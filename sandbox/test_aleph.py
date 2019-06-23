@@ -4,12 +4,16 @@ import fastjet as fj
 from lundplane import pylundplane as lund
 from tqdm import tqdm
 import sys
+import os
 
-aleph_file="/Volumes/two/data/aleph/LEP1Data1992_recons_aftercut-001.aleph"
+aleph_file = "/Volumes/two/data/aleph/LEP1Data1992_recons_aftercut-001.aleph"
 if len(sys.argv) > 1:
     aleph_file = sys.argv[1]
-
-mpt.dump(aleph_file, 2, False);
+if not os.path.isfile(aleph_file):
+    aleph_file = "/Volumes/mp256s/data/aleph/LEP1Data1992_recons_aftercut-001.aleph"
+if not os.path.isfile(aleph_file):
+    aleph_file = "/Users/ploskon/data/aleph/LEP1Data1992_recons_aftercut-001.aleph"
+mpt.dump(aleph_file, 2, False)
 # mpt.dump(aleph_file, -1, True);
 
 # print the banner first
