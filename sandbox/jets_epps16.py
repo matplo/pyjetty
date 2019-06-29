@@ -73,12 +73,27 @@ def main(args):
 		if input.failed():
 			print ("[error] unable to read from {}".format(args.read))
 			return
+
+		# print the banner first
+		fj.ClusterSequence.print_banner()
+		print()
+		jet_R0 = 0.4
+		jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
+		jet_selector = fj.SelectorPtMin(100.0) & fj.SelectorPtMax(200.0) & fj.SelectorAbsEtaMax(1)
+
 		event = pyhepmc_ng.GenEvent()
 		pbar = tqdm(range(nevents))
 		while not input.failed():
-			p = input.read_event(event)
+			e = input.read_event(event)
 			if input.failed():
 				break
+			fjparts = []
+			for i,p in enumerate(event.particles):
+				if p.status == 1:
+					psj = fj.PseudoJet(p.momentum.px, p.momentum.py, p.momentum.pz, p.momentum.e)
+					psj.set_user_index(i)
+					fjparts.append(psj)
+			jets = jet_selector(jet_def(fjparts))
 			pbar.update()
 
 if __name__ == '__main__':
@@ -97,6 +112,7 @@ if __name__ == '__main__':
 	parser.add_argument('--epps16set', help='set number of EPPS16nlo_CT14nlo_Pb208', default=None, type=int)
 	parser.add_argument('--allset', help='run for all sets in EPPS16nlo_CT14nlo_Pb208', default=False, action='store_true')
 	parser.add_argument('--noue', help="no underlying event - equivalend to no ISR and MPIs set to off", default=False, action='store_true')
+	parser.add_argument('--fj', help="run fastjet", default=False, action='store_true')
 	args = parser.parse_args()
 	if args.allset and args.epps16set is None:
 		main(args)
