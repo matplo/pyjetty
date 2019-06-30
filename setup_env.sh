@@ -14,9 +14,9 @@ function thisdir()
 STHISDIR=$(thisdir)
 
 if [ -z ${1} ]; then
-	. ${STHISDIR}/.config_fjpydev
+	source ${STHISDIR}/.config_fjpydev
 	echo "[i] FJPYDEV=${FJPYDEV}"
-	. ${FJPYDEV}/test/setup_env.sh
+	source ${FJPYDEV}/test/setup_env.sh
 else
 	echo "[i] using ${1} for fjpydev location"
 fi

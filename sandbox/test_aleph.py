@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import pythia8 as pythia
 from mptools import pymptools as mpt
 import fastjet as fj
 from lundplane import pylundplane as lund
