@@ -24,7 +24,7 @@ def create_and_init_pythia(config_strings=[]):
 def get_pythia_config(args):
 	sconfig_pythia = [	"Beams:eCM = {}".format(args.ecm),
 						"HardQCD:all = on"]
-	if args.pthatmin == 0:
+	if args.pthatmin < 0:
 		_extra = [	"PhaseSpace:bias2Selection=on",
 					"PhaseSpace:bias2SelectionPow={}".format(args.biaspow),
 					"PhaseSpace:bias2SelectionRef={}".format(args.biasref)]
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
 	#	sconfig_pythia = get_pythia_config(args.ecm, args.pthatmin, args.biaspow, args.biasref, args.epps16set)
 	parser.add_argument('--ecm', help='sqrt(s) GeV', default=5000., type=float)
-	parser.add_argument('--pthatmin', help='minimum hat{pT}', default=10, type=float)
+	parser.add_argument('--pthatmin', help='minimum hat{pT}', default=-1, type=float)
 	parser.add_argument('--biaspow', help='power of the bias (hard)', default=4, type=float)
 	parser.add_argument('--biasref', help='reference pT for the bias', default='50', type=float)
 	parser.add_argument('--epps16set', help='set number of EPPS16nlo_CT14nlo_Pb208', default=None, type=int)
