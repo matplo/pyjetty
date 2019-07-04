@@ -14,7 +14,7 @@ def create_and_init_pythia(config_strings=[]):
 	pythia = pythia8.Pythia()
 	for s in config_strings:
 		pythia.readString(s)
-	for extra_s in ["Next:numberShowEvent = 0", "Next:numberShowInfo = 0", "Next:numberShowProcess = 0"]:
+	for extra_s in ["Next:numberShowEvent = 0", "Next:numberShowInfo = 0", "Next:numberShowProcess = 0", "Next:numberCount = 0"]:
 		pythia.readString(extra_s)
 	if pythia.init():
 		return pythia
@@ -36,11 +36,12 @@ def get_pythia_config(args):
 		sconfig_pythia.append("PartonLevel:ISR = off")
 		sconfig_pythia.append("PartonLevel:MPI = off")
 	if args.epps16set is not None:
-		if abs(args.epps16set) > 40:
-			print("[e] bad epps16set {}".format(args.epps16set))
-			return None
-		else:
-			sconfig_pythia.append("PDF:pset = LHAPDF6:EPPS16nlo_CT14nlo_Pb208/{0}".format(args.epps16set))
+		if args.epps16set >= 0:
+			if abs(args.epps16set) > 40:
+				print("[e] bad epps16set {}".format(args.epps16set))
+				return None
+			else:
+				sconfig_pythia.append("PDF:pset = LHAPDF6:EPPS16nlo_CT14nlo_Pb208/{0}".format(args.epps16set))
 	return sconfig_pythia
 
 
@@ -114,13 +115,18 @@ if __name__ == '__main__':
 	parser.add_argument('--noue', help="no underlying event - equivalend to no ISR and MPIs set to off", default=False, action='store_true')
 	parser.add_argument('--fj', help="run fastjet", default=False, action='store_true')
 	args = parser.parse_args()
+
+	args.write = os.path.splitext(args.write)[0] + '.dat'
+
 	if args.allset and args.epps16set is None:
 		main(args)
 		_base_outputname = args.write
 		for args.epps16set in range(0, 41):
 			if _base_outputname:
-				args.write = _base_outputname.rstrip('.dat') + '.dat'
-				args.write = args.write.replace('.dat', '_EPPS16_set{0}.dat'.format(args.epps16set))
+				args.write = os.path.splitext(_base_outputname)[0] + '_EPPS16_set{0}.dat'.format(args.epps16set)
 			main(args)
 	else:
+		if args.epps16set is not None:
+			if args.epps16set >= 0:
+				args.write = os.path.splitext(args.write)[0] + '_EPPS16_set{0}.dat'.format(args.epps16set)
 		main(args)

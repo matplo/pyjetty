@@ -3,10 +3,65 @@
 import os
 import argparse
 import ROOT as r
+r.PyConfig.IgnoreCommandLineOptions = True
 import math
+import dlist
 
+def make_ratio(fref, fepps16):
+	f0 = r.TFile(fref)
+	f1 = r.TFile(fepps16)
+	h0 = f0.Get('hjetpt')
+	hepps_set0 = f1.Get('hset0')
+	hepps_plus = f1.Get('hstat_plus')
+	hepps_minus = f1.Get('hstat_minus')
 
-def get_EPPS16_uncerts(flist, hname='hjetpt'):
+	h0.Sumw2()
+	hepps_set0.Sumw2()
+	hepps_plus.Sumw2()
+	hepps_plus.Sumw2()
+
+	dlist.scale_by_binwidth(h0)
+	dlist.scale_by_binwidth(hepps_set0)
+	dlist.scale_by_binwidth(hepps_plus)
+	dlist.scale_by_binwidth(hepps_minus)
+
+	hepps_set0.Divide(hepps_set0, h0, 1., 1., 'B')
+	hepps_plus.Divide(hepps_plus, h0, 1., 1., 'B')
+	hepps_minus.Divide(hepps_minus, h0, 1., 1., 'B')
+	#hepps_set0.Divide(h0)
+	#hepps_plus.Divide(h0)
+	#hepps_minus.Divide(h0)
+
+	hepps_set0.SetTitle('set0')
+	hepps_plus.SetTitle('plus')
+	hepps_minus.SetTitle('minus')
+
+	foutname = os.path.join(os.path.dirname(fref), 'epps16_uncerts_ratio.root')
+	fout = r.TFile(foutname, 'recreate')
+	hepps_set0.Write()
+	hepps_plus.Write()
+	hepps_minus.Write()
+
+	grset0 = dlist.h_to_graph(hepps_set0, False, True)
+	gr_x = grset0.GetX()
+	gr_y = grset0.GetY()
+	gr_ex = grset0.GetEX()
+	gr_exl = [ex for ex in gr_ex]
+	gr_exh = [ex for ex in gr_ex]
+	gr_eyl = [abs(hepps_minus.GetBinContent(i) - hepps_set0.GetBinContent(i)) for i in range(1, hepps_minus.GetNbinsX() + 1)]
+	gr_eyh = [abs(hepps_plus.GetBinContent(i) - hepps_set0.GetBinContent(i)) for i in range(1, hepps_plus.GetNbinsX() + 1)]
+	grassymErr = dlist.make_graph_ae_xy('epps16_uncerts_ratio', gr_x, gr_y, gr_exl, gr_exh, gr_eyl, gr_eyh)
+	grassymErr.SetTitle('EPPS16 / default')
+	grassymErr.Write()
+
+	gr = dlist.make_graph_xy('epps16_uncerts_ratio_noErr', gr_x, gr_y)
+	gr.SetTitle('EPPS16 / default')
+	gr.Write()
+
+	fout.Close()
+	print ("[i] written", foutname)
+
+def make_EPPS16_uncerts(flist, hname='hjetpt'):
 	hset0 = None
 	hdiffs = []
 	for i, f in enumerate(flist):
@@ -27,28 +82,49 @@ def get_EPPS16_uncerts(flist, hname='hjetpt'):
 	hstat_plus = hset0.Clone('hstat_plus')
 	hstat_minus = hset0.Clone('hstat_minus')
 
+	grset0 = dlist.h_to_graph(hset0, False, True)
+
+	# gr_x = [x*1.1 for x in grset0.GetX()]
+	gr_x = grset0.GetX()
+	gr_y = grset0.GetY()
+	gr_ex = grset0.GetEX()
+	gr_exl = [ex for ex in gr_ex]
+	gr_exh = [ex for ex in gr_ex]
+	gr_eyl = []
+	gr_eyh = []
+
+	print (len(hdiffs))
 	for ib in range(1, hset0.GetNbinsX() + 1):
 		diffplus = []
 		diffminus = []
-		for i,h in enumerate(hsetdiff):
-			diff = hsetdiff.GetBinContent(ib)
+		for i,h in enumerate(hdiffs):
+			diff = h.GetBinContent(ib)
 			if i % 2 == 0:
-				diffplus.append(diff)
-			else:
 				diffminus.append(diff)
+			else:
+				diffplus.append(diff)
+			print ('set', i)
 		_dplus = sum([_d*_d for _d in diffplus])
 		_dminus = sum([_d*_d for _d in diffminus])
 		_dplus = math.sqrt(_dplus)
 		_dminus = math.sqrt(_dminus)
+		print ('delta plus-minus', _dplus-_dminus)
 		hstat_plus.SetBinContent(ib, hset0.GetBinContent(ib) + _dplus)
 		hstat_minus.SetBinContent(ib, hset0.GetBinContent(ib) - _dminus)
+		gr_eyl.append(_dminus)
+		gr_eyh.append(_dplus)
 
-	fout = r.TFile('epps16_uncerts.root', 'recreate')
+	foutname = os.path.join(os.path.dirname(flist[0]), 'epps16_uncerts.root')
+	fout = r.TFile(foutname, 'recreate')
 	fout.cd()
 	hstat_minus.Write()
 	hstat_plus.Write()
 	hset0.Write()
+	grset0.Write()
+	grassymErr = dlist.make_graph_ae_xy('epps16_uncerts', gr_x, gr_y, gr_exl, gr_exh, gr_eyl, gr_eyh)
+	grassymErr.Write()
 	fout.Close()
+	print ("[i] written", foutname)
 
 
 def main(args):
@@ -57,7 +133,10 @@ def main(args):
 	for iset in range(41):
 		fname = fbasename.replace('EPPS16_set0', 'EPPS16_set{0}'.format(iset))
 		flist.append(fname)
-	get_EPPS16_uncerts(flist, 'hjetpt')
+	make_EPPS16_uncerts(flist, 'hjetpt')
+	fref = os.path.join(os.path.dirname(fbasename), 'jets_npdf_compare_output.root')
+	funcerts = os.path.join(os.path.dirname(fbasename), 'epps16_uncerts.root')
+	make_ratio(fref, funcerts)
 
 
 if __name__ == '__main__':

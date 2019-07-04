@@ -13,6 +13,7 @@ import ROOT as r
 import numpy as np
 import array
 import pyhepmc_ng
+import joblib
 
 def logbins(xmin, xmax, nbins):
 	lspace = np.logspace(np.log10(xmin), np.log10(xmax), nbins+1)
@@ -38,8 +39,9 @@ def main(args):
 	print()
 	jet_R0 = 0.4
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-	jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorPtMax(200.0) & fj.SelectorAbsEtaMax(1)
+	jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorPtMax(200.0) & fj.SelectorAbsEtaMax(3)
 
+	all_jets = []
 	event = pyhepmc_ng.GenEvent()
 	pbar = tqdm(range(args.nevents))
 	while not input.failed():
@@ -53,14 +55,15 @@ def main(args):
 				psj.set_user_index(i)
 				fjparts.append(psj)
 		jets = jet_selector(jet_def(fjparts))
+		all_jets.append([ [j.pt(), j.eta()] for j in jets])
 		pbar.update()
 		for j in jets:
 			hjetpt.Fill(j.perp())
 		if pbar.n >= args.nevents:
 			break
-
 	foutput.Write()
 	foutput.Close()
+	joblib.dump(all_jets, outfname.replace(".root", ".joblib"))
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='jets with different with EPPS16nlo_CT14nlo_Pb208',
