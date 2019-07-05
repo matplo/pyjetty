@@ -21,7 +21,7 @@ def logbins(xmin, xmax, nbins):
 	return arr
 	# return lspace
 
-def main(args):
+def main_jets(args):
 	outfname = '{}_output.root'.format(args.read).replace('.dat', '')
 	print("output file: {}".format(outfname))
 	foutput = r.TFile(outfname, "recreate")
@@ -50,7 +50,45 @@ def main(args):
 			break
 		fjparts = []
 		for i,p in enumerate(event.particles):
-			if p.status == 1:
+			if p.status == 1 and not p.end_vertex:
+				psj = fj.PseudoJet(p.momentum.px, p.momentum.py, p.momentum.pz, p.momentum.e)
+				psj.set_user_index(i)
+				fjparts.append(psj)
+		jets = jet_selector(jet_def(fjparts))
+		all_jets.append([ [j.pt(), j.eta()] for j in jets])
+		pbar.update()
+		for j in jets:
+			hjetpt.Fill(j.perp())
+		if pbar.n >= args.nevents:
+			break
+	foutput.Write()
+	foutput.Close()
+	joblib.dump(all_jets, outfname.replace(".root", ".joblib"))
+
+def main_parts(args):
+	outfname = '{}_output.root'.format(args.read).replace('.dat', '')
+	print("output file: {}".format(outfname))
+	foutput = r.TFile(outfname, "recreate")
+	foutput.cd()
+	lbins = logbins(1., 100, 10)
+	hpt = r.TH1F('hpt', 'hpt', 10, lbins)
+
+	input = pyhepmc_ng.ReaderAsciiHepMC2(args.read)
+	if input.failed():
+		print ("[error] unable to read from {}".format(args.read))
+		return
+
+	# print the banner first
+	all_parts = []
+	event = pyhepmc_ng.GenEvent()
+	pbar = tqdm(range(args.nevents))
+	while not input.failed():
+		e = input.read_event(event)
+		if input.failed():
+			break
+		fjparts = []
+		for i,p in enumerate(event.particles):
+			if p.status == 1 and not p.end_vertex:
 				psj = fj.PseudoJet(p.momentum.px, p.momentum.py, p.momentum.pz, p.momentum.e)
 				psj.set_user_index(i)
 				fjparts.append(psj)
@@ -71,8 +109,7 @@ if __name__ == '__main__':
 	parser.add_argument('-n', '--nevents', help='number of events', default=1000, type=int)
 	parser.add_argument('-g', '--generate', help='generate - no writing', action='store_true')
 	parser.add_argument('-w', '--write', help='generate and write hepmc file', type=str, default='')
-	parser.add_argument('-r', '--read', help='read hepmc file', type=str, default='')
-
+	parser.add_argument('-r', '--read', help='read hepmc file', type=str, default=None, required=True)
 	#	sconfig_pythia = get_pythia_config(args.ecm, args.pthatmin, args.biaspow, args.biasref, args.epps16set)
 	parser.add_argument('--ecm', help='sqrt(s) GeV', default=5000., type=float)
 	parser.add_argument('--pthatmin', help='minimum hat{pT}', default=-1, type=float)
