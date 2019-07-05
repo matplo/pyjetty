@@ -29,9 +29,9 @@ def make_ratio(fref, fepps16):
 	hepps_set0.Divide(hepps_set0, h0, 1., 1., 'B')
 	hepps_plus.Divide(hepps_plus, h0, 1., 1., 'B')
 	hepps_minus.Divide(hepps_minus, h0, 1., 1., 'B')
-	#hepps_set0.Divide(h0)
-	#hepps_plus.Divide(h0)
-	#hepps_minus.Divide(h0)
+	# hepps_set0.Divide(h0)
+	# hepps_plus.Divide(h0)
+	# hepps_minus.Divide(h0)
 
 	hepps_set0.SetTitle('set0')
 	hepps_plus.SetTitle('plus')
