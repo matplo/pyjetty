@@ -8,6 +8,7 @@ import math
 import dlist
 
 def make_ratio(fref, fepps16):
+	print ('[i] making ratio of',fref, fepps16)
 	f0 = r.TFile(fref)
 	f1 = r.TFile(fepps16)
 	h0 = f0.Get('hjetpt')
@@ -36,7 +37,7 @@ def make_ratio(fref, fepps16):
 	hepps_plus.SetTitle('plus')
 	hepps_minus.SetTitle('minus')
 
-	foutname = os.path.join(os.path.dirname(fref), 'epps16_uncerts_ratio.root')
+	foutname = fepps16.replace('uncerts_output', 'uncerts_ratio')
 	fout = r.TFile(foutname, 'recreate')
 	hepps_set0.Write()
 	hepps_plus.Write()
@@ -65,6 +66,9 @@ def make_EPPS16_uncerts(flist, hname='hjetpt'):
 	hset0 = None
 	hdiffs = []
 	for i, f in enumerate(flist):
+		if not os.path.isfile(f):
+			print ('[w] missing', f)
+			continue
 		fin = r.TFile(f)
 		hset = fin.Get(hname)
 		if i == 0:
@@ -114,7 +118,7 @@ def make_EPPS16_uncerts(flist, hname='hjetpt'):
 		gr_eyl.append(_dminus)
 		gr_eyh.append(_dplus)
 
-	foutname = os.path.join(os.path.dirname(flist[0]), 'epps16_uncerts.root')
+	foutname = os.path.join(flist[0].replace('EPPS16_set0' ,'uncerts'))
 	fout = r.TFile(foutname, 'recreate')
 	fout.cd()
 	hstat_minus.Write()
@@ -125,7 +129,7 @@ def make_EPPS16_uncerts(flist, hname='hjetpt'):
 	grassymErr.Write()
 	fout.Close()
 	print ("[i] written", foutname)
-
+	return foutname
 
 def main(args):
 	fbasename = args.input
@@ -133,9 +137,8 @@ def main(args):
 	for iset in range(41):
 		fname = fbasename.replace('EPPS16_set0', 'EPPS16_set{0}'.format(iset))
 		flist.append(fname)
-	make_EPPS16_uncerts(flist, 'hjetpt')
-	fref = os.path.join(os.path.dirname(fbasename), 'jets_npdf_compare_output.root')
-	funcerts = os.path.join(os.path.dirname(fbasename), 'epps16_uncerts.root')
+	funcerts = make_EPPS16_uncerts(flist, 'hjetpt')
+	fref = os.path.join(fbasename.replace('EPPS16_set0_', ''))
 	make_ratio(fref, funcerts)
 
 
