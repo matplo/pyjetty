@@ -9,6 +9,17 @@ from mptools import pymptools as mp
 from tqdm import tqdm
 import argparse
 import os
+import ROOT as r
+import numpy as np
+import array
+
+
+def logbins(xmin, xmax, nbins):
+	lspace = np.logspace(np.log10(xmin), np.log10(xmax), nbins+1)
+	arr = array.array('f', lspace)
+	return arr
+	# return lspace
+
 
 def create_and_init_pythia(config_strings=[]):
 	pythia = pythia8.Pythia()
@@ -52,6 +63,18 @@ def get_pythia_config(args, procsel=[]):
 	return sconfig_pythia
 
 
+def get_final_daughters(event, idx):
+	retv = []
+	daughters = event.daughterList(idx)
+	for d in daughters:
+		if event[d].isFinal():
+			retv.append(d)
+		else:
+			_ds = get_final_daughters(event, d)
+			if len(_ds):
+				retv.extend(_ds)
+	return retv
+
 def main(args):
 	nevents = args.nevents
 	procsel = []
@@ -63,22 +86,74 @@ def main(args):
 		procsel.append("HardQCD:all = on")
 	sconfig_pythia = get_pythia_config(args, procsel)
 
-	if args.write:
+	pythia = None
+	if args.write or args.generate:
 		pythia = create_and_init_pythia(sconfig_pythia)
-		if not pythia:
-			return
+	if not pythia:
+		print("[error] bad or no pythia create and init. stop here.")
+		return
+
+	if args.write:
 		pyhepmcwriter = mp.Pythia8HepMCWrapper(args.write)
 		for iEvent in tqdm(range(nevents), 'event'):
 			if not pythia.next(): continue
 			pyhepmcwriter.fillEvent(pythia)
 		print("[i] done writing to {}".format(args.write))
 
+	if args.generate:
+		outfname = '{}_output.root'.format(args.generate).replace('.dat', '')
+		print("output file: {}".format(outfname))
+		foutput = r.TFile(outfname, "recreate")
+		foutput.cd()
+		lbins = logbins(1., 100, 10)
+		hjetpt = r.TH1F('hjetpt', 'hjetpt', 10, lbins)
+		hevent = r.TH1F('hevent', 'hevent', 10, 0, 10);
+		hxsection = r.TNtuple('xsection', 'xsection', 'xsec:xsecErr')
+		tnpart = r.TNtuple('tnpart', 'tnpart', 'pt:eta:phi:id5:id6')
+		for iEvent in tqdm(range(nevents), 'event'):
+			if not pythia.next(): continue
+			hevent.Fill(0, pythia.info.weight())
+			hxsection.Fill(pythia.info.sigmaGen(), pythia.info.sigmaErr())
+			if not args.charm and not args.photon:
+				for ip in range(pythia.event.size()):
+					if abs(pythia.event[ip].id()) == 111:
+						tnpart.Fill(pythia.event[ip].pT(), pythia.event[ip].eta(), pythia.event[ip].phi(),
+						            pythia.event[5].id(), pythia.event[6].id())
+						if pythia.event[ip].eta() > 3 and pythia.event[ip].eta() < 6:
+							hjetpt.Fill(pythia.event[ip].pT())
+			if args.charm:
+				for ip in range(pythia.event.size()):
+					if abs(pythia.event[ip].id()) == 421:
+						tnpart.Fill(pythia.event[ip].pT(), pythia.event[ip].eta(), pythia.event[ip].phi(),
+						            pythia.event[5].id(), pythia.event[6].id())
+						if pythia.event[ip].eta() > 3 and pythia.event[ip].eta() < 6:
+							hjetpt.Fill(pythia.event[ip].pT())
+			if args.photon:
+				for idx in range(5,7):
+					if pythia.event[idx].id() == 22:
+						finalds = get_final_daughters(pythia.event, idx)
+						for fidx in finalds:
+							if pythia.event[fidx].id() == 22:
+								tnpart.Fill(pythia.event[fidx].pT(), pythia.event[fidx].eta(), pythia.event[fidx].phi(),
+								            pythia.event[5].id(), pythia.event[6].id())
+								if pythia.event[fidx].eta() > 3 and pythia.event[fidx].eta() < 6:
+									hjetpt.Fill(pythia.event[fidx].pT())
+		w = pythia.info.weightSum()
+		xs = pythia.info.sigmaGen()
+		tnpart.SetWeight(xs/w)
+		hjetpt.Scale(xs/w)
+		foutput.Write()
+		foutput.Close()
+	if pythia:
+		pythia.stat()
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='jets with different with EPPS16nlo_CT14nlo_Pb208',
 	                                 prog=os.path.basename(__file__))
 	parser.add_argument('-n', '--nevents', help='number of events', default=1000, type=int)
-	parser.add_argument('-g', '--generate', help='generate - no writing', action='store_true')
-	parser.add_argument('-w', '--write', help='generate and write hepmc file', type=str, default='pPb_output.dat')
+	# parser.add_argument('-g', '--generate', help='generate - no writing', action='store_true')
+	parser.add_argument('-g', '--generate', help='generate - on-the-fly - write root file', type=str, default=None)
+	parser.add_argument('-w', '--write', help='generate and write hepmc file', type=str, default=None)
 
 	#	sconfig_pythia = get_pythia_config(args.ecm, args.pthatmin, args.biaspow, args.biasref, args.epps16set)
 	parser.add_argument('--ecm', help='low or high sqrt(s) GeV', default='low', type=str)
@@ -92,17 +167,27 @@ if __name__ == '__main__':
 	parser.add_argument('--photon', help="enable prompt photon production",  default=False, action='store_true')
 	args = parser.parse_args()
 
-	args.write = os.path.splitext(args.write)[0] + '.dat'
+	if args.write:
+		args.write    = os.path.splitext(args.write)[0] + '.dat'
+	if args.generate:
+		args.generate = os.path.splitext(args.generate)[0] + '.dat'
+
+	_base_outputname = args.write
+	_base_outputname_gen = args.generate
 
 	if args.allset and args.epps16set is None:
 		main(args)
-		_base_outputname = args.write
 		for args.epps16set in range(0, 41):
 			if _base_outputname:
 				args.write = os.path.splitext(_base_outputname)[0] + '_EPPS16_set{0}.dat'.format(args.epps16set)
+			if _base_outputname_gen:
+				args.generate = os.path.splitext(_base_outputname_gen)[0] + '_EPPS16_set{0}.dat'.format(args.epps16set)
 			main(args)
 	else:
 		if args.epps16set is not None:
 			if args.epps16set >= 0:
-				args.write = os.path.splitext(args.write)[0] + '_EPPS16_set{0}.dat'.format(args.epps16set)
+				if args.write:
+					args.write = os.path.splitext(args.write)[0] + '_EPPS16_set{0}.dat'.format(args.epps16set)
+				if args.generate:
+					args.generate = os.path.splitext(args.generate)[0] + '_EPPS16_set{0}.dat'.format(args.epps16set)
 		main(args)
