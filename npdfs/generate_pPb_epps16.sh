@@ -1,34 +1,81 @@
 #!/bin/bash
 
-smode=${1}
+function get_opt()
+{
+    all_opts="$@"
+    # echo "options in function: ${all_opts}"
+    opt=${1}
+    # echo "checking for [${opt}]"
+    #opts=("${all_opts[@]:2}")
+    opts=$(echo ${all_opts} | cut -d ' ' -f 2-)
+    retval=""
+    is_set=""
+    # echo ".. in [${opts}]"
+    for i in ${opts}
+    do
+    case $i in
+        --${opt}=*)
+        retval="${i#*=}"
+        shift # past argument=value
+        ;;
+        --${opt})
+        is_set=yes
+        shift # past argument with no value
+        ;;
+        *)
+            # unknown option
+        ;;
+    esac
+    done
+    if [ -z ${retval} ]; then
+        echo ${is_set}
+    else
+        echo ${retval}
+    fi
+}
+export -f get_opt
+
+function usage()
+{
+	echo "usage:" $(basename ${0}) "--mode=bias|pthat [--power=<power>] [--ref=<ref>] [--pthatmin=<minval>] [--nev=<n_events>]"
+}
+
+smode=$(get_opt "mode" $@)
+biaspower=$(get_opt "power" $@)
+biasref=$(get_opt "ref" $@)
+pthatmin=$(get_opt "pthatmin" $@)
+nev=$(get_opt "nev" $@)
 
 if [ -z ${smode} ]; then
-	echo $(basename ${0}) "[<pthatmin> | bias] [biaspower] [biasref]"
+	usage
 	exit 0
+else
+	[ "x${smode}" == "xbias" ]  && ( [ -z ${biaspower} ] || [ -z ${biasref} ] ) && usage	&& exit 0
+	[ "x${smode}" == "xpthat" ] && [ -z ${pthatmin} ] && usage && exit 0
 fi
 
-if [ "xbias" == "x$smode" ]; then
-	biaspower=4
-	[ ! -z ${2} ] && biaspower=${2}
-	biasref=20
-	[ ! -z ${3} ] && biasref=${3}
+
+if [ "x${smode}" == "xbias" ]; then
+	[ -z ${biaspower} ] && biaspower=4
+	[ -z ${biasref} ] && biasref=5
 	echo "mode : ${smode} && biaspower : ${biaspower} && biasref : ${biasref}"
 	outdir="${PWD}/epps16-pPb-ehigh-bias-${biaspower}-${biasref}"
 	mkdir -p ${outdir}
 	sets=$(seq -1 0)
 	sets=$(seq -1 40)
-	parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare.dat --epps16set {} --ecm high --biaspow 4 --biasref 20 -n 1000 ::: ${sets}
-	parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_charm.dat --charm --epps16set {} --ecm high --biaspow 4 --biasref 20 -n 1000 ::: ${sets}
-	parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_photon.dat --photon --epps16set {} --ecm high --biaspow 4 --biasref 20 -n 1000 ::: ${sets}
+	parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare.dat --epps16set {} --ecm high --biaspow 4 --biasref 20 -n ${nev} ::: ${sets}
+	parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_charm.dat --charm --epps16set {} --ecm high --biaspow 4 --biasref 20 -n ${nev} ::: ${sets}
+	parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_photon.dat --photon --epps16set {} --ecm high --biaspow 4 --biasref 20 -n ${nev} ::: ${sets}
 else
-	pthatmin=${1}
+	[ -z ${pthatmin} ] && pthatmin=10
+	echo "mode : ${mode} && pthatmin : ${pthatmin}"
 	if [ ! -z ${pthatmin} ]; then
 		outdir=${PWD}/epps16-pPb-ehigh-pthat${pthatmin}/
 		mkdir -p ${outdir}
 		sets=$(seq -1 0)
 		sets=$(seq -1 40)
-		parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare.dat --epps16set {} --ecm high --pthatmin ${pthatmin} -n 1000 ::: ${sets}
-		parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_charm.dat --charm --epps16set {} --ecm high --pthatmin ${pthatmin} -n 1000 ::: ${sets}
-		parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_photon.dat --photon --epps16set {} --ecm high --pthatmin ${pthatmin} -n 1000 ::: ${sets}
+		parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare.dat --epps16set {} --ecm high --pthatmin ${pthatmin} -n ${nev} ::: ${sets}
+		parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_charm.dat --charm --epps16set {} --ecm high --pthatmin ${pthatmin} -n ${nev} ::: ${sets}
+		parallel --bar ./pPb_epps16.py -g ${outdir}/pPb_npdf_compare_photon.dat --photon --epps16set {} --ecm high --pthatmin ${pthatmin} -n ${nev} ::: ${sets}
 	fi
 fi

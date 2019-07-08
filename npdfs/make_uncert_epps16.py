@@ -49,8 +49,8 @@ def make_ratio(fref, fepps16):
 	gr_ex = grset0.GetEX()
 	gr_exl = [ex for ex in gr_ex]
 	gr_exh = [ex for ex in gr_ex]
-	gr_eyl = [abs(hepps_minus.GetBinContent(i) - hepps_set0.GetBinContent(i)) for i in range(1, hepps_minus.GetNbinsX() + 1)]
-	gr_eyh = [abs(hepps_plus.GetBinContent(i) - hepps_set0.GetBinContent(i)) for i in range(1, hepps_plus.GetNbinsX() + 1)]
+	gr_eyl = [hepps_set0.GetBinContent(i) - hepps_minus.GetBinContent(i) for i in range(1, hepps_minus.GetNbinsX() + 1)]
+	gr_eyh = [hepps_plus.GetBinContent(i) - hepps_set0.GetBinContent(i) for i in range(1, hepps_plus.GetNbinsX() + 1)]
 	grassymErr = dlist.make_graph_ae_xy('epps16_uncerts_ratio', gr_x, gr_y, gr_exl, gr_exh, gr_eyl, gr_eyh)
 	grassymErr.SetTitle('EPPS16 / default')
 	grassymErr.Write()
