@@ -17,7 +17,8 @@ function write_tdraw_file()
 	echo "        varexp = pt" >> ${outputfile}
 	echo "        # selection = eta < -3 && eta > -6" >> ${outputfile}
 	#echo "        selection = eta > 3 && eta < 6" >> ${outputfile}
-	echo "        selection = eta > 2.5 && eta < 4." >> ${outputfile}
+	#echo "        selection = eta > 2.5 && eta < 4." >> ${outputfile}
+	echo "        selection = eta < 1." >> ${outputfile}
 	echo "        option = e" >> ${outputfile}
 	echo "        nentries =" >> ${outputfile}
 	echo "        firstentry =" >> ${outputfile}
