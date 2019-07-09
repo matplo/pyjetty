@@ -63,7 +63,7 @@ if [ "x${smode}" == "xbias" ]; then
 	[ -z ${biaspower} ] && biaspower=4
 	[ -z ${biasref} ] && biasref=5
 	echo "mode : ${smode} && biaspower : ${biaspower} && biasref : ${biasref}"
-	outdir="${PWD}/epps16-pPb-ehigh-bias-${biaspower}-${biasref}"
+	outdir="${PWD}/epps16-PbPb-ehigh-bias-${biaspower}-${biasref}"
 	mkdir -p ${outdir}
 	sets=$(seq -1 0)
 	sets=$(seq -1 40)
@@ -74,7 +74,7 @@ else
 	[ -z ${pthatmin} ] && pthatmin=10
 	echo "mode : ${mode} && pthatmin : ${pthatmin}"
 	if [ ! -z ${pthatmin} ]; then
-		outdir=${PWD}/epps16-pPb-ehigh-pthat${pthatmin}/
+		outdir=${PWD}/epps16-PbPb-ehigh-pthat${pthatmin}/
 		mkdir -p ${outdir}
 		sets=$(seq -1 0)
 		sets=$(seq -1 40)
