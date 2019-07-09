@@ -72,7 +72,7 @@ if [ "x${smode}" == "xbias" ]; then
 	parallel --bar ./PbPb_epps16.py -g ${outdir}/PbPb_npdf_compare_photon.dat --photon --epps16set {} --ecm high --biaspow 4 --biasref 20 -n ${nev} ::: ${sets}
 else
 	[ -z ${pthatmin} ] && pthatmin=10
-	echo "mode : ${mode} && pthatmin : ${pthatmin}"
+	echo "mode : ${smode} && pthatmin : ${pthatmin}"
 	if [ ! -z ${pthatmin} ]; then
 		outdir=${PWD}/epps16-PbPb-ehigh-pthat${pthatmin}/
 		mkdir -p ${outdir}
