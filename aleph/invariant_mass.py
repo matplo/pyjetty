@@ -77,6 +77,7 @@ def main(args):
 				if p1.q() != p2.q():
 					hmass2pK0.Fill(sump.M())
 					hmasspt2p.Fill(sump.M(), sump.Pt())
+					pK0 = sump
 					for _l in leptons:
 						if _l[0].Pt() > 2:
 							hmass2pK0Ldphi.Fill(sump.M(), abs(sump.DeltaPhi(_l[0])))
@@ -87,8 +88,8 @@ def main(args):
 						p3 = inparts[ip3]
 						if p3.pwflag() != aleph_utils.AlephWFLAG.ALEPH_CHARGED_TRACK:
 							continue
-						sump = pK0 + _p3
-						hmass3p.Fill(sump.M())
+						sump3 = pK0 + _p3
+						hmass3p.Fill(sump3.M())
 		hntracks.Fill(ntracks)
 		if pbar.n >= nev:
 			break
