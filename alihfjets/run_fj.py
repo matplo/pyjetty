@@ -84,27 +84,43 @@ def main(args):
 	fj.ClusterSequence.print_banner()
 
 	# signal jet definition
+	maxrap = 0.9
 	jet_R0 = args.jetR
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 	jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorPtMax(1000.0) & fj.SelectorAbsEtaMax(1)
+	jet_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(maxrap))
 	print(jet_def)
+
+	# background estimation
+	grid_spacing = maxrap/10.
+	gmbge = fj.GridMedianBackgroundEstimator(maxrap, grid_spacing)
+
 	print()
 
-	e_jets = pd.DataFrame(columns=['evid', 'pt', 'eta', 'phi'])
+	output_columns = ['evid', 'pt', 'eta', 'phi', 'area', 'ptsub']
+	e_jets = pd.DataFrame(columns=output_columns)
 
 	for i, e in pds_evs.iterrows():
 		iev_id = int(e['ev_id'])
 		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id]
 		_tpsj = fj_parts_from_tracks(_ts)
-		_jets = jet_selector(jet_def(_tpsj))
+		# print('maximum particle rapidity:', max([psj.rap() for psj in _tpsj]))
+		_cs = fj.ClusterSequenceArea(_tpsj, jet_def, jet_area_def)
+		_jets = jet_selector(fj.sorted_by_pt(_cs.inclusive_jets()))
+		gmbge.set_particles(_tpsj)
+		print("rho   = ", gmbge.rho())
+		print("sigma = ", gmbge.sigma())
+		# _jets = jet_selector(jet_def(_tpsj))
 		# _jets_a = [[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]
 		# _jets_a = pd.DataFrame(np.array([[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]), columns=['evid', 'pt', 'eta', 'phi'])
-		_jets_a = pd.DataFrame([[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets], columns=['evid', 'pt', 'eta', 'phi'])
+		_jets_a = pd.DataFrame(	[[iev_id, j.perp(), j.eta(), j.phi(), j.area(), j.perp() - gmbge.rho() * j.area()] for j in _jets], 
+								columns=output_columns)
 		# , columns=['evid, pt, eta, phi']
 		e_jets = e_jets.append(_jets_a, ignore_index=True)
 		print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
 		# print(_jets_a.describe())
-		fj_example_02_area(_tpsj)
+		if args.fjsubtract:
+			fj_example_02_area(_tpsj)
 
 	print(e_jets.describe())
 	joblib.dump(e_jets, args.output)
@@ -115,6 +131,7 @@ if __name__ == '__main__':
 	parser.add_argument('-f', '--fname', help='input file name', type=str, default=None, required=True)
 	parser.add_argument('-R', '--jetR', help='jet radius', default=0.4, type=float)
 	parser.add_argument('-o', '--output', help='output file name', default='{}_output.joblib'.format(os.path.basename(__file__)), type=str)
+	parser.add_argument('--fjsubtract', help='do and show fj subtraction', action='store_true', default=False)
 	args = parser.parse_args()	
 	main(args)
 	#fname = '/Users/ploskon/data/HFtree_trains/13-06-2019/488_20190613-0256/unmerged/child_1/0001/AnalysisResults.root'
