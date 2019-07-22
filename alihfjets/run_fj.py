@@ -11,6 +11,7 @@ from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
 from pythiafjtools import pypythiafjtools as pyfj
 from mptools import pymptools as mp
+import joblib
 
 
 def fj_parts_from_tracks(tracks):
@@ -45,18 +46,25 @@ def main(args):
 	print(jet_def)
 	print()
 
+	e_jets = []
+
 	for i, e in pds_evs.iterrows():
 		iev_id = int(e['ev_id'])
 		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id]
 		_tpsj = fj_parts_from_tracks(_ts)
 		_jets = jet_selector(jet_def(_tpsj))
+		_jets_a = [[j.perp(), j.eta(), j.phi()] for j in _jets]
+		e_jets.append(_jets_a)
 		print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
+
+	joblib.dump(e_jets, args.output)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='jet reco on alice data', prog=os.path.basename(__file__))
 	parser.add_argument('-n', '--nevents', help='number of events', default=1000, type=int)
 	parser.add_argument('-f', '--fname', help='input file name', type=str, default=None, required=True)
 	parser.add_argument('-R', '--jetR', help='jet radius', default=0.4, type=float)
+	parser.add_argument('-o', '--output', help='output file name', default='{}_output.joblib'.format(os.path.basename(__file__)), type=str)
 	args = parser.parse_args()	
 	main(args)
 	#fname = '/Users/ploskon/data/HFtree_trains/13-06-2019/488_20190613-0256/unmerged/child_1/0001/AnalysisResults.root'
