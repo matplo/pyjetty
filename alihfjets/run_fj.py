@@ -25,6 +25,8 @@ def fj_parts_from_tracks(tracks):
 		fjparts.append(psj)
 	return fjparts
 
+# MP note: read more about uproot unpacking at https://github.com/scikit-hep/uproot#filling-pandas-dataframes
+# MP note: there may be more efficient way to do this...
 
 def main(args):
 	fname = args.fname
