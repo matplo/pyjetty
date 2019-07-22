@@ -27,6 +27,47 @@ def fj_parts_from_tracks(tracks):
 		fjparts.append(psj)
 	return fjparts
 
+
+#----------------------------------------------------------------------
+# this is from examples/python/02-area.py
+def print_jets(jets):
+	print("{0:>5s} {1:>10s} {2:>10s} {3:>10s} {4:>10s}".format(
+		"jet #", "pt", "rap", "phi", "area"))
+	for ijet in range(len(jets)):
+		jet = jets[ijet]
+		print("{0:5d} {1:10.3f} {2:10.4f} {3:10.4f} {3:10.4f}".format(
+			ijet, jet.pt(), jet.rap(), jet.phi(), jet.area))
+
+
+def fj_example_02_area(event):
+	# cluster the event
+	jet_def = fj.JetDefinition(fj.antikt_algorithm, 0.4)
+	area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(5.0))
+	cs = fj.ClusterSequenceArea(event, jet_def, area_def)
+	jets = fj.SelectorPtMin(5.0)(fj.sorted_by_pt(cs.inclusive_jets()))
+	print("jet def:", jet_def)
+	print("area def:", area_def)
+	print("#-------------------- initial jets --------------------")
+	print_jets(jets)
+	#----------------------------------------------------------------------
+	# estimate the background
+	maxrap       = 4.0
+	grid_spacing = 0.55
+	gmbge = fj.GridMedianBackgroundEstimator(maxrap, grid_spacing)
+	gmbge.set_particles(event)
+	print("#-------------------- background properties --------------------")
+	print("rho   = ", gmbge.rho())
+	print("sigma = ", gmbge.sigma())
+	print()	
+	#----------------------------------------------------------------------
+	# subtract the jets
+	subtractor = fj.Subtractor(gmbge)
+	subtracted_jets = subtractor(jets)
+	print("#-------------------- subtracted jets --------------------")
+	print_jets(subtracted_jets)
+#----------------------------------------------------------------------
+
+
 # MP note: read more about uproot unpacking at https://github.com/scikit-hep/uproot#filling-pandas-dataframes
 # MP note: there may be more efficient way to do this...
 
@@ -41,6 +82,8 @@ def main(args):
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()
+
+	# signal jet definition
 	jet_R0 = args.jetR
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 	jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorPtMax(1000.0) & fj.SelectorAbsEtaMax(1)
@@ -60,7 +103,8 @@ def main(args):
 		# , columns=['evid, pt, eta, phi']
 		e_jets = e_jets.append(_jets_a, ignore_index=True)
 		print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
-		print(_jets_a.describe())
+		# print(_jets_a.describe())
+		fj_example_02_area(_tpsj)
 
 	print(e_jets.describe())
 	joblib.dump(e_jets, args.output)
