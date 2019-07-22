@@ -43,7 +43,7 @@ def main(args):
 	print(jet_def)
 	print()
 
-	for i, e in pds_evs.head().iterrows():
+	for i, e in pds_evs.iterrows():
 		iev_id = int(e['ev_id'])
 		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id]
 		_tpsj = fj_parts_from_tracks(_ts)
