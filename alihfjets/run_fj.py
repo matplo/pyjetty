@@ -11,8 +11,9 @@ from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
 from pythiafjtools import pypythiafjtools as pyfj
 from mptools import pymptools as mp
-import joblib
 
+import pandas as pd
+import joblib
 
 def fj_parts_from_tracks(tracks):
 	fjparts = []
@@ -46,17 +47,22 @@ def main(args):
 	print(jet_def)
 	print()
 
-	e_jets = []
+	e_jets = pd.DataFrame(columns=['evid', 'pt', 'eta', 'phi'])
 
 	for i, e in pds_evs.iterrows():
 		iev_id = int(e['ev_id'])
 		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id]
 		_tpsj = fj_parts_from_tracks(_ts)
 		_jets = jet_selector(jet_def(_tpsj))
-		_jets_a = [[j.perp(), j.eta(), j.phi()] for j in _jets]
-		e_jets.append(_jets_a)
+		# _jets_a = [[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]
+		# _jets_a = pd.DataFrame(np.array([[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]), columns=['evid', 'pt', 'eta', 'phi'])
+		_jets_a = pd.DataFrame([[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets], columns=['evid', 'pt', 'eta', 'phi'])
+		# , columns=['evid, pt, eta, phi']
+		e_jets = e_jets.append(_jets_a, ignore_index=True)
 		print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
+		print(_jets_a.describe())
 
+	print(e_jets.describe())
 	joblib.dump(e_jets, args.output)
 
 if __name__ == '__main__':
