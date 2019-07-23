@@ -27,6 +27,7 @@ def add_standard_pythia_args(parser):
 	parser.add_argument('--beauty', help="enable hardbbbar", default=False, action='store_true')
 	parser.add_argument('--photon', help="enable prompt photon production",  default=False, action='store_true')
 	parser.add_argument('--nev', help='number of events', default=1, type=int)
+	parser.add_argument('-n', '--nevents', help='number of events', default=1000, type=int)
 
 
 def pythia_config_from_args(args):
