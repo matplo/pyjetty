@@ -108,8 +108,9 @@ def main(args):
 		_cs = fj.ClusterSequenceArea(_tpsj, jet_def, jet_area_def)
 		_jets = jet_selector(fj.sorted_by_pt(_cs.inclusive_jets()))
 		gmbge.set_particles(_tpsj)
-		print("rho   = ", gmbge.rho())
-		print("sigma = ", gmbge.sigma())
+		# print("rho   = ", gmbge.rho())
+		# print("sigma = ", gmbge.sigma())
+
 		# _jets = jet_selector(jet_def(_tpsj))
 		# _jets_a = [[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]
 		# _jets_a = pd.DataFrame(np.array([[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]), columns=['evid', 'pt', 'eta', 'phi'])
@@ -117,12 +118,12 @@ def main(args):
 								columns=output_columns)
 		# , columns=['evid, pt, eta, phi']
 		e_jets = e_jets.append(_jets_a, ignore_index=True)
-		print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
+		# print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
 		# print(_jets_a.describe())
 		if args.fjsubtract:
 			fj_example_02_area(_tpsj)
 
-	print(e_jets.describe())
+	# print(e_jets.describe())
 	joblib.dump(e_jets, args.output)
 
 if __name__ == '__main__':
