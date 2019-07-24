@@ -21,5 +21,5 @@ else
 	echo "[i] using ${1} for fjpydev location"
 fi
 
-export PYTHONPATH=${PYTHONPATH}:${STHISDIR}
-
+export PYTHONPATH=${PYTHONPATH}:${STHISDIR}:${STHISDIR}/lib
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${STHISDIR}/lib
