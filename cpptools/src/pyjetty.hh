@@ -1,3 +1,6 @@
+#ifndef PYJETTY_PYJETTY_HH
+#define PYJETTY_PYJETTY_HH
+
 namespace PyJetty
 {
 	class TestClass
@@ -8,3 +11,5 @@ namespace PyJetty
 		int status;
 	};
 }
+
+#endif

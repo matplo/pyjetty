@@ -51,6 +51,17 @@ else()
   message(FATAL_ERROR "Some of this requires pythia8-config... - must be in your \$PATH")
 endif()
 
+find_package(HepMC REQUIRED HepMC)
+if (HEPMC_FOUND)
+  include_directories(${HEPMC_INCLUDE_DIRS})
+  add_definitions(-DUSE_HEPMC)
+  message( STATUS "HEPMC_LIBRARIES: ${HEPMC_LIBRARIES}")
+  message( STATUS "HEPMC_LIBRARY_DIRS: ${HEPMC_LIBRARY_DIRS}")
+  message( STATUS "HEPMC_LINK_LIBRARIES: ${HEPMC_LINK_LIBRARIES}")
+else()
+  message(FATAL_ERROR "Some of this requires HEPMC ver 2.x...")
+endif()
+
 # Layout build dir like install dir
 if(UNIX)
   option(BUILD_SHARED_LIBS "Build shared libraries(.so or .dyld)." ON)
@@ -102,12 +113,12 @@ set(NAME_LIB ${MODULE})
 include_directories(${PROJECT_SOURCE_DIR}/src)
 file(GLOB SOURCES_LIB ${PROJECT_SOURCE_DIR}/src/*.cxx)
 message(STATUS "SOURCES: ${SOURCES_LIB}")
-string(REPLACE ".cxx" ".h" HEADERS_LIB "${SOURCES_LIB}")
+string(REPLACE ".cxx" ".hh" HEADERS_LIB "${SOURCES_LIB}")
 string(REPLACE ".cxx" "_wrap.c" SWIG_HEADERS_LIB "${SOURCES_LIB}")
 
 add_library(${NAME_LIB} SHARED ${SOURCES_LIB})
 target_include_directories(${NAME_LIB} PUBLIC ${PYTHIA8_DIR}/include ${ROOT_INCLUDE_DIR} ${FASTJET_DIR}/include)
-target_link_libraries(${NAME_LIB} ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${FASTJET_LIBS} ${Boost_LIBRARIES})
+target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${FASTJET_LIBS} ${HEPMC_LIBRARIES})
 
 ################
 # swigify...

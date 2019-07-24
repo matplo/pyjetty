@@ -1,4 +1,4 @@
-#include "pyjetty.h"
+#include "pyjetty.hh"
 
 namespace PyJetty
 {
