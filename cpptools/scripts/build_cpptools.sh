@@ -102,31 +102,28 @@ if [ ! -z ${unsetpyhonpath} ]; then
 fi
 
 install_path=${SCRIPTPATH}/..
-build_path=/tmp/pyjetty_build
-echo "[i] building in ${build_path}"
+build_path=${SCRIPTPATH}/../build
 
 clean=$(get_opt "clean" $@)
 if [ ! -z ${clean} ]; then
-	echo "[i] removing ${build_path}"
-	rm -rf ${build_path}
+    [ -d ${build_path} ] &&echo "[i] removing ${build_path}" && rm -rf ${build_path}
 	exit 0
 fi
 
 cleanall=$(get_opt "cleanall" $@)
 if [ ! -z ${cleanall} ]; then
-	echo "[i] removing ${build_path}"
-	rm -rf ${build_path}
-	echo "[i] removing ${SCRIPTPATH}/../lib"
-	rm -rf ${SCRIPTPATH}/../lib
+	[ -d ${build_path} ] &&echo "[i] removing ${build_path}" && rm -rf ${build_path}
+    [ -d ${install_path}/lib ] &&echo "[i] removing ${install_path}/lib" && rm -rf ${install_path}/lib
 	exit 0
 fi
 
+echo "[i] building in ${build_path}"
 mkdir -p ${build_path}
 if [ -d ${build_path} ]; then
 	cd ${build_path}
-	cmake -Bbuild -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} -DCMAKE_BUILD_TYPE=Release $(abspath ${SCRIPTPATH}/../cpptools) \
-	&& cmake --build build --target all -- -j $(n_cores) \
-	&& cmake --build build --target install
+	cmake -B. -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} -DCMAKE_BUILD_TYPE=Release $(abspath ${SCRIPTPATH}/..) \
+	&& cmake --build . --target all -- -j $(n_cores) \
+	&& cmake --build . --target install
 	cd -
 else
 	echo "[error] unable to access build path: ${build_path}"

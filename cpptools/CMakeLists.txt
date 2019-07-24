@@ -66,6 +66,9 @@ endif()
 if(UNIX)
   option(BUILD_SHARED_LIBS "Build shared libraries(.so or .dyld)." ON)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  set(CMAKE_MACOSX_RPATH ON)
+  # note here we are installing with RPATH explicit
+  set(CMAKE_INSTALL_RPATH ${CMAKE_BINARY_DIR}/lib)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -118,7 +121,8 @@ string(REPLACE ".cxx" "_wrap.c" SWIG_HEADERS_LIB "${SOURCES_LIB}")
 
 add_library(${NAME_LIB} SHARED ${SOURCES_LIB})
 target_include_directories(${NAME_LIB} PUBLIC ${PYTHIA8_DIR}/include ${ROOT_INCLUDE_DIR} ${FASTJET_DIR}/include)
-target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${FASTJET_LIBS} ${HEPMC_LIBRARIES})
+# target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${FASTJET_LIBS} ${HEPMC_LIBRARIES})
+target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${FASTJET_LIBS} ${HEPMC_LINK_LIBRARIES})
 
 ################
 # swigify...
@@ -152,4 +156,4 @@ endif(BUILD_PYTHON)
 #install_targets_custom()
 install(TARGETS ${NAME_LIB} LIBRARY DESTINATION lib)
 install(FILES ${PYTHON_INSTALL_FILES} DESTINATION lib)
-install(CODE "execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/lib/_${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_CURRENT_BINARY_DIR}/lib/_${PROJECT_NAME}.so)")
+install(CODE "execute_process(COMMAND ln -sfv ${CMAKE_INSTALL_PREFIX}/lib/_${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_INSTALL_PREFIX}/lib/_${PROJECT_NAME}.so)")

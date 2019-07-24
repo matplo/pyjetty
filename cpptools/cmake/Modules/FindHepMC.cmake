@@ -19,9 +19,19 @@ foreach(component ${HepMC_FIND_COMPONENTS})
   list(APPEND HEPMC_LIBRARIES ${HEPMC_${component}_LIBRARY})
   get_filename_component(_comp_dir ${HEPMC_${component}_LIBRARY} PATH)
   list(APPEND HEPMC_LIBRARY_DIRS ${_comp_dir})
+
+  find_library(COMP NAMES ${component} HINTS $ENV{HEPMC_DIR}/lib)
+  if (COMP)
+  	list(APPEND HEPMC_LINKS ${component})
+  endif()
 endforeach()
+
 if(HEPMC_LIBRARY_DIRS)
   list(REMOVE_DUPLICATES HEPMC_LIBRARY_DIRS)
+  set(HEPMC_LINK_LIBRARIES "-Wl,-rpath,${HEPMC_LIBRARY_DIRS} -L${HEPMC_LIBRARY_DIRS}")
+  foreach(comp ${HEPMC_LINKS})
+	  set(HEPMC_LINK_LIBRARIES "${HEPMC_LINK_LIBRARIES} -l${comp}")
+  endforeach()
 endif()
 
 # handle the QUIETLY and REQUIRED arguments and set HEPMC_FOUND to TRUE if
