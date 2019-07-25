@@ -16,6 +16,28 @@ from pythiafjtools import pypythiafjtools as pyfj
 from mptools import pymptools as mp
 import pyjetty
 
+
+def fj_parts_from_tracks(tracks):
+	fjparts = []
+	_pts  = tracks['ParticlePt']
+	_etas = tracks['ParticleEta']
+	_phis = tracks['ParticlePhi']
+	for index, row in tracks.iterrows():
+		lv = r.Math.PtEtaPhiMVector(row['ParticlePt'], row['ParticleEta'], row['ParticlePhi'], 0.0)
+		psj = fj.PseudoJet(lv.Px(), lv.Py(), lv.Pz(), lv.E())
+		psj.set_user_index(index)
+		fjparts.append(psj)
+	return fjparts
+
+def fj_parts_from_tracks_numpy(tracks):
+	fjparts = []
+	_pts  = tracks['ParticlePt']
+	_etas = tracks['ParticleEta']
+	_phis = tracks['ParticlePhi']
+	fjparts = pyjetty.vectorize_pt_eta_phi(	_pts.values, _etas.values, _phis.values)
+	return fjparts
+
+
 #----------------------------------------------------------------------
 # this is from examples/python/02-area.py
 def print_jets(jets):
@@ -75,7 +97,7 @@ def main(args):
 	maxrap = 0.9
 	jet_R0 = args.jetR
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-	jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorAbsEtaMax(1)
+	jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorPtMax(1000.0) & fj.SelectorAbsEtaMax(1)
 	jet_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(maxrap))
 	print(jet_def)
 
@@ -91,15 +113,34 @@ def main(args):
 	for i, e in pds_evs.iterrows():
 		iev_id = int(e['ev_id'])
 		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id]
-		_tpsj = pyjetty.vectorize_pt_eta_phi(_ts['ParticlePt'].values, _ts['ParticleEta'].values, _ts['ParticlePhi'].values)
+
+		start = time.time()		
+		_tpsj = fj_parts_from_tracks_numpy(_ts)
+		end = time.time()
+		dt_swig = end - start
+
+		start = time.time()
+		_tpsj_for = fj_parts_from_tracks(_ts)
+		end = time.time()
+		dt_for = end - start
+
+		# print ('len {} =?= {}'.format(len(_tpsj_for), len(_tpsj)))
+		print ('[i] timing (ntracks={}): dt_for: {} dt_swig: {} ratio: {}'.format(len(_tpsj), dt_for, dt_swig, dt_for / dt_swig))
+
 		# print('maximum particle rapidity:', max([psj.rap() for psj in _tpsj]))
 		_cs = fj.ClusterSequenceArea(_tpsj, jet_def, jet_area_def)
 		_jets = jet_selector(fj.sorted_by_pt(_cs.inclusive_jets()))
 		gmbge.set_particles(_tpsj)
-		# print("rho   = ", gmbge.rho(), "sigma = ", gmbge.sigma())
-		_jets_df = pd.DataFrame(	[[iev_id, j.perp(), j.eta(), j.phi(), j.area(), j.perp() - gmbge.rho() * j.area()] for j in _jets], 
+		# print("rho   = ", gmbge.rho())
+		# print("sigma = ", gmbge.sigma())
+
+		# _jets = jet_selector(jet_def(_tpsj))
+		# _jets_a = [[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]
+		# _jets_a = pd.DataFrame(np.array([[iev_id, j.perp(), j.eta(), j.phi()] for j in _jets]), columns=['evid', 'pt', 'eta', 'phi'])
+		_jets_a = pd.DataFrame(	[[iev_id, j.perp(), j.eta(), j.phi(), j.area(), j.perp() - gmbge.rho() * j.area()] for j in _jets], 
 								columns=output_columns)
-		e_jets = e_jets.append(_jets_df, ignore_index=True)
+		# , columns=['evid, pt, eta, phi']
+		e_jets = e_jets.append(_jets_a, ignore_index=True)
 		# print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
 		# print(_jets_a.describe())
 		if args.fjsubtract:
