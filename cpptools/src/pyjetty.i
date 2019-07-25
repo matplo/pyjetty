@@ -18,7 +18,10 @@
 
 /* Parse the header file to generate wrappers */
 %apply (double* IN_ARRAY1, int DIM1) {(double* seq, int n)};
+%apply (double* IN_ARRAY1, int DIM1) {(double* pt, int npt), (double* eta, int neta), (double* phi, int nphi)};
 %include "pyjetty.hh"
 %clear (double* seq, int n);
+%clear (double *pt, int npt, double *eta, int neta, double *phi, int nphi);
+
 %include "pythiahepmc.hh" 
 %include "pyfjtools.hh"

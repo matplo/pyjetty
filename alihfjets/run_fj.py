@@ -4,6 +4,9 @@ import os
 import argparse
 import uproot
 import ROOT as r
+import pandas as pd
+import joblib
+import time
 
 import fastjet as fj
 import pythia8
@@ -11,9 +14,8 @@ from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
 from pythiafjtools import pypythiafjtools as pyfj
 from mptools import pymptools as mp
+import pyjetty
 
-import pandas as pd
-import joblib
 
 def fj_parts_from_tracks(tracks):
 	fjparts = []
@@ -25,6 +27,14 @@ def fj_parts_from_tracks(tracks):
 		psj = fj.PseudoJet(lv.Px(), lv.Py(), lv.Pz(), lv.E())
 		psj.set_user_index(index)
 		fjparts.append(psj)
+	return fjparts
+
+def fj_parts_from_tracks_numpy(tracks):
+	fjparts = []
+	_pts  = tracks['ParticlePt']
+	_etas = tracks['ParticleEta']
+	_phis = tracks['ParticlePhi']
+	fjparts = pyjetty.vectorize_pt_eta_phi(	_pts.values, _etas.values, _phis.values)
 	return fjparts
 
 
@@ -103,7 +113,19 @@ def main(args):
 	for i, e in pds_evs.iterrows():
 		iev_id = int(e['ev_id'])
 		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id]
-		_tpsj = fj_parts_from_tracks(_ts)
+		start = time.time()
+		_tpsj_for = fj_parts_from_tracks(_ts)
+		end = time.time()
+		dt_for = end - start
+
+		start = time.time()		
+		_tpsj = fj_parts_from_tracks_numpy(_ts)
+		end = time.time()
+		dt_swig = end - start
+
+		# print ('len {} =?= {}'.format(len(_tpsj_for), len(_tpsj)))
+		print ('[i] timing (ntracks={}): dt_for: {} dt_swig: {} ratio: {}'.format(len(_tpsj), dt_for, dt_swig, dt_swig / dt_for))
+
 		# print('maximum particle rapidity:', max([psj.rap() for psj in _tpsj]))
 		_cs = fj.ClusterSequenceArea(_tpsj, jet_def, jet_area_def)
 		_jets = jet_selector(fj.sorted_by_pt(_cs.inclusive_jets()))
