@@ -22,6 +22,7 @@ import numpy as np
 import ROOT
 
 # Fastjet via python (from external library fjpydev)
+import pyjetty
 import fastjet as fj
 from recursivetools import pyrecursivetools as rt
 
@@ -44,7 +45,7 @@ def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
 
   # Load dataframe from .pkl file
   # dfTrack is a dataframe with one row per jet constituent: run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
-  print('--- %s seconds ---' % (time.time() - start_time))
+  print('--- {} seconds ---'.format(time.time() - start_time))
   print('Load track dataframe and unpickle...')
   dfTrack = pd.read_pickle(inputFileTrack)
   if debugLevel > 0:
@@ -53,8 +54,7 @@ def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
     print(dfTrack)
 
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
-  # This is currently the slowest part of the analysis, by factor ~10...
-  print('--- %s seconds ---' % (time.time() - start_time))
+  print('--- {} seconds ---'.format(time.time() - start_time))
   print('Transform the track dataframe into a series object of fastjet particles per event...')
 
   # (i) Group the track dataframe by event
@@ -63,10 +63,11 @@ def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
 
   # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
   df_fjparticles = df_tracks.apply(get_fjparticles)
+  
   if debugLevel > 0:
     print(df_fjparticles.dtypes)
     print(df_fjparticles)
-  print('--- %s seconds ---' % (time.time() - start_time))
+  print('--- {} seconds ---'.format(time.time() - start_time))
 
   # Print number of events
   nEvents = df_tracks.size().count()
@@ -85,21 +86,13 @@ def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
   print('Plot histograms...')
   plotHistograms(hDict, outputDir, fileFormat)
 
-  print('--- %s seconds ---' % (time.time() - start_time))
+  print('--- {} seconds ---'.format(time.time() - start_time))
 
 #---------------------------------------------------------------
 def get_fjparticles(df_tracks):
   
-  fj_particles = []
-  for index, row in df_tracks.iterrows(): # Not sure how to do this without iterating...
-    pt = row['ParticlePt']
-    eta = row['ParticleEta']
-    phi = row['ParticlePhi']
-    px = pt * math.cos(phi)
-    py = pt * math.sin(phi)
-    pz = pt * math.sinh(eta)
-    e = pt
-    fj_particles.append(fj.PseudoJet(px, py, pz, e))
+  # Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
+  fj_particles = pyjetty.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)
   
   return fj_particles
 
