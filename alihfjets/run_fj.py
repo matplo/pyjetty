@@ -101,7 +101,7 @@ def main(args):
 								columns=output_columns)
 		e_jets = e_jets.append(_jets_df, ignore_index=True)
 		# print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
-		# print(_jets_a.describe())
+		# print(_jets_df.describe())
 		if args.fjsubtract:
 			fj_example_02_area(_tpsj)
 
