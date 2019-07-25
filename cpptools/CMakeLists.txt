@@ -127,16 +127,20 @@ target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${
 ################
 # swigify...
 ################
-find_package(SWIG REQUIRED)
-include(${SWIG_USE_FILE})
-
 # Add subdirectories for each language if desired
 option(BUILD_PYTHON "Build Python SWIG module" ON)
 if(BUILD_PYTHON)
 
+  find_package(SWIG REQUIRED)
+  include(${SWIG_USE_FILE})
+
   # Include python
-  find_package(PythonLibs REQUIRED)
-  include_directories(${PYTHON_INCLUDE_PATH})
+  # find_package(PythonLibs REQUIRED)
+  # include_directories(${PYTHON_INCLUDE_PATH})
+  find_package(Python3 REQUIRED COMPONENTS NumPy)
+  message(STATUS "Python3 libraries: ${Python3_LIBRARIES}")
+  include_directories(${Python3_INCLUDE_DIRS})
+  include_directories(${Python3_NumPy_INCLUDE_DIRS})
 
   set(CMAKE_SWIG_FLAGS "")
   set_source_files_properties(src/${PROJECT_NAME}.i PROPERTIES CPLUSPLUS ON)
@@ -145,7 +149,7 @@ if(BUILD_PYTHON)
   # Add swig module
   swig_add_library(${PROJECT_NAME} TYPE SHARED LANGUAGE python 
                   SOURCES src/${PROJECT_NAME}.i ${SOURCES_LIB})
-  swig_link_libraries(${PROJECT_NAME} ${NAME_LIB} ${PYTHON_LIBRARIES})
+  swig_link_libraries(${PROJECT_NAME} ${NAME_LIB} ${Python3_LIBRARIES})
 
   # Files to install with Python
   set(PYTHON_INSTALL_FILES

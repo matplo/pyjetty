@@ -1,16 +1,16 @@
-#!/usr/bin/env python
+#!/usr/local/bin/python3
 
 import argparse
 import os
 import tqdm
 
 import fastjet as fj
+import pyjetty
 import pythia8
 from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
 
 from pythiautils import configuration as pyconf
-import pyjetty
 
 def main(args):
 	if args.nev < 10:
@@ -51,6 +51,7 @@ def main(args):
 	    print ('  Deltas={}'.format([s.Delta() for s in l]))
 	    print ('  kts={}'.format([s.Delta() for s in l]))
 	    print ( )
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='jet reco on alice data', prog=os.path.basename(__file__))
 	pyconf.add_standard_pythia_args(parser)

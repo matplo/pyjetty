@@ -3,6 +3,8 @@
 
 namespace PyJetty
 {
+	double sum(double *seq, int n);
+	
 	class TestClass
 	{
 	public:

@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/local/bin/python3
 
-import pythia8
 import pyjetty
+import pythia8
 
 def create_and_init_pythia(config_strings=[]):
 	pythia = pythia8.Pythia()
