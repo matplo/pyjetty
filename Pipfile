@@ -14,6 +14,7 @@ seaborn = "*"
 joblib = "*"
 tqdm = "*"
 ipython = "*"
+jupyterlab = "*"
 
 [requires]
 python_version = "3.7"
