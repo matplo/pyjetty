@@ -9,8 +9,7 @@ import joblib
 import time
 
 import fastjet as fj
-from recursivetools import pyrecursivetools as rt
-from lundplane import pylundplane as lund
+import fjcontrib
 import fjext
 
 #----------------------------------------------------------------------

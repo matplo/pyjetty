@@ -30,9 +30,9 @@ sys.path.append(os.path.abspath("{0}/fastjet-3.3.2-inst/lib/python{1}/site-packa
 
 import fastjet as fj
 import pythia8
-from recursivetools import pyrecursivetools as rt
-from pythiafjtools import pypythiafjtools as pyfj
-
+#from recursivetools import pyrecursivetools as rt
+#from pythiafjtools import pypythiafjtools as pyfj
+import fjcontrib
 import gzip
 
 def main():
@@ -70,8 +70,8 @@ def main():
         print_jets(jets)
 
         jet_def_rc = fj.JetDefinition(fj.antikt_algorithm, 0.1)
-        rc = rt.Recluster(jet_def_rc, True)
-        sd = rt.SoftDrop(0, 0.1, 1.0)
+        rc = fjcontrib.Recluster(jet_def_rc, True)
+        sd = fjcontrib.SoftDrop(0, 0.1, 1.0)
         for i,j in enumerate(jets):
             j_rc = rc.result(j)
             print('- [{0:3d}] orig pT={1:10.3f} reclustered pT={2:10.3f}'.format(i, j.perp(), j_rc.perp()))
@@ -79,7 +79,7 @@ def main():
             # j_sd.structure_of<fj.contrib.SoftDrop>().delta_R()
             # print(j_sd.python_info())
             print('  |-> after soft drop pT={0:10.3f} delta={1:10.3f}'.format(j_sd.perp(), j_sd.perp() - j.perp()))
-            sd_info = rt.get_SD_jet_info(j_sd)
+            sd_info = fjcontrib.get_SD_jet_info(j_sd)
             print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(sd_info.z, sd_info.dR, sd_info.mu))
 
 #----------------------------------------------------------------------

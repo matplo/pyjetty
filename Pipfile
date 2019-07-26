@@ -11,6 +11,9 @@ uproot = "*"
 pandas = "*"
 pyhepmc-ng = "*"
 seaborn = "*"
+joblib = "*"
+tqdm = "*"
+ipython = "*"
 
 [requires]
 python_version = "3.7"

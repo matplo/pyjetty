@@ -16,7 +16,10 @@ STHISDIR=$(thisdir)
 if [ -z ${1} ]; then
 	source ${STHISDIR}/.config_fjpydev
 	echo "[i] FJPYDEV=${FJPYDEV}"
-	source ${FJPYDEV}/test/setup_env.sh
+	# source ${FJPYDEV}/test/setup_env.sh
+	cd ${STHISDIR}
+	source ${FJPYDEV}/setup_env.sh
+	cd -
 else
 	echo "[i] using ${1} for fjpydev location"
 fi
