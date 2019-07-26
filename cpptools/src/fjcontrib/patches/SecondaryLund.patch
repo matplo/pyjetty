@@ -4,7 +4,7 @@
    virtual ~SecondaryLund() {}
  
    /// returns the index of branch corresponding to the root of the secondary plane
-+#ifndef SWIG
++#ifndef SWIGPYTHON
    virtual int result(const std::vector<LundDeclustering> & declusts) const = 0;
 +#else
 +  virtual int result(const std::vector<LundDeclustering> & declusts) const {return 0.0;}

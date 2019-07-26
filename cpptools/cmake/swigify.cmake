@@ -16,13 +16,20 @@ message(STATUS "Python3 libraries: ${Python3_LIBRARIES}")
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Python3_NumPy_INCLUDE_DIRS})
 
+if (SWIG_INTERFACE_FILE)
+		message(STATUS "Using swig file ${SWIG_INTERFACE_FILE}")
+	else()
+		set(SWIG_INTERFACE_FILE ${MODULE_NAME}.i)
+		message(STATUS "Using swig file ${SWIG_INTERFACE_FILE} - from MODULE_NAME")
+endif()
+
 set(CMAKE_SWIG_FLAGS "")
-set_source_files_properties(${MODULE_NAME}.i PROPERTIES CPLUSPLUS ON)
-set_property(SOURCE ${MODULE_NAME}.i PROPERTY SWIG_MODULE_NAME ${MODULE_NAME})
+set_source_files_properties(${SWIG_INTERFACE_FILE} PROPERTIES CPLUSPLUS ON)
+set_property(SOURCE ${SWIG_INTERFACE_FILE} PROPERTY SWIG_MODULE_NAME ${MODULE_NAME})
 
 # Add swig module
 swig_add_library(${MODULE_NAME} TYPE SHARED LANGUAGE python 
-                SOURCES ${MODULE_NAME}.i ${SOURCES_LIB})
+                SOURCES ${SWIG_INTERFACE_FILE} ${SOURCES_LIB})
 swig_link_libraries(${MODULE_NAME} ${NAME_LIB} ${Python3_LIBRARIES})
 
 # Files to install with Python

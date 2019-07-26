@@ -58,7 +58,7 @@ if [ ! -z ${1} ]; then
 	dirinst=${1}
 fi
 
-if [ ! -e ${SCRIPTPATH}/${fname}.tar.gz ]; then
+if [ ! -e ${SCRIPTPATH}/build/${fname}.tar.gz ]; then
 	cd ${SCRIPTPATH}/build
 	wget https://lhapdf.hepforge.org/downloads/?f=${fname}.tar.gz -O ${fname}.tar.gz
 fi

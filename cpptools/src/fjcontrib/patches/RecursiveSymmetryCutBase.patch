@@ -6,7 +6,7 @@
   protected:
     // the methods below have to be defined by deerived classes
     //----------------------------------------------------------------------
-+ #ifndef SWIG
++ #ifndef SWIGPYTHON
     /// the cut on the symmetry measure (typically z) that one need to
     /// apply for a given pair of subjets p1 and p2
     virtual double symmetry_cut_fn(const PseudoJet & /* p1 */, 
