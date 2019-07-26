@@ -90,14 +90,15 @@ def main(args):
 
 	for i, e in pds_evs.iterrows():
 		iev_id = int(e['ev_id'])
-		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id]
+		run_number = int(e['run_number'])
+		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id].loc[pds_trks['run_number'] == run_number]
 		_tpsj = pyjetty.vectorize_pt_eta_phi(_ts['ParticlePt'].values, _ts['ParticleEta'].values, _ts['ParticlePhi'].values)
 		# print('maximum particle rapidity:', max([psj.rap() for psj in _tpsj]))
 		_cs = fj.ClusterSequenceArea(_tpsj, jet_def, jet_area_def)
 		_jets = jet_selector(fj.sorted_by_pt(_cs.inclusive_jets()))
 		gmbge.set_particles(_tpsj)
 		# print("rho   = ", gmbge.rho(), "sigma = ", gmbge.sigma())
-		_jets_df = pd.DataFrame(	[[iev_id, j.perp(), j.eta(), j.phi(), j.area(), j.perp() - gmbge.rho() * j.area()] for j in _jets], 
+		_jets_df = pd.DataFrame([[iev_id, j.perp(), j.eta(), j.phi(), j.area(), j.perp() - gmbge.rho() * j.area()] for j in _jets], 
 								columns=output_columns)
 		e_jets = e_jets.append(_jets_df, ignore_index=True)
 		# print('event', i, 'number of parts', len(_tpsj), 'number of jets', len(_jets))
