@@ -6,10 +6,11 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-jupyter = "*"
-lab = "*"
-jupyter-lab = "*"
-jupyterlab = "*"
+numpy = "*"
+uproot = "*"
+pandas = "*"
+pyhepmc-ng = "*"
+seaborn = "*"
 
 [requires]
 python_version = "3.7"
