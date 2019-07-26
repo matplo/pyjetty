@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-  Simple analysis script to read a pandas dataframe of track information
+  Simple analysis script to read a ROOT TTree of track information
   and do jet-finding, and plot some basic histograms.
   
   Author: James Mulligan (james.mulligan@berkeley.edu)
@@ -17,7 +17,8 @@ import math
 import time
 
 # Data analysis and plotting
-import pandas as pd
+import uproot
+import pandas
 import numpy as np
 import ROOT
 
@@ -33,7 +34,7 @@ ROOT.gROOT.SetBatch(True)
 debugLevel = 0
 
 #---------------------------------------------------------------
-def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
+def plotJetDataframe(inputFile, outputDir, fileFormat):
   
   start_time = time.time()
   
@@ -43,26 +44,22 @@ def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
   if not os.path.exists(outputDir):
     os.makedirs(outputDir)
 
-  # Load dataframe from .pkl file
-  # dfTrack is a dataframe with one row per jet constituent: run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
+  # Convert ROOT TTree to pandas dataframe
+  # track_df is a dataframe with one row per jet constituent: run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   print('--- {} seconds ---'.format(time.time() - start_time))
-  print('Load track dataframe and unpickle...')
-  dfTrack = pd.read_pickle(inputFileTrack)
-  if debugLevel > 0:
-    print(dfTrack.dtypes)
-  if debugLevel > 1:
-    print(dfTrack)
+  print('Convert ROOT trees to pandas dataframes...')
+  track_df = load_dataframe(inputFile)
 
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
   print('Transform the track dataframe into a series object of fastjet particles per event...')
 
   # (i) Group the track dataframe by event
-  #     df_tracks is a DataFrameGroupBy object with one track dataframe per event
-  df_tracks = dfTrack.groupby(['run_number','ev_id'])
+  #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
+  track_df_grouped = track_df.groupby(['run_number','ev_id'])
 
   # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
-  df_fjparticles = df_tracks.apply(get_fjparticles)
+  df_fjparticles = track_df_grouped.apply(get_fjparticles)
   
   if debugLevel > 0:
     print(df_fjparticles.dtypes)
@@ -70,9 +67,9 @@ def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
   print('--- {} seconds ---'.format(time.time() - start_time))
 
   # Print number of events
-  nEvents = df_tracks.size().count()
+  nEvents = track_df_grouped.size().count()
   print('Number of events: {}'.format(nEvents))
-  nTracks = len(dfTrack.index)
+  nTracks = len(track_df.index)
   print('Number of tracks: {}'.format(nTracks))
 
   # Initialize histogram dictionary
@@ -87,6 +84,30 @@ def plotJetDataframe(inputFileTrack, outputDir, fileFormat):
   plotHistograms(hDict, outputDir, fileFormat)
 
   print('--- {} seconds ---'.format(time.time() - start_time))
+
+#---------------------------------------------------------------
+def load_dataframe(inputFile):
+  
+  # Load event tree into dataframe, and apply event selection
+  event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
+  event_tree = uproot.open(inputFile)[event_tree_name]
+  if not event_tree:
+    print('Tree {} not found in file {}'.format('tree_event_char', inputFile))
+  event_df_orig = event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
+  event_df_orig.reset_index(drop=True)
+  event_df = event_df_orig.query('is_ev_rej == 0')
+  event_df.reset_index(drop=True)
+
+  # Load track tree into dataframe
+  track_tree_name = 'PWGHF_TreeCreator/tree_Particle'
+  track_tree = uproot.open(inputFile)[track_tree_name]
+  if not track_tree:
+    print('Tree {} not found in file {}'.format('tree_Particle', inputFile))
+  track_df_orig = track_tree.pandas.df()
+
+  # Merge event info into track tree
+  track_df = pandas.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
+  return track_df
 
 #---------------------------------------------------------------
 def get_fjparticles(df_tracks):
@@ -237,10 +258,10 @@ def plotHist(h, outputFilename, drawOptions = "", setLogy = False, setLogz = Fal
 if __name__ == '__main__':
   # Define arguments
   parser = argparse.ArgumentParser(description='Plot analysis histograms')
-  parser.add_argument('-f', '--inputFileTrack', action='store',
-                      type=str, metavar='inputFileTrack',
-                      default='AnalysisResultsTrackMergedIndex0.pkl',
-                      help='Path of pickled AnalysisResults file for track tree')
+  parser.add_argument('-f', '--inputFile', action='store',
+                      type=str, metavar='inputFile',
+                      default='AnalysisResults.root',
+                      help='Path of ROOT file containing TTrees')
   parser.add_argument('-o', '--outputDir', action='store',
                       type=str, metavar='outputDir',
                       default='./myTestFigures',
@@ -254,14 +275,14 @@ if __name__ == '__main__':
   args = parser.parse_args()
   
   print('Configuring...')
-  print('inputFileTrack: \'{0}\''.format(args.inputFileTrack))
+  print('inputFile: \'{0}\''.format(args.inputFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
   print('imageFormat: \'{0}\''.format(args.imageFormat))
   print('----------------------------------------------------------------')
   
   # If invalid inputFile is given, exit
-  if not os.path.exists(args.inputFileTrack):
-    print('File \"{0}\" does not exist! Exiting!'.format(args.inputFileTrack))
+  if not os.path.exists(args.inputFile):
+    print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
     sys.exit(0)
 
-  plotJetDataframe(inputFileTrack = args.inputFileTrack, outputDir = args.outputDir, fileFormat = args.imageFormat)
+  plotJetDataframe(inputFile = args.inputFile, outputDir = args.outputDir, fileFormat = args.imageFormat)
