@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 
-import pyjetty
 import pythia8
+import pythiaext
 
 def create_and_init_pythia(config_strings=[]):
 	pythia = pythia8.Pythia()
@@ -16,7 +16,7 @@ def create_and_init_pythia(config_strings=[]):
 def main():
 	pythia = create_and_init_pythia(["PhaseSpace:pTHatMin = 2", "HardQCD:all = on"])
 	sfoutname = "test_write_pythia_hepmc2.dat"
-	pyhepmcwriter = pyjetty.Pythia8HepMCWrapper(sfoutname)
+	pyhepmcwriter = pythiaext.Pythia8HepMCWrapper(sfoutname)
 	for iEvent in range(100):
 		if not pythia.next(): continue
 		pyhepmcwriter.fillEvent(pythia)

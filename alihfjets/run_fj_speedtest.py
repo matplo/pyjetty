@@ -14,7 +14,7 @@ from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
 from pythiafjtools import pypythiafjtools as pyfj
 from mptools import pymptools as mp
-import pyjetty
+import fjext
 
 
 def fj_parts_from_tracks(tracks):
@@ -34,7 +34,7 @@ def fj_parts_from_tracks_numpy(tracks):
 	_pts  = tracks['ParticlePt']
 	_etas = tracks['ParticleEta']
 	_phis = tracks['ParticlePhi']
-	fjparts = pyjetty.vectorize_pt_eta_phi(	_pts.values, _etas.values, _phis.values)
+	fjparts = fjext.vectorize_pt_eta_phi(	_pts.values, _etas.values, _phis.values)
 	return fjparts
 
 

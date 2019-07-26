@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.14.2)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+include(install_targets_custom)
 
 # Apple: Don't modify install_name when touching RPATH.
 if(POLICY CMP0068)
@@ -22,45 +23,6 @@ endif()
 
 project(pyjetty VERSION 1.0 LANGUAGES CXX)
 message(STATUS "version: ${PROJECT_VERSION}")
-
-find_program ( FASTJETCONFIG fastjet-config )
-message(STATUS "Using fjconfig at ${FASTJETCONFIG}")
-if (EXISTS ${FASTJETCONFIG})
-  execute_process ( COMMAND ${FASTJETCONFIG} --prefix WORKING_DIRECTORY /tmp OUTPUT_VARIABLE FASTJET_DIR OUTPUT_STRIP_TRAILING_WHITESPACE )
-  execute_process ( COMMAND ${FASTJETCONFIG} --cxxflags WORKING_DIRECTORY /tmp OUTPUT_VARIABLE FASTJET_CXXFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE )
-  execute_process ( COMMAND ${FASTJETCONFIG} --libs --plugins WORKING_DIRECTORY /tmp OUTPUT_VARIABLE FASTJET_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE )
-  message( STATUS "FASTJET_DIR: ${FASTJET_DIR}")
-  message( STATUS "FASTJET_CXXFLAGS: ${FASTJET_CXXFLAGS}")
-  message( STATUS "FASTJET_LIBS: ${FASTJET_LIBS}")
-  add_compile_options(${FASTJET_CXXFLAGS})
-else()
-  message(FATAL_ERROR "This really requires fastjet-config... - must be in your \$PATH")
-endif()
-
-find_program ( PYTHIA8CONFIG pythia8-config )
-message(STATUS "Using pythia8-config at ${PYTHIA8CONFIG}")
-if (EXISTS ${PYTHIA8CONFIG})
-  execute_process ( COMMAND ${PYTHIA8CONFIG} --prefix WORKING_DIRECTORY /tmp OUTPUT_VARIABLE PYTHIA8_DIR OUTPUT_STRIP_TRAILING_WHITESPACE )
-  execute_process ( COMMAND ${PYTHIA8CONFIG} --cxxflags WORKING_DIRECTORY /tmp OUTPUT_VARIABLE PYTHIA8_CXXFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE )
-  execute_process ( COMMAND ${PYTHIA8CONFIG} --ldflags WORKING_DIRECTORY /tmp OUTPUT_VARIABLE PYTHIA8_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE )
-  message( STATUS "PYTHIA8_DIR: ${PYTHIA8_DIR}")
-  message( STATUS "PYTHIA8_CXXFLAGS: ${PYTHIA8_CXXFLAGS}")
-  message( STATUS "PYTHIA8_LDFLAGS: ${PYTHIA8_LDFLAGS}")
-  add_compile_options(${PYTHIA8_CXXFLAGS})
-else()
-  message(FATAL_ERROR "Some of this requires pythia8-config... - must be in your \$PATH")
-endif()
-
-find_package(HepMC REQUIRED HepMC)
-if (HEPMC_FOUND)
-  include_directories(${HEPMC_INCLUDE_DIRS})
-  add_definitions(-DUSE_HEPMC)
-  message( STATUS "HEPMC_LIBRARIES: ${HEPMC_LIBRARIES}")
-  message( STATUS "HEPMC_LIBRARY_DIRS: ${HEPMC_LIBRARY_DIRS}")
-  message( STATUS "HEPMC_LINK_LIBRARIES: ${HEPMC_LINK_LIBRARIES}")
-else()
-  message(FATAL_ERROR "Some of this requires HEPMC ver 2.x...")
-endif()
 
 # Layout build dir like install dir
 if(UNIX)
@@ -99,6 +61,7 @@ else()
 endif()
 
 message( STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+message( STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Force default build type to Release
 if(NOT CMAKE_BUILD_TYPE)
@@ -107,57 +70,4 @@ if(NOT CMAKE_BUILD_TYPE)
     FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
-# now actual build instructions
-
-set(MODULE_NAME cpptools)
-set(MODULE ${PROJECT_NAME}_${MODULE_NAME})
-set(NAME_LIB ${MODULE})
-
-include_directories(${PROJECT_SOURCE_DIR}/src)
-file(GLOB SOURCES_LIB ${PROJECT_SOURCE_DIR}/src/*.cxx)
-message(STATUS "SOURCES: ${SOURCES_LIB}")
-string(REPLACE ".cxx" ".hh" HEADERS_LIB "${SOURCES_LIB}")
-string(REPLACE ".cxx" "_wrap.c" SWIG_HEADERS_LIB "${SOURCES_LIB}")
-
-add_library(${NAME_LIB} SHARED ${SOURCES_LIB})
-target_include_directories(${NAME_LIB} PUBLIC ${PYTHIA8_DIR}/include ${ROOT_INCLUDE_DIR} ${FASTJET_DIR}/include)
-# target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${FASTJET_LIBS} ${HEPMC_LIBRARIES})
-target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${ROOT_LIBRARIES} ${FASTJET_LIBS} ${HEPMC_LINK_LIBRARIES})
-
-################
-# swigify...
-################
-# Add subdirectories for each language if desired
-option(BUILD_PYTHON "Build Python SWIG module" ON)
-if(BUILD_PYTHON)
-
-  find_package(SWIG REQUIRED)
-  include(${SWIG_USE_FILE})
-
-  # Include python
-  # find_package(PythonLibs REQUIRED)
-  # include_directories(${PYTHON_INCLUDE_PATH})
-  find_package(Python3 REQUIRED COMPONENTS NumPy)
-  message(STATUS "Python3 libraries: ${Python3_LIBRARIES}")
-  include_directories(${Python3_INCLUDE_DIRS})
-  include_directories(${Python3_NumPy_INCLUDE_DIRS})
-
-  set(CMAKE_SWIG_FLAGS "")
-  set_source_files_properties(src/${PROJECT_NAME}.i PROPERTIES CPLUSPLUS ON)
-  set_property(SOURCE src/${PROJECT_NAME}.i PROPERTY SWIG_MODULE_NAME ${PROJECT_NAME})
-
-  # Add swig module
-  swig_add_library(${PROJECT_NAME} TYPE SHARED LANGUAGE python 
-                  SOURCES src/${PROJECT_NAME}.i ${SOURCES_LIB})
-  swig_link_libraries(${PROJECT_NAME} ${NAME_LIB} ${Python3_LIBRARIES})
-
-  # Files to install with Python
-  set(PYTHON_INSTALL_FILES
-          ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.py
-          ${CMAKE_CURRENT_BINARY_DIR}/lib/_${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
-endif(BUILD_PYTHON)
-
-#install_targets_custom()
-install(TARGETS ${NAME_LIB} LIBRARY DESTINATION lib)
-install(FILES ${PYTHON_INSTALL_FILES} DESTINATION lib)
-install(CODE "execute_process(COMMAND ln -sfv ${CMAKE_INSTALL_PREFIX}/lib/_${PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_INSTALL_PREFIX}/lib/_${PROJECT_NAME}.so)")
+add_subdirectory(src)

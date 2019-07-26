@@ -1,19 +1,9 @@
-#include "pyjetty.hh"
+#include "fjtools.hh"
 #include <iostream>
 #include <fastjet/PseudoJet.hh>
 
 namespace PyJetty
 {
-	double sum(double *seq, int n)
-	{
-		double _sum = 0;
-		for (unsigned int i = 0; i < n; i++)
-		{
-			_sum += seq[i];
-		}
-		return _sum;
-	}
-
 	std::vector<fastjet::PseudoJet> vectorize_pt_eta_phi(double *pt, int npt, double *eta, int neta, double *phi, int nphi)
 	{
 		std::vector<fastjet::PseudoJet> v;
@@ -34,7 +24,4 @@ namespace PyJetty
 		}
 		return v;
 	}
-
-	TestClass::TestClass() {;}
-	TestClass::~TestClass() {;}
 };

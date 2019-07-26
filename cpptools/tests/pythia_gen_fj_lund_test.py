@@ -1,12 +1,12 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env ipython
 
 import argparse
 import os
 import tqdm
 
 import fastjet as fj
-import pyjetty
 import pythia8
+import pythiafjext
 from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
 
@@ -33,7 +33,7 @@ def main(args):
 	for i in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
-		parts = pyjetty.vectorize(pythia, True, -1, 1, False)
+		parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
 		jets = jet_selector(jet_def(parts))
 		all_jets.extend(jets)
 

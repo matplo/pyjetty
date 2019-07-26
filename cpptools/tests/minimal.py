@@ -1,6 +1,8 @@
+#!/usr/bin/env ipython
+
 import fastjet as fj
-import pyjetty
 import pythia8
+import pythiafjext
 from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
 from pythiautils import configuration as pyconf
@@ -12,8 +14,6 @@ import numpy as np
 parser = argparse.ArgumentParser(description='jet reco on alice data', prog=os.path.basename(__file__))
 pyconf.add_standard_pythia_args(parser)
 args = parser.parse_args()	
-mycfg = []
-pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
 
 # print the banner first
 fj.ClusterSequence.print_banner()
@@ -22,14 +22,16 @@ print()
 jet_R0 = 0.4
 jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 jet_selector = fj.SelectorPtMin(100.0) & fj.SelectorPtMax(200.0) & fj.SelectorAbsEtaMax(1)
-sd = rt.SoftDrop(0, 0.1, 1.0)
+# sd = rt.SoftDrop(0, 0.1, 1.0)
 
 all_jets = []
 
+mycfg = []
+pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
 for i in tqdm.tqdm(range(100)):
 	if not pythia.next():
 		continue
-	parts = pyjetty.vectorize(pythia, True, -1, 1, False)
+	parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
 	jets = jet_selector(jet_def(parts))
 	all_jets.extend(jets)
 
@@ -47,11 +49,3 @@ for l in lunds:
 	print ('  Deltas={}'.format([s.Delta() for s in l]))
 	print ('  kts={}'.format([s.Delta() for s in l]))
 	print ( )
-
-print("now toying with numpy arrays...")
-a = np.array([1,2,3])
-b = np.array([1,2,1])
-d = pyjetty.sum(a)
-print(d)
-d = pyjetty.sum(b)
-print(d)

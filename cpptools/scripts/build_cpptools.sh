@@ -117,15 +117,31 @@ if [ ! -z ${cleanall} ]; then
 	exit 0
 fi
 
+verbose=$(get_opt "verbose" $@)
+if [ ! -z ${verbose} ]; then
+    export VERBOSE=1
+else
+    unset VERBOSE
+fi
+
+
 DVENVOPT=""
 in_venv=$(python -c "import sys; print(hasattr(sys, 'real_prefix'))")
 [ "x${in_venv}" == "xTrue" ] && DVENVOPT="-DPython3_FIND_VIRTUALENV=ONLY" && echo "- Find/use python in VENV -> option set: ${DVENVOPT}"
+
+build_configuration="Release"
+debug=$(get_opt "debug" $@)
+if [ ! -z ${debug} ]; then
+    build_configuration="Debug"
+fi
 
 echo "[i] building in ${build_path}"
 mkdir -p ${build_path}
 if [ -d ${build_path} ]; then
 	cd ${build_path}
-	cmake -B. -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} ${DVENVOPT} -DCMAKE_BUILD_TYPE=Release $(abspath ${SCRIPTPATH}/..) \
+	cmake -B. -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} \
+    ${DVENVOPT} -DCMAKE_BUILD_TYPE=${build_configuration} \
+    $(abspath ${SCRIPTPATH}/..) \
 	&& cmake --build . --target all -- -j $(n_cores) \
 	&& cmake --build . --target install
 	cd -

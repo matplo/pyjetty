@@ -9,12 +9,9 @@ import joblib
 import time
 
 import fastjet as fj
-import pythia8
 from recursivetools import pyrecursivetools as rt
 from lundplane import pylundplane as lund
-from pythiafjtools import pypythiafjtools as pyfj
-from mptools import pymptools as mp
-import pyjetty
+import fjext
 
 #----------------------------------------------------------------------
 # this is from examples/python/02-area.py
@@ -92,7 +89,7 @@ def main(args):
 		iev_id = int(e['ev_id'])
 		run_number = int(e['run_number'])
 		_ts = pds_trks.loc[pds_trks['ev_id'] == iev_id].loc[pds_trks['run_number'] == run_number]
-		_tpsj = pyjetty.vectorize_pt_eta_phi(_ts['ParticlePt'].values, _ts['ParticleEta'].values, _ts['ParticlePhi'].values)
+		_tpsj = fjext.vectorize_pt_eta_phi(_ts['ParticlePt'].values, _ts['ParticleEta'].values, _ts['ParticlePhi'].values)
 		# print('maximum particle rapidity:', max([psj.rap() for psj in _tpsj]))
 		_cs = fj.ClusterSequenceArea(_tpsj, jet_def, jet_area_def)
 		_jets = jet_selector(fj.sorted_by_pt(_cs.inclusive_jets()))
