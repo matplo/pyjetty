@@ -3,12 +3,13 @@
 - some work on HEP things in python (with quite a bit of help on c++ side)
 - this uses CMake, SWIG
 - Python3 required
+- recommendation: work within pipenv (or virtual env)
 
 # example python script
 
  - `cpptools/tests/pythia_gen_fj_lund_test.py`
 
-## recommended build/setup
+# recommended build/setup
 
 ```
 source setup.sh
@@ -25,7 +26,7 @@ Notes:
 - for PYTHIA and/or FASTJET `pythia8-config` and/or `fastjet-config` are expected to be accessible (in PATH)
 - export $PYJETTY_SETUP_EXTERNAL to point to a shell script setting up the environment or set it to a value - for example: `export ${PYJETTY_SETUP_EXTERNAL}=mysetup.sh`
 
-## add/extend c++ (swig) to python
+# add/extend c++ (swig) to python
 
 - in the `cpptools/src` directory create your code/directory
 - edit `cpptools/src/pyjetty.i`, `cpptools/src/CMakeLists.txt` as needed

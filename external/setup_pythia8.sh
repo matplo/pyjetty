@@ -102,6 +102,12 @@ if [ ! -d ${dirinst} ] || [ ${reconfigure} ]; then
 	    echo "[i] python exec: ${python_exec}"
 	    echo "[i] python bin dir: ${python_bin_dir}"
 	    echo "[i] python include: ${python_inc_dir}"
+	    if [ ! -e ${python_bin_dir}/python ]; then
+	    	python_bin_dir=${SCRIPTPATH}/build/pythia-python-bin
+	    	mkdir ${python_bin_dir}
+	    	ln -s ${python_exec} ${python_bin_dir}/python 
+		    echo "[i] fix-up-python bin dir: ${python_bin_dir}"
+		fi
     	if [ ! -d ${dirinst} ]; then
 			run_configure
 			make -j $(n_cores) && make install

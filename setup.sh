@@ -32,6 +32,8 @@ if [ -z ${PYJETTY_SETUP_EXTERNAL} ]; then
 	[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL}
 fi
 
+[ ! -d ${STHISDIR}/cpptools/lib ] && ${STHISDIR}/cpptools/scripts/build_cpptools.sh
+
 export PYTHONPATH=${PYTHONPATH}:${STHISDIR}:${STHISDIR}/cpptools/lib
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib
 export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib

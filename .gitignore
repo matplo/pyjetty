@@ -5,3 +5,4 @@ __pycache__
 *.confobj
 *.joblib
 .ipynb_checkpoints
+.pyjetty_config_external

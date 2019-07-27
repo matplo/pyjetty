@@ -5,15 +5,15 @@ import argparse
 import os
 import numpy as np
 
-import fastjet as fj
-import fjcontrib
 import pythia8
 import pythiafjext
+import fastjet as fj
+import fjcontrib
 
-from pythiautils import configuration as pyconf
+#from pythiautils import configuration as pyconf
 
 parser = argparse.ArgumentParser(description='jet reco on alice data', prog=os.path.basename(__file__))
-pyconf.add_standard_pythia_args(parser)
+#pyconf.add_standard_pythia_args(parser)
 args = parser.parse_args()	
 
 # print the banner first
@@ -28,7 +28,10 @@ print(jet_def)
 all_jets = []
 
 mycfg = ['PhaseSpace:pThatMin = 10']
-pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
+#pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
+pythia = pythia8.Pythia()
+pythia.readString("HardQCD:all=on")
+pythia.init()
 for i in tqdm.tqdm(range(10)):
 	if not pythia.next():
 		continue
