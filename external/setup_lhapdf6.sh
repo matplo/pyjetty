@@ -52,7 +52,7 @@ dirsrc=${SCRIPTPATH}/build/LHAPDF-${version}
 dirinst=${SCRIPTPATH}/packages/LHAPDF-${version}
 
 [ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
-[ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/packages
+[ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
 
 if [ ! -z ${1} ]; then
 	dirinst=${1}

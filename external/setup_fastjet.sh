@@ -54,7 +54,7 @@ if [ ! -z ${1} ]; then
 fi
 
 [ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
-[ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/packages
+[ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
 
 if [ ! -e ${SCRIPTPATH}/build/${fjfname}.tar.gz ]; then
 	cd ${SCRIPTPATH}/build

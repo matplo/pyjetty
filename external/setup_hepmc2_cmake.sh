@@ -52,6 +52,9 @@ fname=HepMC-${version}
 dirsrc=${SCRIPTPATH}/build/HepMC-${version}
 dirinst=${SCRIPTPATH}/packages/hepmc-${version}
 
+[ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
+[ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
+
 if [ ! -z ${1} ]; then
 	dirinst=${1}
 fi
