@@ -4,3 +4,4 @@ __pycache__
 *.root
 *.confobj
 *.joblib
+.ipynb_checkpoints
