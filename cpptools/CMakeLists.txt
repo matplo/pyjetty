@@ -30,12 +30,32 @@ if(UNIX)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
   set(CMAKE_MACOSX_RPATH ON)
   # note here we are installing with RPATH explicit
-  set(CMAKE_INSTALL_RPATH ${CMAKE_BINARY_DIR}/lib)
+  # set(CMAKE_INSTALL_RPATH ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-  include_directories("/usr/local/include")
-  link_directories("/usr/local/lib")
+  if (APPLE)
+    # something for SIP - always FULL RPATH
+    # https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/RPATH-handling
+    # use, i.e. don't skip the full RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+    # when building, don't use the install RPATH already
+    # (but later on when installing)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    # add the automatically determined parts of the RPATH
+    # which point to directories outside the build tree to the install RPATH
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+    # the RPATH to be used when installing, but only if it's not a system directory
+    list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+    if("${isSystemDir}" STREQUAL "-1")
+       set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    endif("${isSystemDir}" STREQUAL "-1")
+    # something for brew
+    include_directories("/usr/local/include")
+    link_directories("/usr/local/lib")
+  endif(APPLE)
   # for multi-config builds (e.g. msvc,xcode)
   foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
     string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)

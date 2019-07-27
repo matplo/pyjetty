@@ -20,7 +20,7 @@ if (SWIG_INTERFACE_FILE)
 		message(STATUS "Using swig file ${SWIG_INTERFACE_FILE}")
 	else()
 		set(SWIG_INTERFACE_FILE ${MODULE_NAME}.i)
-		message(STATUS "Using swig file ${SWIG_INTERFACE_FILE} - from MODULE_NAME")
+		message(STATUS "Using swig file ${SWIG_INTERFACE_FILE} - from MODULE_NAME := ${MODULE_NAME}")
 endif()
 
 set(CMAKE_SWIG_FLAGS "")
@@ -28,9 +28,8 @@ set_source_files_properties(${SWIG_INTERFACE_FILE} PROPERTIES CPLUSPLUS ON)
 set_property(SOURCE ${SWIG_INTERFACE_FILE} PROPERTY SWIG_MODULE_NAME ${MODULE_NAME})
 
 # Add swig module
-swig_add_library(${MODULE_NAME} TYPE SHARED LANGUAGE python 
-                SOURCES ${SWIG_INTERFACE_FILE} ${SOURCES_LIB})
-swig_link_libraries(${MODULE_NAME} ${NAME_LIB} ${Python3_LIBRARIES})
+swig_add_library(${MODULE_NAME} TYPE SHARED LANGUAGE python SOURCES ${SWIG_INTERFACE_FILE})
+swig_link_libraries(${MODULE_NAME} ${NAME_LIB} ${Python3_LIBRARIES} ${SWIG_MODULE_LINK_LIBRARIES})
 
 # Files to install with Python
 set(PYTHON_INSTALL_FILES

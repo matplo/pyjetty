@@ -1,6 +1,6 @@
-add_compile_options(${PYTHIA8_CXXFLAGS})
+add_compile_options(${FASTJET_CXXFLAGS})
 
-set(MODULE_NAME pythiafjext)
+set(MODULE_NAME fjext)
 set(MODULE ${PROJECT_NAME}_${MODULE_NAME})
 set(NAME_LIB ${MODULE})
 
@@ -11,9 +11,10 @@ string(REPLACE ".cxx" ".hh" HEADERS_LIB "${SOURCES_LIB}")
 string(REPLACE ".cxx" "_wrap.c" SWIG_HEADERS_LIB "${SOURCES_LIB}")
 
 add_library(${NAME_LIB} SHARED ${SOURCES_LIB})
-target_include_directories(${NAME_LIB} PUBLIC ${PYTHIA8_DIR}/include ${FASTJET_DIR}/include)
-target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${FASTJET_LIBS})
+target_include_directories(${NAME_LIB} PUBLIC ${FASTJET_DIR}/include)
+target_link_libraries(${NAME_LIB} PUBLIC ${FASTJET_LIBS})
 
+set(SWIG_TARGET_LINK_LIBRARIES ${FASTJET_LIBS})
 include(swigify)
 
 install_targets_custom()
