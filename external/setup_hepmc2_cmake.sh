@@ -47,7 +47,7 @@ SCRIPTPATH=$(thisdir)
 
 savepwd=${PWD}
 
-version=2.06.09
+version=2.06.10
 fname=HepMC-${version}
 dirsrc=${SCRIPTPATH}/build/HepMC-${version}
 dirinst=${SCRIPTPATH}/packages/hepmc-${version}
@@ -72,13 +72,16 @@ fi
 if [ ! -d ${dirinst} ]; then
 	if [ -d ${dirsrc} ]; then
 		cd ${dirsrc}
-		patch CMakeLists.txt -i ${SCRIPTPATH}/patches/HepMC-2.06.09-CMakeLists.txt.patch
+		[ "x${version}" == "x2.06.09" ] && patch CMakeLists.txt -i ${SCRIPTPATH}/patches/HepMC-2.06.09-CMakeLists.txt.patch
 		mkdir ${SCRIPTPATH}/build/build_dir_${fname}
 		cd ${SCRIPTPATH}/build/build_dir_${fname}
 		cmake -Dmomentum:STRING=GEV -Dlength:STRING=CM \
 				-DCMAKE_INSTALL_PREFIX=${dirinst} \
 		     	-DCMAKE_BUILD_TYPE=Release \
 		      	-Dbuild_docs:BOOL=OFF \
+		      	-DCMAKE_MACOSX_RPATH=ON \
+		      	-DCMAKE_INSTALL_RPATH=${dirinst}/lib \
+		      	-DCMAKE_BUILD_WITH_INSTALL_NAME_DIR=ON \
 			    ${dirsrc}
 		make && make install
 		make test
@@ -86,9 +89,6 @@ if [ ! -d ${dirinst} ]; then
 	fi
 fi
 
-#		      	-DCMAKE_MACOSX_RPATH=ON \
-#		      	-DCMAKE_INSTALL_RPATH=${dirinst}/lib \
-#		      	-DCMAKE_BUILD_WITH_INSTALL_NAME_DIR=ON \
 
 if [ -d ${dirinst} ]; then
 	export HEPMC2_DIR=${dirinst}
