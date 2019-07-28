@@ -19,6 +19,7 @@ SCRIPTPATH=$(thisdir)
 . ${SCRIPTPATH}/setup_lhapdf6.sh
 . ${SCRIPTPATH}/setup_pythia8.sh
 . ${SCRIPTPATH}/setup_fastjet.sh
+. ${SCRIPTPATH}/setup_hepmc3.sh
 
 python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
 export PYTHONPATH=${FASTJET_DIR}/lib/python${python_version}/site-packages:${PYTHONPATH}

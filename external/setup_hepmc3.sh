@@ -57,7 +57,7 @@ if [ ! -z ${1} ]; then
 	dirinst=${1}
 fi
 
-if [ ! -e ${SCRIPTPATH}/${fname}.tar.gz ]; then
+if [ ! -e ${SCRIPTPATH}/build/${fname}.tar.gz ]; then
 	cd ${SCRIPTPATH}/build
 	wget http://hepmc.web.cern.ch/hepmc/releases/${fname}.tar.gz
 fi

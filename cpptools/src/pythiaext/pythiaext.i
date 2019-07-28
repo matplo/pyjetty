@@ -1,4 +1,4 @@
-%module pythiafjtools
+%module pythiaext
 
 %include "std_string.i"
 %include "std_vector.i"

@@ -43,3 +43,10 @@ else()
 endif()
 
 add_subdirectory(aleph)
+
+find_package(HepMC3 REQUIRED HepMC)
+if (HEPMC3_FOUND)
+  add_subdirectory(hepmc3)
+  message( STATUS "HEPMC3_INCLUDE_DIR: ${HEPMC3_INCLUDE_DIR}")
+  message( STATUS "HEPMC3_LIBRARY: ${HEPMC3_LIBRARY}")
+endif(HEPMC3_FOUND)
