@@ -47,7 +47,7 @@ SCRIPTPATH=$(thisdir)
 
 savepwd=${PWD}
 
-version=2.06.10
+version=2.06.09
 fname=HepMC-${version}
 dirsrc=${SCRIPTPATH}/build/HepMC-${version}
 dirinst=${SCRIPTPATH}/packages/hepmc-${version}
