@@ -1,7 +1,6 @@
-import pythia8
-from mptools import pymptools as mpt
 import os
 from configobj import ConfigObj
+import aleph
 
 def get_n_events(fname):
 	ic = 0
@@ -11,7 +10,7 @@ def get_n_events(fname):
 		ic = int(cobj['nevents'])
 	except KeyError:
 		print('[i] counting events in', fname)
-		reader = mpt.Reader(fname)
+		reader = aleph.Reader(fname)
 		while reader.read_next_event():
 			ic += 1
 		cobj['nevents']=ic
