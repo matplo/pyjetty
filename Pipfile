@@ -15,6 +15,7 @@ joblib = "*"
 tqdm = "*"
 ipython = "*"
 jupyterlab = "*"
+configobj = "*"
 
 [requires]
 python_version = "3.7"
