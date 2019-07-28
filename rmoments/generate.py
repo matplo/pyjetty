@@ -1,16 +1,15 @@
 #!/usr/bin/env ipython3
 
 import fastjet as fj
+import fjcontrib
 import pythia8
-from recursivetools import pyrecursivetools as rt
-from lundplane import pylundplane as lund
-from pythiafjtools import pypythiafjtools as pyfj
+import pythiaext
+import pythiafjext
 import math
 from tqdm import tqdm
 import joblib
-from pyutils import pyutils
 from fjutils import fjpsj
-
+from pythiautils import configuration as pyconf
 
 def print_jets(events):
 	for i, rjets in enumerate(events):
@@ -21,7 +20,7 @@ def print_jets(events):
 
 
 sconfig_pythia = ["Beams:eCM = 8000.", "HardQCD:all = on", "PhaseSpace:pTHatMin = 100."]
-pythia = pyutils.create_and_init_pythia(sconfig_pythia)
+pythia = pyconf.create_and_init_pythia(sconfig_pythia)
 
 # print the banner first
 fj.ClusterSequence.print_banner()
@@ -30,7 +29,7 @@ print()
 jet_R0 = 0.4
 jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 jet_selector = fj.SelectorPtMin(100.0) & fj.SelectorPtMax(200.0) & fj.SelectorAbsEtaMax(1)
-sd = rt.SoftDrop(0, 0.1, 1.0)
+sd = fjcontrib.SoftDrop(0, 0.1, 1.0)
 
 all_jets = []
 all_jets_py = []
@@ -38,7 +37,7 @@ all_parts = []
 for iEvent in tqdm(range(1000), 'event'):
 	if not pythia.next():
 		continue
-	parts = pyfj.vectorize(pythia, True, -1, 1, False)
+	parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
 	all_parts.append(fjpsj.pyfj_list(parts))
 	jets = fj.sorted_by_pt(jet_selector(jet_def(parts)))
 	ev_jets_py = []
