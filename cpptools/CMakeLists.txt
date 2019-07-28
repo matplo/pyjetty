@@ -4,6 +4,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 include(install_targets_custom)
 
+set (CMAKE_CXX_STANDARD 11)
+
 # Apple: Don't modify install_name when touching RPATH.
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)

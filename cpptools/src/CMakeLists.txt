@@ -42,3 +42,4 @@ else()
   message(WARNING "Some of this requires pythia8-config... - must be in your \$PATH")
 endif()
 
+add_subdirectory(aleph)
