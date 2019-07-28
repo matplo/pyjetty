@@ -47,7 +47,9 @@ savepwd=${PWD}
 
 version=3.1.1
 fname=HepMC3-${version}
-dirsrc=${SCRIPTPATH}/build/HepMC3-${version}
+version=3.0.0
+fname=hepmc${version}
+dirsrc=${SCRIPTPATH}/build/${fname}
 dirinst=${SCRIPTPATH}/packages/hepmc-${version}
 
 [ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
@@ -57,14 +59,20 @@ if [ ! -z ${1} ]; then
 	dirinst=${1}
 fi
 
-if [ ! -e ${SCRIPTPATH}/build/${fname}.tar.gz ]; then
+if [ "x${version}" == "x3.0.0" ]; then
+	archsuffix='.tgz'
+else
+	archsuffix='.tar.gz'
+fi
+
+if [ ! -e ${SCRIPTPATH}/build/${fname}${archsuffix} ]; then
 	cd ${SCRIPTPATH}/build
-	wget http://hepmc.web.cern.ch/hepmc/releases/${fname}.tar.gz
+	wget http://hepmc.web.cern.ch/hepmc/releases/${fname}${archsuffix}
 fi
 
 if [ ! -d ${dirsrc} ]; then
 	cd ${SCRIPTPATH}/build
-	tar zxvf ${fname}.tar.gz
+	tar zxvf ${fname}${archsuffix}
 fi
 
 if [ ! -d ${dirinst} ]; then
@@ -91,7 +99,11 @@ if [ ! -d ${dirinst} ]; then
 	      	-DCMAKE_MACOSX_RPATH=ON \
 	      	-DCMAKE_INSTALL_RPATH=${dirinst}/lib \
 	      	-DCMAKE_BUILD_WITH_INSTALL_NAME_DIR=ON 
-		make -j $(n_cores) && make install && make test
+		if [ "x${version}" == "x3.0.0" ]; then
+			make -j $(n_cores) && make install
+		else
+			make -j $(n_cores) && make install && make test
+		fi
 		ln -s ${dirinst}/include/HepMC3 ${dirinst}/include/HepMC
 		[ -e ${dirinst}/lib/libHepMC3.dylib ] && ln -s ${dirinst}/lib/libHepMC3.dylib ${dirinst}/lib/libHepMC.dylib
 		[ -e ${dirinst}/lib/libHepMC3.so ] && ln -s ${dirinst}/lib/libHepMC3.so ${dirinst}/lib/libHepMC.so
