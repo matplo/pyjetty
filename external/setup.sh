@@ -23,7 +23,9 @@ separator "${BASH_SOURCE}"
 . ${SCRIPTPATH}/setup_hepmc2_cmake.sh 	--version=2.06.09 	 $@
 . ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1  	 $@
 . ${SCRIPTPATH}/setup_pythia8.sh 		--version=8235 		 $@
-. ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1 --re $@
+if [ "$(get_opt "install" $@)" == "xyes" ]; then
+	. ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1 --re $@
+fi
 . ${SCRIPTPATH}/setup_fastjet.sh 		--version=3.3.2 	 $@
 
 python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
@@ -33,7 +35,7 @@ export PYTHONPATH=${HEPMC3_DIR}/lib:${PYTHONPATH}
 export PYTHONPATH=${LHAPDF6_DIR}/lib/python${python_version}/site-packages:${PYTHONPATH}
 export PYTHONPATH=${PYTHIA_DIR}/lib:${PYTHONPATH}
 
-export PATH=${HEPMC_DIR}/bin:${LHAPDF6_DIR}/bin:${PYTHIA8_DIR}/bin:${FASTJET_DIR}/bin:${PATH}
+export PATH=${HEPMC_DIR}/bin:${HEPMC3_DIR}/bin:${LHAPDF6_DIR}/bin:${PYTHIA8_DIR}/bin:${FASTJET_DIR}/bin:${PATH}
 if [ -z ${LD_LIBRARY_PATH} ]; then
 	export LD_LIBRARY_PATH=${HEPMC3_DIR}/lib:${HEPMC_DIR}/lib:${LHAPDF6_DIR}/lib:${PYTHIA_DIR}/lib:${FASTJET_DIR}/lib
 else

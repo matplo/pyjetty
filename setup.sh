@@ -14,6 +14,8 @@ function thisdir()
 	echo ${DIR}
 }
 STHISDIR=$(thisdir)
+source ${STHISDIR}/external/util.sh
+separator "pyjetty: ${BASH_SOURCE}"
 
 if [ -z ${PYJETTY_SETUP_EXTERNAL} ]; then
 	if [ -e ${PWD}/.pyjetty_config_external ]; then
@@ -21,18 +23,19 @@ if [ -z ${PYJETTY_SETUP_EXTERNAL} ]; then
 	else
 		if [ -e ${STHISDIR}/.pyjetty_config_external ]; then
 			source ${STHISDIR}/.pyjetty_config_external
-			[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL}
+			[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL}
 		else
-			echo "PYJETTY_SETUP_EXTERNAL=${STHISDIR}/external/setup.sh" | tee ${STHISDIR}/.pyjetty_config_external
+			echo_info "PYJETTY_SETUP_EXTERNAL=${STHISDIR}/external/setup.sh" | tee ${STHISDIR}/.pyjetty_config_external
 			if [ -e ${STHISDIR}/.pyjetty_config_external ]; then
 				source ${STHISDIR}/.pyjetty_config_external
 			fi
 		fi
 	fi
-	[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL}
+	[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL}
 fi
 
-[ ! -d ${STHISDIR}/cpptools/lib ] && ${STHISDIR}/cpptools/scripts/build_cpptools.sh
+redo=$(get_opt "re" $@)
+( [ ! -d ${STHISDIR}/cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${STHISDIR}/cpptools/scripts/build_cpptools.sh $@
 
 export PYTHONPATH=${PYTHONPATH}:${STHISDIR}:${STHISDIR}/cpptools/lib
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib

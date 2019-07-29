@@ -1,3 +1,21 @@
+if [ ! -z ${PYJETTY_EXTERNAL_UTIL_LOADED} ]; then
+	return 0
+fi
+PYJETTY_EXTERNAL_UTIL_LOADED=yes
+
+function abspath()
+{
+  case "${1}" in
+    [./]*)
+    echo "$(cd ${1%/*}; pwd)/${1##*/}"
+    ;;
+    *)
+    echo "${PWD}/${1}"
+    ;;
+  esac
+}
+export -f abspath
+
 function os_linux()
 {
 	_system=$(uname -a | cut -f 1 -d " ")

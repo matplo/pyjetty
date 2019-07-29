@@ -56,10 +56,6 @@ fi
 [ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
 [ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
 
-if [ ! -z ${1} ]; then
-	dirinst=${1}
-fi
-
 if [ ! -e ${SCRIPTPATH}/build/${fname}.tar.gz ]; then
 	cd ${SCRIPTPATH}/build
 	wget https://lhapdf.hepforge.org/downloads/?f=${fname}.tar.gz -O ${fname}.tar.gz
