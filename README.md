@@ -22,7 +22,7 @@ source setup.sh --install
 source setup.sh --install --reset-external --rebuild
 ```
 
-- OR (or individually with one of the 
+- or use individually one of the scripts
 ```
 external/setup_pythia8.sh
 external/setup_fastjet.sh          
