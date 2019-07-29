@@ -65,7 +65,7 @@ if [ ! -d ${dirsrc} ]; then
 	tar zxvf ${dirsrc}.tar.gz
 fi
 
-redo=$(get_opt "re" $@)
+redo=$(get_opt "rebuild" $@)
 if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	if [ -d ${dirsrc} ]; then
 		cd ${dirsrc}

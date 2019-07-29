@@ -76,7 +76,7 @@ function run_configure()
 			${lhapd6_opt} ${hepmc2_opt} ${hepmc3_opt}
 }
 
-redo=$(get_opt "re" $@)
+redo=$(get_opt "rebuild" $@)
 if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	if [ -d ${dirsrc} ]; then
 		cd ${dirsrc}
@@ -94,12 +94,10 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	    	ln -s ${python_exec} ${python_bin_dir}/python 
 		    warning "fix-up-python bin dir: ${python_bin_dir}"
 		fi
-    	if [ ! -d ${dirinst} ]; then
-			run_configure
-			configure_only=$(get_opt "configure-only" $@)
-			[ "x${configure_only}" == "xyes" ] && grace_return && return 0
-			make -j $(n_cores) && make install
-		fi
+		run_configure
+		configure_only=$(get_opt "configure-only" $@)
+		[ "x${configure_only}" == "xyes" ] && grace_return && return 0
+		make -j $(n_cores) && make install
 		cd - 2>&1 > /dev/null
 	fi
 fi
