@@ -12,13 +12,26 @@
 # recommended build/setup
 
 ```
-source setup.sh
+pipenv shell
+source setup.sh --install
+...
 ```
 
 Notes: 
 - this will download and install PYTHIA, HepMC2, HepMC3, LHAPDF6, FASTJET into the `external` subdirectory. This behavior can be controlled by `.pyjetty_config_external` file (sourced as a shell script) - you can control what version packages to use by building those libs yourself... (no or empty `.pyjetty_config_external` is fine)
 - the `.pyjetty_config_external` in a local directory takes precedence (default is to take one from the downloaded/git directory)
 - for some options `./scripts/build_cpptools.sh --help`
+
+# running
+
+- example 'workflow' (note no `--install`)
+
+```
+pipenv shell
+source setup.sh
+./cpptools/tests/pythia_gen_fj_lund_test.py
+...
+```
 
 ## alternative
 
