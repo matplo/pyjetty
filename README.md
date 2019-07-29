@@ -33,7 +33,7 @@ OR
 ```
 ./cpptools/scripts/build_cpptools.sh
 ```
--useful options `--clean` (only build) or '--cleanall' (build and install)
+- useful options `--clean` (only build) or '--cleanall' (build and install)
 
 ## Notes: 
 - this will download and install PYTHIA, HepMC2, HepMC3, LHAPDF6, FASTJET into the `external` subdirectory. This behavior can be controlled by `.pyjetty_config_external` file (sourced as a shell script) - you can control what version packages to use by building those libs yourself... (no or empty `.pyjetty_config_external` is fine)
