@@ -119,7 +119,7 @@ function note_red()
 function separator()
 {
 	echo
-	echo -e "\033[1;32m$(padding "[ ${1} ]" "-" 25 center) \033[0m"
+	echo -e "\033[1;32m$(padding "[ ${1} ]" "-" 50 center) \033[0m"
 	## colors at http://misc.flogisoft.com/bash/tip_colors_and_formatting
 }
 
@@ -135,12 +135,12 @@ function note()
 
 function warning()
 {
-	echo_warning "[warning] $(padding "[${@}] " "-" 50 right)"
+	echo_warning "[warning] $(padding "[${@}] " "-" 40 right)"
 }
 
 function error()
 {
-	echo_error "[error] $(padding "[${@}] " "-" 50 right)"
+	echo_error "[error] $(padding "[${@}] " "-" 42 right)"
 }
 
 function padding ()

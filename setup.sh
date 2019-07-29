@@ -15,7 +15,10 @@ function thisdir()
 }
 STHISDIR=$(thisdir)
 source ${STHISDIR}/external/util.sh
-separator "pyjetty: ${BASH_SOURCE}"
+separator "pyjetty $(abspath ${BASH_SOURCE})"
+if [ ! -z ${PYJETTY_SET} ]; then
+	warning "PYJETTY_SET is ${PYJETTY_SET}"
+fi
 
 if [ -z ${PYJETTY_SETUP_EXTERNAL} ]; then
 	if [ -e ${PWD}/.pyjetty_config_external ]; then
@@ -37,8 +40,11 @@ fi
 redo=$(get_opt "re" $@)
 ( [ ! -d ${STHISDIR}/cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${STHISDIR}/cpptools/scripts/build_cpptools.sh $@
 
-export PYTHONPATH=${PYTHONPATH}:${STHISDIR}:${STHISDIR}/cpptools/lib
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib
-export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib
+export PYJETTY_SET=TRUE
+if [ -z ${PYJETTY_SET} ]; then
+	export PYTHONPATH=${PYTHONPATH}:${STHISDIR}:${STHISDIR}/cpptools/lib
+	export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib
+	export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib
+fi
 
 cd ${cpwd}

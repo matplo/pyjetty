@@ -14,10 +14,28 @@
 ```
 pipenv shell
 source setup.sh --install
-...
 ```
 
-Notes: 
+- to 'redo the install' of the externals (all) or individually
+```
+source ./external/setup_env.sh --install
+```
+- useful debuging option `--configure-only`
+
+- to rebuild cpptools
+```
+source setup.sh --re
+```
+- useful debuging option `--configure-only`
+
+OR
+
+```
+./cpptools/scripts/build_cpptools.sh
+```
+-useful options `--clean` (only build) or '--cleanall' (build and install)
+
+## Notes: 
 - this will download and install PYTHIA, HepMC2, HepMC3, LHAPDF6, FASTJET into the `external` subdirectory. This behavior can be controlled by `.pyjetty_config_external` file (sourced as a shell script) - you can control what version packages to use by building those libs yourself... (no or empty `.pyjetty_config_external` is fine)
 - the `.pyjetty_config_external` in a local directory takes precedence (default is to take one from the downloaded/git directory)
 - for some options `./scripts/build_cpptools.sh --help`

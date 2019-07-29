@@ -21,6 +21,7 @@ npdfs_link="http://lhapdfsets.web.cern.ch/lhapdfsets/current/EPPS16nlo_CT14nlo_P
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=6.2.3
+warning "... version ${version}"
 fname=LHAPDF-${version}
 dirsrc=${SCRIPTPATH}/build/LHAPDF-${version}
 dirinst=${SCRIPTPATH}/packages/LHAPDF-${version}

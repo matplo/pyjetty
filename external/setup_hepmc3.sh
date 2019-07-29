@@ -19,6 +19,7 @@ separator "${BASH_SOURCE}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.0.0
+warning "... version ${version}"
 fname=HepMC3-${version}
 if [ "x${version}" == "x3.0.0" ]; then
 	fname=hepmc${version}

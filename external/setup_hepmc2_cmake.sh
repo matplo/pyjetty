@@ -17,7 +17,9 @@ SCRIPTPATH=$(thisdir)
 source ${SCRIPTPATH}/util.sh
 separator "${BASH_SOURCE}"
 
-version=2.06.09
+version=$(get_opt "version" $@)
+[ -z ${version} ] && version=2.06.09
+warning "... version ${version}"
 fname=HepMC-${version}
 dirsrc=${SCRIPTPATH}/build/HepMC-${version}
 dirinst=${SCRIPTPATH}/packages/hepmc-${version}

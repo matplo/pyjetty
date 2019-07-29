@@ -19,6 +19,7 @@ separator "${BASH_SOURCE}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=8235
+warning "... version ${version}"
 fname=pythia${version}
 dirsrc=${SCRIPTPATH}/build/pythia${version}
 dirinst=${SCRIPTPATH}/packages/pythia${version}

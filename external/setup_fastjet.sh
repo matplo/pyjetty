@@ -19,6 +19,7 @@ separator "${BASH_SOURCE}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.3.2
+warning "... version ${version}"
 fname=fastjet-${version}
 dirsrc=${SCRIPTPATH}/build/fastjet-${version}
 dirinst=${SCRIPTPATH}/packages/fastjet-${version}
