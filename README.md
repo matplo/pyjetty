@@ -4,6 +4,7 @@
 - this uses CMake, SWIG
 - Python3 required
 - recommendation: work within pipenv (or virtual env)
+- usage of ROOT (Pythia8 bindings; also HEPMC3) is up to the user
 
 # example python script
 
