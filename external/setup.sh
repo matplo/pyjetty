@@ -36,9 +36,13 @@ export PYTHONPATH=${HEPMC3_DIR}/lib:${PYTHONPATH}
 export PYTHONPATH=${LHAPDF6_DIR}/lib/python${python_version}/site-packages:${PYTHONPATH}
 export PYTHONPATH=${PYTHIA_DIR}/lib:${PYTHONPATH}
 
-warning $(which cmake)
+warning "before exports... $(which cmake)"
 
-export PATH=${HEPMC_DIR}/bin:${HEPMC3_DIR}/bin:${LHAPDF6_DIR}/bin:${PYTHIA8_DIR}/bin:${FASTJET_DIR}/bin:${PATH}
+if [ -z ${PATH} ]; then
+	export PATH=${HEPMC_DIR}/bin:${HEPMC3_DIR}/bin:${LHAPDF6_DIR}/bin:${PYTHIA8_DIR}/bin:${FASTJET_DIR}/bin
+else
+	export PATH=${HEPMC_DIR}/bin:${HEPMC3_DIR}/bin:${LHAPDF6_DIR}/bin:${PYTHIA8_DIR}/bin:${FASTJET_DIR}/bin:${PATH}
+fi
 if [ -z ${LD_LIBRARY_PATH} ]; then
 	export LD_LIBRARY_PATH=${HEPMC3_DIR}/lib:${HEPMC_DIR}/lib:${LHAPDF6_DIR}/lib:${PYTHIA_DIR}/lib:${FASTJET_DIR}/lib
 else
@@ -50,6 +54,6 @@ else
 	export DYLD_LIBRARY_PATH=${HEPMC3_DIR}/lib:${HEPMC_DIR}/lib:${LHAPDF6_DIR}/lib:${PYTHIA_DIR}/lib:${FASTJET_DIR}/lib:${DYLD_LIBRARY_PATH}
 fi
 
-warning $(which cmake)
+warning "after exports $(which cmake)"
 
 cd ${cdir}
