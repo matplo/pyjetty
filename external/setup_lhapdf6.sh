@@ -21,7 +21,7 @@ npdfs_link="http://lhapdfsets.web.cern.ch/lhapdfsets/current/EPPS16nlo_CT14nlo_P
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=6.2.3
-warning "... version ${version}"
+note "... version ${version}"
 fname=LHAPDF-${version}
 dirsrc=${SCRIPTPATH}/build/LHAPDF-${version}
 dirinst=${SCRIPTPATH}/packages/LHAPDF-${version}
@@ -75,7 +75,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		configure_only=$(get_opt "configure-only" $@)
 		[ "x${configure_only}" == "xyes" ] && grace_return && return 0
 		make -j $(n_cores) && make install
-		cd - 
+		cd -
 	fi
 fi
 

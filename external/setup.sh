@@ -24,7 +24,7 @@ separator "${BASH_SOURCE}"
 . ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1  	 $@
 . ${SCRIPTPATH}/setup_pythia8.sh 		--version=8235 		 $@
 if [ "$(get_opt "install" $@)" == "xyes" ]; then
-	warning "... running with install"
+	note "... running with install"
 	. ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1 --re $@
 fi
 . ${SCRIPTPATH}/setup_fastjet.sh 		--version=3.3.2 	 $@

@@ -19,7 +19,7 @@ separator "${BASH_SOURCE}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=8235
-warning "... version ${version}"
+note "... version ${version}"
 fname=pythia${version}
 dirsrc=${SCRIPTPATH}/build/pythia${version}
 dirinst=${SCRIPTPATH}/packages/pythia${version}
@@ -91,7 +91,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	    if [ ! -e ${python_bin_dir}/python ]; then
 	    	python_bin_dir=${SCRIPTPATH}/build/pythia-python-bin
 	    	mkdir ${python_bin_dir}
-	    	ln -s ${python_exec} ${python_bin_dir}/python 
+	    	ln -s ${python_exec} ${python_bin_dir}/python
 		    warning "fix-up-python bin dir: ${python_bin_dir}"
 		fi
 		run_configure
