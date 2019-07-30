@@ -38,7 +38,9 @@ export PYTHONPATH=${PYTHIA_DIR}/lib:${PYTHONPATH}
 
 for _path in ${HEPMC_DIR} ${HEPMC3_DIR} ${LHAPDF6_DIR} ${PYTHIA8_DIR} ${FASTJET_DIR}
 do
+	echo ${_path}
 	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
+		echo_info "adding ${_path}"
 		if [ -z ${PATH} ]; then
 			export PATH=${_path}/bin
 		else
@@ -54,7 +56,7 @@ do
 		else
 			export DYLD_LIBRARY_PATH=${_path}/lib:${DYLD_LIBRARY_PATH}
 		fi
-	done
+	fi
 done
 
 cd ${cdir}
