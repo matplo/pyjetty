@@ -19,7 +19,7 @@ separator "${BASH_SOURCE}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=2.06.09
-warning "... version ${version}"
+note "... version ${version}"
 fname=HepMC-${version}
 dirsrc=${SCRIPTPATH}/build/HepMC-${version}
 dirinst=${SCRIPTPATH}/packages/hepmc-${version}

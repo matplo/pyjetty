@@ -118,7 +118,6 @@ function note_red()
 
 function separator()
 {
-	echo
 	echo -e "\033[1;32m$(padding "[ ${1} ]" "-" 50 center) \033[0m"
 	## colors at http://misc.flogisoft.com/bash/tip_colors_and_formatting
 }

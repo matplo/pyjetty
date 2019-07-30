@@ -19,7 +19,7 @@ separator "${BASH_SOURCE}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.0.0
-warning "... version ${version}"
+note "... version ${version}"
 fname=HepMC3-${version}
 if [ "x${version}" == "x3.0.0" ]; then
 	fname=hepmc${version}
@@ -91,7 +91,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	    if [ ! -e ${python_bin_dir}/python ]; then
 	    	python_bin_dir=${SCRIPTPATH}/build/pythia-python-bin
 	    	mkdir ${python_bin_dir}
-	    	ln -s ${python_exec} ${python_bin_dir}/python 
+	    	ln -s ${python_exec} ${python_bin_dir}/python
 		    warning "fix-up-python bin dir: ${python_bin_dir}"
 		fi
 		ROOTIOFLAG=OFF
@@ -113,7 +113,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		if [ "x${version}" == "x3.0.0" ]; then
 			make -j $(n_cores) && make install
 		else
-			make -j $(n_cores) && make install 
+			make -j $(n_cores) && make install
 			# make test
 		fi
 		echo_info "link: ln -s ${dirinst}/include/HepMC3 ${dirinst}/include/HepMC"

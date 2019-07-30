@@ -19,7 +19,7 @@ separator "${BASH_SOURCE}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.3.2
-warning "... version ${version}"
+note "... version ${version}"
 fname=fastjet-${version}
 dirsrc=${SCRIPTPATH}/build/fastjet-${version}
 dirinst=${SCRIPTPATH}/packages/fastjet-${version}
@@ -104,6 +104,7 @@ if [ -d ${dirinst} ]; then
 	export PATH=$PATH:${dirinst}/bin
 	python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
 	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib/python${python_version}/site-packages
+	[ -d ${dirinst}/lib64 ] && export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib64/python${python_version}/site-packages
 fi
 
 cd ${cdir}
