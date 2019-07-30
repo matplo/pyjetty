@@ -2,6 +2,7 @@ import sys
 import os
 import fastjet as fj
 import pyhepmc_ng
+import tqdm
 
 def main():
 	input_file="$HOME/data/jetscape/test_out.hepmc"
@@ -11,10 +12,12 @@ def main():
 	input_file = os.path.expandvars(input_file)
 
 	print('[i] reading from:', input_file)
-	input = pyhepmc_ng.ReaderAsciiHepMC2(input_file)
+	# input = pyhepmc_ng.ReaderAsciiHepMC2(input_file)
+	input = pyhepmc_ng.ReaderAscii(input_file)
 	if input.failed():
-		print ("[error] unable to read from {}".format(args.read))
+		print ("[error] unable to read from {}".format(input_file))
 		return
+	nevents = 1000
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()
@@ -25,7 +28,7 @@ def main():
 
 	all_jets = []
 	event = pyhepmc_ng.GenEvent()
-	pbar = tqdm(range(args.nevents))
+	pbar = tqdm.tqdm(range(nevents))
 	while not input.failed():
 		e = input.read_event(event)
 		if input.failed():
@@ -41,8 +44,8 @@ def main():
 		pbar.update()
 		for j in jets:
 			hjetpt.Fill(j.perp())
-		if pbar.n >= args.nevents:
+		if pbar.n >= nevents:
 			break
-
+	pbar.close()
 if __name__ == '__main__':
 	main()
