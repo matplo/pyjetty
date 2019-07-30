@@ -31,12 +31,8 @@ if [ -z ${PYJETTY_SETUP_EXTERNAL} ] || [ "x${reset}" == "xyes" ]; then
 			source ${STHISDIR}/.pyjetty_config_external
 		fi
 	fi
-	warning $(which cmake)
 	[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL} $@
-	warning $(which cmake)
 fi
-
-separator $(which cmake)
 
 redo=$(get_opt "rebuild" $@)
 ( [ ! -d ${STHISDIR}/cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${STHISDIR}/cpptools/scripts/build_cpptools.sh $@
