@@ -79,6 +79,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		      	-DCMAKE_MACOSX_RPATH=ON \
 		      	-DCMAKE_INSTALL_RPATH=${dirinst}/lib \
 		      	-DCMAKE_BUILD_WITH_INSTALL_NAME_DIR=ON \
+		      	-DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc) \
 			    ${dirsrc}
 		configure_only=$(get_opt "configure-only" $@)
 		[ "x${configure_only}" == "xyes" ] && grace_return && return 0

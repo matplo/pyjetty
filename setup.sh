@@ -23,17 +23,13 @@ fi
 reset=$(get_opt "reset-external" $@)
 if [ -z ${PYJETTY_SETUP_EXTERNAL} ] || [ "x${reset}" == "xyes" ]; then
 	[ "x${reset}" == "xyes" ] && warning "PYJETTY_SET resetting ... ${reset}"
-	if [ -e ${PWD}/.pyjetty_config_external ]; then
-		source ${PWD}/.pyjetty_config_external
+	if [ -e ${STHISDIR}/.pyjetty_config_external ]; then
+		source ${STHISDIR}/.pyjetty_config_external
+		[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL} $@
 	else
+		echo "PYJETTY_SETUP_EXTERNAL=${STHISDIR}/external/setup.sh" | tee ${STHISDIR}/.pyjetty_config_external
 		if [ -e ${STHISDIR}/.pyjetty_config_external ]; then
 			source ${STHISDIR}/.pyjetty_config_external
-			[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL}
-		else
-			echo_info "PYJETTY_SETUP_EXTERNAL=${STHISDIR}/external/setup.sh" | tee ${STHISDIR}/.pyjetty_config_external
-			if [ -e ${STHISDIR}/.pyjetty_config_external ]; then
-				source ${STHISDIR}/.pyjetty_config_external
-			fi
 		fi
 	fi
 	[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL} $@
