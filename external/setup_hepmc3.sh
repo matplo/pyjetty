@@ -26,6 +26,7 @@ if [ "x${version}" == "x3.0.0" ]; then
 fi
 dirsrc=${SCRIPTPATH}/build/${fname}
 dirinst=${SCRIPTPATH}/packages/hepmc-${version}
+dirbuild=${dirsrc}-build
 
 function grace_return()
 {
@@ -76,8 +77,10 @@ fi
 
 redo=$(get_opt "rebuild" $@)
 if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
+	mkdir -p ${dirbuild}
 	if [ -d ${dirsrc} ]; then
-		cd ${dirsrc}
+		mkdir -p ${dirbuild}
+		cd ${dirbuild}
 		[ "x${1}" == "xunset" ] && unset PYTHONPATH	&& echo "unsetting PYTHONPATH"
 	    python_inc_dir=$(python3-config --includes | cut -d' ' -f 1 | cut -dI -f 2)
 	    python_exec=$(which python3)
@@ -91,18 +94,20 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	    	ln -s ${python_exec} ${python_bin_dir}/python 
 		    warning "fix-up-python bin dir: ${python_bin_dir}"
 		fi
-		mkdir hepmc3-build
-		cd hepmc3-build
+		ROOTIOFLAG=OFF
+		[ ! -z ${ROOTSYS} ] && [ -d ${ROOTSYS} ] && ROOTIOFLAG=ON
 		echo_info "installing to ${dirinst}"
-		cmake -S${dirsrc} \
+		cmake \
 			-DCMAKE_INSTALL_PREFIX=${dirinst} \
-			-DHEPMC3_ENABLE_ROOTIO=OFF \
-			-DHEPMC3_BUILD_EXAMPLES=ON \
-			-DHEPMC3_ENABLE_TEST=ON \
-			-DHEPMC3_INSTALL_INTERFACES=ON \
+			-DHEPMC3_ENABLE_ROOTIO=${ROOTIOFLAG} \
+			-DHEPMC3_BUILD_EXAMPLES=OFF \
+			-DHEPMC3_ENABLE_TEST=OFF \
+			-DHEPMC3_INSTALL_INTERFACES=OFF \
 	      	-DCMAKE_MACOSX_RPATH=ON \
 	      	-DCMAKE_INSTALL_RPATH=${dirinst}/lib \
-	      	-DCMAKE_BUILD_WITH_INSTALL_NAME_DIR=ON	    
+	      	-DCMAKE_BUILD_WITH_INSTALL_NAME_DIR=ON \
+	      	-DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc) \
+	      	${dirsrc}
 		configure_only=$(get_opt "configure-only" $@)
 		[ "x${configure_only}" == "xyes" ] && grace_return && return 0
 		if [ "x${version}" == "x3.0.0" ]; then
@@ -114,8 +119,10 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		echo_info "link: ln -s ${dirinst}/include/HepMC3 ${dirinst}/include/HepMC"
 		ln -s ${dirinst}/include/HepMC3 ${dirinst}/include/HepMC
 		echo_info "link ${dirinst}/lib/libHepMC3.dylib"
-		[ -e ${dirinst}/lib/libHepMC3.dylib ] && ln -s ${dirinst}/lib/libHepMC3.dylib ${dirinst}/lib/libHepMC.dylib
-		[ -e ${dirinst}/lib/libHepMC3.so ] && ln -s ${dirinst}/lib/libHepMC3.so ${dirinst}/lib/libHepMC.so
+		_libdir=${dirinst}/lib
+		[ -e ${dirinst}/lib64 ] && ln -s ${dirinst}/lib64 ${_libdir} && _libdir=${dirinst}/lib64
+		[ -e ${_libdir}/libHepMC3.dylib ] && ln -s ${_libdir}/libHepMC3.dylib ${_libdir}/libHepMC.dylib
+		[ -e ${_libdir}/libHepMC3.so ] && ln -s ${_libdir}/libHepMC3.so ${_libdir}/libHepMC.so
 		cd ${cdir}
 	fi
 fi
