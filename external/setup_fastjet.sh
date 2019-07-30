@@ -77,10 +77,12 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	    echo_info "python exec: ${python_exec}"
 	    echo_info "python includes: ${python_includes}"
 	    echo_info "python include: ${python_inc_dir}"
-		if [ "x${CGAL_DIR}" == "x" ]; then
+		if [ "x${CGAL_DIR}" == "x" ] && [ -d ${CGAL_DIR} ]; then
+			echo_info "building w/o cgal"
 		    ./configure --prefix=${dirinst} --enable-allcxxplugins \
 		    PYTHON=${python_exec} \
 		    PYTHON_INCLUDE="${python_includes}" \
+		    --enable-pyext
 		else
 			echo_info "building using cgal at ${CGAL_DIR}"
 		    ./configure --prefix=${dirinst} --enable-allcxxplugins \

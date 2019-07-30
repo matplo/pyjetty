@@ -25,16 +25,18 @@ if [ -z ${PYJETTY_SETUP_EXTERNAL} ] || [ "x${reset}" == "xyes" ]; then
 	[ "x${reset}" == "xyes" ] && warning "PYJETTY_SET resetting ... ${reset}"
 	if [ -e ${STHISDIR}/.pyjetty_config_external ]; then
 		source ${STHISDIR}/.pyjetty_config_external
-		[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL} $@
 	else
 		echo "PYJETTY_SETUP_EXTERNAL=${STHISDIR}/external/setup.sh" | tee ${STHISDIR}/.pyjetty_config_external
 		if [ -e ${STHISDIR}/.pyjetty_config_external ]; then
 			source ${STHISDIR}/.pyjetty_config_external
 		fi
 	fi
+	warning $(which cmake)
 	[ -e ${PYJETTY_SETUP_EXTERNAL} ] && echo_info "[i] PYJETTY_SETUP_EXTERNAL=${PYJETTY_SETUP_EXTERNAL}" && source ${PYJETTY_SETUP_EXTERNAL} $@
+	warning $(which cmake)
 fi
 
+separator $(which cmake)
 
 redo=$(get_opt "rebuild" $@)
 ( [ ! -d ${STHISDIR}/cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${STHISDIR}/cpptools/scripts/build_cpptools.sh $@
