@@ -1,34 +1,5 @@
 #!/bin/bash
 
-function os_linux()
-{
-	_system=$(uname -a | cut -f 1 -d " ")
-	if [ $_system == "Linux" ]; then
-		echo "yes"
-	else
-		echo
-	fi
-}
-
-function os_darwin()
-{
-	_system=$(uname -a | cut -f 1 -d " ")
-	if [ $_system == "Darwin" ]; then
-		echo "yes"
-	else
-		echo
-	fi
-}
-
-function n_cores()
-{
-	local _ncores="1"
-	[ $(os_darwin) ] && local _ncores=$(system_profiler SPHardwareDataType | grep "Number of Cores" | cut -f 2 -d ":" | sed 's| ||')
-	[ $(os_linux) ] && local _ncores=$(lscpu | grep "CPU(s):" | head -n 1 | cut -f 2 -d ":" | sed 's| ||g')
-	#[ ${_ncores} -gt "1" ] && retval=$(_ncores-1)
-	echo ${_ncores}
-}
-
 function thisdir()
 {
         SOURCE="${BASH_SOURCE[0]}"
@@ -41,54 +12,8 @@ function thisdir()
         echo ${DIR}
 }
 SCRIPTPATH=$(thisdir)
-
-function abspath()
-{
-  case "${1}" in
-    [./]*)
-    echo "$(cd ${1%/*}; pwd)/${1##*/}"
-    ;;
-    *)
-    echo "${PWD}/${1}"
-    ;;
-  esac
-}
-export -f abspath
-
-function get_opt()
-{
-    all_opts="$@"
-    # echo "options in function: ${all_opts}"
-    opt=${1}
-    # echo "checking for [${opt}]"
-    #opts=("${all_opts[@]:2}")
-    opts=$(echo ${all_opts} | cut -d ' ' -f 2-)
-    retval=""
-    is_set=""
-    # echo ".. in [${opts}]"
-    for i in ${opts}
-    do
-    case $i in
-        --${opt}=*)
-        retval="${i#*=}"
-        shift # past argument=value
-        ;;
-        --${opt})
-        is_set=yes
-        shift # past argument with no value
-        ;;
-        *)
-            # unknown option
-        ;;
-    esac
-    done
-    if [ -z ${retval} ]; then
-        echo ${is_set}
-    else
-        echo ${retval}
-    fi
-}
-export -f get_opt
+source ${SCRIPTPATH}/../../external/util.sh
+separator "pyjetty: ${BASH_SOURCE}"
 
 need_help=$(get_opt "help" $@)
 if [ ! -z ${need_help} ]; then
@@ -98,7 +23,7 @@ fi
 
 unsetpyhonpath=$(get_opt "unsetpyhonpath" $@)
 if [ ! -z ${unsetpyhonpath} ]; then
-    unset PYTHONPATH	&& echo "unsetting PYTHONPATH"
+    unset PYTHONPATH	&& warning "unsetting PYTHONPATH"
 fi
 
 install_path=${SCRIPTPATH}/..
@@ -106,14 +31,14 @@ build_path=${SCRIPTPATH}/../build
 
 clean=$(get_opt "clean" $@)
 if [ ! -z ${clean} ]; then
-    [ -d ${build_path} ] &&echo "[i] removing ${build_path}" && rm -rf ${build_path}
+    [ -d ${build_path} ] && warning "removing ${build_path}" && rm -rf ${build_path}
 	exit 0
 fi
 
 cleanall=$(get_opt "cleanall" $@)
 if [ ! -z ${cleanall} ]; then
-	[ -d ${build_path} ] &&echo "[i] removing ${build_path}" && rm -rf ${build_path}
-    [ -d ${install_path}/lib ] &&echo "[i] removing ${install_path}/lib" && rm -rf ${install_path}/lib
+	[ -d ${build_path} ] && warning "removing ${build_path}" && rm -rf ${build_path}
+    [ -d ${install_path}/lib ] && warning "removing ${install_path}/lib" && rm -rf ${install_path}/lib
 	exit 0
 fi
 
@@ -126,8 +51,8 @@ fi
 
 
 DVENVOPT=""
-in_venv=$(python -c "import sys; print(hasattr(sys, 'real_prefix'))")
-[ "x${in_venv}" == "xTrue" ] && DVENVOPT="-DPython3_FIND_VIRTUALENV=ONLY" && echo "- Find/use python in VENV -> option set: ${DVENVOPT}"
+invenv=$(python -c "import sys; print(hasattr(sys, 'real_prefix'))")
+[ "x${invenv}" == "xTrue" ] && DVENVOPT="-DPython3_FIND_VIRTUALENV=ONLY" && warning "- Find/use python in VENV -> option set: ${DVENVOPT}"
 
 build_configuration="Release"
 debug=$(get_opt "debug" $@)
@@ -137,14 +62,18 @@ fi
 
 echo "[i] building in ${build_path}"
 mkdir -p ${build_path}
-if [ -d ${build_path} ]; then
+redo=$(get_opt "re" $@)
+if [ -d ${build_path} ] || [ "x${redo}" == "xyes" ]; then
 	cd ${build_path}
 	cmake -B. -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} \
     ${DVENVOPT} -DCMAKE_BUILD_TYPE=${build_configuration} \
-    $(abspath ${SCRIPTPATH}/..) \
-	&& cmake --build . --target all -- -j $(n_cores) \
-	&& cmake --build . --target install
-	cd -
+    $(abspath ${SCRIPTPATH}/..)
+    configure_only=$(get_opt "configure-only" $@)
+    if [ ! "x${configure_only}" == "xyes" ]; then
+        cmake --build . --target all -- -j $(n_cores) \
+	       && cmake --build . --target install
+    fi
+   cd -
 else
 	echo "[error] unable to access build path: ${build_path}"
 fi

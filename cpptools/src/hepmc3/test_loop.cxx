@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#if HEPMC3
+#if HEPMC31
 #define HEPMC_ALIAS HepMC3
 #include "HepMC3/GenEvent.h"
 #include "HepMC3/ReaderAscii.h"

@@ -8,19 +8,19 @@
 #  HEPMC_LIBRARIES (not cached)
 #  HEPMC_LIBRARY_DIRS (not cached)
 
-find_path(HEPMC_INCLUDE_DIR HepMC/GenEvent.h HINTS $ENV{HEPMC_DIR}/include)
+find_path(HEPMC_INCLUDE_DIR HepMC/GenEvent.h HINTS $ENV{HEPMC_DIR}/include $ENV{HEPMC2_DIR}/include)
 set(HEPMC_INCLUDE_DIRS ${HEPMC_INCLUDE_DIR})
 
 if(NOT HepMC_FIND_COMPONENTS)
   set(HepMC_FIND_COMPONENTS HepMC)
 endif()
 foreach(component ${HepMC_FIND_COMPONENTS})
-  find_library(HEPMC_${component}_LIBRARY NAMES HepMC${component} ${component} HINTS $ENV{HEPMC_DIR}/lib)
+  find_library(HEPMC_${component}_LIBRARY NAMES HepMC${component} ${component} HINTS $ENV{HEPMC_DIR}/lib $ENV{HEPMC2_DIR}/lib)
   list(APPEND HEPMC_LIBRARIES ${HEPMC_${component}_LIBRARY})
   get_filename_component(_comp_dir ${HEPMC_${component}_LIBRARY} PATH)
   list(APPEND HEPMC_LIBRARY_DIRS ${_comp_dir})
 
-  find_library(COMP NAMES ${component} HINTS $ENV{HEPMC_DIR}/lib)
+  find_library(COMP NAMES ${component} HINTS $ENV{HEPMC_DIR}/lib $ENV{HEPMC2_DIR}/lib)
   if (COMP)
   	list(APPEND HEPMC_LINKS ${component})
   endif()

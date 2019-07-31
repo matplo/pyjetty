@@ -6,3 +6,5 @@ __pycache__
 *.joblib
 .ipynb_checkpoints
 .pyjetty_config_external
+Pipfile
+Pipfile.lock

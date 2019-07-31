@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cdir=$(pwd)
+
 function thisdir()
 {
 	SOURCE="${BASH_SOURCE[0]}"
@@ -13,29 +15,48 @@ function thisdir()
 }
 
 SCRIPTPATH=$(thisdir)
+source ${SCRIPTPATH}/util.sh
+separator "${BASH_SOURCE}"
 
-[ "x${1}" == "xunset" ] && unset PYTHONPATH	&& echo "unsetting PYTHONPATH"
-. ${SCRIPTPATH}/setup_hepmc2_cmake.sh
-. ${SCRIPTPATH}/setup_lhapdf6.sh
-. ${SCRIPTPATH}/setup_pythia8.sh
-. ${SCRIPTPATH}/setup_fastjet.sh
-. ${SCRIPTPATH}/setup_hepmc3.sh
+[ "$(get_opt "unset" $@)" == "xyes" ] && unset PYTHONPATH && warning "unsetting PYTHONPATH"
+. ${SCRIPTPATH}/setup_lhapdf6.sh 		--version=6.2.3 	 $@
+. ${SCRIPTPATH}/setup_hepmc2_cmake.sh 	--version=2.06.09 	 $@
+. ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1  	 $@
+. ${SCRIPTPATH}/setup_pythia8.sh 		--version=8235 		 $@
+if [ "$(get_opt "install" $@)" == "xyes" ]; then
+	note "... running with install"
+	. ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1 --re $@
+fi
+. ${SCRIPTPATH}/setup_fastjet.sh 		--version=3.3.2 	 $@
 
 python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
 export PYTHONPATH=${FASTJET_DIR}/lib/python${python_version}/site-packages:${PYTHONPATH}
-export PYTHONPATH=${HEPMC2_DIR}/lib:${PYTHONPATH}
+# export PYTHONPATH=${HEPMC2_DIR}/lib:${PYTHONPATH}
 export PYTHONPATH=${HEPMC3_DIR}/lib:${PYTHONPATH}
 export PYTHONPATH=${LHAPDF6_DIR}/lib/python${python_version}/site-packages:${PYTHONPATH}
 export PYTHONPATH=${PYTHIA_DIR}/lib:${PYTHONPATH}
 
-export PATH=${HEPMC_DIR}/bin:${LHAPDF6_DIR}/bin:${PYTHIA8_DIR}/bin:${FASTJET_DIR}/bin:${PATH}
-if [ -z ${LD_LIBRARY_PATH} ]; then
-	export LD_LIBRARY_PATH=${HEPMC3_DIR}/lib:${HEPMC_DIR}/lib:${LHAPDF6_DIR}/lib:${PYTHIA_DIR}/lib:${FASTJET_DIR}/lib
-else
-	export LD_LIBRARY_PATH=${HEPMC3_DIR}/lib:${HEPMC_DIR}/lib:${LHAPDF6_DIR}/lib:${PYTHIA_DIR}/lib:${FASTJET_DIR}/lib:${LD_LIBRARY_PATH}
-fi
-if [ -z ${DYLD_LIBRARY_PATH} ]; then
-	export DYLD_LIBRARY_PATH=${HEPMC3_DIR}/lib:${HEPMC_DIR}/lib:${LHAPDF6_DIR}/lib:${PYTHIA_DIR}/lib:${FASTJET_DIR}/lib
-else
-	export DYLD_LIBRARY_PATH=${HEPMC3_DIR}/lib:${HEPMC_DIR}/lib:${LHAPDF6_DIR}/lib:${PYTHIA_DIR}/lib:${FASTJET_DIR}/lib:${DYLD_LIBRARY_PATH}
-fi
+for _path in ${HEPMC_DIR} ${HEPMC3_DIR} ${LHAPDF6_DIR} ${PYTHIA8_DIR} ${FASTJET_DIR}
+do
+	echo ${_path}
+	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
+		echo_info "adding ${_path}"
+		if [ -z ${PATH} ]; then
+			export PATH=${_path}/bin
+		else
+			export PATH=${_path}/bin:${PATH}
+		fi
+		if [ -z ${LD_LIBRARY_PATH} ]; then
+			export LD_LIBRARY_PATH=${_path}/lib
+		else
+			export LD_LIBRARY_PATH=${_path}/lib:${LD_LIBRARY_PATH}
+		fi
+		if [ -z ${DYLD_LIBRARY_PATH} ]; then
+			export DYLD_LIBRARY_PATH=${_path}/lib
+		else
+			export DYLD_LIBRARY_PATH=${_path}/lib:${DYLD_LIBRARY_PATH}
+		fi
+	fi
+done
+
+cd ${cdir}

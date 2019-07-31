@@ -4,6 +4,7 @@
 - this uses CMake, SWIG
 - Python3 required
 - recommendation: work within pipenv (or virtual env)
+- usage of ROOT (Pythia8 bindings; also HEPMC3) is up to the user
 
 # example python script
 
@@ -11,14 +12,55 @@
 
 # recommended build/setup
 
+- first time run
 ```
-source setup.sh
+pipenv shell
+source setup.sh --install
 ```
 
-Notes: 
+- to rebuild everything (including the externals (all))
+```
+source setup.sh --install --reset-external --rebuild
+```
+
+- or use individually one of the scripts
+```
+external/setup_pythia8.sh
+external/setup_fastjet.sh          
+external/setup_hepmc3.sh           
+external/setup_hepmc2_cmake.sh     
+external/setup_lhapdf6.sh
+```
+
+```
+source ./external/setup_env.sh --install --rebuild
+```
+
+- useful debuging option `--configure-only`
+
+- to rebuild cpptools only
+```
+source setup.sh --rebuild
+```
+- useful debuging option `--configure-only`
+
+- one can also use ./cpptools/scripts/build_cpptools.sh directly with [--rebuild] [--install] [--clean] [--cleanall]
+
+## Notes: 
 - this will download and install PYTHIA, HepMC2, HepMC3, LHAPDF6, FASTJET into the `external` subdirectory. This behavior can be controlled by `.pyjetty_config_external` file (sourced as a shell script) - you can control what version packages to use by building those libs yourself... (no or empty `.pyjetty_config_external` is fine)
 - the `.pyjetty_config_external` in a local directory takes precedence (default is to take one from the downloaded/git directory)
 - for some options `./scripts/build_cpptools.sh --help`
+
+# running
+
+- example 'workflow' (note no `--install`)
+
+```
+pipenv shell
+source setup.sh
+./cpptools/tests/pythia_gen_fj_lund_test.py
+...
+```
 
 ## alternative
 
