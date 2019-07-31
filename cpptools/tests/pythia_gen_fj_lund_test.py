@@ -29,7 +29,9 @@ all_jets = []
 
 mycfg = ['PhaseSpace:pThatMin = 10']
 pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
-for i in tqdm.tqdm(range(10)):
+if args.nev < 10:
+	args.nev = 10
+for i in tqdm.tqdm(range(args.nev)):
 	if not pythia.next():
 		continue
 	parts = pythiafjext.vectorize(pythia, True, -1, 1, False)

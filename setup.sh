@@ -41,6 +41,10 @@ if [ -z ${PYJETTY_SET} ]; then
 	export PYTHONPATH=${PYTHONPATH}:${STHISDIR}:${STHISDIR}/cpptools/lib
 	export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib
 	export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib
+	if [ "x$(os_darwin)" == "xyes" ]; then
+		export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib:/usr/local/lib
+		export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${STHISDIR}/cpptools/lib:/usr/local/lib
+	fi
 	export PYJETTY_SET=TRUE
 fi
 
