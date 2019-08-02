@@ -48,6 +48,8 @@ do
 		add_ldpath "${python_path}"
 	fi
 	add_pythonpath "${python_path}"
+	add_pythonpath "${lib_path}"
+	add_pythonpath "${lib64_path}"
 done
 
 cd ${cdir}
