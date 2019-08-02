@@ -80,7 +80,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		if [ "x${CGAL_DIR}" == "x" ] || [ ! -d ${CGAL_DIR} ]; then
 			note "building w/o cgal"
 		    PYTHON=${PYJETTY_PYTHON_EXECUTABLE} \
-		    PYTHON_INCLUDE="${PYJETTY_PYTHON_INCLUDE_DIR}" \
+		    PYTHON_INCLUDE="${PYJETTY_PYTHON_INCLUDES}" \
 		    ./configure --prefix=${dirinst} --enable-allcxxplugins \
 		    --enable-pyext
 		else

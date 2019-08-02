@@ -240,9 +240,9 @@ function add_path()
 	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
 		echo_info "adding ${_path} to PATH"
 		if [ -z ${PATH} ]; then
-			export PATH=${_path}/bin
+			export PATH=${_path}
 		else
-			export PATH=${_path}/bin:${PATH}
+			export PATH=${_path}:${PATH}
 		fi
 	fi
 }
@@ -254,9 +254,9 @@ function add_pythonpath()
 	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
 		echo_info "adding ${_path} PYTHONPATH"
 		if [ -z ${PYTHONPATH} ]; then
-			export PYTHONPATH=${_path}/bin
+			export PYTHONPATH=${_path}
 		else
-			export PYTHONPATH=${_path}/bin:${PYTHONPATH}
+			export PYTHONPATH=${_path}:${PYTHONPATH}
 		fi
 	fi
 }
@@ -268,9 +268,9 @@ function add_ldpath()
 	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
 		echo_info "adding ${_path} to LD_LIBRARY_PATH"
 		if [ -z ${LD_LIBRARY_PATH} ]; then
-			export LD_LIBRARY_PATH=${_path}/bin
+			export LD_LIBRARY_PATH=${_path}
 		else
-			export LD_LIBRARY_PATH=${_path}/bin:${LD_LIBRARY_PATH}
+			export LD_LIBRARY_PATH=${_path}:${LD_LIBRARY_PATH}
 		fi
 	fi
 }
@@ -282,9 +282,9 @@ function add_dyldpath()
 	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
 		echo_info "adding ${_path} to DYLD_LIBRARY_PATH"
 		if [ -z ${DYLD_LIBRARY_PATH} ]; then
-			export DYLD_LIBRARY_PATH=${_path}/bin
+			export DYLD_LIBRARY_PATH=${_path}
 		else
-			export DYLD_LIBRARY_PATH=${_path}/bin:${DYLD_LIBRARY_PATH}
+			export DYLD_LIBRARY_PATH=${_path}:${DYLD_LIBRARY_PATH}
 		fi
 	fi
 }

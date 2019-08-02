@@ -32,21 +32,21 @@ fi
 
 for _path in ${HEPMC_DIR} ${HEPMC3_DIR} ${LHAPDF6_DIR} ${PYTHIA8_DIR} ${FASTJET_DIR}
 do
-	echo ${_path}
+	note "using ${_path} to setup environment..."
 	add_path "${_path}/bin"
-	_add_python_path=${_path}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages
+	_add_python_path="${_path}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages"
 	if [ "x$(os_darwin)" == "xyes" ]; then
 		add_dyldpath "${_path}/lib"
 		add_dyldpath "${_path}/lib64"
-		add_dyldpath ${_add_python_path}
-		add_dyldpath ${_add_python_path}
+		add_dyldpath "${_add_python_path}"
+		add_dyldpath "${_add_python_path}"
 	else
 		add_ldpath "${_path}/lib"
 		add_ldpath "${_path}/lib64"
-		add_ldpath ${_add_python_path}
-		add_ldpath ${_add_python_path}
+		add_ldpath "${_add_python_path}"
+		add_ldpath "${_add_python_path}"
 	fi
-	add_pythonpath ${_add_python_path}
+	add_pythonpath "${_add_python_path}"
 done
 
 cd ${cdir}
