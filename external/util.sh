@@ -183,7 +183,7 @@ function setup_python_env()
     	_PYTHON_SETUP=""
     	_PYTHON_LIBS_LINK=""
 	else
-		_PYTHON_VERSION=$(${_PYTHON_EXECUTABLE} --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
+		_PYTHON_VERSION=$(${_PYTHON_EXECUTABLE} --version 2>&1 | cut -f 2 -d' ' | cut -f 1-2 -d.)
 		_PYTHON_BIN_DIR=$(dirname ${_PYTHON_EXECUTABLE})
 	    _PYTHON_INCLUDE_DIR=$(${_PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")
 	    _PYTHON_LIBDIR=$(${_PYTHON_EXECUTABLE} -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
