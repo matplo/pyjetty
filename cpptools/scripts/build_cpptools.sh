@@ -65,8 +65,21 @@ mkdir -p ${build_path}
 redo=$(get_opt "re" $@)
 if [ -d ${build_path} ] || [ "x${redo}" == "xyes" ]; then
 	cd ${build_path}
+    _wpython=$(which python)
+    _python_includes=$(${_wpython} -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")
+    _python_libdir=$(${_wpython} -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
+    _wpython_config=$(which python-config)
+    _python_libs=$(${_wpython_config} --libs)
+    _python_numpy_includes=$(${_wpython} -c "import numpy; print(numpy.get_include())")
 	cmake -B. -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} \
     ${DVENVOPT} -DCMAKE_BUILD_TYPE=${build_configuration} \
+    -DPYTHON_INCLUDE_DIR=${_python_includes} \
+    -DPYTHON_LIBRARY=${_python_libdir} \
+    -DPYTHON_LIBS="-L${_python_libdir} ${_python_libs}" \
+    -DPython3_NumPy_INCLUDE_DIRS=${_python_numpy_includes} \
+    -DPython3_LIBRARIES="-L${_python_libdir} ${_python_libs}" \
+    -DPython3_INCLUDE_DIRS=${_python_includes} \
+    -DPython_User=TRUE \
     $(abspath ${SCRIPTPATH}/..)
     configure_only=$(get_opt "configure-only" $@)
     if [ ! "x${configure_only}" == "xyes" ]; then

@@ -11,8 +11,19 @@ include(${SWIG_USE_FILE})
 # Include python
 # find_package(PythonLibs REQUIRED)
 # include_directories(${PYTHON_INCLUDE_PATH})
-find_package(Python3 REQUIRED COMPONENTS Interpreter NumPy)
-message(STATUS "Python3 libraries: ${Python3_LIBRARIES}")
+if (Python_User)
+	message(STATUS "Using Python paths specified by the user...")
+	set(Python3_FOUND)
+else()
+	set (Python3_FIND_ABI "ANY" "ANY" "ANY")
+	find_package(Python3 REQUIRED COMPONENTS Interpreter NumPy)
+	message(STATUS "Python3 libraries: ${Python3_LIBRARIES}")
+endif()
+
+message(STATUS "Python3_LIBRARIES: ${Python3_LIBRARIES}")
+message(STATUS "Python3_INCLUDE_DIRS: ${Python3_INCLUDE_DIRS}")
+message(STATUS "Python3_NumPy_INCLUDE_DIRS: ${Python3_NumPy_INCLUDE_DIRS}")
+
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Python3_NumPy_INCLUDE_DIRS})
 
