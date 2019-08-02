@@ -37,17 +37,21 @@ do
 	lib_path="${path}/lib"
 	lib64_path="${path}/lib64"
 	python_path="${path}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages"
+	python_path64="${path}/lib64/python${PYJETTY_PYTHON_VERSION}/site-packages"
 	add_path ${bin_path}
 	if [ "x$(os_darwin)" == "xyes" ]; then
 		add_dyldpath "${lib_path}"
 		add_dyldpath "${lib64_path}"
 		add_dyldpath "${python_path}"
+		add_dyldpath "${python_path64}"
 	else
 		add_ldpath "${lib_path}"
 		add_ldpath "${lib64_path}"
 		add_ldpath "${python_path}"
+		add_ldpath "${python_path64}"
 	fi
 	add_pythonpath "${python_path}"
+	add_pythonpath "${python_path64}"
 	add_pythonpath "${lib_path}"
 	add_pythonpath "${lib64_path}"
 done
