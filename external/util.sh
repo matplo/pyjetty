@@ -233,3 +233,59 @@ function echo_python_setup()
 	echo_info "PYJETTY_PYTHON_LIBS_LINK=${PYJETTY_PYTHON_LIBS_LINK}"
 }
 export -f echo_python_setup
+
+function add_path()
+{
+	_path=${1}
+	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
+		echo_info "adding ${_path} to PATH"
+		if [ -z ${PATH} ]; then
+			export PATH=${_path}/bin
+		else
+			export PATH=${_path}/bin:${PATH}
+		fi
+	fi
+}
+export -f add_path
+
+function add_pythonpath()
+{
+	_path=${1}
+	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
+		echo_info "adding ${_path} PYTHONPATH"
+		if [ -z ${PYTHONPATH} ]; then
+			export PYTHONPATH=${_path}/bin
+		else
+			export PYTHONPATH=${_path}/bin:${PYTHONPATH}
+		fi
+	fi
+}
+export -f add_pythonpath
+
+function add_ldpath()
+{
+	_path=${1}
+	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
+		echo_info "adding ${_path} to LD_LIBRARY_PATH"
+		if [ -z ${LD_LIBRARY_PATH} ]; then
+			export LD_LIBRARY_PATH=${_path}/bin
+		else
+			export LD_LIBRARY_PATH=${_path}/bin:${LD_LIBRARY_PATH}
+		fi
+	fi
+}
+export -f add_ldpath
+
+function add_dyldpath()
+{
+	_path=${1}
+	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
+		echo_info "adding ${_path} to DYLD_LIBRARY_PATH"
+		if [ -z ${DYLD_LIBRARY_PATH} ]; then
+			export DYLD_LIBRARY_PATH=${_path}/bin
+		else
+			export DYLD_LIBRARY_PATH=${_path}/bin:${DYLD_LIBRARY_PATH}
+		fi
+	fi
+}
+export -f add_dyldpath
