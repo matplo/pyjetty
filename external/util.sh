@@ -1,7 +1,7 @@
-if [ ! -z ${PYJETTY_EXTERNAL_UTIL_LOADED} ]; then
-	return 0
-fi
-PYJETTY_EXTERNAL_UTIL_LOADED=yes
+#if [ ! -z ${PYJETTY_EXTERNAL_UTIL_LOADED} ]; then
+#	return 0
+#fi
+#PYJETTY_EXTERNAL_UTIL_LOADED=yes
 
 function abspath()
 {
@@ -236,56 +236,64 @@ export -f echo_python_setup
 
 function add_path()
 {
-	_path=${1}
-	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
-		echo_info "adding ${_path} to PATH"
+	path=${1}
+	if [ ! -z ${path} ] && [ -d ${path} ]; then
+		echo_info "adding ${path} to PATH"
 		if [ -z ${PATH} ]; then
-			export PATH=${_path}
+			export PATH=${path}
 		else
-			export PATH=${_path}:${PATH}
+			export PATH=${path}:${PATH}
 		fi
+	else
+		[ "x${2}" == "xdebug" ] && echo_error "ignoring ${path} for PATH"
 	fi
 }
 export -f add_path
 
 function add_pythonpath()
 {
-	_path=${1}
-	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
-		echo_info "adding ${_path} PYTHONPATH"
+	path=${1}
+	if [ ! -z ${path} ] && [ -d ${path} ]; then
+		echo_info "adding ${path} PYTHONPATH"
 		if [ -z ${PYTHONPATH} ]; then
-			export PYTHONPATH=${_path}
+			export PYTHONPATH=${path}
 		else
-			export PYTHONPATH=${_path}:${PYTHONPATH}
+			export PYTHONPATH=${path}:${PYTHONPATH}
 		fi
+	else
+		[ "x${2}" == "xdebug" ] && echo_error "ignoring ${path} for PYTHONPATH"
 	fi
 }
 export -f add_pythonpath
 
 function add_ldpath()
 {
-	_path=${1}
-	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
-		echo_info "adding ${_path} to LD_LIBRARY_PATH"
+	path=${1}
+	if [ ! -z ${path} ] && [ -d ${path} ]; then
+		echo_info "adding ${path} to LD_LIBRARY_PATH"
 		if [ -z ${LD_LIBRARY_PATH} ]; then
-			export LD_LIBRARY_PATH=${_path}
+			export LD_LIBRARY_PATH=${path}
 		else
-			export LD_LIBRARY_PATH=${_path}:${LD_LIBRARY_PATH}
+			export LD_LIBRARY_PATH=${path}:${LD_LIBRARY_PATH}
 		fi
+	else
+		[ "x${2}" == "xdebug" ] && echo_error "ignoring ${path} for LD_LIBRARY_PATH"
 	fi
 }
 export -f add_ldpath
 
 function add_dyldpath()
 {
-	_path=${1}
-	if [ ! -z ${_path} ] && [ -d ${_path} ]; then
-		echo_info "adding ${_path} to DYLD_LIBRARY_PATH"
+	path=${1}
+	if [ ! -z ${path} ] && [ -d ${path} ]; then
+		echo_info "adding ${path} to DYLD_LIBRARY_PATH"
 		if [ -z ${DYLD_LIBRARY_PATH} ]; then
-			export DYLD_LIBRARY_PATH=${_path}
+			export DYLD_LIBRARY_PATH=${path}
 		else
-			export DYLD_LIBRARY_PATH=${_path}:${DYLD_LIBRARY_PATH}
+			export DYLD_LIBRARY_PATH=${path}:${DYLD_LIBRARY_PATH}
 		fi
+	else
+		[ "x${2}" == "xdebug" ] && echo_error "ignoring ${path} for DYLD_LIBRARY_PATH"
 	fi
 }
 export -f add_dyldpath

@@ -30,23 +30,24 @@ if [ "$(get_opt "install" $@)" == "xyes" ]; then
 fi
 . ${SCRIPTPATH}/setup_fastjet.sh 		--version=3.3.2 	 $@
 
-for _path in ${HEPMC_DIR} ${HEPMC3_DIR} ${LHAPDF6_DIR} ${PYTHIA8_DIR} ${FASTJET_DIR}
+for path in ${HEPMC2_DIR} ${HEPMC3_DIR} ${LHAPDF6_DIR} ${PYTHIA8_DIR} ${FASTJET_DIR}
 do
-	note "using ${_path} to setup environment..."
-	add_path "${_path}/bin"
-	_add_python_path="${_path}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages"
+	note "using ${path} to setup environment..."
+	bin_path="${path}/bin"
+	lib_path="${path}/lib"
+	lib64_path="${path}/lib64"
+	python_path="${path}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages"
+	add_path ${bin_path}
 	if [ "x$(os_darwin)" == "xyes" ]; then
-		add_dyldpath "${_path}/lib"
-		add_dyldpath "${_path}/lib64"
-		add_dyldpath "${_add_python_path}"
-		add_dyldpath "${_add_python_path}"
+		add_dyldpath "${lib_path}"
+		add_dyldpath "${lib64_path}"
+		add_dyldpath "${python_path}"
 	else
-		add_ldpath "${_path}/lib"
-		add_ldpath "${_path}/lib64"
-		add_ldpath "${_add_python_path}"
-		add_ldpath "${_add_python_path}"
+		add_ldpath "${lib_path}"
+		add_ldpath "${lib64_path}"
+		add_ldpath "${python_path}"
 	fi
-	add_pythonpath "${_add_python_path}"
+	add_pythonpath "${python_path}"
 done
 
 cd ${cdir}

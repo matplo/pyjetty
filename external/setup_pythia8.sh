@@ -104,9 +104,8 @@ fi
 
 if [ -d ${dirinst} ]; then
 	export PYTHIA_DIR=${dirinst}
+	export PYTHIA8_DIR=${dirinst}
 	export PYTHIA8_ROOT_DIR=${dirinst}
-	export PATH=$PATH:${dirinst}/bin
-	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib
 fi
 
 cd ${cdir}
