@@ -14,8 +14,9 @@ function thisdir()
 	echo ${DIR}
 }
 SCRIPTPATH=$(thisdir)
-source ${SCRIPTPATH}/util.sh
 separator "${BASH_SOURCE}"
+source ${SCRIPTPATH}/util.sh
+setup_python_env
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.0.0
@@ -81,19 +82,6 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	if [ -d ${dirsrc} ]; then
 		mkdir -p ${dirbuild}
 		cd ${dirbuild}
-		[ "x${1}" == "xunset" ] && unset PYTHONPATH	&& echo "unsetting PYTHONPATH"
-	    python_inc_dir=$(python3-config --includes | cut -d' ' -f 1 | cut -dI -f 2)
-	    python_exec=$(which python3)
-	    python_bin_dir=$(dirname ${python_exec})
-	    echo_info "python exec: ${python_exec}"
-	    echo_info "python include: ${python_inc_dir}"
-	    # this is a nasty trick to force python3 bindings
-	    if [ ! -e ${python_bin_dir}/python ]; then
-	    	python_bin_dir=${SCRIPTPATH}/build/pythia-python-bin
-	    	mkdir ${python_bin_dir}
-	    	ln -s ${python_exec} ${python_bin_dir}/python
-		    warning "fix-up-python bin dir: ${python_bin_dir}"
-		fi
 		ROOTIOFLAG=OFF
 		[ ! -z ${ROOTSYS} ] && [ -d ${ROOTSYS} ] && ROOTIOFLAG=ON
 		echo_info "installing to ${dirinst}"

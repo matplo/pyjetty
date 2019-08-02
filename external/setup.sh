@@ -15,8 +15,9 @@ function thisdir()
 }
 
 SCRIPTPATH=$(thisdir)
-source ${SCRIPTPATH}/util.sh
 separator "${BASH_SOURCE}"
+source ${SCRIPTPATH}/util.sh
+setup_python_env
 
 [ "$(get_opt "unset" $@)" == "xyes" ] && unset PYTHONPATH && warning "unsetting PYTHONPATH"
 . ${SCRIPTPATH}/setup_lhapdf6.sh 		--version=6.2.3 	 $@
@@ -35,6 +36,21 @@ export PYTHONPATH=${FASTJET_DIR}/lib/python${python_version}/site-packages:${PYT
 export PYTHONPATH=${HEPMC3_DIR}/lib:${PYTHONPATH}
 export PYTHONPATH=${LHAPDF6_DIR}/lib/python${python_version}/site-packages:${PYTHONPATH}
 export PYTHONPATH=${PYTHIA_DIR}/lib:${PYTHONPATH}
+
+#	export PATH=$PATH:${dirinst}/bin
+#	python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
+#	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib/python${python_version}/site-packages
+#	export LHAPATH=${dirinst}/share/LHAPDF
+
+#	export PATH=$PATH:${dirinst}/bin
+#	python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
+#	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib/python${python_version}/site-packages
+#	[ -d ${dirinst}/lib64 ] && export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib64/python${python_version}/site-packages
+
+	# export HEPMC_DIR=${dirinst}
+	export PATH=$PATH:${dirinst}/bin
+	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib
+
 
 for _path in ${HEPMC_DIR} ${HEPMC3_DIR} ${LHAPDF6_DIR} ${PYTHIA8_DIR} ${FASTJET_DIR}
 do
@@ -55,6 +71,12 @@ do
 			export DYLD_LIBRARY_PATH=${_path}/lib
 		else
 			export DYLD_LIBRARY_PATH=${_path}/lib:${DYLD_LIBRARY_PATH}
+		fi
+		_add_python_path=${_path}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages
+		if [ -z ${PYTHONPATH} ]; then
+			export PYTHONPATH=${_add_python_path}
+		else
+			export PYTHONPATH=${_add_python_path}:${PYTHONPATH}
 		fi
 	fi
 done

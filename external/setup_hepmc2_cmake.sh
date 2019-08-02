@@ -14,8 +14,9 @@ function thisdir()
 	echo ${DIR}
 }
 SCRIPTPATH=$(thisdir)
-source ${SCRIPTPATH}/util.sh
 separator "${BASH_SOURCE}"
+source ${SCRIPTPATH}/util.sh
+setup_python_env
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=2.06.09
@@ -93,9 +94,6 @@ fi
 if [ -d ${dirinst} ]; then
 	export HEPMC2_DIR=${dirinst}
 	export HEPMC2_ROOT_DIR=${dirinst}
-	# export HEPMC_DIR=${dirinst}
-	export PATH=$PATH:${dirinst}/bin
-	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib
 fi
 
 cd ${cdir}

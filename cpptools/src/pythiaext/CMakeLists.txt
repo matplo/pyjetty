@@ -15,6 +15,7 @@ target_include_directories(${NAME_LIB} PUBLIC ${HEPMC_INCLUDE_DIRS})
 target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${HEPMC_LIBRARIES})
 
 set(SWIG_TARGET_LINK_LIBRARIES ${PYTHIA8_LDFLAGS} ${HEPMC_LIBRARIES})
-include(swigify)
+
+swigify()
 
 install_targets_custom()

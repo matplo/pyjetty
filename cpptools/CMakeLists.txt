@@ -1,16 +1,8 @@
 # This file is just an orchestration
 cmake_minimum_required(VERSION 3.13.5)
-find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
-find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
-include(install_targets_custom)
-
-set (CMAKE_CXX_STANDARD 11)
-
-# Apple: Don't modify install_name when touching RPATH.
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
+# SWIG: use SWIG_MODULE_NAME property.
+if(POLICY CMP0086)
+  cmake_policy(SET CMP0086 NEW)
 endif()
 # target_sources: use absolute path for INTERFACE_SOURCES.
 if(POLICY CMP0076)
@@ -20,10 +12,13 @@ endif()
 if(POLICY CMP0078)
   cmake_policy(SET CMP0078 NEW)
 endif()
-# SWIG: use SWIG_MODULE_NAME property.
-if(POLICY CMP0086)
-  cmake_policy(SET CMP0086 NEW)
-endif()
+
+find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
+find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
+set (CMAKE_CXX_STANDARD 11)
 
 project(pyjetty VERSION 1.0 LANGUAGES CXX)
 message(STATUS "version: ${PROJECT_VERSION}")
@@ -94,4 +89,7 @@ if(NOT CMAKE_BUILD_TYPE)
     FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
+include(colors)
+include(swigify)
+include(install_targets_custom)
 add_subdirectory(src)

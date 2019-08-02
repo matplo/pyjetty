@@ -15,6 +15,8 @@ function thisdir()
 }
 STHISDIR=$(thisdir)
 source ${STHISDIR}/external/util.sh
+setup_python_env
+echo_python_setup
 separator "pyjetty $(abspath ${BASH_SOURCE})"
 if [ ! -z ${PYJETTY_SET} ]; then
 	warning "PYJETTY_SET is already ${PYJETTY_SET}"

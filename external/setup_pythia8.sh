@@ -14,8 +14,9 @@ function thisdir()
 	echo ${DIR}
 }
 SCRIPTPATH=$(thisdir)
-source ${SCRIPTPATH}/util.sh
 separator "${BASH_SOURCE}"
+source ${SCRIPTPATH}/util.sh
+setup_python_env
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=8235
@@ -71,8 +72,8 @@ function run_configure()
 	[ ! -z ${HEPMC2_DIR} ] && hepmc2_opt=" --with-hepmc2=${HEPMC2_DIR} --with-hepmc2-include=${HEPMC2_DIR}/include --with-hepmc2-lib=${HEPMC2_DIR}/lib"
 	[ ! -z ${HEPMC3_DIR} ] && hepmc3_opt=" --with-hepmc3=${HEPMC3_DIR} --with-hepmc3-include=${HEPMC3_DIR}/include --with-hepmc3-lib=${HEPMC3_DIR}/lib"
 		./configure --prefix=${dirinst} \
-			--with-python-include=${python_inc_dir} \
-			--with-python-bin=${python_bin_dir} \
+			--with-python-include=${PYJETTY_PYTHON_INCLUDE_DIR} \
+			--with-python-bin=${PYJETTY_PYTHON_BIN_DIR} \
 			${lhapd6_opt} ${hepmc2_opt} ${hepmc3_opt}
 }
 
@@ -81,20 +82,19 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	if [ -d ${dirsrc} ]; then
 		cd ${dirsrc}
 	    # echo "unsetting PYTHONPATH"
-		[ "$(get_opt "unset" $@)" == "xyes" ] && unset PYTHONPATH && warning "unsetting PYTHONPATH"
-	    python_inc_dir=$(python3-config --includes | cut -d' ' -f 1 | cut -dI -f 2)
-	    python_exec=$(which python3)
-	    python_bin_dir=$(dirname ${python_exec})
-	    echo_info "python exec: ${python_exec}"
-	    echo_info "python bin dir: ${python_bin_dir}"
-	    echo_info "python include: ${python_inc_dir}"
-	    if [ ! -e ${python_bin_dir}/python ]; then
-	    	python_bin_dir=${SCRIPTPATH}/build/pythia-python-bin
-	    	mkdir ${python_bin_dir}
-	    	ln -s ${python_exec} ${python_bin_dir}/python
-		    warning "fix-up-python bin dir: ${python_bin_dir}"
+	    if [ ! -e ${PYJETTY_PYTHON_BIN_DIR}/python ]; then
+	    	PYJETTY_PYTHON_BIN_DIR=${SCRIPTPATH}/build/pythia-python-bin
+	    	mkdir ${PYJETTY_PYTHON_BIN_DIR}
+	    	ln -s ${python_exec} ${PYJETTY_PYTHON_BIN_DIR}/python
+		    warning "fix-up-python bin dir: ${PYJETTY_PYTHON_BIN_DIR}"
 		fi
-		run_configure
+		[ ! -z ${LHAPDF6_DIR} ] && lhapd6_opt="	--with-lhapdf6=${LHAPDF6_DIR} --with-lhapdf6-include=${LHAPDF6_DIR}/include --with-lhapdf6-lib=${LHAPDF6_DIR}/lib"
+		[ ! -z ${HEPMC2_DIR} ] && hepmc2_opt=" --with-hepmc2=${HEPMC2_DIR} --with-hepmc2-include=${HEPMC2_DIR}/include --with-hepmc2-lib=${HEPMC2_DIR}/lib"
+		[ ! -z ${HEPMC3_DIR} ] && hepmc3_opt=" --with-hepmc3=${HEPMC3_DIR} --with-hepmc3-include=${HEPMC3_DIR}/include --with-hepmc3-lib=${HEPMC3_DIR}/lib"
+			./configure --prefix=${dirinst} \
+				--with-python-include=${PYJETTY_PYTHON_INCLUDE_DIR} \
+				--with-python-bin=${PYJETTY_PYTHON_BIN_DIR} \
+				${lhapd6_opt} ${hepmc2_opt} ${hepmc3_opt}
 		configure_only=$(get_opt "configure-only" $@)
 		[ "x${configure_only}" == "xyes" ] && grace_return && return 0
 		make -j $(n_cores) && make install

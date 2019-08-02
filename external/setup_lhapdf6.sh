@@ -14,8 +14,9 @@ function thisdir()
 	echo ${DIR}
 }
 SCRIPTPATH=$(thisdir)
-source ${SCRIPTPATH}/util.sh
 separator "${BASH_SOURCE}"
+source ${SCRIPTPATH}/util.sh
+setup_python_env
 
 npdfs_link="http://lhapdfsets.web.cern.ch/lhapdfsets/current/EPPS16nlo_CT14nlo_Pb208.tar.gz"
 
@@ -82,10 +83,6 @@ fi
 if [ -d ${dirinst} ]; then
 	export LHAPDF6_DIR=${dirinst}
 	export LHAPDF6_ROOT_DIR=${dirinst}
-	export PATH=$PATH:${dirinst}/bin
-	python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
-	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib/python${python_version}/site-packages
-	export LHAPATH=${dirinst}/share/LHAPDF
 fi
 
 cd ${cdir}

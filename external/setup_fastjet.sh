@@ -14,8 +14,9 @@ function thisdir()
 	echo ${DIR}
 }
 SCRIPTPATH=$(thisdir)
-source ${SCRIPTPATH}/util.sh
 separator "${BASH_SOURCE}"
+source ${SCRIPTPATH}/util.sh
+setup_python_env
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.3.2
@@ -69,14 +70,6 @@ redo=$(get_opt "rebuild" $@)
 if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	if [ -d ${dirsrc} ]; then
 		cd ${dirsrc}
-		[ "$(get_opt "unset" $@)" == "xyes" ] && unset PYTHONPATH && warning "unsetting PYTHONPATH"
-	    python_includes=$(python3-config --includes)
-	    python_inc_dir=$(python3-config --includes | cut -d' ' -f 1 | cut -dI -f 2)
-	    python_exec=$(which python3)
-	    python_bin_dir=$(dirname ${python_exec})
-	    echo_info "python exec: ${python_exec}"
-	    echo_info "python includes: ${python_includes}"
-	    echo_info "python include: ${python_inc_dir}"
 	    if [ "x${CGAL_DIR}" == "x" ] || [ ! -d ${CGAL_DIR} ]; then
     		no_cgal=$(get_opt "no-cgal" $@)
 	    	if [ "x$(os_darwin)" == "xyes" ] && [ -z ${no_cgal} ]; then
@@ -86,15 +79,15 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	    fi
 		if [ "x${CGAL_DIR}" == "x" ] || [ ! -d ${CGAL_DIR} ]; then
 			note "building w/o cgal"
+		    PYTHON=${PYJETTY_PYTHON_EXECUTABLE} \
+		    PYTHON_INCLUDE="${PYJETTY_PYTHON_INCLUDE_DIR}" \
 		    ./configure --prefix=${dirinst} --enable-allcxxplugins \
-		    PYTHON=${python_exec} \
-		    PYTHON_INCLUDE="${python_includes}" \
 		    --enable-pyext
 		else
 			note "building using cgal at ${CGAL_DIR}"
+		    PYTHON=${PYJETTY_PYTHON_EXECUTABLE} \
+		    PYTHON_INCLUDE="${PYJETTY_PYTHON_INCLUDES}" \
 		    ./configure --prefix=${dirinst} --enable-allcxxplugins \
-		    PYTHON=${python_exec} \
-		    PYTHON_INCLUDE="${python_includes}" \
 		    --enable-cgal --with-cgaldir=${CGAL_DIR} \
 		    --enable-pyext
 		    # \ LDFLAGS=-Wl,-rpath,${BOOST_DIR}/lib CXXFLAGS=-I${BOOST_DIR}/include CPPFLAGS=-I${BOOST_DIR}/include
@@ -108,10 +101,6 @@ fi
 
 if [ -d ${dirinst} ]; then
 	export FASTJET_DIR=${dirinst}
-	export PATH=$PATH:${dirinst}/bin
-	python_version=$(python3 --version | cut -f 2 -d' ' | cut -f 1-2 -d.)
-	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib/python${python_version}/site-packages
-	[ -d ${dirinst}/lib64 ] && export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib64/python${python_version}/site-packages
 fi
 
 cd ${cdir}

@@ -15,6 +15,7 @@ target_include_directories(${NAME_LIB} PUBLIC ${FASTJET_DIR}/include)
 target_link_libraries(${NAME_LIB} PUBLIC ${FASTJET_LIBS})
 
 set(SWIG_TARGET_LINK_LIBRARIES ${FASTJET_LIBS})
-include(swigify)
+
+swigify()
 
 install_targets_custom()

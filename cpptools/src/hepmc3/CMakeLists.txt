@@ -15,6 +15,7 @@ target_include_directories(${NAME_LIB} PUBLIC ${HEPMC3_INCLUDE_DIR})
 target_link_libraries(${NAME_LIB} PUBLIC ${HEPMC3_LIBRARY})
 
 set(SWIG_TARGET_LINK_LIBRARIES ${HEPMC3_LIBRARY})
-include(swigify)
+
+swigify()
 
 install_targets_custom()

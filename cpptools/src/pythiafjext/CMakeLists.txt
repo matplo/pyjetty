@@ -15,6 +15,7 @@ target_include_directories(${NAME_LIB} PUBLIC ${PYTHIA8_DIR}/include ${FASTJET_D
 target_link_libraries(${NAME_LIB} PUBLIC ${PYTHIA8_LDFLAGS} ${FASTJET_LIBS})
 
 set(SWIG_TARGET_LINK_LIBRARIES ${PYTHIA8_LDFLAGS} ${FASTJET_LIBS})
-include(swigify)
+
+swigify()
 
 install_targets_custom()
