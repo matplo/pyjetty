@@ -8,3 +8,4 @@ __pycache__
 .pyjetty_config_external
 Pipfile
 Pipfile.lock
+*.pyc
