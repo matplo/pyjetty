@@ -1,22 +1,14 @@
 %module lundplane
-
+%{
+  #include <fastjet/PseudoJet.hh>
+  #include <fastjet/FunctionOfPseudoJet.hh>
+  #include <LundPlane/LundGenerator.hh>
+  #include <LundPlane/LundJSON.hh>
+  #include <LundPlane/LundWithSecondary.hh>
+  #include <LundPlane/SecondaryLund.hh>
+%}
 %include "std_string.i"
 %include "std_vector.i"
-
-// Add necessary symbols to generated header
-%{
-#include <fastjet/PseudoJet.hh>
-#include <fastjet/FunctionOfPseudoJet.hh>
-// #include <fastjet/tools/Transformer.hh>
-// #include <fastjet/ClusterSequence.hh>
-// #include <fastjet/WrappedStructure.hh>
-// #include <fastjet/tools/Transformer.hh>
-
-#include <LundPlane/LundGenerator.hh>
-#include <LundPlane/LundJSON.hh>
-#include <LundPlane/LundWithSecondary.hh>
-#include <LundPlane/SecondaryLund.hh>
-%}
 
 // Process symbols in header
 // %nodefaultctor Recluster;

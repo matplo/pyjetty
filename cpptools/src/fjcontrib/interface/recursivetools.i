@@ -1,27 +1,23 @@
 %module recursivetools
+%{
+  #include <fastjet/FunctionOfPseudoJet.hh>
+  #include <fastjet/tools/Transformer.hh>
+  #include <fastjet/ClusterSequence.hh>
+  #include <fastjet/WrappedStructure.hh>
+  #include <fastjet/tools/Transformer.hh>
+
+  #include <RecursiveTools/Recluster.hh>
+  #include <RecursiveTools/IteratedSoftDrop.hh>
+  #include <RecursiveTools/RecursiveSymmetryCutBase.hh>
+  #include <RecursiveTools/BottomUpSoftDrop.hh>
+  #include <RecursiveTools/RecursiveSoftDrop.hh>
+  #include <RecursiveTools/ModifiedMassDropTagger.hh>
+  #include <RecursiveTools/SoftDrop.hh>
+  #include <RecursiveTools/Util.hh>
+%}
 
 %include "std_string.i"
 %include "std_vector.i"
-// %include "fastjet.i"
-// %import "fastjet.i"
-
-// Add necessary symbols to generated header
-%{
-#include <fastjet/FunctionOfPseudoJet.hh>
-#include <fastjet/tools/Transformer.hh>
-#include <fastjet/ClusterSequence.hh>
-#include <fastjet/WrappedStructure.hh>
-#include <fastjet/tools/Transformer.hh>
-
-#include <RecursiveTools/Recluster.hh>
-#include <RecursiveTools/IteratedSoftDrop.hh>
-#include <RecursiveTools/RecursiveSymmetryCutBase.hh>
-#include <RecursiveTools/BottomUpSoftDrop.hh>
-#include <RecursiveTools/RecursiveSoftDrop.hh>
-#include <RecursiveTools/ModifiedMassDropTagger.hh>
-#include <RecursiveTools/SoftDrop.hh>
-#include <RecursiveTools/Util.hh>
-%}
 
 // Process symbols in header
 // %nodefaultctor Recluster;

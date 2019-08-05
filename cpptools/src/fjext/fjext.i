@@ -1,8 +1,7 @@
 %module fjext
 %{
-/* Includes the header in the wrapper code */
-#define SWIG_FILE_WITH_INIT
-#include "fjtools.hh"
+	#define SWIG_FILE_WITH_INIT
+	#include "fjtools.hh"
 %}
 
 %include "std_string.i"
