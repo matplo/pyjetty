@@ -169,7 +169,8 @@ export -f padding
 function setup_python_env()
 {	
 	separator "setup_python_env()"
-	_PYTHON_EXECUTABLE=$(which python)
+	[ -z ${PYJETTY_USER_PYTHON_VERSION} ] && export PYJETTY_USER_PYTHON_VERSION=python
+	_PYTHON_EXECUTABLE=$(which ${PYJETTY_USER_PYTHON_VERSION})
 	if [ -z ${_PYTHON_EXECUTABLE} ]; then
 		_PYTHON_VERSION=""
 		_PYTHON_BIN_DIR=""
@@ -189,7 +190,7 @@ function setup_python_env()
 	    _PYTHON_LIBDIR=$(${_PYTHON_EXECUTABLE} -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
     	_PYTHON_NUMPY_INCLUDE_DIR=$(${_PYTHON_EXECUTABLE} -c "import numpy; print(numpy.get_include())")
 
-	    _PYTHON_CONFIG_EXECUTABLE=$(which python-config)
+	    _PYTHON_CONFIG_EXECUTABLE=$(which ${PYJETTY_USER_PYTHON_VERSION}-config)
 		if [ -z ${_PYTHON_CONFIG_EXECUTABLE} ]; then
 			warning "guessing python libs..."
 		    _PYTHON_LIBS="-lpython${_PYTHON_VERSION}"

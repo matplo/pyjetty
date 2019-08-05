@@ -17,9 +17,11 @@ function thisdir()
 SCRIPTPATH=$(thisdir)
 separator "${BASH_SOURCE}"
 source ${SCRIPTPATH}/util.sh
+[ "x$(get_opt "python2" $@)" == "xyes" ] && export PYJETTY_USER_PYTHON_VERSION=python2
+[ "x$(get_opt "python3" $@)" == "xyes" ] && export PYJETTY_USER_PYTHON_VERSION=python3
 setup_python_env
 
-[ "$(get_opt "unset" $@)" == "xyes" ] && unset PYTHONPATH && warning "unsetting PYTHONPATH"
+[ "x$(get_opt "unset" $@)" == "xyes" ] && unset PYTHONPATH && warning "unsetting PYTHONPATH"
 . ${SCRIPTPATH}/setup_lhapdf6.sh 		--version=6.2.3 	 $@
 . ${SCRIPTPATH}/setup_hepmc2_cmake.sh 	--version=2.06.09 	 $@
 . ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1  	 $@
