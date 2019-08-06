@@ -15,6 +15,8 @@ function thisdir()
 }
 STHISDIR=$(thisdir)
 source ${STHISDIR}/external/util.sh
+[ "x$(get_opt "python2" $@)" == "xyes" ] && export PYJETTY_USER_PYTHON_VERSION=python2
+[ "x$(get_opt "python3" $@)" == "xyes" ] && export PYJETTY_USER_PYTHON_VERSION=python3
 setup_python_env
 echo_python_setup
 separator "pyjetty $(abspath ${BASH_SOURCE})"

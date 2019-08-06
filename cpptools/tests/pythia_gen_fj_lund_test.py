@@ -7,10 +7,10 @@ import argparse
 import os
 import numpy as np
 
-import pythia8
-import pythiafjext
 import fastjet as fj
 import fjcontrib
+import pythia8
+import pythiafjext
 
 from pythiautils import configuration as pyconf
 

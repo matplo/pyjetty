@@ -198,7 +198,7 @@ function setup_python_env()
 		    _PYTHON_LIBS=$(${_PYTHON_CONFIG_EXECUTABLE} --libs)
 	    	_PYTHON_LIBS_LINK="-L${_PYTHON_LIBDIR} ${_PYTHON_LIBS}"
 	    	_PYTHON_CONFIG_LDFLAGS=$(${_PYTHON_CONFIG_EXECUTABLE} --ldflags)
-	    	_PYTHON_CONFIG_INCLUDES=$(python-config --includes)
+	    	_PYTHON_CONFIG_INCLUDES=$(${_PYTHON_CONFIG_EXECUTABLE} --includes)
 	    	_PYTHON_SETUP=TRUE
 	    fi
 	fi
