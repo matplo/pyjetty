@@ -25,6 +25,7 @@ function os_linux()
 		echo
 	fi
 }
+export -f os_linux
 
 function os_darwin()
 {
@@ -35,6 +36,7 @@ function os_darwin()
 		echo
 	fi
 }
+export -f os_darwin
 
 function n_cores()
 {
@@ -44,6 +46,7 @@ function n_cores()
 	#[ ${_ncores} -gt "1" ] && retval=$(_ncores-1)
 	echo ${_ncores}
 }
+export -f n_cores
 
 function get_opt()
 {
@@ -167,7 +170,7 @@ function padding ()
 export -f padding
 
 function setup_python_env()
-{	
+{
 	separator "setup_python_env()"
 	[ -z ${PYJETTY_USER_PYTHON_VERSION} ] && export PYJETTY_USER_PYTHON_VERSION=python
 	_PYTHON_EXECUTABLE=$(which ${PYJETTY_USER_PYTHON_VERSION})
