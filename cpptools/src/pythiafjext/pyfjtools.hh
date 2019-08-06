@@ -5,7 +5,7 @@
 #include <Pythia8/Pythia.h>
 
 namespace pythiafjtools{
-	std::vector<fastjet::PseudoJet> vectorize(const Pythia8::Pythia *p,
+	std::vector<fastjet::PseudoJet> vectorize(const Pythia8::Pythia &p,
 	                                          bool only_final,
 	                                          double eta_min, double eta_max,
 	                                          bool add_particle_info);
@@ -18,7 +18,7 @@ namespace pythiafjtools{
 	{
 	public:
 		PythiaParticleInfo();
-		PythiaParticleInfo(const Pythia8::Particle *p);
+		PythiaParticleInfo(const Pythia8::Particle &p);
 		~PythiaParticleInfo();
 		Pythia8::Particle* getParticle() const ;
 	private:

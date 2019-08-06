@@ -2,17 +2,19 @@
 
 from __future__ import print_function
 
+import fastjet as fj
+import fjcontrib
+import fjext
+import pythiafjext
+import pythiaext
+
 import tqdm
 import argparse
 import os
 import numpy as np
 
-import fastjet as fj
-import fjcontrib
-import pythia8
-import pythiafjext
-
 from pythiautils import configuration as pyconf
+import pythia8
 
 parser = argparse.ArgumentParser(description='jet reco on alice data', prog=os.path.basename(__file__))
 pyconf.add_standard_pythia_args(parser)

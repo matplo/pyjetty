@@ -1,26 +1,25 @@
 #include "pyfjtools.hh"
 #include <cmath>
-#include <iostream>
 
 namespace pythiafjtools{
 
-	std::vector<fastjet::PseudoJet> vectorize(const Pythia8::Pythia *pythia,
+	std::vector<fastjet::PseudoJet> vectorize(const Pythia8::Pythia &pythia,
 	                                          bool only_final,
 	                                          double eta_min, double eta_max,
 	                                          bool add_particle_info)
 	{
 		std::vector<fastjet::PseudoJet> v;
-		for (int ip = 0; ip < pythia->event.size(); ip++)
+		for (int ip = 0; ip < pythia.event.size(); ip++)
 		{
-			if (pythia->event[ip].isFinal() || only_final == false)
+			if (pythia.event[ip].isFinal() || only_final == false)
 			{
-				if (pythia->event[ip].eta() > eta_min && pythia->event[ip].eta() < eta_max)
+				if (pythia.event[ip].eta() > eta_min && pythia.event[ip].eta() < eta_max)
 				{
-					fastjet::PseudoJet psj(pythia->event[ip].px(), pythia->event[ip].py(), pythia->event[ip].pz(), pythia->event[ip].e());
+					fastjet::PseudoJet psj(pythia.event[ip].px(), pythia.event[ip].py(), pythia.event[ip].pz(), pythia.event[ip].e());
 					psj.set_user_index(ip);
 					if (add_particle_info)
 					{
-						PythiaParticleInfo * _pinfo = new PythiaParticleInfo(&pythia->event[ip]);
+						PythiaParticleInfo * _pinfo = new PythiaParticleInfo(pythia.event[ip]);
 						psj.set_user_info(_pinfo);
 					}
 					v.push_back(psj);
@@ -48,9 +47,9 @@ namespace pythiafjtools{
 	, fParticle(0)
 	{;}
 
-	PythiaParticleInfo::PythiaParticleInfo(const Pythia8::Particle *p)
+	PythiaParticleInfo::PythiaParticleInfo(const Pythia8::Particle &p)
 	: fastjet::PseudoJet::UserInfoBase::UserInfoBase()
-	, fParticle(new Pythia8::Particle(*p))
+	, fParticle(new Pythia8::Particle(p))
 	{;}
 
 	PythiaParticleInfo::~PythiaParticleInfo()
