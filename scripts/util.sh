@@ -1,8 +1,3 @@
-#if [ ! -z ${PYJETTY_EXTERNAL_UTIL_LOADED} ]; then
-#	return 0
-#fi
-#PYJETTY_EXTERNAL_UTIL_LOADED=yes
-
 function abspath()
 {
   case "${1}" in
@@ -301,3 +296,89 @@ function add_dyldpath()
 	fi
 }
 export -f add_dyldpath
+
+function add_path_module()
+{
+	path=${@:3}
+	what=${2}
+	modulefile=${1}
+	if [ ! -z "${path}" ] && [ -d ${path} ]; then
+		if [ ! -f "${modulefile}" ]; then
+			touch ${modulefile}
+			if [ ! -f "${modulefile}" ]; then
+				error "add_path_module:: unable to open file ${modulefile}"
+			else
+				echo "#%Module" >> ${modulefile}
+				echo "proc ModulesHelp { } {" >> ${modulefile}
+				echo "    global version" >> ${modulefile}
+				echo "    puts stderr \"   Setup pyjetty ${version}\"}" >> ${modulefile}
+				echo "set version ${modulefile}" >> ${modulefile}
+			fi
+		fi
+		if [ ! -f "${modulefile}" ]; then
+			error "add_path_module:: unable to open file ${modulefile}"
+		else
+			echo_info "adding ${what} to ${path}"
+			echo "prepend-path ${what} ${path}" >> ${modulefile}
+		fi
+	else
+		error "add_path_module:: ignoring ${path} for ${what}"
+	fi
+}
+export -f add_path_module
+
+function setenv_module()
+{
+	path=${@:3}
+	what=${2}
+	modulefile=${1}
+	if [ ! -z "${path}" ]; then
+		if [ ! -f "${modulefile}" ]; then
+			touch ${modulefile}
+			if [ ! -f "${modulefile}" ]; then
+				error "setenv_module:: unable to open file ${modulefile}"
+			else
+				echo "#%Module" >> ${modulefile}
+				echo "proc ModulesHelp { } {" >> ${modulefile}
+				echo "    global version" >> ${modulefile}
+				echo "    puts stderr \"   Setup pyjetty ${version}\"}" >> ${modulefile}
+				echo "set version ${modulefile}" >> ${modulefile}
+			fi
+		fi
+		if [ ! -f "${modulefile}" ]; then
+			error "setenv_module:: unable to open file ${modulefile}"
+		else
+			echo_info "setenv ${what} ${path}"
+			echo "setenv ${what} \"${path}\"" >> ${modulefile}
+		fi
+	else
+		error "setenv_module:: ignoring ${path} for ${what}"
+	fi
+}
+export -f setenv_module
+
+function setalias_module()
+{
+	path=${@:3}
+	what=${2}
+	modulefile=${1}
+	if [ ! -f "${modulefile}" ]; then
+		touch ${modulefile}
+		if [ ! -f "${modulefile}" ]; then
+			error "setalias_module:: unable to open file ${modulefile}"
+		else
+			echo "#%Module" >> ${modulefile}
+			echo "proc ModulesHelp { } {" >> ${modulefile}
+			echo "    global version" >> ${modulefile}
+			echo "    puts stderr \"   Setup pyjetty ${version}\"}" >> ${modulefile}
+			echo "set version ${modulefile}" >> ${modulefile}
+		fi
+	fi
+	if [ ! -f "${modulefile}" ]; then
+		error "setalias_module:: unable to open file ${modulefile}"
+	else
+		echo_info "set-alias ${what} ${path}"
+		echo "set-alias ${what} \"${path}\"" >> ${modulefile}
+	fi
+}
+export -f setalias_module

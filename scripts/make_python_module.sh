@@ -16,92 +16,6 @@ export -f thisdir
 THISD=$(thisdir)
 . ${THISD}/util.sh
 
-function add_path_module()
-{
-	path=${1}
-	what=${2}
-	modulefile=${3}
-	if [ ! -z "${path}" ] && [ -d ${path} ]; then
-		if [ ! -f "${modulefile}" ]; then
-			touch ${modulefile}
-			if [ ! -f "${modulefile}" ]; then
-				error "add_path_module:: unable to open file ${modulefile}"
-			else
-				echo "#%Module" >> ${modulefile}
-				echo "proc ModulesHelp { } {" >> ${modulefile}
-				echo "    global version" >> ${modulefile}
-				echo "    puts stderr \"   Setup pyjetty ${version}\"}" >> ${modulefile}
-				echo "set version ${modulefile}" >> ${modulefile}
-			fi
-		fi
-		if [ ! -f "${modulefile}" ]; then
-			error "add_path_module:: unable to open file ${modulefile}"
-		else
-			echo_info "adding ${what} to ${path}"
-			echo "prepend-path ${what} ${path}" >> ${modulefile}
-		fi
-	else
-		error "add_path_module:: ignoring ${path} for ${what}"
-	fi
-}
-export -f add_path_module
-
-function setenv_module()
-{
-	path=${1}
-	what=${2}
-	modulefile=${3}
-	if [ ! -z "${path}" ]; then
-		if [ ! -f "${modulefile}" ]; then
-			touch ${modulefile}
-			if [ ! -f "${modulefile}" ]; then
-				error "setenv_module:: unable to open file ${modulefile}"
-			else
-				echo "#%Module" >> ${modulefile}
-				echo "proc ModulesHelp { } {" >> ${modulefile}
-				echo "    global version" >> ${modulefile}
-				echo "    puts stderr \"   Setup pyjetty ${version}\"}" >> ${modulefile}
-				echo "set version ${modulefile}" >> ${modulefile}
-			fi
-		fi
-		if [ ! -f "${modulefile}" ]; then
-			error "setenv_module:: unable to open file ${modulefile}"
-		else
-			echo_info "setenv ${what} ${path}"
-			echo "setenv ${what} ${path}" >> ${modulefile}
-		fi
-	else
-		error "setenv_module:: ignoring ${path} for ${what}"
-	fi
-}
-export -f setenv_module
-
-function setalias_module()
-{
-	path=${1}
-	what=${2}
-	modulefile=${3}
-	if [ ! -f "${modulefile}" ]; then
-		touch ${modulefile}
-		if [ ! -f "${modulefile}" ]; then
-			error "setalias_module:: unable to open file ${modulefile}"
-		else
-			echo "#%Module" >> ${modulefile}
-			echo "proc ModulesHelp { } {" >> ${modulefile}
-			echo "    global version" >> ${modulefile}
-			echo "    puts stderr \"   Setup pyjetty ${version}\"}" >> ${modulefile}
-			echo "set version ${modulefile}" >> ${modulefile}
-		fi
-	fi
-	if [ ! -f "${modulefile}" ]; then
-		error "setalias_module:: unable to open file ${modulefile}"
-	else
-		echo_info "set-alias ${what} ${path}"
-		echo "set-alias ${what} \"${path}\"" >> ${modulefile}
-	fi
-}
-export -f setalias_module
-
 # add_path_module "/usr/lib" "USRLIB" ./testmodule
 # setenv_module "/usr/lib" "USRLIBSETENV" ./testmodule
 # setalias_module $(which python) "userpython" ./testmodule
@@ -111,17 +25,45 @@ export -f setalias_module
 [ -z ${PYJETTY_USER_PYTHON_VERSION} ] && export PYJETTY_USER_PYTHON_VERSION=python
 
 PYJETTY_PYTHON_EXECUTABLE=$(which ${PYJETTY_USER_PYTHON_VERSION})
+PYJETTY_PYTHON_CONFIG_EXECUTABLE=$(which ${PYJETTY_USER_PYTHON_VERSION}-config)
+if [ -f "${PYJETTY_PYTHON_EXECUTABLE}" ] && [ -f "${PYJETTY_PYTHON_CONFIG_EXECUTABLE}" ]; then
 
-if [ -f "${PYJETTY_PYTHON_EXECUTABLE}" ]; then
+	PYJETTY_PYTHON_VERSION=$(${PYJETTY_PYTHON_EXECUTABLE} --version 2>&1 | cut -f 2 -d' ' | cut -f 1-2 -d.)
+	PYJETTY_PYTHON_BIN_DIR=$(dirname ${PYJETTY_PYTHON_EXECUTABLE})
+	PYJETTY_PYTHON_INCLUDE_DIR=$(${PYJETTY_PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")
+	PYJETTY_PYTHON_LIBDIR=$(${PYJETTY_PYTHON_EXECUTABLE} -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
+	PYJETTY_PYTHON_NUMPY_INCLUDE_DIR=$(${PYJETTY_PYTHON_EXECUTABLE} -c "import numpy; print(numpy.get_include())")
+
+	PYJETTY_PYTHON_LIBS=$(${PYJETTY_PYTHON_CONFIG_EXECUTABLE} --libs)
+	PYJETTY_PYTHON_LIBS_LINK="-L${PYJETTY_PYTHON_LIBDIR} ${PYJETTY_PYTHON_LIBS}"
+	PYJETTY_PYTHON_CONFIG_LDFLAGS=$(${PYJETTY_PYTHON_CONFIG_EXECUTABLE} --ldflags)
+	PYJETTY_PYTHON_CONFIG_INCLUDES=$(${PYJETTY_PYTHON_CONFIG_EXECUTABLE} --includes)
+	PYJETTY_PYTHON_SETUP=TRUE
+
 	modulefiledir=$(abspath ${THISD}/../modules)
 	mkdir -p ${modulefiledir}
 	modulefile="${modulefiledir}/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"
-	rm ${modulefile}
 	separator "making python module ${modulefile}"
-	setenv_module "$PYJETTY_USER_PYTHON_VERSION" PYJETTY_PYTHON_VERSION ${modulefile}
-	setenv_module ${PYJETTY_PYTHON_EXECUTABLE} PYJETTY_PYTHON_EXECUTABLE ${modulefile}
-	setenv_module ${PYJETTY_PYTHON_EXECUTABLE} PYJETTY_PYTHON_EXECUTABLE ${modulefile}
-	setalias_module "echo ${PYJETTY_USER_PYTHON_VERSION} at ${PYJETTY_PYTHON_EXECUTABLE}" pyjetty_show_python ${modulefile}
+	[ -f ${modulefile} ] && warning "removing ${modulefile}" && rm -f ${modulefile}
+
+	setenv_module ${modulefile} PYJETTY_PYTHON_VERSION "${PYJETTY_USER_PYTHON_VERSION}" 
+	setenv_module ${modulefile} PYJETTY_PYTHON_EXECUTABLE "${PYJETTY_PYTHON_EXECUTABLE}" 
+	setalias_module ${modulefile} pyjetty_show_python "echo ${PYJETTY_USER_PYTHON_VERSION} at ${PYJETTY_PYTHON_EXECUTABLE}" 
+
+	setenv_module ${modulefile} PYJETTY_PYTHON_VERSION ${PYJETTY_PYTHON_VERSION}
+	setenv_module ${modulefile} PYJETTY_PYTHON_BIN_DIR ${PYJETTY_PYTHON_BIN_DIR} 
+	setenv_module ${modulefile} PYJETTY_PYTHON_INCLUDE_DIR ${PYJETTY_PYTHON_INCLUDE_DIR}
+	setenv_module ${modulefile} PYJETTY_PYTHON_LIBDIR ${PYJETTY_PYTHON_LIBDIR} 
+	setenv_module ${modulefile} PYJETTY_PYTHON_NUMPY_INCLUDE_DIR ${PYJETTY_PYTHON_NUMPY_INCLUDE_DIR} 
+
+	setenv_module ${modulefile} PYJETTY_PYTHON_LIBS ${PYJETTY_PYTHON_LIBS} 
+	setenv_module ${modulefile} PYJETTY_PYTHON_LIBS_LINK ${PYJETTY_PYTHON_LIBS_LINK} 
+	setenv_module ${modulefile} PYJETTY_PYTHON_CONFIG_LDFLAGS ${PYJETTY_PYTHON_CONFIG_LDFLAGS} 
+	setenv_module ${modulefile} PYJETTY_PYTHON_CONFIG_INCLUDES ${PYJETTY_PYTHON_CONFIG_INCLUDES} 
+	setenv_module ${modulefile} PYJETTY_PYTHON_SETUP ${PYJETTY_PYTHON_SETUP} 
+
 else
 	error "no python for ${PYJETTY_USER_PYTHON_VERSION}"
+	[ ! -f "${PYJETTY_PYTHON_EXECUTABLE}" ] && error "missing: ${PYJETTY_USER_PYTHON_VERSION}"
+	[ ! -f "${PYJETTY_PYTHON_CONFIG_EXECUTABLE}" ] && error "missing: ${PYJETTY_USER_PYTHON_VERSION}-config"
 fi
