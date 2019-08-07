@@ -49,6 +49,7 @@ if [ -f "${PYJETTY_PYTHON_EXECUTABLE}" ] && [ -f "${PYJETTY_PYTHON_CONFIG_EXECUT
 	setenv_module ${modulefile} PYJETTY_PYTHON_VERSION "${PYJETTY_USER_PYTHON_VERSION}" 
 	setenv_module ${modulefile} PYJETTY_PYTHON_EXECUTABLE "${PYJETTY_PYTHON_EXECUTABLE}" 
 	setalias_module ${modulefile} pyjetty_show_python "echo ${PYJETTY_USER_PYTHON_VERSION} at ${PYJETTY_PYTHON_EXECUTABLE}" 
+	setenv_module ${modulefile} PYJETTY_USER_PYTHON_VERSION "${PYJETTY_USER_PYTHON_VERSION}"
 
 	setenv_module ${modulefile} PYJETTY_PYTHON_VERSION ${PYJETTY_PYTHON_VERSION}
 	setenv_module ${modulefile} PYJETTY_PYTHON_BIN_DIR ${PYJETTY_PYTHON_BIN_DIR} 

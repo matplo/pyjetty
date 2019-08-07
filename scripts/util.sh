@@ -322,7 +322,7 @@ function add_path_module()
 			echo "prepend-path ${what} ${path}" >> ${modulefile}
 		fi
 	else
-		error "add_path_module:: ignoring ${path} for ${what}"
+		warning "add_path_module:: ignoring ${path} for ${what}"
 	fi
 }
 export -f add_path_module
@@ -352,7 +352,7 @@ function setenv_module()
 			echo "setenv ${what} \"${path}\"" >> ${modulefile}
 		fi
 	else
-		error "setenv_module:: ignoring ${path} for ${what}"
+		warning "setenv_module:: ignoring ${path} for ${what}"
 	fi
 }
 export -f setenv_module

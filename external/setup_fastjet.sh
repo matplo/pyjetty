@@ -13,17 +13,18 @@ function thisdir()
 	DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 	echo ${DIR}
 }
-SCRIPTPATH=$(thisdir)
+THISD=$(thisdir)
+. ${THISD}/../scripts/util.sh
 separator "${BASH_SOURCE}"
-source ${SCRIPTPATH}/util.sh
-setup_python_env
-
+[ "x$PYJETTY_PYTHON_SETUP" != "xTRUE" ] && error "missing: PYJETTY_PYTHON_SETUP" && exit 1
+warning "user python version: ${PYJETTY_USER_PYTHON_VERSION}"
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.3.2
 note "... version ${version}"
 fname=fastjet-${version}
-dirsrc=${SCRIPTPATH}/build/fastjet-${version}
-dirinst=${SCRIPTPATH}/packages/fastjet-${version}
+dirsrc=${THISD}/build/fastjet-${version}
+warning "user python version: ${PYJETTY_USER_PYTHON_VERSION}"
+dirinst=${THISD}/packages/fastjet-${version}-${PYJETTY_USER_PYTHON_VERSION}
 
 function grace_return()
 {
@@ -38,31 +39,31 @@ if [ "x${clean}" == "xyes" ]; then
 	rm -rf ${dirsrc}
 	echo_info "removing ${dirinst}"
 	rm -rf ${dirinst}
-	grace_return && return 0
+	grace_return && exit 0
 fi
 uninstall=$(get_opt "uninstall" $@)
 if [ "x${uninstall}" == "xyes" ]; then
 	echo_info "uninstall..."
 	rm -rf ${dirinst}
-	grace_return && return 0
+	grace_return && exit 0
 fi
 installed=$(get_opt "installed" $@)
 if [ "x${installed}" == "xyes" ]; then
 	[ -d ${dirinst} ] && echo_info "${dirinst} exists"
 	[ ! -d ${dirinst} ] && error "${dirinst} does NOT exists"
-	grace_return && return 0
+	grace_return && exit 0
 fi
 
-[ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
-[ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
+[ ! -d ${THISD}/build ] && mkdir -v ${THISD}/build
+[ ! -d ${THISD}/packages ] && mkdir -v ${THISD}/packages
 
-if [ ! -e ${SCRIPTPATH}/build/${fname}.tar.gz ]; then
-	cd ${SCRIPTPATH}/build
+if [ ! -e ${THISD}/build/${fname}.tar.gz ]; then
+	cd ${THISD}/build
 	wget http://fastjet.fr/repo/${fname}.tar.gz
 fi
 
 if [ ! -d ${dirsrc} ]; then
-	cd ${SCRIPTPATH}/build
+	cd ${THISD}/build
 	tar zxvf ${dirsrc}.tar.gz
 fi
 
@@ -93,14 +94,47 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		    # \ LDFLAGS=-Wl,-rpath,${BOOST_DIR}/lib CXXFLAGS=-I${BOOST_DIR}/include CPPFLAGS=-I${BOOST_DIR}/include
 		fi
 		configure_only=$(get_opt "configure-only" $@)
-		[ "x${configure_only}" == "xyes" ] && grace_return && return 0
+		[ "x${configure_only}" == "xyes" ] && grace_return && exit 0
 		make -j $(n_cores) && make install
 		cd ${cdir}
 	fi
 fi
 
-if [ -d ${dirinst} ]; then
-	export FASTJET_DIR=${dirinst}
+python_path="${dirinst}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages/fastjet.py"
+python_path64="${dirinst}/lib64/python${PYJETTY_PYTHON_VERSION}/site-packages/fastjet.py"
+
+if [ -f ${python_path64} ] || [ -f ${python_path} ]; then
+	# export FASTJET_DIR=${dirinst}
+	modulefiledir=$(abspath ${THISD}/../modules)
+	mkdir -p ${modulefiledir}
+	modulefile="${modulefiledir}/pyjetty_fastjet_${PYJETTY_USER_PYTHON_VERSION}"
+	separator "making python module ${modulefile}"
+	[ -f ${modulefile} ] && warning "removing ${modulefile}" && rm -f ${modulefile}
+
+	bin_path="${dirinst}/bin"
+	lib_path="${dirinst}/lib"
+	lib64_path="${dirinst}/lib64"
+	python_path="${dirinst}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages"
+	python_path64="${dirinst}/lib64/python${PYJETTY_PYTHON_VERSION}/site-packages"
+
+	setenv_module ${modulefile} FASTJETDIR ${dirinst}
+	setenv_module ${modulefile} FASTJET_DIR ${dirinst}
+	setenv_module ${modulefile} FASTJET_ROOT ${dirinst}
+
+	for sp in ${lib_path} ${lib64_path} ${python_path} ${python_path64}
+	do
+		[ $(os_linux) ] && add_path_module ${modulefile} LD_LIBRARY_PATH ${sp}
+		[ $(os_darwin) ] && add_path_module ${modulefile} DYLD_LIBRARY_PATH ${sp}
+	done
+
+	for sp in ${python_path} ${python_path64}
+	do
+		[ $(os_linux) ] && add_path_module ${modulefile} PYTHONPATH ${sp}
+	done
+else
+	error "fastjet.py not found - no module generation"
+	[ ! -f ${python_path} ] && error "missing ${python_path}"
+	[ ! -f ${python_path64} ] && error "missing ${python_path64}"
 fi
 
 cd ${cdir}
