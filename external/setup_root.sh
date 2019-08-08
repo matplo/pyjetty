@@ -33,8 +33,8 @@ version=$(get_opt "version" $@)
 note "... version ${version}"
 fname=fastjet-${version}
 fname=root_v${version}.source
-dirsrc=${THISD}/build/${fname}
-dirinst=${THISD}/packages/${fname}-${PYJETTY_USER_PYTHON_VERSION}
+dirsrc=${THISD}/build/root-${version}
+dirinst=${THISD}/packages/root-${version}-${PYJETTY_USER_PYTHON_VERSION}
 dirbuild=${dirsrc}-build-${PYJETTY_USER_PYTHON_VERSION}
 
 function grace_return()
@@ -84,19 +84,19 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	if [ -d ${dirsrc} ]; then
 		mkdir -p ${dirbuild}
 		cd ${dirbuild}
-		local _gff=$(which gfortran)
-		local _gcc=$(which gcc)
-		local _gpp=$(which g++)
+		_gff=$(which gfortran)
+		_gcc=$(which gcc)
+		_gpp=$(which g++)
 		config_opts="-DPYTHON_EXECUTABLE=${PYJETTY_PYTHON_EXECUTABLE} -DPYTHON_INCLUDE_DIR=${PYJETTY_PYTHON_INCLUDE_DIR} -DPYTHON_LIBRARY=${PYJETTY_PYTHON_LIBDIR}"
 		config_opts="-Dbuiltin_xrootd=ON -Dmathmore=ON"
 		compiler_opts="-DCMAKE_C_COMPILER=${_gcc} -DCMAKE_CXX_COMPILER=${_gpp} -DCMAKE_Fortran_COMPILER=${_gff}"
 		echo_info "extra options: ${config_opts} ${compiler_opts}"
 
-		cmake -DCMAKE_BUILD_TYPE\=${BT_build_type} ${compiler_opts} ${config_opts} ${BT_src_dir}
+		cmake -DCMAKE_BUILD_TYPE\=Release ${compiler_opts} ${config_opts} ${dirsrc}
 
 		configure_only=$(get_opt "configure-only" $@)
 		[ "x${configure_only}" == "xyes" ] && grace_return && exit 0
-		cmake --build . -- -j && cmake -DCMAKE_INSTALL_PREFIX=${dirinst} -P cmake_install.cmake
+		cmake --build . -- -j $(n_cores) && cmake -DCMAKE_INSTALL_PREFIX=${dirinst} -P cmake_install.cmake
 
 		cd ${cdir}
 	fi

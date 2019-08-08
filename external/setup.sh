@@ -28,10 +28,11 @@ separator "LHAPDF6"
 ${THISD}/setup_lhapdf6.sh 		--version=6.2.3 	 $@
 separator "HEPMC2"
 ${THISD}/setup_hepmc2_cmake.sh 	--version=2.06.09 	 $@
-if [ "x$(get_opt \"build-root\" $@)" == "xyes" ]; then
+build_root=$(get_opt "root" $@)
+if [ "x${build_root}" == "xyes" ]; then
 	separator "ROOT"
 	${THISD}/setup_root.sh 	--version=6.18.00 	 $@
-	module load pyjetty/${build_with_python}/root
+	module load pyjetty/${build_with_python}/ROOT
 fi
 separator "HEPMC3"
 ${THISD}/setup_hepmc3.sh 		--version=3.1.1  	 $@

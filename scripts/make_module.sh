@@ -156,9 +156,13 @@ function make_module_pyjetty()
 	setalias_module ${modulefile} pyjetty_cd "cd ${pyjetty_dir}"
 
 	echo "module load pyjetty/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"	>> ${modulefile}
+	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/LHAPDF6"	>> ${modulefile}
 	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/HEPMC2"	>> ${modulefile}
 	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/HEPMC3"	>> ${modulefile}
-	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/LHAPDF6"	>> ${modulefile}
+	build_root=$(get_opt "root" $@)
+	if [ "x${build_root}" == "xyes" ] && [ -d "${THISD}/../modules/pyjetty/${PYJETTY_USER_PYTHON_VERSION}/ROOT" ]; then
+		echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/ROOT"	>> ${modulefile}
+	fi
 	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/PYTHIA8"	>> ${modulefile}
 	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/FASTJET"	>> ${modulefile}
 	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/cpptools"	>> ${modulefile}
@@ -183,6 +187,6 @@ fi
 
 if [ "x$(get_opt "make-main-module" $@)" == "xyes" ]; then
 	separator "make_modules.sh :: main module"
-	make_module_pyjetty
+	make_module_pyjetty $@
 	separator "make_modules.sh - done"
 fi

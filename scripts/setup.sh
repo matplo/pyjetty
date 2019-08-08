@@ -40,13 +40,16 @@ module load pyjetty/${build_with_python}/LHAPDF6
 module load pyjetty/${build_with_python}/PYTHIA8
 module load pyjetty/${build_with_python}/FASTJET
 
+build_root=$(get_opt "root" $@)
+[ "x${build_root}" == "xyes" ] && module load pyjetty/${build_with_python}/ROOT
+
 # ( [ ! -d ${THISD}/../cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${THISD}/../cpptools/scripts/build_cpptools.sh $@
 ${THISD}/../cpptools/scripts/build_cpptools.sh $@
 
 clean=$(get_opt "clean" $@)
 cleanall=$(get_opt "cleanall" $@)
 if [ -z ${cleanall} ] && [ -z ${clean} ]; then
-	${THISD}/make_module.sh --make-main-module
+	${THISD}/make_module.sh --make-main-module $@
 fi
 
 cd ${cpwd}
