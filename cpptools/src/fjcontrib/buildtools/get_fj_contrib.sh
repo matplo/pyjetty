@@ -3,7 +3,7 @@
 srcdir=${1}
 wdir=${2}
 if [ ! -z ${wdir} ]; then
-	[ ! -d ${wdir} ] && mkdir -pv ${wdir}
+	[ ! -d ${wdir} ] && mkdir -p ${wdir}
 fi
 
 if [ -d ${srcdir} ]; then
