@@ -19,7 +19,7 @@ separator "${BASH_SOURCE}"
 build_with_python="python"
 [ "x$(get_opt "python2" $@)" == "xyes" ] && build_with_python="python2"
 [ "x$(get_opt "python3" $@)" == "xyes" ] && build_with_python="python3"
-${THISD}/../scripts/make_module.sh ${build_with_python}
+${THISD}/../scripts/make_module.sh --${build_with_python}
 module use ${THISD}/../modules
 module avail
 separator ''
