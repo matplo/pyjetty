@@ -19,8 +19,10 @@ THISD=$(thisdir)
 mdir=$(abspath_python_expand "${THISD}/..")
 separator "rm -rf ${mdir}/modules"
 rm -rf ${mdir}/modules
-separator "rm -rf ${mdir}/external/build"
-rm -rf ${mdir}/external/build
+#separator "rm -rf ${mdir}/external/build"
+#rm -rf ${mdir}/external/build
+separator "cleaning ${mdir}/external/build - leaving *.gz files"
+find ${mdir}/external/build -type f ! -name '*.gz' -delete
 separator "rm -rf ${mdir}/external/packages"
 rm -rf ${mdir}/external/packages
 

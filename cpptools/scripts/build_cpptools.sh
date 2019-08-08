@@ -17,8 +17,14 @@ separator "pyjetty: ${BASH_SOURCE}"
 
 need_help=$(get_opt "help" $@)
 if [ ! -z ${need_help} ]; then
-	echo "$0 [--help] [--unsetpyhonpath] [--clean] [--cleanall]"
+	echo "$0 [--help] [--unsetpyhonpath] [--clean] [--cleanall] [--verbose]"
 	exit 0
+fi
+
+if [ -z ${PYJETTY_PYTHON_SETUP} ]; then
+    error "this setup relies on PYJETTY_PYTHON_SETUP..."
+    error "check if modules loaded... module load pyjetty/pyjetty_python ?"
+    exit 0
 fi
 
 unsetpyhonpath=$(get_opt "unsetpyhonpath" $@)
@@ -32,12 +38,14 @@ build_path=${THISD}/../build
 clean=$(get_opt "clean" $@)
 if [ ! -z ${clean} ]; then
     [ -d ${build_path} ] && warning "removing ${build_path}" && rm -rf ${build_path}
+    # [ -d ${build_path} ] && warning "cleaning ${build_path}" && find ${build_path} -type f ! -name '*.gz' -delete
 	exit 0
 fi
 
 cleanall=$(get_opt "cleanall" $@)
 if [ ! -z ${cleanall} ]; then
 	[ -d ${build_path} ] && warning "removing ${build_path}" && rm -rf ${build_path}
+    # [ -d ${build_path} ] && warning "cleaning ${build_path}" && find ${build_path} -type f ! -name '*.gz' -delete
     [ -d ${install_path}/lib ] && warning "removing ${install_path}/lib" && rm -rf ${install_path}/lib
 	exit 0
 fi

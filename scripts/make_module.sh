@@ -31,7 +31,12 @@ function make_python_module()
 		PYJETTY_PYTHON_INCLUDE_DIR=$(${PYJETTY_PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")
 		PYJETTY_PYTHON_LIBDIR=$(${PYJETTY_PYTHON_EXECUTABLE} -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
 		PYJETTY_PYTHON_NUMPY_INCLUDE_DIR=$(${PYJETTY_PYTHON_EXECUTABLE} -c "import numpy; print(numpy.get_include())")
-
+		if [ ! -d "${PYJETTY_PYTHON_NUMPY_INCLUDE_DIR}" ]; then
+			error "missing numpy and/or headers "
+			error "we are strongly relying on numpy - numpy AND headers must be installed/accessible - anything below does not matter..."
+			error "try: pip install numpy [--user]"
+			return 0
+		fi
 		PYJETTY_PYTHON_LIBS=$(${PYJETTY_PYTHON_CONFIG_EXECUTABLE} --libs)
 		PYJETTY_PYTHON_LIBS_LINK="-L${PYJETTY_PYTHON_LIBDIR} ${PYJETTY_PYTHON_LIBS}"
 		PYJETTY_PYTHON_CONFIG_LDFLAGS=$(${PYJETTY_PYTHON_CONFIG_EXECUTABLE} --ldflags)
@@ -44,22 +49,22 @@ function make_python_module()
 		separator "making python module ${modulefile}"
 		[ -f ${modulefile} ] && warning "removing ${modulefile}" && rm -f ${modulefile}
 
-		setenv_module ${modulefile} PYJETTY_PYTHON_VERSION "${PYJETTY_USER_PYTHON_VERSION}" 
-		setenv_module ${modulefile} PYJETTY_PYTHON_EXECUTABLE "${PYJETTY_PYTHON_EXECUTABLE}" 
-		setalias_module ${modulefile} pyjetty_show_python "echo ${PYJETTY_USER_PYTHON_VERSION} at ${PYJETTY_PYTHON_EXECUTABLE}" 
+		setenv_module ${modulefile} PYJETTY_PYTHON_VERSION "${PYJETTY_USER_PYTHON_VERSION}"
+		setenv_module ${modulefile} PYJETTY_PYTHON_EXECUTABLE "${PYJETTY_PYTHON_EXECUTABLE}"
+		setalias_module ${modulefile} pyjetty_show_python "echo ${PYJETTY_USER_PYTHON_VERSION} at ${PYJETTY_PYTHON_EXECUTABLE}"
 		setenv_module ${modulefile} PYJETTY_USER_PYTHON_VERSION "${PYJETTY_USER_PYTHON_VERSION}"
 
 		setenv_module ${modulefile} PYJETTY_PYTHON_VERSION ${PYJETTY_PYTHON_VERSION}
-		setenv_module ${modulefile} PYJETTY_PYTHON_BIN_DIR ${PYJETTY_PYTHON_BIN_DIR} 
+		setenv_module ${modulefile} PYJETTY_PYTHON_BIN_DIR ${PYJETTY_PYTHON_BIN_DIR}
 		setenv_module ${modulefile} PYJETTY_PYTHON_INCLUDE_DIR ${PYJETTY_PYTHON_INCLUDE_DIR}
-		setenv_module ${modulefile} PYJETTY_PYTHON_LIBDIR ${PYJETTY_PYTHON_LIBDIR} 
-		setenv_module ${modulefile} PYJETTY_PYTHON_NUMPY_INCLUDE_DIR ${PYJETTY_PYTHON_NUMPY_INCLUDE_DIR} 
+		setenv_module ${modulefile} PYJETTY_PYTHON_LIBDIR ${PYJETTY_PYTHON_LIBDIR}
+		setenv_module ${modulefile} PYJETTY_PYTHON_NUMPY_INCLUDE_DIR ${PYJETTY_PYTHON_NUMPY_INCLUDE_DIR}
 
-		setenv_module ${modulefile} PYJETTY_PYTHON_LIBS ${PYJETTY_PYTHON_LIBS} 
-		setenv_module ${modulefile} PYJETTY_PYTHON_LIBS_LINK ${PYJETTY_PYTHON_LIBS_LINK} 
-		setenv_module ${modulefile} PYJETTY_PYTHON_CONFIG_LDFLAGS ${PYJETTY_PYTHON_CONFIG_LDFLAGS} 
-		setenv_module ${modulefile} PYJETTY_PYTHON_CONFIG_INCLUDES ${PYJETTY_PYTHON_CONFIG_INCLUDES} 
-		setenv_module ${modulefile} PYJETTY_PYTHON_SETUP ${PYJETTY_PYTHON_SETUP} 
+		setenv_module ${modulefile} PYJETTY_PYTHON_LIBS ${PYJETTY_PYTHON_LIBS}
+		setenv_module ${modulefile} PYJETTY_PYTHON_LIBS_LINK ${PYJETTY_PYTHON_LIBS_LINK}
+		setenv_module ${modulefile} PYJETTY_PYTHON_CONFIG_LDFLAGS ${PYJETTY_PYTHON_CONFIG_LDFLAGS}
+		setenv_module ${modulefile} PYJETTY_PYTHON_CONFIG_INCLUDES ${PYJETTY_PYTHON_CONFIG_INCLUDES}
+		setenv_module ${modulefile} PYJETTY_PYTHON_SETUP ${PYJETTY_PYTHON_SETUP}
 
 		setenv_module ${modulefile} PYJETTY_PYTHON_MODULE_LOADED "pyjetty/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"
 
@@ -76,7 +81,7 @@ function make_module_package()
 	dirinst=${1}
 	module_name=$(basename ${dirinst})
 	package_name=$(basename ${dirinst})
-	[ ! -z ${2} ] && package_name=${2}	
+	[ ! -z ${2} ] && package_name=${2}
 	[ ! -z ${3} ] && package_version=${3}
 
 	if [ -d ${dirinst} ]; then

@@ -25,6 +25,12 @@ module avail
 separator ''
 module load pyjetty/pyjetty_${build_with_python}
 
+if [ -z ${PYJETTY_PYTHON_SETUP} ]; then
+    error "this setup relies on PYJETTY_PYTHON_SETUP..."
+    error "check if modules loaded... module load pyjetty/pyjetty_python ?"
+    exit 0
+fi
+
 buildext=$(get_opt "buildext" $@)
 [ "x${buildext}" == "xyes" ] && ${THISD}/../external/setup.sh $@
 
@@ -35,7 +41,7 @@ module load pyjetty/${build_with_python}/PYTHIA8
 module load pyjetty/${build_with_python}/FASTJET
 
 # ( [ ! -d ${THISD}/../cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${THISD}/../cpptools/scripts/build_cpptools.sh $@
-${THISD}/../cpptools/scripts/build_cpptools.sh
+${THISD}/../cpptools/scripts/build_cpptools.sh $@
 
 ${THISD}/make_module.sh --make-main-module
 
