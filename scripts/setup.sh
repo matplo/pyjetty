@@ -25,8 +25,8 @@ module avail
 separator ''
 module load pyjetty/pyjetty_${build_with_python}
 
-redo=$(get_opt "rebuild" $@)
-[ "x${redo}" == "xyes" ] && ${THISD}/../external/setup.sh $@
+buildext=$(get_opt "buildext" $@)
+[ "x${buildext}" == "xyes" ] && ${THISD}/../external/setup.sh $@
 
 module load pyjetty/${build_with_python}/HEPMC2
 module load pyjetty/${build_with_python}/HEPMC3
@@ -34,7 +34,8 @@ module load pyjetty/${build_with_python}/LHAPDF6
 module load pyjetty/${build_with_python}/PYTHIA8
 module load pyjetty/${build_with_python}/FASTJET
 
-( [ ! -d ${THISD}/../cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${THISD}/../cpptools/scripts/build_cpptools.sh $@
+# ( [ ! -d ${THISD}/../cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${THISD}/../cpptools/scripts/build_cpptools.sh $@
+${THISD}/../cpptools/scripts/build_cpptools.sh
 
 ${THISD}/make_module.sh --make-main-module
 

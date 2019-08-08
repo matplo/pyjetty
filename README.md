@@ -15,15 +15,16 @@
 - first time run
 ```
 pipenv shell
-source setup.sh --install
+./scripts/setup.sh --buildext
 ```
 
-- to rebuild everything (including the externals (all))
+- to wipe out and rebuild everything
 ```
-source setup.sh --install --reset-external --rebuild
+./scripts/cleanup.sh
+./scripts/setup.sh --buildext
 ```
 
-- or use individually one of the scripts
+- you can use individually one of the scripts
 ```
 external/setup_pythia8.sh
 external/setup_fastjet.sh          
@@ -32,19 +33,20 @@ external/setup_hepmc2_cmake.sh
 external/setup_lhapdf6.sh
 ```
 
-```
-source ./external/setup_env.sh --install --rebuild
-```
-
 - useful debuging option `--configure-only`
 
 - to rebuild cpptools only
 ```
-source setup.sh --rebuild
+./scripts/setup.sh
 ```
 - useful debuging option `--configure-only`
 
 - one can also use ./cpptools/scripts/build_cpptools.sh directly with [--rebuild] [--install] [--clean] [--cleanall]
+
+# modules
+
+- ./modules/pyjetty contains modules - use the one with 'main' to load everything
+
 
 ## Notes: 
 - this will download and install PYTHIA, HepMC2, HepMC3, LHAPDF6, FASTJET into the `external` subdirectory. This behavior can be controlled by `.pyjetty_config_external` file (sourced as a shell script) - you can control what version packages to use by building those libs yourself... (no or empty `.pyjetty_config_external` is fine)

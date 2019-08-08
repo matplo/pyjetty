@@ -38,7 +38,7 @@ function make_python_module()
 		PYJETTY_PYTHON_CONFIG_INCLUDES=$(${PYJETTY_PYTHON_CONFIG_EXECUTABLE} --includes)
 		PYJETTY_PYTHON_SETUP=TRUE
 
-		mkdir -p ${modulefiledir}
+		mkdir -p ${THISD}/../modules/pyjetty
 		modulefiledir=$(abspath ${THISD}/../modules/pyjetty)
 		modulefile="${modulefiledir}/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"
 		separator "making python module ${modulefile}"
