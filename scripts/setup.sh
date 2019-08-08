@@ -43,6 +43,10 @@ module load pyjetty/${build_with_python}/FASTJET
 # ( [ ! -d ${THISD}/../cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${THISD}/../cpptools/scripts/build_cpptools.sh $@
 ${THISD}/../cpptools/scripts/build_cpptools.sh $@
 
-${THISD}/make_module.sh --make-main-module
+clean=$(get_opt "clean" $@)
+cleanall=$(get_opt "cleanall" $@)
+if [ -z ${cleanall} ] && [ -z ${clean} ]; then
+	${THISD}/make_module.sh --make-main-module
+fi
 
 cd ${cpwd}

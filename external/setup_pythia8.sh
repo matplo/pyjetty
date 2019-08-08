@@ -96,7 +96,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	    if [ ! -e ${PYJETTY_PYTHON_BIN_DIR}/python ]; then
 	    	PYJETTY_PYTHON_BIN_DIR=${THISD}/build/pythia-python-bin
 	    	mkdir ${PYJETTY_PYTHON_BIN_DIR}
-	    	ln -s ${python_exec} ${PYJETTY_PYTHON_BIN_DIR}/python
+	    	ln -s ${PYJETTY_PYTHON_EXECUTABLE} ${PYJETTY_PYTHON_BIN_DIR}/python
 		    warning "fix-up-python bin dir: ${PYJETTY_PYTHON_BIN_DIR}"
 		fi
 		[ ! -z ${LHAPDF6_DIR} ] && lhapd6_opt="	--with-lhapdf6=${LHAPDF6_DIR} --with-lhapdf6-include=${LHAPDF6_DIR}/include --with-lhapdf6-lib=${LHAPDF6_DIR}/lib"

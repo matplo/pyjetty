@@ -26,4 +26,6 @@ find ${mdir}/external/build -type f ! -name '*.gz' -delete
 separator "rm -rf ${mdir}/external/packages"
 rm -rf ${mdir}/external/packages
 
+${THISD}/setup.sh --cleanall
+
 cd ${cdir}
