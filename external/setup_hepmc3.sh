@@ -13,11 +13,21 @@ function thisdir()
 	DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 	echo ${DIR}
 }
-SCRIPTPATH=$(thisdir)
+THISD=$(thisdir)
+. ${THISD}/../scripts/util.sh
 separator "${BASH_SOURCE}"
-source ${SCRIPTPATH}/util.sh
-setup_python_env
-
+if [ -z "${PYJETTY_USER_PYTHON_VERSION}" ]; then
+	warning "trying to load pyjetty_python"
+	pyjetty_python_module_name=$(module avail -t | grep pyjetty_python | head -n 1 | grep pyjetty_python)
+	if [ ! -z ${pyjetty_python_module_name} ]; then
+		warning "... found ${pyjetty_python_module_name}"	
+		module load ${pyjetty_python_module_name}
+	else
+		warning "... no suitable module found"
+	fi
+fi
+[ -z "${PYJETTY_USER_PYTHON_VERSION}" ] && error "missing: PYJETTY_USER_PYTHON_VERSION" && exit 1
+warning "using pyjetty python version: ${PYJETTY_USER_PYTHON_VERSION}"
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=3.0.0
 note "... version ${version}"
@@ -25,9 +35,9 @@ fname=HepMC3-${version}
 if [ "x${version}" == "x3.0.0" ]; then
 	fname=hepmc${version}
 fi
-dirsrc=${SCRIPTPATH}/build/${fname}
-dirinst=${SCRIPTPATH}/packages/hepmc-${version}
-dirbuild=${dirsrc}-build
+dirsrc=${THISD}/build/${fname}
+dirinst=${THISD}/packages/hepmc-${version}-${PYJETTY_USER_PYTHON_VERSION}
+dirbuild=${dirsrc}-build-${PYJETTY_USER_PYTHON_VERSION}
 
 function grace_return()
 {
@@ -42,23 +52,23 @@ if [ "x${clean}" == "xyes" ]; then
 	rm -rf ${dirsrc}
 	echo_info "removing ${dirinst}"
 	rm -rf ${dirinst}
-	grace_return && return 0
+	grace_return && exit 0
 fi
 uninstall=$(get_opt "uninstall" $@)
 if [ "x${uninstall}" == "xyes" ]; then
 	echo_info "uninstall..."
 	rm -rf ${dirinst}
-	grace_return && return 0
+	grace_return && exit 0
 fi
 installed=$(get_opt "installed" $@)
 if [ "x${installed}" == "xyes" ]; then
 	[ -d ${dirinst} ] && echo_info "${dirinst} exists"
 	[ ! -d ${dirinst} ] && error "${dirinst} does NOT exists"
-	grace_return && return 0
+	grace_return && exit 0
 fi
 
-[ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
-[ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
+[ ! -d ${THISD}/build ] && mkdir -v ${THISD}/build
+[ ! -d ${THISD}/packages ] && mkdir -v ${THISD}/packages
 
 if [ "x${version}" == "x3.0.0" ]; then
 	archsuffix='.tgz'
@@ -66,13 +76,13 @@ else
 	archsuffix='.tar.gz'
 fi
 
-if [ ! -e ${SCRIPTPATH}/build/${fname}${archsuffix} ]; then
-	cd ${SCRIPTPATH}/build
+if [ ! -e ${THISD}/build/${fname}${archsuffix} ]; then
+	cd ${THISD}/build
 	wget http://hepmc.web.cern.ch/hepmc/releases/${fname}${archsuffix}
 fi
 
 if [ ! -d ${dirsrc} ]; then
-	cd ${SCRIPTPATH}/build
+	cd ${THISD}/build
 	tar zxvf ${fname}${archsuffix}
 fi
 
@@ -97,7 +107,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	      	-DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc) \
 	      	${dirsrc}
 		configure_only=$(get_opt "configure-only" $@)
-		[ "x${configure_only}" == "xyes" ] && grace_return && return 0
+		[ "x${configure_only}" == "xyes" ] && grace_return && exit 0
 		if [ "x${version}" == "x3.0.0" ]; then
 			make -j $(n_cores) && make install
 		else
@@ -115,11 +125,6 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	fi
 fi
 
-if [ -d ${dirinst} ]; then
-	export HEPMC3_DIR=${dirinst}
-	export HEPMC3_ROOT_DIR=${dirinst}
-	export PATH=$PATH:${dirinst}/bin
-	export PYTHONPATH=${PYTHONPATH}:${dirinst}/lib
-fi
+${THISD}/../scripts/make_module.sh --dir=${dirinst} --name=HEPMC3 --version=${version}
 
 cd ${cdir}

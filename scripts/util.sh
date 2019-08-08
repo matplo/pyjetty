@@ -11,6 +11,13 @@ function abspath()
 }
 export -f abspath
 
+function abspath_python_expand()
+{
+	rv=$(python -c "import os; print(os.path.abspath(os.path.expandvars(\"${1}\")))")
+	echo ${rv}
+}
+export -f abspath_python_expand
+
 function os_linux()
 {
 	_system=$(uname -a | cut -f 1 -d " ")
@@ -322,7 +329,7 @@ function add_path_module()
 			echo "prepend-path ${what} ${path}" >> ${modulefile}
 		fi
 	else
-		warning "add_path_module:: ignoring ${path} for ${what}"
+		[ ${PYJETTY_DEBUG} ] && warning "add_path_module:: ignoring ${path} for ${what}"
 	fi
 }
 export -f add_path_module
@@ -352,7 +359,7 @@ function setenv_module()
 			echo "setenv ${what} \"${path}\"" >> ${modulefile}
 		fi
 	else
-		warning "setenv_module:: ignoring ${path} for ${what}"
+		[ ${PYJETTY_DEBUG} ] && warning "setenv_module:: ignoring ${path} for ${what}"
 	fi
 }
 export -f setenv_module

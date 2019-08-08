@@ -21,7 +21,7 @@ if [ -z "${PYJETTY_USER_PYTHON_VERSION}" ]; then
 	pyjetty_python_module_name=$(module avail -t | grep pyjetty_python | head -n 1 | grep pyjetty_python)
 	if [ ! -z ${pyjetty_python_module_name} ]; then
 		warning "... found ${pyjetty_python_module_name}"	
-		module load pyjetty_python
+		module load ${pyjetty_python_module_name}
 	else
 		warning "... no suitable module found"
 	fi
@@ -33,7 +33,6 @@ version=$(get_opt "version" $@)
 note "... version ${version}"
 fname=fastjet-${version}
 dirsrc=${THISD}/build/fastjet-${version}
-warning "pyjetty python version: ${PYJETTY_USER_PYTHON_VERSION}"
 dirinst=${THISD}/packages/fastjet-${version}-${PYJETTY_USER_PYTHON_VERSION}
 
 function grace_return()
@@ -110,12 +109,16 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	fi
 fi
 
-. ${THISD}/../scripts/make_modules.sh
-make_module_package ${dirinst}
-
-# or
-
-. ${THISD}/../scripts/make_modules.sh --packagedir=${dirinst}
+python_path="${dirinst}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages/fastjet.py"
+python_path64="${dirinst}/lib64/python${PYJETTY_PYTHON_VERSION}/site-packages/fastjet.py"
+if [ -f ${python_path64} ] || [ -f ${python_path} ]; then
+	${THISD}/../scripts/make_module.sh --dir=${dirinst} --name=FASTJET --version=${version}
+else
+	error "fastjet.py not found - no module generation"
+	[ ! -f ${python_path} ] && error "missing ${python_path}"
+	[ ! -f ${python_path64} ] && error "missing ${python_path64}"
+	exit 0
+fi
 
 
 cd ${cdir}

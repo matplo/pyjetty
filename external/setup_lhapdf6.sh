@@ -13,19 +13,29 @@ function thisdir()
 	DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 	echo ${DIR}
 }
-SCRIPTPATH=$(thisdir)
+THISD=$(thisdir)
+. ${THISD}/../scripts/util.sh
 separator "${BASH_SOURCE}"
-source ${SCRIPTPATH}/util.sh
-setup_python_env
-
-npdfs_link="http://lhapdfsets.web.cern.ch/lhapdfsets/current/EPPS16nlo_CT14nlo_Pb208.tar.gz"
-
+if [ -z "${PYJETTY_USER_PYTHON_VERSION}" ]; then
+	warning "trying to load pyjetty_python"
+	pyjetty_python_module_name=$(module avail -t | grep pyjetty_python | head -n 1 | grep pyjetty_python)
+	if [ ! -z ${pyjetty_python_module_name} ]; then
+		warning "... found ${pyjetty_python_module_name}"	
+		module load ${pyjetty_python_module_name}
+	else
+		warning "... no suitable module found"
+	fi
+fi
+[ -z "${PYJETTY_USER_PYTHON_VERSION}" ] && error "missing: PYJETTY_USER_PYTHON_VERSION" && exit 1
+warning "using pyjetty python version: ${PYJETTY_USER_PYTHON_VERSION}"
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=6.2.3
 note "... version ${version}"
 fname=LHAPDF-${version}
-dirsrc=${SCRIPTPATH}/build/LHAPDF-${version}
-dirinst=${SCRIPTPATH}/packages/LHAPDF-${version}
+dirsrc=${THISD}/build/LHAPDF-${version}
+dirinst=${THISD}/packages/LHAPDF-${version}-${PYJETTY_USER_PYTHON_VERSION}
+
+npdfs_link="http://lhapdfsets.web.cern.ch/lhapdfsets/current/EPPS16nlo_CT14nlo_Pb208.tar.gz"
 
 function grace_return()
 {
@@ -55,16 +65,16 @@ if [ "x${installed}" == "xyes" ]; then
 	grace_return && return 0
 fi
 
-[ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
-[ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
+[ ! -d ${THISD}/build ] && mkdir -v ${THISD}/build
+[ ! -d ${THISD}/packages ] && mkdir -v ${THISD}/packages
 
-if [ ! -e ${SCRIPTPATH}/build/${fname}.tar.gz ]; then
-	cd ${SCRIPTPATH}/build
+if [ ! -e ${THISD}/build/${fname}.tar.gz ]; then
+	cd ${THISD}/build
 	wget https://lhapdf.hepforge.org/downloads/?f=${fname}.tar.gz -O ${fname}.tar.gz
 fi
 
 if [ ! -d ${dirsrc} ]; then
-	cd ${SCRIPTPATH}/build
+	cd ${THISD}/build
 	tar zxvf ${fname}.tar.gz
 fi
 
@@ -80,9 +90,6 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	fi
 fi
 
-if [ -d ${dirinst} ]; then
-	export LHAPDF6_DIR=${dirinst}
-	export LHAPDF6_ROOT_DIR=${dirinst}
-fi
+${THISD}/../scripts/make_module.sh --dir=${dirinst} --name=LHAPDF6 --version=${version}
 
 cd ${cdir}

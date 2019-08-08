@@ -5,8 +5,6 @@ from __future__ import print_function
 import fastjet as fj
 import fjcontrib
 import fjext
-import pythiafjext
-import pythiaext
 
 import tqdm
 import argparse
@@ -15,6 +13,8 @@ import numpy as np
 
 from pythiautils import configuration as pyconf
 import pythia8
+import pythiafjext
+import pythiaext
 
 parser = argparse.ArgumentParser(description='jet reco on alice data', prog=os.path.basename(__file__))
 pyconf.add_standard_pythia_args(parser)

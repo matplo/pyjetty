@@ -13,17 +13,28 @@ function thisdir()
 	DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 	echo ${DIR}
 }
-SCRIPTPATH=$(thisdir)
+THISD=$(thisdir)
+. ${THISD}/../scripts/util.sh
 separator "${BASH_SOURCE}"
-source ${SCRIPTPATH}/util.sh
-setup_python_env
+if [ -z "${PYJETTY_USER_PYTHON_VERSION}" ]; then
+	warning "trying to load pyjetty_python"
+	pyjetty_python_module_name=$(module avail -t | grep pyjetty_python | head -n 1 | grep pyjetty_python)
+	if [ ! -z ${pyjetty_python_module_name} ]; then
+		warning "... found ${pyjetty_python_module_name}"	
+		module load ${pyjetty_python_module_name}
+	else
+		warning "... no suitable module found"
+	fi
+fi
+[ -z "${PYJETTY_USER_PYTHON_VERSION}" ] && error "missing: PYJETTY_USER_PYTHON_VERSION" && exit 1
+warning "using pyjetty python version: ${PYJETTY_USER_PYTHON_VERSION}"
 
 version=$(get_opt "version" $@)
 [ -z ${version} ] && version=8235
 note "... version ${version}"
 fname=pythia${version}
-dirsrc=${SCRIPTPATH}/build/pythia${version}
-dirinst=${SCRIPTPATH}/packages/pythia${version}
+dirsrc=${THISD}/build/pythia${version}
+dirinst=${THISD}/packages/pythia${version}-${PYJETTY_USER_PYTHON_VERSION}
 
 function grace_return()
 {
@@ -53,16 +64,16 @@ if [ "x${installed}" == "xyes" ]; then
 	grace_return && return 0
 fi
 
-[ ! -d ${SCRIPTPATH}/build ] && mkdir -v ${SCRIPTPATH}/build
-[ ! -d ${SCRIPTPATH}/packages ] && mkdir -v ${SCRIPTPATH}/packages
+[ ! -d ${THISD}/build ] && mkdir -v ${THISD}/build
+[ ! -d ${THISD}/packages ] && mkdir -v ${THISD}/packages
 
-if [ ! -e ${SCRIPTPATH}/build/${fname}.tgz ]; then
-	cd ${SCRIPTPATH}/build
+if [ ! -e ${THISD}/build/${fname}.tgz ]; then
+	cd ${THISD}/build
 	wget http://home.thep.lu.se/~torbjorn/pythia8/${fname}.tgz
 fi
 
 if [ ! -d ${dirsrc} ]; then
-	cd ${SCRIPTPATH}/build
+	cd ${THISD}/build
 	tar zxvf ${fname}.tgz
 fi
 
@@ -83,7 +94,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		cd ${dirsrc}
 	    # echo "unsetting PYTHONPATH"
 	    if [ ! -e ${PYJETTY_PYTHON_BIN_DIR}/python ]; then
-	    	PYJETTY_PYTHON_BIN_DIR=${SCRIPTPATH}/build/pythia-python-bin
+	    	PYJETTY_PYTHON_BIN_DIR=${THISD}/build/pythia-python-bin
 	    	mkdir ${PYJETTY_PYTHON_BIN_DIR}
 	    	ln -s ${python_exec} ${PYJETTY_PYTHON_BIN_DIR}/python
 		    warning "fix-up-python bin dir: ${PYJETTY_PYTHON_BIN_DIR}"
@@ -102,10 +113,15 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 	fi
 fi
 
-if [ -d ${dirinst} ]; then
-	export PYTHIA_DIR=${dirinst}
-	export PYTHIA8_DIR=${dirinst}
-	export PYTHIA8_ROOT_DIR=${dirinst}
+python_path="${dirinst}/lib/pythia8.py"
+python_path64="${dirinst}/lib64/pythia8.py"
+if [ -f ${python_path64} ] || [ -f ${python_path} ]; then
+	${THISD}/../scripts/make_module.sh --dir=${dirinst} --name=PYTHIA8 --version=${version}
+else
+	error "pythia8.py not found - no module generation"
+	[ ! -f ${python_path} ] && error "missing ${python_path}"
+	[ ! -f ${python_path64} ] && error "missing ${python_path64}"
+	exit 0
 fi
 
 cd ${cdir}

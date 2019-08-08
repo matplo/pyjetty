@@ -11,8 +11,8 @@ function thisdir()
         DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
         echo ${DIR}
 }
-SCRIPTPATH=$(thisdir)
-source ${SCRIPTPATH}/../../external/util.sh
+THISD=$(thisdir)
+source ${THISD}/../scripts/util.sh
 separator "pyjetty: ${BASH_SOURCE}"
 
 need_help=$(get_opt "help" $@)
@@ -26,8 +26,8 @@ if [ ! -z ${unsetpyhonpath} ]; then
     unset PYTHONPATH	&& warning "unsetting PYTHONPATH"
 fi
 
-install_path=${SCRIPTPATH}/..
-build_path=${SCRIPTPATH}/../build
+install_path=$(abspath ${THISD}/..)
+build_path=${THISD}/../build
 
 clean=$(get_opt "clean" $@)
 if [ ! -z ${clean} ]; then
@@ -74,7 +74,7 @@ if [ -d ${build_path} ] || [ "x${redo}" == "xyes" ]; then
 	cmake -B. -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} \
     ${DVENVOPT} -DCMAKE_BUILD_TYPE=${build_configuration} \
     -DPython_User=TRUE \
-    $(abspath ${SCRIPTPATH}/..)
+    $(abspath ${THISD}/..)
     configure_only=$(get_opt "configure-only" $@)
     if [ ! "x${configure_only}" == "xyes" ]; then
         cmake --build . --target all -- -j $(n_cores) \
@@ -83,4 +83,12 @@ if [ -d ${build_path} ] || [ "x${redo}" == "xyes" ]; then
    cd -
 else
 	echo "[error] unable to access build path: ${build_path}"
+fi
+
+if [ -d ${install_path}/lib ]; then
+    separator "make module ..."
+    ls ${THISD}/../../scripts/make_module.sh
+    ${THISD}/../../scripts/make_module.sh --dir=${install_path} --name=cpptools --version=1.0
+else
+    error "missing ${STHISDIR}/cpptools/lib"
 fi

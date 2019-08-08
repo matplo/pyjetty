@@ -13,49 +13,35 @@ function thisdir()
 	DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 	echo ${DIR}
 }
-
-SCRIPTPATH=$(thisdir)
+THISD=$(thisdir)
+source ${THISD}/../scripts/util.sh
 separator "${BASH_SOURCE}"
-source ${SCRIPTPATH}/util.sh
-[ "x$(get_opt "python2" $@)" == "xyes" ] && export PYJETTY_USER_PYTHON_VERSION=python2
-[ "x$(get_opt "python3" $@)" == "xyes" ] && export PYJETTY_USER_PYTHON_VERSION=python3
-setup_python_env
-
-[ "x$(get_opt "unset" $@)" == "xyes" ] && unset PYTHONPATH && warning "unsetting PYTHONPATH"
-. ${SCRIPTPATH}/setup_lhapdf6.sh 		--version=6.2.3 	 $@
-. ${SCRIPTPATH}/setup_hepmc2_cmake.sh 	--version=2.06.09 	 $@
-. ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1  	 $@
-. ${SCRIPTPATH}/setup_pythia8.sh 		--version=8235 		 $@
+build_with_python="python"
+[ "x$(get_opt "python2" $@)" == "xyes" ] && build_with_python="python2"
+[ "x$(get_opt "python3" $@)" == "xyes" ] && build_with_python="python3"
+${THISD}/../scripts/make_module.sh ${build_with_python}
+module use ${THISD}/../modules
+module avail
+separator ''
+module load pyjetty/pyjetty_${build_with_python}
+separator "LHAPDF6"
+${THISD}/setup_lhapdf6.sh 		--version=6.2.3 	 $@
+separator "HEPMC2"
+${THISD}/setup_hepmc2_cmake.sh 	--version=2.06.09 	 $@
+separator "HEPMC3"
+${THISD}/setup_hepmc3.sh 		--version=3.1.1  	 $@
+separator "PYTHIA8"
+module use ${THISD}/../modules
+module load pyjetty/${build_with_python}/HEPMC2/2.06.09 
+module load pyjetty/${build_with_python}/HEPMC3/3.1.1
+module load pyjetty/${build_with_python}/LHAPDF6/6.2.3
+#module load pyjetty/${build_with_python}/fastjet/3.3.2
+${THISD}/setup_pythia8.sh 		--version=8235 		 $@
 if [ "$(get_opt "install" $@)" == "xyes" ]; then
+	separator "redo HEPMC3"
 	note "... running with install"
-	. ${SCRIPTPATH}/setup_hepmc3.sh 		--version=3.1.1 --re $@
+	. ${THISD}/setup_hepmc3.sh 		--version=3.1.1 --re $@
 fi
-. ${SCRIPTPATH}/setup_fastjet.sh 		--version=3.3.2 	 $@
-
-for path in ${HEPMC2_DIR} ${HEPMC3_DIR} ${LHAPDF6_DIR} ${PYTHIA8_DIR} ${FASTJET_DIR}
-do
-	note "using ${path} to setup environment..."
-	bin_path="${path}/bin"
-	lib_path="${path}/lib"
-	lib64_path="${path}/lib64"
-	python_path="${path}/lib/python${PYJETTY_PYTHON_VERSION}/site-packages"
-	python_path64="${path}/lib64/python${PYJETTY_PYTHON_VERSION}/site-packages"
-	add_path ${bin_path}
-	if [ "x$(os_darwin)" == "xyes" ]; then
-		add_dyldpath "${lib_path}"
-		add_dyldpath "${lib64_path}"
-		add_dyldpath "${python_path}"
-		add_dyldpath "${python_path64}"
-	else
-		add_ldpath "${lib_path}"
-		add_ldpath "${lib64_path}"
-		add_ldpath "${python_path}"
-		add_ldpath "${python_path64}"
-	fi
-	add_pythonpath "${python_path}"
-	add_pythonpath "${python_path64}"
-	add_pythonpath "${lib_path}"
-	add_pythonpath "${lib64_path}"
-done
-
+separator "FASTJET"
+${THISD}/setup_fastjet.sh 		--version=3.3.2 	 $@
 cd ${cdir}
