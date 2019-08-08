@@ -39,7 +39,7 @@ function make_python_module()
 		PYJETTY_PYTHON_SETUP=TRUE
 
 		modulefiledir=$(abspath ${THISD}/../modules/pyjetty)
-		mkdir -p ${modulefiledir}
+		mkdir -pv ${modulefiledir}
 		modulefile="${modulefiledir}/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"
 		separator "making python module ${modulefile}"
 		[ -f ${modulefile} ] && warning "removing ${modulefile}" && rm -f ${modulefile}
@@ -85,7 +85,7 @@ function make_module_package()
 		[ ! -z ${package_name} ] && modulefiledir=${modulefiledir}/${package_name}
 		modulefile="${modulefiledir}/${module_name}"
 		[ ! -z ${package_version} ] && modulefile="${modulefiledir}/${package_version}"
-		mkdir -p ${modulefiledir}
+		mkdir -pv ${modulefiledir}
 		separator "making ${package_name} module ${modulefile}"
 		[ -f ${modulefile} ] && warning "removing ${modulefile}" && rm -f ${modulefile}
 
