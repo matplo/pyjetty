@@ -12,10 +12,12 @@
 
 # recommended build/setup
 
-- first time run
 ```
 pipenv shell
 ./scripts/setup.sh --buildext
+module use $PWD/modules
+module load pyjetty/main_python
+./cpptools/tests/pythia_gen_fj_lund_test.py
 ```
 
 - to wipe out and rebuild everything
