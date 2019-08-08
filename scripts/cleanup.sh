@@ -23,8 +23,14 @@ rm -rf ${mdir}/modules
 #rm -rf ${mdir}/external/build
 separator "cleaning ${mdir}/external/build - leaving *.gz files"
 find ${mdir}/external/build -type f ! -name '*.gz' -delete
+find ${mdir}/external/build -type d -delete
 separator "rm -rf ${mdir}/external/packages"
-rm -rf ${mdir}/external/packages
+
+${THISD}/setup_lhapdf6.sh 		--clean
+${THISD}/setup_hepmc2_cmake.sh 	--clean
+${THISD}/setup_root.sh 			--clean
+${THISD}/setup_pythia8.sh 		--clean
+${THISD}/setup_fastjet.sh 		--clean
 
 ${THISD}/setup.sh --cleanall
 

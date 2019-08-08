@@ -17,8 +17,8 @@ THISD=$(thisdir)
 source ${THISD}/../scripts/util.sh
 separator "${BASH_SOURCE}"
 build_with_python="python"
-[ "x$(get_opt "python2" $@)" == "xyes" ] && build_with_python="python2"
-[ "x$(get_opt "python3" $@)" == "xyes" ] && build_with_python="python3"
+[ "x$(get_opt \"python2\" $@)" == "xyes" ] && build_with_python="python2"
+[ "x$(get_opt \"python3\" $@)" == "xyes" ] && build_with_python="python3"
 ${THISD}/../scripts/make_module.sh ${build_with_python}
 module use ${THISD}/../modules
 module avail
@@ -28,6 +28,11 @@ separator "LHAPDF6"
 ${THISD}/setup_lhapdf6.sh 		--version=6.2.3 	 $@
 separator "HEPMC2"
 ${THISD}/setup_hepmc2_cmake.sh 	--version=2.06.09 	 $@
+if [ "x$(get_opt \"build-root\" $@)" == "xyes" ]; then
+	separator "ROOT"
+	${THISD}/setup_root.sh 	--version=6.18.00 	 $@
+	module load pyjetty/${build_with_python}/root
+fi
 separator "HEPMC3"
 ${THISD}/setup_hepmc3.sh 		--version=3.1.1  	 $@
 separator "PYTHIA8"
