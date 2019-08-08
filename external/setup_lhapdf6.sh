@@ -50,19 +50,19 @@ if [ "x${clean}" == "xyes" ]; then
 	rm -rf ${dirsrc}
 	echo_info "removing ${dirinst}"
 	rm -rf ${dirinst}
-	grace_return && return 0
+	grace_return && exit 0
 fi
 uninstall=$(get_opt "uninstall" $@)
 if [ "x${uninstall}" == "xyes" ]; then
 	echo_info "uninstall..."
 	rm -rf ${dirinst}
-	grace_return && return 0
+	grace_return && exit 0
 fi
 installed=$(get_opt "installed" $@)
 if [ "x${installed}" == "xyes" ]; then
 	[ -d ${dirinst} ] && echo_info "${dirinst} exists"
 	[ ! -d ${dirinst} ] && error "${dirinst} does NOT exists"
-	grace_return && return 0
+	grace_return && exit 0
 fi
 
 [ ! -d ${THISD}/build ] && mkdir -v ${THISD}/build
@@ -84,7 +84,7 @@ if [ ! -d ${dirinst} ] || [ "x${redo}" == "xyes" ]; then
 		cd ${dirsrc}
 		./configure --prefix=${dirinst}
 		configure_only=$(get_opt "configure-only" $@)
-		[ "x${configure_only}" == "xyes" ] && grace_return && return 0
+		[ "x${configure_only}" == "xyes" ] && grace_return && exit 0
 		make -j $(n_cores) && make install
 		cd -
 	fi
