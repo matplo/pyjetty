@@ -75,7 +75,7 @@ fi
 
 if [ ! -d ${dirsrc} ]; then
 	cd ${THISD}/build
-	tar zxvf ${dirsrc}.tar.gz
+	tar zxvf ${fname}.tar.gz
 fi
 
 redo=$(get_opt "rebuild" $@)
