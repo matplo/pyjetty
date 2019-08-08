@@ -12,7 +12,7 @@ function thisdir()
         echo ${DIR}
 }
 THISD=$(thisdir)
-source ${THISD}/../scripts/util.sh
+source ${THISD}/../../scripts/util.sh
 separator "pyjetty: ${BASH_SOURCE}"
 
 need_help=$(get_opt "help" $@)
