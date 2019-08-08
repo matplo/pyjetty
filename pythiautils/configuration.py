@@ -22,7 +22,7 @@ def add_standard_pythia_args(parser):
 	parser.add_argument('--noue', help="no underlying event - equivalend to no ISR and MPIs set to off", default=False, action='store_true')
 	parser.add_argument('--noISR', help="ISR set to off", default=False, action='store_true')
 	parser.add_argument('--noMPI', help="MPIs set to off", default=False, action='store_true')
-	parser.add_argument('--hard', help="enable hardQCD", default=False, action='store_true')
+	parser.add_argument('--hard', help="enable hardQCD (ON if no other process selected)", default=False, action='store_true')
 	parser.add_argument('--charm', help="enable hardccbar", default=False, action='store_true')
 	parser.add_argument('--beauty', help="enable hardbbbar", default=False, action='store_true')
 	parser.add_argument('--photon', help="enable prompt photon production",  default=False, action='store_true')

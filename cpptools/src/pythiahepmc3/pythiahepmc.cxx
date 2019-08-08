@@ -7,7 +7,7 @@ using namespace HEPMC_ALIAS;
 
 namespace HepMCTools
 {
-Pythia8HepMCWrapper::Pythia8HepMCWrapper()
+Pythia8HepMC3Wrapper::Pythia8HepMC3Wrapper()
 	: fOutputName("pythia8_hepmc.dat")
 	, fOutput(0)
 	, fPythiaToHepMC()
@@ -16,7 +16,7 @@ Pythia8HepMCWrapper::Pythia8HepMCWrapper()
 		;
 	}
 
-Pythia8HepMCWrapper::Pythia8HepMCWrapper(const char *fname)
+Pythia8HepMC3Wrapper::Pythia8HepMC3Wrapper(const char *fname)
 	: fOutputName(fname)
 	, fOutput(0)
 	, fPythiaToHepMC()
@@ -25,13 +25,13 @@ Pythia8HepMCWrapper::Pythia8HepMCWrapper(const char *fname)
 		;
 	}
 
-Pythia8HepMCWrapper::~Pythia8HepMCWrapper()
+Pythia8HepMC3Wrapper::~Pythia8HepMC3Wrapper()
 {
 	if (fOutput)
 		delete fOutput;
 }
 
-bool Pythia8HepMCWrapper::fillEvent(Pythia8::Pythia &pythia)
+bool Pythia8HepMC3Wrapper::fillEvent(Pythia8::Pythia &pythia)
 {
 	if (fiEv == 0)
 	{
@@ -61,14 +61,14 @@ bool Pythia8HepMCWrapper::fillEvent(Pythia8::Pythia &pythia)
 		_filled = fPythiaToHepMC.fill_next_event( pythia.event, &hepmc_event, fiEv, &pythia.info, &pythia.settings);
 		if (_filled == false)
 		{
-			std::cerr << "[error] Pythia8HepMCWrapper::fillEvent false" << std::endl;
+			std::cerr << "[error] Pythia8HepMC3Wrapper::fillEvent false" << std::endl;
 		}
 		fOutput->write_event(hepmc_event);
 		fiEv++;
 	}
 	else
 	{
-		std::cerr << "[error] Pythia8HepMCWrapper::fillEvent false - no valid output 0x" << fOutput << std::endl;		
+		std::cerr << "[error] Pythia8HepMC3Wrapper::fillEvent false - no valid output 0x" << fOutput << std::endl;		
 	}
 	return _filled;
 }

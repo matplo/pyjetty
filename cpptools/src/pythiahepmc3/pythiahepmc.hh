@@ -18,12 +18,12 @@
 
 namespace HepMCTools
 {
-	class Pythia8HepMCWrapper
+	class Pythia8HepMC3Wrapper
 	{
 	public:
-		Pythia8HepMCWrapper();
-		Pythia8HepMCWrapper(const char *fname);
-		~Pythia8HepMCWrapper();
+		Pythia8HepMC3Wrapper();
+		Pythia8HepMC3Wrapper(const char *fname);
+		~Pythia8HepMC3Wrapper();
 		bool fillEvent(Pythia8::Pythia &pythia);
 	private:
 		std::string fOutputName;
