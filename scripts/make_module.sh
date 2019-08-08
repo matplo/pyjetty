@@ -38,8 +38,8 @@ function make_python_module()
 		PYJETTY_PYTHON_CONFIG_INCLUDES=$(${PYJETTY_PYTHON_CONFIG_EXECUTABLE} --includes)
 		PYJETTY_PYTHON_SETUP=TRUE
 
+		mkdir -p ${modulefiledir}
 		modulefiledir=$(abspath ${THISD}/../modules/pyjetty)
-		mkdir -pv ${modulefiledir}
 		modulefile="${modulefiledir}/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"
 		separator "making python module ${modulefile}"
 		[ -f ${modulefile} ] && warning "removing ${modulefile}" && rm -f ${modulefile}
@@ -80,12 +80,13 @@ function make_module_package()
 	[ ! -z ${3} ] && package_version=${3}
 
 	if [ -d ${dirinst} ]; then
+		mkdir -p ${THISD}/../modules/pyjetty
 		modulefiledir=$(abspath ${THISD}/../modules/pyjetty)
 		[ ! -z ${PYJETTY_USER_PYTHON_VERSION} ] && modulefiledir=${modulefiledir}/${PYJETTY_USER_PYTHON_VERSION}
 		[ ! -z ${package_name} ] && modulefiledir=${modulefiledir}/${package_name}
 		modulefile="${modulefiledir}/${module_name}"
 		[ ! -z ${package_version} ] && modulefile="${modulefiledir}/${package_version}"
-		mkdir -pv ${modulefiledir}
+		mkdir -p ${modulefiledir}
 		separator "making ${package_name} module ${modulefile}"
 		[ -f ${modulefile} ] && warning "removing ${modulefile}" && rm -f ${modulefile}
 
@@ -132,6 +133,7 @@ function make_module_pyjetty()
 	[ "x$(get_opt "python3" $@)" == "xyes" ] && PYJETTY_USER_PYTHON_VERSION=python3
 	[ -z ${PYJETTY_USER_PYTHON_VERSION} ] && PYJETTY_USER_PYTHON_VERSION=python
 
+	mkdir -p "${THISD}/../modules/pyjetty"
 	modulefiledir=$(abspath_python_expand "${THISD}/../modules/pyjetty")
 	module_name="main_${PYJETTY_USER_PYTHON_VERSION}"
 	modulefile="${modulefiledir}/${module_name}"
