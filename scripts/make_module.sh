@@ -155,16 +155,18 @@ function make_module_pyjetty()
 	add_path_module ${modulefile} PYTHONPATH ${pyjetty_dir}
 	setalias_module ${modulefile} pyjetty_cd "cd ${pyjetty_dir}"
 
-	echo "module load pyjetty/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"	>> ${modulefile}
-	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/LHAPDF6"	>> ${modulefile}
-	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/HEPMC2"	>> ${modulefile}
-	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/HEPMC3"	>> ${modulefile}
-	build_root=$(get_opt "root" $@)
-	if [ "x${build_root}" == "xyes" ] && [ -d "${THISD}/../modules/pyjetty/${PYJETTY_USER_PYTHON_VERSION}/ROOT" ]; then
-		echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/ROOT"	>> ${modulefile}
-	fi
-	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/PYTHIA8"	>> ${modulefile}
-	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/FASTJET"	>> ${modulefile}
+	echo "module load heppy/heppy_${PYJETTY_USER_PYTHON_VERSION}"	>> ${modulefile}
+	echo "module load heppy/main_${PYJETTY_USER_PYTHON_VERSION}" >> ${modulefile}
+	# echo "module load pyjetty/pyjetty_${PYJETTY_USER_PYTHON_VERSION}"	>> ${modulefile}
+	# echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/LHAPDF6"	>> ${modulefile}
+	# echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/HEPMC2"	>> ${modulefile}
+	# echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/HEPMC3"	>> ${modulefile}
+	# build_root=$(get_opt "root" $@)
+	# if [ "x${build_root}" == "xyes" ] && [ -d "${THISD}/../modules/pyjetty/${PYJETTY_USER_PYTHON_VERSION}/ROOT" ]; then
+	# 	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/ROOT"	>> ${modulefile}
+	# fi
+	# echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/PYTHIA8"	>> ${modulefile}
+	# echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/FASTJET"	>> ${modulefile}
 	echo "module load pyjetty/${PYJETTY_USER_PYTHON_VERSION}/cpptools"	>> ${modulefile}
 }
 export -f make_module_pyjetty

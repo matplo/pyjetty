@@ -13,7 +13,7 @@ function thisdir()
 }
 THISD=$(thisdir)
 source ${THISD}/../../scripts/util.sh
-separator "pyjetty: ${BASH_SOURCE}"
+separator "heppy: ${BASH_SOURCE}"
 
 need_help=$(get_opt "help" $@)
 if [ ! -z ${need_help} ]; then
@@ -21,9 +21,9 @@ if [ ! -z ${need_help} ]; then
 	exit 0
 fi
 
-if [ -z ${PYJETTY_PYTHON_SETUP} ]; then
-    error "this setup relies on PYJETTY_PYTHON_SETUP..."
-    error "check if modules loaded... module load pyjetty/pyjetty_python ?"
+if [ -z ${HEPPY_PYTHON_SETUP} ]; then
+    error "this setup relies on HEPPY_PYTHON_SETUP..."
+    error "check if modules loaded... module load heppy/heppy_python ?"
     exit 0
 fi
 

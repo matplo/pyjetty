@@ -31,17 +31,17 @@ if [ -z ${PYJETTY_PYTHON_SETUP} ]; then
     exit 0
 fi
 
-buildext=$(get_opt "buildext" $@)
-[ "x${buildext}" == "xyes" ] && ${THISD}/../external/setup.sh $@
+# buildext=$(get_opt "buildext" $@)
+# [ "x${buildext}" == "xyes" ] && ${THISD}/../external/setup.sh $@
 
-module load pyjetty/${build_with_python}/HEPMC2
-module load pyjetty/${build_with_python}/HEPMC3
-module load pyjetty/${build_with_python}/LHAPDF6
-module load pyjetty/${build_with_python}/PYTHIA8
-module load pyjetty/${build_with_python}/FASTJET
+module load heppy/${build_with_python}/HEPMC2
+module load heppy/${build_with_python}/HEPMC3
+module load heppy/${build_with_python}/LHAPDF6
+module load heppy/${build_with_python}/PYTHIA8
+module load heppy/${build_with_python}/FASTJET
 
 build_root=$(get_opt "root" $@)
-[ "x${build_root}" == "xyes" ] && module load pyjetty/${build_with_python}/ROOT
+[ "x${build_root}" == "xyes" ] && module load heppy/${build_with_python}/ROOT
 
 # ( [ ! -d ${THISD}/../cpptools/lib ] || [ "x${redo}" == "xyes" ] ) && ${THISD}/../cpptools/scripts/build_cpptools.sh $@
 ${THISD}/../cpptools/scripts/build_cpptools.sh $@
