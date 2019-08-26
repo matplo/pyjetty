@@ -19,26 +19,28 @@ separator "${BASH_SOURCE}"
 build_with_python="python"
 [ "x$(get_opt "python2" $@)" == "xyes" ] && build_with_python="python2"
 [ "x$(get_opt "python3" $@)" == "xyes" ] && build_with_python="python3"
-${THISD}/../scripts/make_module.sh --${build_with_python}
-module use ${THISD}/../modules
-module avail
-separator ''
-module load pyjetty/pyjetty_${build_with_python}
+# ${THISD}/../scripts/make_module.sh --${build_with_python}
+# module use ${THISD}/../modules
+# module avail
+# separator ''
+# module load pyjetty/pyjetty_${build_with_python}
 
-if [ -z ${PYJETTY_PYTHON_SETUP} ]; then
-    error "this setup relies on PYJETTY_PYTHON_SETUP..."
-    error "check if modules loaded... module load pyjetty/pyjetty_python ?"
+if [ ! -d "${HEPPYDIR}/modules" ]; then
+    error "this setup relies on HEPPYDIR"
+    error "check if modules loaded... "
     exit 0
 fi
 
 # buildext=$(get_opt "buildext" $@)
 # [ "x${buildext}" == "xyes" ] && ${THISD}/../external/setup.sh $@
 
-module load heppy/${build_with_python}/HEPMC2
-module load heppy/${build_with_python}/HEPMC3
-module load heppy/${build_with_python}/LHAPDF6
-module load heppy/${build_with_python}/PYTHIA8
-module load heppy/${build_with_python}/FASTJET
+# module load heppy/${build_with_python}/HEPMC2
+# module load heppy/${build_with_python}/HEPMC3
+# module load heppy/${build_with_python}/LHAPDF6
+# module load heppy/${build_with_python}/PYTHIA8
+# module load heppy/${build_with_python}/FASTJET
+module use ${HEPPYDIR}/modules
+module load heppy/main_python
 
 build_root=$(get_opt "root" $@)
 [ "x${build_root}" == "xyes" ] && module load heppy/${build_with_python}/ROOT
