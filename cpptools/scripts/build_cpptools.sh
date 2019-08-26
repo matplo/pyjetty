@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ ! -f "${HEPPYDIR}/scripts/util.sh" ]; then
+    error "this setup relies on HEPPYDIR"
+    error "check if modules loaded... "
+    exit 0
+fi
+
 function thisdir()
 {
         SOURCE="${BASH_SOURCE[0]}"
@@ -12,7 +18,7 @@ function thisdir()
         echo ${DIR}
 }
 THISD=$(thisdir)
-source ${THISD}/../../scripts/util.sh
+source ${HEPPYDIR}/scripts/util.sh
 separator "heppy: ${BASH_SOURCE}"
 
 need_help=$(get_opt "help" $@)
@@ -57,7 +63,6 @@ else
     unset VERBOSE
 fi
 
-
 DVENVOPT=""
 invenv=$(python -c "import sys; print(hasattr(sys, 'real_prefix'))")
 [ "x${invenv}" == "xTrue" ] && DVENVOPT="-DPython3_FIND_VIRTUALENV=ONLY" && warning "- Find/use python in VENV -> option set: ${DVENVOPT}"
@@ -91,12 +96,4 @@ if [ -d ${build_path} ] || [ "x${redo}" == "xyes" ]; then
    cd -
 else
 	echo "[error] unable to access build path: ${build_path}"
-fi
-
-if [ -d ${install_path}/lib ]; then
-    separator "make module ..."
-    ls ${THISD}/../../scripts/make_module.sh
-    ${THISD}/../../scripts/make_module.sh --dir=${install_path} --name=cpptools --version=1.0
-else
-    error "missing ${STHISDIR}/cpptools/lib"
 fi

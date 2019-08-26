@@ -25,7 +25,7 @@ import ROOT
 # Fastjet via python (from external library fjpydev)
 import pyjetty
 import fastjet as fj
-from recursivetools import pyrecursivetools as rt
+import fjcontrib as rt
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
