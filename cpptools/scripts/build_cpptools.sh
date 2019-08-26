@@ -81,8 +81,8 @@ if [ -d ${build_path} ] || [ "x${redo}" == "xyes" ]; then
     # _python_numpy_includes=$(${_wpython} -c "import numpy; print(numpy.get_include())")
 	cmake -B. -DBUILD_PYTHON=ON -DCMAKE_INSTALL_PREFIX=${install_path} \
     ${DVENVOPT} -DCMAKE_BUILD_TYPE=${build_configuration} \
-    -DPython_User=TRUE \
     $(abspath ${THISD}/..)
+    # -DPython_User=TRUE \
     configure_only=$(get_opt "configure-only" $@)
     if [ ! "x${configure_only}" == "xyes" ]; then
         cmake --build . --target all -- -j $(n_cores) \

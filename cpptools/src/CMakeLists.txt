@@ -42,6 +42,7 @@ else()
   message(WARNING "Some of this requires pythia8-config... - must be in your \$PATH")
 endif()
 
+find_package(HEPPY REQUIRED HEPPYSET)
 add_subdirectory(aleph)
 
 find_package(HepMC3 REQUIRED HepMC)
