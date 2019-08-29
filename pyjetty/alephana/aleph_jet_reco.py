@@ -37,21 +37,22 @@ def main():
 	partSelector = KineSelectorFactory(absetamax=2)
 	jetSelector = KineSelectorFactory(absetamax=2, ptmin=10)
 
-	all_jets = []
+	all_jets = pd.DataFrame(columns=FJEvent.df_columns)
 	while reader.read_next_event():
 		e = reader.get_event()
 		vparts = e.get_particles_vdoubles()
 		df = pd.DataFrame(vparts, columns=aleph.Particle.descr())
 		parts = fjext.vectorize_px_py_pz_e(df['px'].values, df['py'].values, df['pz'].values, df['e'].values)
-		fjev = FJEvent(	particles=parts, id=pbar.n, R=0.4, algorithm=fj.antikt_algorithm,
+		fjev = FJEvent(	particles=parts, id=e.get_header().n(), R=0.4, algorithm=fj.antikt_algorithm,
 						jet_selector=jetSelector,
 						particle_selector=partSelector)
 		fjev.run_jet_finder_csaa()
 		inclusive_jets = fjev.inclusive_jets
 		njets = len(inclusive_jets)
 		if njets > 0:
-			# print("njets = {}".format(njets))
-			all_jets.extend([j.pt() for j in inclusive_jets])
+			# print("njets = {} df:{}".format(njets, len(_jets_df)))
+			_jets_df = fjev.jets_df
+			all_jets = all_jets.append(_jets_df, ignore_index=True)
 		pbar.update()
 		if pbar.n > 1000:
 			break;

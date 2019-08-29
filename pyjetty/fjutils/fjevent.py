@@ -24,6 +24,7 @@ class KineSelectorFactory(object):
 
 
 class FJEvent(object):
+	df_columns = ['evid', 'pt', 'eta', 'phi', 'area', 'ptsub', 'name']
 	def __init__(self, **kwargs):
 		# eventid = -1, R=0.4, algorithm=fj.antikt_algorithm, name = None):
 		self.particles = []
@@ -36,8 +37,9 @@ class FJEvent(object):
 		self.csaa = None
 		self.particle_selector = None
 		self.jet_selector = None
-		self.name = "FJEvent"
+		self.name = None
 		self.id = -1
+		self.ngrid = None
 		for key, value in kwargs.items():
 			if key == "R": self.R = value
 			if key == "algorithm": self.algorithm = value
@@ -48,6 +50,8 @@ class FJEvent(object):
 			if key == "particles": self.particles = value
 		if self.name is None:
 			self.name = '{}_{}'.format(self.R, self.algorithm)
+		self.background_estimator = None
+		self.jets_df = None
 
 	def run_jet_finder_csaa(self):
 		self.jet_def = fj.JetDefinition(self.algorithm, self.R)
@@ -56,6 +60,15 @@ class FJEvent(object):
 		self.inclusive_jets = fj.sorted_by_pt(self.csaa.inclusive_jets())
 		if self.jet_selector:
 			self.inclusive_jets = self.jet_selector.selector(self.inclusive_jets)
+		if self.ngrid is None:
+			self.ngrid = self.particle_selector.absetamax / 0.05
+		_grid_spacing = self.particle_selector.absetamax / self.ngrid
+		self.background_estimator = fj.GridMedianBackgroundEstimator(self.particle_selector.absetamax, _grid_spacing)
+		self.background_estimator.set_particles(self.particle_selector.selector(self.particles))
+		self.jets_df = pd.DataFrame([[	self.id, j.perp(), j.eta(), j.phi(), j.area(), 
+										j.perp() - self.background_estimator.rho() * j.area(), self.name] 
+										for j in self.inclusive_jets], 
+									columns=self.df_columns)
 
 	def leading_pt_particle(self, ptmin):
 		return fj.sorted_by_pt(self.particles)[0]
@@ -69,5 +82,3 @@ class FJEvent(object):
 	def leading_jet_select(self, selector):
 		return fj.sorted_by_pt(selector(self.inclusive_jets))[0]
 
-	# implement background subtraction
-	# implement the panda output
