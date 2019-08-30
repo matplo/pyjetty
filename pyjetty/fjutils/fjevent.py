@@ -51,9 +51,11 @@ class FJEvent(object):
 		if self.name is None:
 			self.name = '{}_{}'.format(self.R, self.algorithm)
 		self.background_estimator = None
-		self.jets_df = None
+		self.jets_df = []
 
-	def run_jet_finder_csaa(self):
+	def run_jet_finder_csaa(self, particles = [], evid = -1):
+		self.particles = particles
+		self.id = evid
 		self.jet_def = fj.JetDefinition(self.algorithm, self.R)
 		self.jet_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(self.particle_selector.absetamax))
 		self.csaa = fj.ClusterSequenceArea(self.particle_selector.selector(self.particles), self.jet_def, self.jet_area_def)
@@ -65,18 +67,20 @@ class FJEvent(object):
 		_grid_spacing = self.particle_selector.absetamax / self.ngrid
 		self.background_estimator = fj.GridMedianBackgroundEstimator(self.particle_selector.absetamax, _grid_spacing)
 		self.background_estimator.set_particles(self.particle_selector.selector(self.particles))
-		self.jets_df = pd.DataFrame([[	self.id, j.perp(), j.eta(), j.phi(), j.area(), 
+		self.jets_df.append(pd.DataFrame([[	self.id, j.perp(), j.eta(), j.phi(), j.area(), 
 										j.perp() - self.background_estimator.rho() * j.area(), self.name] 
 										for j in self.inclusive_jets], 
-									columns=self.df_columns)
+									columns=self.df_columns))
+	def get_pandas(self):
+		return pd.concat(self.jets_df, ignore_index=True)
 
-	def leading_pt_particle(self, ptmin):
+	def leading_pt_particle(self):
 		return fj.sorted_by_pt(self.particles)[0]
 
 	def leading_particle_select(self, selector):
 		return fj.sorted_by_pt(selector(self.particles))[0]
 
-	def leading_pt_jet(self, ptmin):
+	def leading_pt_jet(self):
 		return fj.sorted_by_pt(self.inclusive_jets)[0]
 
 	def leading_jet_select(self, selector):
