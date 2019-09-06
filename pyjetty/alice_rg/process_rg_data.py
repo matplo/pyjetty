@@ -22,10 +22,10 @@ import pandas
 import numpy as np
 import ROOT
 
-# Fastjet via python (from external library fjpydev)
-import pyjetty
+# Fastjet via python (from external library heppy)
 import fastjet as fj
-from recursivetools import pyrecursivetools as rt
+import fjcontrib
+import fjext
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -113,7 +113,7 @@ def load_dataframe(inputFile):
 def get_fjparticles(df_tracks):
   
   # Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
-  fj_particles = pyjetty.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)
+  fj_particles = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)
   
   return fj_particles
 
@@ -160,7 +160,7 @@ def analyzeEvents(df_fjparticles, hDict, outputDir, fileFormat):
   # Define SoftDrop settings
   beta = 0
   zcut = 0.1
-  sd = rt.SoftDrop(beta, zcut, jetR)
+  sd = fjcontrib.SoftDrop(beta, zcut, jetR)
   print('SoftDrop groomer is: {}'.format(sd.description()));
 
   # Use list comprehension to do jet-finding and fill histograms
@@ -212,7 +212,7 @@ def fillSoftDropHistograms(hDict, jets_sd):
   
   for jet in jets_sd:
     
-    sd_info = rt.get_SD_jet_info(jet)
+    sd_info = fjcontrib.get_SD_jet_info(jet)
     zg = sd_info.z
     Rg = sd_info.dR
     
