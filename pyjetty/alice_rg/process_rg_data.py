@@ -91,7 +91,7 @@ def process_rg_data(inputFile, configFile, outputDir):
   analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir)
 
   # Plot histograms
-  print('Plot histograms...')
+  print('Save histograms...')
   saveHistograms(hDict, outputDir)
 
   print('--- {} seconds ---'.format(time.time() - start_time))
@@ -169,41 +169,42 @@ def analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict):
   jets = fj.sorted_by_pt(cs.inclusive_jets())
   jets_accepted = jet_selector(jets)
 
-  fillJetHistograms(hDict, jets_accepted, jet_def.R())
-
-  # Loop through jets and perform SoftDrop grooming
-  jets_sd = []
+  # Loop through jets
+  jetR = jet_def.R()
   for jet in jets_accepted:
-    jets_sd.append(sd.result(jet))
-
-  fillSoftDropHistograms(hDict, jets_sd, jet_def.R(), beta)
-
-#---------------------------------------------------------------
-def fillJetHistograms(hDict, jets_accepted, jetR):
-
-  # Loop through jets, and fill histograms
-  for jet in jets_accepted:
+    
     if debugLevel > 1:
       print('jet:')
       print(jet)
-      
-    hDict['hJetPt_R{}'.format(jetR)].Fill(jet.pt())
-    hDict['hM_JetPt_R{}'.format(jetR)].Fill(jet.pt(), jet.m())
+    
+    # Fill histograms
+    fillJetHistograms(hDict, jet, jetR)
+    
+    # Perform SoftDrop grooming and fill histograms
+    jet_sd = sd.result(jet)
+    fillSoftDropHistograms(hDict, jet_sd, jet, jetR, beta)
 
 #---------------------------------------------------------------
-def fillSoftDropHistograms(hDict, jets_sd, jetR, beta):
+def fillJetHistograms(hDict, jet, jetR):
   
-  for jet in jets_sd:
-    
-    sd_info = fjcontrib.get_SD_jet_info(jet)
-    theta_g = sd_info.dR / jetR
-    zg = sd_info.z
-    mg = jet.m
+  jet_pt = jet.pt()
 
-    # Note: beware of groomed pt
-    hDict['hThetaG_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet.pt(), theta_g)
-    hDict['hZg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet.pt(), zg)
-    hDict['hMg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet.pt(), jet.m())
+  hDict['hJetPt_R{}'.format(jetR)].Fill(jet_pt)
+  hDict['hM_JetPt_R{}'.format(jetR)].Fill(jet_pt, jet.m())
+
+#---------------------------------------------------------------
+def fillSoftDropHistograms(hDict, jet_sd, jet, jetR, beta):
+  
+  jet_pt_ungroomed = jet.pt()
+  
+  sd_info = fjcontrib.get_SD_jet_info(jet_sd)
+  theta_g = sd_info.dR / jetR
+  zg = sd_info.z
+  mg = jet_sd.m()
+
+  hDict['hThetaG_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_ungroomed, theta_g)
+  hDict['hZg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_ungroomed, zg)
+  hDict['hMg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_ungroomed, mg)
 
 #---------------------------------------------------------------
 def saveHistograms(hDict, outputDir):
