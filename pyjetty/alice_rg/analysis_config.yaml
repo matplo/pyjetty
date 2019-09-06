@@ -1,0 +1,6 @@
+# Analysis parameters
+jetR: [0.2, 0.4]
+beta: [0, 1.]
+
+# Plotting parameters
+fileFormat: ".pdf"

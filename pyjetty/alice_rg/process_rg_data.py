@@ -21,6 +21,7 @@ import uproot
 import pandas
 import numpy as np
 import ROOT
+import yaml
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -37,9 +38,16 @@ ROOT.gROOT.SetBatch(True)
 debugLevel = 0
 
 #---------------------------------------------------------------
-def process_rg_data(inputFile, outputDir):
+def process_rg_data(inputFile, configFile, outputDir):
   
   start_time = time.time()
+  
+  # Read config file
+  with open(configFile, 'r') as stream:
+    config = yaml.safe_load(stream)
+  
+  jetR_list = config['jetR']
+  beta_list = config['beta']
   
   # Create output dir
   if not outputDir.endswith("/"):
@@ -76,11 +84,11 @@ def process_rg_data(inputFile, outputDir):
   print('Number of tracks: {}'.format(nTracks))
 
   # Initialize histogram dictionary
-  hDict = initializeHistograms()
+  hDict = initializeHistograms(jetR_list, beta_list)
   
   # Find jets and fill histograms
   print('Find jets...')
-  analyzeEvents(df_fjparticles, hDict, outputDir)
+  analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir)
 
   # Plot histograms
   print('Plot histograms...')
@@ -89,73 +97,89 @@ def process_rg_data(inputFile, outputDir):
   print('--- {} seconds ---'.format(time.time() - start_time))
 
 #---------------------------------------------------------------
-def initializeHistograms():
+def initializeHistograms(jetR_list, beta_list):
   
   hDict = {}
   
-  hJetPt = ROOT.TH1F('hJetPt', 'hJetPt', 300, 0, 300)
-  hJetPt.GetXaxis().SetTitle('p_{T,jet}')
-  hJetPt.GetYaxis().SetTitle('dN/dp_{T}')
-  hDict['hJetPt'] = hJetPt
+  for jetR in jetR_list:
   
-  hThetaG_JetPt = ROOT.TH2F('hThetaG_JetPt', 'hThetaG_JetPt', 300, 0, 300, 150, 0, 1.5)
-  hThetaG_JetPt.GetXaxis().SetTitle('p_{T,jet}')
-  hThetaG_JetPt.GetYaxis().SetTitle('#theta_{g}')
-  hDict['hThetaG_JetPt'] = hThetaG_JetPt
+    name = 'hJetPt_R{}'.format(jetR)
+    hJetPt = ROOT.TH1F(name, name, 300, 0, 300)
+    hJetPt.GetXaxis().SetTitle('p_{T,jet}')
+    hJetPt.GetYaxis().SetTitle('dN/dp_{T}')
+    hDict[name] = hJetPt
+    
+    name = 'hM_JetPt_R{}'.format(jetR)
+    hM_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
+    hM_JetPt.GetXaxis().SetTitle('p_{T,jet}')
+    hM_JetPt.GetYaxis().SetTitle('m_{jet}')
+    hDict[name] = hM_JetPt
+    
+    for beta in beta_list:
 
-  hZg_JetPt = ROOT.TH2F('hZg_JetPt', 'hZg_JetPt', 300, 0, 300, 100, 0, 1.)
-  hZg_JetPt.GetXaxis().SetTitle('p_{T,jet}')
-  hZg_JetPt.GetYaxis().SetTitle('z_{g}')
-  hDict['hZg_JetPt'] = hZg_JetPt
-  
-  hM_JetPt = ROOT.TH2F('hM_JetPt', 'hM_JetPt', 300, 0, 300, 100, 0, 50.)
-  hM_JetPt.GetXaxis().SetTitle('p_{T,jet}')
-  hM_JetPt.GetYaxis().SetTitle('m_{jet}')
-  hDict['hM_JetPt'] = hM_JetPt
+      name = 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)
+      hThetaG_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
+      hThetaG_JetPt.GetXaxis().SetTitle('p_{T,jet}')
+      hThetaG_JetPt.GetYaxis().SetTitle('#theta_{g}')
+      hDict[name] = hThetaG_JetPt
+
+      name = 'hZg_JetPt_R{}_B{}'.format(jetR, beta)
+      hZg_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+      hZg_JetPt.GetXaxis().SetTitle('p_{T,jet}')
+      hZg_JetPt.GetYaxis().SetTitle('z_{g}')
+      hDict[name] = hZg_JetPt
+
+      name = 'hMg_JetPt_R{}_B{}'.format(jetR, beta)
+      hMg_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
+      hMg_JetPt.GetXaxis().SetTitle('p_{T,jet}')
+      hMg_JetPt.GetYaxis().SetTitle('m_{g,jet}')
+      hDict[name] = hMg_JetPt
 
   return hDict
 
 #---------------------------------------------------------------
-def analyzeEvents(df_fjparticles, hDict, outputDir):
+def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir):
   
   fj.ClusterSequence.print_banner()
   print()
   
-  # Set jet definition and a jet selector
-  jetR = 0.4
-  jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-  jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-  print('jet definition is:', jet_def)
-  print('jet selector is:', jet_selector,'\n')
-  
-  # Define SoftDrop settings
-  beta = 0
-  zcut = 0.1
-  sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-  print('SoftDrop groomer is: {}'.format(sd.description()));
+  for jetR in jetR_list:
+    
+    for beta in beta_list:
+    
+      # Set jet definition and a jet selector
+      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      print('jet definition is:', jet_def)
+      print('jet selector is:', jet_selector,'\n')
+      
+      # Define SoftDrop settings
+      zcut = 0.1
+      sd = fjcontrib.SoftDrop(beta, zcut, jetR)
+      print('SoftDrop groomer is: {}'.format(sd.description()));
 
-  # Use list comprehension to do jet-finding and fill histograms
-  result = [analyzeJets(fj_particles, jet_def, jet_selector, sd, hDict) for fj_particles in df_fjparticles]
+      # Use list comprehension to do jet-finding and fill histograms
+      result = [analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict) for fj_particles in df_fjparticles]
 
 #---------------------------------------------------------------
-def analyzeJets(fj_particles, jet_def, jet_selector, sd, hDict):
+def analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict):
   
   # Do jet finding
   cs = fj.ClusterSequence(fj_particles, jet_def)
   jets = fj.sorted_by_pt(cs.inclusive_jets())
   jets_accepted = jet_selector(jets)
 
-  fillJetHistograms(hDict, jets_accepted)
+  fillJetHistograms(hDict, jets_accepted, jet_def.R())
 
   # Loop through jets and perform SoftDrop grooming
   jets_sd = []
   for jet in jets_accepted:
     jets_sd.append(sd.result(jet))
 
-  fillSoftDropHistograms(hDict, jets_sd, jet_def.R())
+  fillSoftDropHistograms(hDict, jets_sd, jet_def.R(), beta)
 
 #---------------------------------------------------------------
-def fillJetHistograms(hDict, jets_accepted):
+def fillJetHistograms(hDict, jets_accepted, jetR):
 
   # Loop through jets, and fill histograms
   for jet in jets_accepted:
@@ -163,20 +187,23 @@ def fillJetHistograms(hDict, jets_accepted):
       print('jet:')
       print(jet)
       
-    hDict['hJetPt'].Fill(jet.pt())
-    hDict['hM_JetPt'].Fill(jet.pt(), jet.m())
+    hDict['hJetPt_R{}'.format(jetR)].Fill(jet.pt())
+    hDict['hM_JetPt_R{}'.format(jetR)].Fill(jet.pt(), jet.m())
 
 #---------------------------------------------------------------
-def fillSoftDropHistograms(hDict, jets_sd, jetR):
+def fillSoftDropHistograms(hDict, jets_sd, jetR, beta):
   
   for jet in jets_sd:
     
     sd_info = fjcontrib.get_SD_jet_info(jet)
-    zg = sd_info.z
     theta_g = sd_info.dR / jetR
-    
-    hDict['hZg_JetPt'].Fill(jet.pt(), zg)
-    hDict['hThetaG_JetPt'].Fill(jet.pt(), theta_g)
+    zg = sd_info.z
+    mg = jet.m
+
+    # Note: beware of groomed pt
+    hDict['hThetaG_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet.pt(), theta_g)
+    hDict['hZg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet.pt(), zg)
+    hDict['hMg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet.pt(), jet.m())
 
 #---------------------------------------------------------------
 def saveHistograms(hDict, outputDir):
@@ -195,6 +222,10 @@ if __name__ == '__main__':
                       type=str, metavar='inputFile',
                       default='AnalysisResults.root',
                       help='Path of ROOT file containing TTrees')
+  parser.add_argument('-c', '--configFile', action='store',
+                      type=str, metavar='configFile',
+                      default='analysis_config.yaml',
+                      help="Path of config file for jetscape analysis")
   parser.add_argument('-o', '--outputDir', action='store',
                       type=str, metavar='outputDir',
                       default='./myTestFigures',
@@ -205,6 +236,7 @@ if __name__ == '__main__':
   
   print('Configuring...')
   print('inputFile: \'{0}\''.format(args.inputFile))
+  print('configFile: \'{0}\''.format(args.configFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
   print('----------------------------------------------------------------')
   
@@ -212,5 +244,10 @@ if __name__ == '__main__':
   if not os.path.exists(args.inputFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
     sys.exit(0)
+  
+  # If invalid configFile is given, exit
+  if not os.path.exists(args.configFile):
+    print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
+    sys.exit(0)
 
-  process_rg_data(inputFile = args.inputFile, outputDir = args.outputDir)
+  process_rg_data(inputFile = args.inputFile, configFile = args.configFile, outputDir = args.outputDir)
