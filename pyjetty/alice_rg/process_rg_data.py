@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-  Simple analysis script to read a ROOT TTree of track information
-  and do jet-finding, and plot some basic histograms.
+  Analysis script to read a ROOT TTree of track information
+  and do jet-finding, and save basic histograms.
   
   Author: James Mulligan (james.mulligan@berkeley.edu)
 """
@@ -37,7 +37,7 @@ ROOT.gROOT.SetBatch(True)
 debugLevel = 0
 
 #---------------------------------------------------------------
-def process_rg_data(inputFile, outputDir, fileFormat):
+def process_rg_data(inputFile, outputDir):
   
   start_time = time.time()
   
@@ -80,11 +80,11 @@ def process_rg_data(inputFile, outputDir, fileFormat):
   
   # Find jets and fill histograms
   print('Find jets...')
-  analyzeEvents(df_fjparticles, hDict, outputDir, fileFormat)
+  analyzeEvents(df_fjparticles, hDict, outputDir)
 
   # Plot histograms
   print('Plot histograms...')
-  plotHistograms(hDict, outputDir, fileFormat)
+  saveHistograms(hDict, outputDir)
 
   print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -116,7 +116,7 @@ def initializeHistograms():
   return hDict
 
 #---------------------------------------------------------------
-def analyzeEvents(df_fjparticles, hDict, outputDir, fileFormat):
+def analyzeEvents(df_fjparticles, hDict, outputDir):
   
   fj.ClusterSequence.print_banner()
   print()
@@ -191,19 +191,13 @@ def fillSoftDropHistograms(hDict, jets_sd):
     hDict['hRg'].Fill(Rg)
 
 #---------------------------------------------------------------
-def plotHistograms(hDict, outputDir, fileFormat):
-
-  outputFilename = "{}hJetPt{}".format(outputDir, fileFormat)
-  analysis_utils.plotHist(hDict['hJetPt'], outputFilename, 'width', setLogy=True)
-
-  outputFilename = "{}hAJ{}".format(outputDir, fileFormat)
-  analysis_utils.plotHist(hDict['hAJ'], outputFilename, 'colz')
-
-  outputFilename = "{}hZg{}".format(outputDir, fileFormat)
-  analysis_utils.plotHist(hDict['hZg'], outputFilename)
-
-  outputFilename = "{}hRg{}".format(outputDir, fileFormat)
-  analysis_utils.plotHist(hDict['hRg'], outputFilename)
+def saveHistograms(hDict, outputDir):
+  
+  fout = ROOT.TFile("AnalysisResults.root", "recreate")
+  fout.cd()
+  for key, val in hDict.items():
+    val.Write()
+  fout.Close()
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
@@ -217,10 +211,6 @@ if __name__ == '__main__':
                       type=str, metavar='outputDir',
                       default='./myTestFigures',
                       help='Output directory for QA plots to be written to')
-  parser.add_argument('-i', '--imageFormat', action='store',
-                      type=str, metavar='imageFormat',
-                      default='.pdf',
-                      help='Image format to save plots in, e.g. \'.pdf\' or \'.png\'')
   
   # Parse the arguments
   args = parser.parse_args()
@@ -228,7 +218,6 @@ if __name__ == '__main__':
   print('Configuring...')
   print('inputFile: \'{0}\''.format(args.inputFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
-  print('imageFormat: \'{0}\''.format(args.imageFormat))
   print('----------------------------------------------------------------')
   
   # If invalid inputFile is given, exit
@@ -236,4 +225,4 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
     sys.exit(0)
 
-  process_rg_data(inputFile = args.inputFile, outputDir = args.outputDir, fileFormat = args.imageFormat)
+  process_rg_data(inputFile = args.inputFile, outputDir = args.outputDir)
