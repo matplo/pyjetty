@@ -93,25 +93,25 @@ def initializeHistograms():
   
   hDict = {}
   
-  hJetPt = ROOT.TH1F('hJetPt', 'hJetPt', 200, 0, 200)
+  hJetPt = ROOT.TH1F('hJetPt', 'hJetPt', 300, 0, 300)
   hJetPt.GetXaxis().SetTitle('p_{T,jet}')
   hJetPt.GetYaxis().SetTitle('dN/dp_{T}')
   hDict['hJetPt'] = hJetPt
+  
+  hThetaG_JetPt = ROOT.TH2F('hThetaG_JetPt', 'hThetaG_JetPt', 300, 0, 300, 150, 0, 1.5)
+  hThetaG_JetPt.GetXaxis().SetTitle('p_{T,jet}')
+  hThetaG_JetPt.GetYaxis().SetTitle('#theta_{g}')
+  hDict['hThetaG_JetPt'] = hThetaG_JetPt
 
-  hAJ = ROOT.TH2F('hAJ', 'hAJ', 100, 0, 1., 100, 0, 4.)
-  hAJ.GetXaxis().SetTitle('A_{J}')
-  hAJ.GetYaxis().SetTitle('#Delta #phi')
-  hDict['hAJ'] = hAJ
-
-  hZg = ROOT.TH1F('hZg', 'hZg', 100, 0, 1.)
-  hZg.GetXaxis().SetTitle('z_{g}')
-  hZg.GetYaxis().SetTitle('dN/dz_{g}')
-  hDict['hZg'] = hZg
-
-  hRg = ROOT.TH1F('hRg', 'hRg', 100, 0, 1.)
-  hRg.GetXaxis().SetTitle('R_{g}')
-  hRg.GetYaxis().SetTitle('dN/dR_{g}')
-  hDict['hRg'] = hRg
+  hZg_JetPt = ROOT.TH2F('hZg_JetPt', 'hZg_JetPt', 300, 0, 300, 100, 0, 1.)
+  hZg_JetPt.GetXaxis().SetTitle('p_{T,jet}')
+  hZg_JetPt.GetYaxis().SetTitle('z_{g}')
+  hDict['hZg_JetPt'] = hZg_JetPt
+  
+  hM_JetPt = ROOT.TH2F('hM_JetPt', 'hM_JetPt', 300, 0, 300, 100, 0, 50.)
+  hM_JetPt.GetXaxis().SetTitle('p_{T,jet}')
+  hM_JetPt.GetYaxis().SetTitle('m_{jet}')
+  hDict['hM_JetPt'] = hM_JetPt
 
   return hDict
 
@@ -152,7 +152,7 @@ def analyzeJets(fj_particles, jet_def, jet_selector, sd, hDict):
   for jet in jets_accepted:
     jets_sd.append(sd.result(jet))
 
-  fillSoftDropHistograms(hDict, jets_sd)
+  fillSoftDropHistograms(hDict, jets_sd, jet_def.R())
 
 #---------------------------------------------------------------
 def fillJetHistograms(hDict, jets_accepted):
@@ -164,36 +164,24 @@ def fillJetHistograms(hDict, jets_accepted):
       print(jet)
       
     hDict['hJetPt'].Fill(jet.pt())
-
-  # Find di-jets and fill histograms
-  if len(jets_accepted) > 1:
-
-    pT1 = jets_accepted[0].pt()
-    pT2 = jets_accepted[1].pt()
-    phi1 = jets_accepted[0].phi()
-    phi2 = jets_accepted[1].phi()
-  
-    AJ = (pT1 - pT2) / (pT1 + pT2)
-    deltaPhi = abs(phi1 - phi2)
-    
-    hDict['hAJ'].Fill(AJ, deltaPhi)
+    hDict['hM_JetPt'].Fill(jet.pt(), jet.m())
 
 #---------------------------------------------------------------
-def fillSoftDropHistograms(hDict, jets_sd):
+def fillSoftDropHistograms(hDict, jets_sd, jetR):
   
   for jet in jets_sd:
     
     sd_info = fjcontrib.get_SD_jet_info(jet)
     zg = sd_info.z
-    Rg = sd_info.dR
+    theta_g = sd_info.dR / jetR
     
-    hDict['hZg'].Fill(zg)
-    hDict['hRg'].Fill(Rg)
+    hDict['hZg_JetPt'].Fill(jet.pt(), zg)
+    hDict['hThetaG_JetPt'].Fill(jet.pt(), theta_g)
 
 #---------------------------------------------------------------
 def saveHistograms(hDict, outputDir):
   
-  fout = ROOT.TFile("AnalysisResults.root", "recreate")
+  fout = ROOT.TFile('AnalysisResults.root', 'recreate')
   fout.cd()
   for key, val in hDict.items():
     val.Write()
