@@ -55,22 +55,15 @@ def process_rg_data(inputFile, configFile, outputDir):
   if not os.path.exists(outputDir):
     os.makedirs(outputDir)
 
-  # Convert ROOT TTree to pandas dataframe
-  # track_df is a dataframe with one row per jet constituent: run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
+  # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
+  #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   print('--- {} seconds ---'.format(time.time() - start_time))
   print('Convert ROOT trees to pandas dataframes...')
   track_df = analysis_utils.load_dataframe(inputFile, 'tree_Particle')
 
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
-  print('Transform the track dataframe into a series object of fastjet particles per event...')
-
-  # (i) Group the track dataframe by event
-  #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
-  track_df_grouped = track_df.groupby(['run_number','ev_id'])
-
-  # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
-  df_fjparticles = track_df_grouped.apply(analysis_utils.get_fjparticles)
+  df_fjparticles = analysis_utils.group_fjparticles(track_df)
   
   if debugLevel > 0:
     print(df_fjparticles.dtypes)
@@ -78,7 +71,7 @@ def process_rg_data(inputFile, configFile, outputDir):
   print('--- {} seconds ---'.format(time.time() - start_time))
 
   # Print number of events
-  nEvents = track_df_grouped.size().count()
+  nEvents = len(df_fjparticles.index)
   print('Number of events: {}'.format(nEvents))
   nTracks = len(track_df.index)
   print('Number of tracks: {}'.format(nTracks))

@@ -61,6 +61,23 @@ def load_dataframe(inputFile, tree_name):
   return track_df
 
 #---------------------------------------------------------------
+# Transform the track dataframe into a SeriesGroupBy object
+# of fastjet particles per event.
+#---------------------------------------------------------------
+def group_fjparticles(track_df):
+
+  print('Transform the track dataframe into a series object of fastjet particles per event...')
+
+  # (i) Group the track dataframe by event
+  #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
+  track_df_grouped = track_df.groupby(['run_number','ev_id'])
+  
+  # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
+  df_fjparticles = track_df_grouped.apply(get_fjparticles)
+  
+  return df_fjparticles
+
+#---------------------------------------------------------------
 # Return fastjet:PseudoJets from a given track dataframe
 #---------------------------------------------------------------
 def get_fjparticles(df_tracks):
