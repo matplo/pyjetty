@@ -27,6 +27,9 @@ import fastjet as fj
 import fjcontrib
 import fjext
 
+# Analysis utilities
+import analysis_utils
+
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
@@ -34,7 +37,7 @@ ROOT.gROOT.SetBatch(True)
 debugLevel = 0
 
 #---------------------------------------------------------------
-def plotJetDataframe(inputFile, outputDir, fileFormat):
+def process_rg_data(inputFile, outputDir, fileFormat):
   
   start_time = time.time()
   
@@ -48,7 +51,7 @@ def plotJetDataframe(inputFile, outputDir, fileFormat):
   # track_df is a dataframe with one row per jet constituent: run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   print('--- {} seconds ---'.format(time.time() - start_time))
   print('Convert ROOT trees to pandas dataframes...')
-  track_df = load_dataframe(inputFile)
+  track_df = analysis_utils.load_dataframe(inputFile)
 
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
@@ -59,7 +62,7 @@ def plotJetDataframe(inputFile, outputDir, fileFormat):
   track_df_grouped = track_df.groupby(['run_number','ev_id'])
 
   # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
-  df_fjparticles = track_df_grouped.apply(get_fjparticles)
+  df_fjparticles = track_df_grouped.apply(analysis_utils.get_fjparticles)
   
   if debugLevel > 0:
     print(df_fjparticles.dtypes)
@@ -84,38 +87,6 @@ def plotJetDataframe(inputFile, outputDir, fileFormat):
   plotHistograms(hDict, outputDir, fileFormat)
 
   print('--- {} seconds ---'.format(time.time() - start_time))
-
-#---------------------------------------------------------------
-def load_dataframe(inputFile):
-  
-  # Load event tree into dataframe, and apply event selection
-  event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
-  event_tree = uproot.open(inputFile)[event_tree_name]
-  if not event_tree:
-    print('Tree {} not found in file {}'.format('tree_event_char', inputFile))
-  event_df_orig = event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
-  event_df_orig.reset_index(drop=True)
-  event_df = event_df_orig.query('is_ev_rej == 0')
-  event_df.reset_index(drop=True)
-
-  # Load track tree into dataframe
-  track_tree_name = 'PWGHF_TreeCreator/tree_Particle'
-  track_tree = uproot.open(inputFile)[track_tree_name]
-  if not track_tree:
-    print('Tree {} not found in file {}'.format('tree_Particle', inputFile))
-  track_df_orig = track_tree.pandas.df()
-
-  # Merge event info into track tree
-  track_df = pandas.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
-  return track_df
-
-#---------------------------------------------------------------
-def get_fjparticles(df_tracks):
-  
-  # Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
-  fj_particles = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)
-  
-  return fj_particles
 
 #---------------------------------------------------------------
 def initializeHistograms():
@@ -223,36 +194,16 @@ def fillSoftDropHistograms(hDict, jets_sd):
 def plotHistograms(hDict, outputDir, fileFormat):
 
   outputFilename = "{}hJetPt{}".format(outputDir, fileFormat)
-  plotHist(hDict['hJetPt'], outputFilename, 'width', setLogy=True)
+  analysis_utils.plotHist(hDict['hJetPt'], outputFilename, 'width', setLogy=True)
 
   outputFilename = "{}hAJ{}".format(outputDir, fileFormat)
-  plotHist(hDict['hAJ'], outputFilename, 'colz')
+  analysis_utils.plotHist(hDict['hAJ'], outputFilename, 'colz')
 
   outputFilename = "{}hZg{}".format(outputDir, fileFormat)
-  plotHist(hDict['hZg'], outputFilename)
+  analysis_utils.plotHist(hDict['hZg'], outputFilename)
 
   outputFilename = "{}hRg{}".format(outputDir, fileFormat)
-  plotHist(hDict['hRg'], outputFilename)
-
-#---------------------------------------------------------------
-def plotHist(h, outputFilename, drawOptions = "", setLogy = False, setLogz = False):
-  
-  h.SetLineColor(1)
-  h.SetLineWidth(1)
-  h.SetLineStyle(1)
-  
-  c = ROOT.TCanvas("c","c: hist",600,450)
-  c.cd()
-  ROOT.gPad.SetLeftMargin(0.15)
-  if setLogy:
-    c.SetLogy()
-  if setLogz:
-    c.SetLogz()
-  ROOT.gPad.SetLeftMargin(0.15)
-
-  h.Draw(drawOptions)
-  c.SaveAs(outputFilename)
-  c.Close()
+  analysis_utils.plotHist(hDict['hRg'], outputFilename)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
@@ -285,4 +236,4 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
     sys.exit(0)
 
-  plotJetDataframe(inputFile = args.inputFile, outputDir = args.outputDir, fileFormat = args.imageFormat)
+  process_rg_data(inputFile = args.inputFile, outputDir = args.outputDir, fileFormat = args.imageFormat)
