@@ -59,7 +59,7 @@ def process_rg_data(inputFile, configFile, outputDir):
   # track_df is a dataframe with one row per jet constituent: run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   print('--- {} seconds ---'.format(time.time() - start_time))
   print('Convert ROOT trees to pandas dataframes...')
-  track_df = analysis_utils.load_dataframe(inputFile)
+  track_df = analysis_utils.load_dataframe(inputFile, 'tree_Particle')
 
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
@@ -209,7 +209,8 @@ def fillSoftDropHistograms(hDict, jet_sd, jet, jetR, beta):
 #---------------------------------------------------------------
 def saveHistograms(hDict, outputDir):
   
-  fout = ROOT.TFile('AnalysisResults.root', 'recreate')
+  outputfilename = os.path.join(outputDir, 'AnalysisResults.root')
+  fout = ROOT.TFile(outputfilename, 'recreate')
   fout.cd()
   for key, val in hDict.items():
     val.Write()
@@ -229,7 +230,7 @@ if __name__ == '__main__':
                       help="Path of config file for jetscape analysis")
   parser.add_argument('-o', '--outputDir', action='store',
                       type=str, metavar='outputDir',
-                      default='./myTestFigures',
+                      default='./TestOutput',
                       help='Output directory for QA plots to be written to')
   
   # Parse the arguments

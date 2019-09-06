@@ -37,7 +37,7 @@ def analysis_utils():
 # Returned dataframe has one row per jet constituent:
 #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
 #---------------------------------------------------------------
-def load_dataframe(inputFile):
+def load_dataframe(inputFile, tree_name):
   
   # Load event tree into dataframe, and apply event selection
   event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
@@ -50,10 +50,10 @@ def load_dataframe(inputFile):
   event_df.reset_index(drop=True)
 
   # Load track tree into dataframe
-  track_tree_name = 'PWGHF_TreeCreator/tree_Particle'
+  track_tree_name = 'PWGHF_TreeCreator/{}'.format(tree_name)
   track_tree = uproot.open(inputFile)[track_tree_name]
   if not track_tree:
-    print('Tree {} not found in file {}'.format('tree_Particle', inputFile))
+    print('Tree {} not found in file {}'.format(tree_name, inputFile))
   track_df_orig = track_tree.pandas.df()
 
   # Merge event info into track tree
