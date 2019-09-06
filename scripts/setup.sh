@@ -74,13 +74,13 @@ function make_module()
 		[ $(os_darwin) ] &&  add_path_module ${modulefile} PYTHONPATH ${sp}
 	done
 }
-export -f make_module_heppy
+export -f make_module
 
 
 separator "${BASH_SOURCE}"
 
 module use ${HEPPYDIR}/modules
-module load heppy/main_python
+module load heppy/main_${HEPPY_USER_PYTHON_VERSION}
 
 ${THISD}/../cpptools/scripts/build_cpptools.sh $@
 
