@@ -1,6 +1,8 @@
 # Analysis parameters
-jetR: [0.2, 0.4]
-beta: [0, 1.]
+jetR: [0.4]
+beta: [0]
+
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 
 # Plotting parameters
 fileFormat: ".pdf"
