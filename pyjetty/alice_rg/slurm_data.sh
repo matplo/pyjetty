@@ -5,6 +5,7 @@
 #SBATCH --partition=quick
 #SBATCH --time=1:00:00
 #SBATCH --array=1-5
+#SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
 
 #5291
 
