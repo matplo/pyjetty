@@ -14,7 +14,7 @@ fi
 
 # Define output path from relevant sub-path of input file
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_ID="20190909-1"
+OUTPUT_ID="AnalysisResults/20190909-1"
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-8)
 #echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/storage/u/alice/$OUTPUT_ID/$OUTPUT_SUFFIX"
