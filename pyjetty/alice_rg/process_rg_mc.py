@@ -180,7 +180,13 @@ def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_dist
 
 #---------------------------------------------------------------
 def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd, beta, jet_matching_distance, hDict):
-  
+
+  # Check that the entries exist appropriately
+  # (need to check how this can happen -- but it is only a tiny fraction of events)
+  if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
+    print('fj_particles type mismatch -- skipping event')
+    return
+
   # Do jet finding
   cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
   jets_det = fj.sorted_by_pt(cs_det.inclusive_jets())
