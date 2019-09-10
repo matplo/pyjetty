@@ -24,7 +24,7 @@ fi
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
 #echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
-echo "Output dir: $OUTPUT_DIR"
+#echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
 module use /software/users/james/heppy/modules
