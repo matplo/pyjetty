@@ -2,8 +2,8 @@
 
 #SBATCH --job-name=rgtest
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --partition=quick
-#SBATCH --time=2:00:00
+#SBATCH --partition=std
+#SBATCH --time=4:00:00
 #SBATCH --array=1-140
 #SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
 
@@ -26,8 +26,9 @@ fi
 echo "START=$START"
 echo "STOP=$STOP"
 
+OUTPUT_PREFIX="AnalysisResults/$SLURM_ARRAY_JOB_ID"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun process_rg_data.sh $FILE
+  srun process_rg_data.sh $FILE $OUTPUT_PREFIX
 done

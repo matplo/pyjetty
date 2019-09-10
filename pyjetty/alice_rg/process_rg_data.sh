@@ -12,12 +12,18 @@ else
   echo "Wrong command line arguments"
 fi
 
+if [ "$2" != "" ]; then
+  OUTPUT_PREFIX=$2
+  echo "Output dir prefix: $OUTPUT_PREFIX"
+else 
+  echo "Wrong command line arguments"
+fi
+
 # Define output path from relevant sub-path of input file
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_ID="AnalysisResults/20190909-1"
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-8)
 #echo $OUTPUT_SUFFIX
-OUTPUT_DIR="/storage/u/alice/$OUTPUT_ID/$OUTPUT_SUFFIX"
+OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 #echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
