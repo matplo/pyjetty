@@ -4,7 +4,7 @@
 # process the input file and write an output ROOT file.
 # The main use is to give this script to a slurm script.
 
-# Take one command line argument -- input file path
+# Take two command line arguments -- (1) input file path, (2) output dir prefix
 if [ "$1" != "" ]; then
   INPUT_FILE=$1
   #echo "Input file: $INPUT_FILE"
