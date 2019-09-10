@@ -3,16 +3,26 @@
 #SBATCH --job-name=rgtest
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=quick
-#SBATCH --time=1:00:00
-#SBATCH --array=1-5
+#SBATCH --time=2:00:00
+#SBATCH --array=1-140
 #SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
 
-#5291
+FILE_PATH='/rstorage/u/alice/LHC17pq/145/files.txt'
+NFILES=$(wc -l < $FILE_PATH)
+echo "N files to process: ${NFILES}"
 
-FILE_PATH='/rstorage/u/alice/LHC17pq/145/files_test.txt'
-NFILES=$(wc -l $FILE_PATH)
-echo "N files: ${NFILES}"
+# Currently we have 7 nodes * 20 cores active
+FILES_PER_JOB=$(( $NFILES / 140 + 1 ))
+echo "Files per job: $FILES_PER_JOB"
 
-FILES=$(sed -n "$SLURM_ARRAY_TASK_ID"p $FILE_PATH)
+STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))
+START=$(( $STOP - $(( $FILES_PER_JOB - 1 )) ))
 
-srun process_rg_data.sh $FILES
+echo "START=$START"
+echo "STOP=$STOP"
+
+for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
+do
+  FILES=$(sed -n "$JOB_N"p $FILE_PATH)
+  srun process_rg_data.sh $FILES
+done
