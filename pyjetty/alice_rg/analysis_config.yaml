@@ -1,6 +1,6 @@
 # Analysis parameters
 jetR: [0.4]
-beta: [0]
+beta: [-1, 0, 1, 2]
 
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 
