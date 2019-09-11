@@ -45,7 +45,7 @@ def scaleHistograms(configFile):
     nEvents = hNevents.GetBinContent(2)
     nEventsSum += nEvents
   nEventsAvg = nEventsSum*1./EndPtHardBin
-  print("nEventsAvg per bin: {}".format(nEventsAvg)
+  print("nEventsAvg per bin: {}".format(nEventsAvg))
 
   for bin in range(1, EndPtHardBin+1):
     print("ooo Scaling Pt-hard bin {} of {}".format(bin, EndPtHardBin))
@@ -79,10 +79,16 @@ def scaleHistograms(configFile):
 def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limit=2, nBinsThreshold=4, pTHardBin=0, EndPtHardBin=20, taskName=""):
   
   # Set Sumw2 if not already done
-  if obj.GetSumw2N() is 0:
-    obj.Sumw2()
-    if verbose:
-      print('Set Sumw2 on {}'.format(obj.GetName()))
+  if obj.InheritsFrom(ROOT.THnBase.Class()):
+    if obj.GetSumw2() is 0:
+      obj.Sumw2()
+      if verbose:
+        print('Set Sumw2 on {}'.format(obj.GetName()))
+  else:
+    if obj.GetSumw2N() is 0:
+      obj.Sumw2()
+      if verbose:
+        print('Set Sumw2 on {}'.format(obj.GetName()))
   
   if obj.InheritsFrom(ROOT.TProfile.Class()):
     if verbose:
