@@ -57,6 +57,9 @@ def process_rg_data(inputFile, configFile, outputDir):
   if not os.path.exists(outputDir):
     os.makedirs(outputDir)
 
+  # Initialize histogram dictionary
+  hDict = initializeHistograms(jetR_list, beta_list)
+
   # ------------------------------------------------------------------------
   # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
   #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
@@ -90,6 +93,7 @@ def process_rg_data(inputFile, configFile, outputDir):
 
   # Print number of events
   nEvents = len(df_fjparticles_truth.index)
+  hDict['hNevents'].Fill(1, nEvents)
   print('Number of events: {}'.format(nEvents))
   nTracks = len(track_df_det.index)
   print('Number of det tracks: {}'.format(nTracks))
@@ -109,9 +113,6 @@ def process_rg_data(inputFile, configFile, outputDir):
 
   # ------------------------------------------------------------------------
 
-  # Initialize histogram dictionary
-  hDict = initializeHistograms(jetR_list, beta_list)
-  
   # Find jets and fill histograms
   print('Find jets...')
   analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_distance, outputDir)
@@ -127,6 +128,10 @@ def initializeHistograms(jetR_list, beta_list):
   
   hDict = {}
   
+  name = 'hNevents'
+  hNevents = ROOT.TH1F(name, name, 2, -0.5, 1.5)
+  hDict[name] = hNevents
+
   for jetR in jetR_list:
   
     name = 'hResponse_JetPt_R{}'.format(jetR)

@@ -55,6 +55,9 @@ def process_rg_data(inputFile, configFile, outputDir):
   if not os.path.exists(outputDir):
     os.makedirs(outputDir)
 
+  # Initialize histogram dictionary
+  hDict = initializeHistograms(jetR_list, beta_list)
+
   # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
   #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   print('--- {} seconds ---'.format(time.time() - start_time))
@@ -72,13 +75,11 @@ def process_rg_data(inputFile, configFile, outputDir):
 
   # Print number of events
   nEvents = len(df_fjparticles.index)
+  hDict['hNevents'].Fill(1, nEvents)
   print('Number of events: {}'.format(nEvents))
   nTracks = len(track_df.index)
   print('Number of tracks: {}'.format(nTracks))
 
-  # Initialize histogram dictionary
-  hDict = initializeHistograms(jetR_list, beta_list)
-  
   # Find jets and fill histograms
   print('Find jets...')
   analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir)
@@ -94,6 +95,10 @@ def initializeHistograms(jetR_list, beta_list):
   
   hDict = {}
   
+  name = 'hNevents'
+  hNevents = ROOT.TH1F(name, name, 2, -0.5, 1.5)
+  hDict[name] = hNevents
+
   for jetR in jetR_list:
   
     name = 'hJetPt_R{}'.format(jetR)
