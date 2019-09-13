@@ -218,7 +218,7 @@ def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd,
       if jet_det.delta_R(jet_truth) < jet_matching_distance*jetR:
 
         #Check that match is unique
-        if jet_det.user_index() == 1 and jet_det.user_index() == 1:
+        if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
 
           fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta)
 
@@ -230,9 +230,9 @@ def setNJetMatches(jets_det_accepted, jets_truth_accepted, jet_matching_distance
 
   # Reset user_index to 0
   for jet_det in jets_det_accepted:
-    for jet_truth in jets_truth_accepted:
-      jet_det.set_user_index(0)
-      jet_truth.set_user_index(0)
+    jet_det.set_user_index(0)
+  for jet_truth in jets_truth_accepted:
+    jet_truth.set_user_index(0)
    
   # Loop through jets and store number of matching candidates in user_index
   for jet_det in jets_det_accepted:
