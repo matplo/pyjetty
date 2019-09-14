@@ -88,6 +88,20 @@ def get_fjparticles(df_tracks):
   return fj_particles
 
 #---------------------------------------------------------------
+# Check if det-jet passes acceptance criteria
+#---------------------------------------------------------------
+def is_det_jet_accepted(jet_det):
+  
+  accept_jet = True
+
+  for track in jet_det.constituents():
+
+    if track.pt() > 100.:
+      accept_jet = False
+
+  return accept_jet
+
+#---------------------------------------------------------------
 # Plot and save a 1D histogram
 #---------------------------------------------------------------
 def plotHist(h, outputFilename, drawOptions = "", setLogy = False, setLogz = False):

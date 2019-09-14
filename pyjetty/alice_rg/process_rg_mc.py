@@ -133,6 +133,10 @@ def initializeHistograms(jetR_list, beta_list):
   hDict[name] = hNevents
 
   for jetR in jetR_list:
+    
+    name = 'hDeltaR_All_R{}'.format(jetR)
+    hDeltaR_All = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+    hDict[name] = hDeltaR_All
   
     name = 'hResponse_JetPt_R{}'.format(jetR)
     hResponse_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 300, 0, 300)
@@ -195,19 +199,23 @@ def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd,
   # Do jet finding
   cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
   jets_det = fj.sorted_by_pt(cs_det.inclusive_jets())
-  jets_det_accepted = jet_selector(jets_det)
+  jets_det_selected = jet_selector(jets_det)
   
   cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
   jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
-  jets_truth_accepted = jet_selector(jets_truth)
+  jets_truth_selected = jet_selector(jets_truth)
 
   # Set number of jet matches for each jet in user_index (to ensure unique matches)
   jetR = jet_def.R()
-  setNJetMatches(jets_det_accepted, jets_truth_accepted, jet_matching_distance, jetR)
+  setNJetMatches(jets_det_selected, jets_truth_selected, jet_matching_distance, jetR)
   
   # Loop through jets and fill response if both det and truth jets are unique match
-  for jet_det in jets_det_accepted:
-    for jet_truth in jets_truth_accepted:
+  for jet_det in jets_det_selected:
+    for jet_truth in jets_truth_selected:
+      
+      # Check additional acceptance criteria
+      if not analysis_utils.is_det_jet_accepted(jet_det):
+        continue
       
       if debugLevel > 0:
         print('deltaR: {}'.format(jet_det.delta_R(jet_truth)))
@@ -215,7 +223,10 @@ def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd,
         print('jet_truth matches: {}'.format(jet_truth.user_index()))
       
       # Check that jets match geometrically
-      if jet_det.delta_R(jet_truth) < jet_matching_distance*jetR:
+      deltaR = jet_det.delta_R(jet_truth)
+      hDict['hDeltaR_All_R{}'.format(jetR)].Fill(jet_det.pt(), deltaR)
+      
+      if deltaR < jet_matching_distance*jetR:
 
         #Check that match is unique
         if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
@@ -226,17 +237,17 @@ def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd,
 # Loop through jets and store number of matching candidates in user_index
 # (In principle could also store matching candidate in user_info)
 #---------------------------------------------------------------
-def setNJetMatches(jets_det_accepted, jets_truth_accepted, jet_matching_distance, jetR):
+def setNJetMatches(jets_det_selected, jets_truth_selected, jet_matching_distance, jetR):
 
   # Reset user_index to 0
-  for jet_det in jets_det_accepted:
+  for jet_det in jets_det_selected:
     jet_det.set_user_index(0)
-  for jet_truth in jets_truth_accepted:
+  for jet_truth in jets_truth_selected:
     jet_truth.set_user_index(0)
    
   # Loop through jets and store number of matching candidates in user_index
-  for jet_det in jets_det_accepted:
-    for jet_truth in jets_truth_accepted:
+  for jet_det in jets_det_selected:
+    for jet_truth in jets_truth_selected:
       
       if jet_det.delta_R(jet_truth) < jet_matching_distance*jetR:
         

@@ -165,15 +165,19 @@ def analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict):
   # Do jet finding
   cs = fj.ClusterSequence(fj_particles, jet_def)
   jets = fj.sorted_by_pt(cs.inclusive_jets())
-  jets_accepted = jet_selector(jets)
+  jets_selected = jet_selector(jets)
 
   # Loop through jets
   jetR = jet_def.R()
-  for jet in jets_accepted:
+  for jet in jets_selected:
     
     if debugLevel > 1:
       print('jet:')
       print(jet)
+    
+    # Check additional acceptance criteria
+    if not analysis_utils.is_det_jet_accepted(jet):
+      continue
     
     # Fill histograms
     fillJetHistograms(hDict, jet, jetR)
