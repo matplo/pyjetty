@@ -69,8 +69,65 @@ def plotRg(f, jetR, beta, outputDir):
 
   # (pt-det, pt-truth, theta_g-det, theta_g-truth)
   name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
+  hRM = f.Get(name)
 
+  plotRgProjection(hRM, jetR, beta, 20, 40, outputDir)
+  plotRgProjection(hRM, jetR, beta, 40, 60, outputDir)
+  plotRgProjection(hRM, jetR, beta, 100, 120, outputDir)
 
+#---------------------------------------------------------------
+def plotRgProjection(hRM, jetR, beta, min_pt_truth, max_pt_truth, outputDir):
+
+  hRM.GetAxis(1).SetRange(min_pt_truth, max_pt_truth)
+  
+  hThetaG_det = hRM.Projection(2)
+  hThetaG_det.SetName('hThetaG_det')
+  hThetaG_det.SetLineColor(2)
+  hThetaG_det.SetLineWidth(2)
+  
+  hThetaG_truth = hRM.Projection(3)
+  hThetaG_truth.SetName('hThetaG_truth')
+  hThetaG_truth.GetYaxis().SetTitle('#frac{dN}{d#theta_{g}}')
+  hThetaG_truth.SetLineColor(4)
+  hThetaG_truth.SetLineWidth(2)
+
+  c = ROOT.TCanvas("c","c: hist",600,450)
+  c.cd()
+  ROOT.gPad.SetLeftMargin(0.15)
+  
+  hThetaG_truth.Draw('hist E')
+  hThetaG_det.Draw('hist E same')
+  
+  leg = ROOT.TLegend(0.6,0.75,0.8,0.85, "")
+  leg.SetFillColor(10)
+  leg.SetBorderSize(0)
+  leg.SetFillStyle(1)
+  leg.SetTextSize(0.04)
+  leg.AddEntry(hThetaG_det, "det-level", "L")
+  leg.AddEntry(hThetaG_truth, "truth-level", "L")
+  leg.Draw("same")
+  
+  text = 'R = {}'.format(jetR)
+  textFit = ROOT.TLatex()
+  textFit.SetTextSize(0.04)
+  textFit.SetNDC()
+  textFit.DrawLatex(0.6,0.7,text)
+  
+  text = '#beta = {}'.format(beta)
+  textFit = ROOT.TLatex()
+  textFit.SetTextSize(0.04)
+  textFit.SetNDC()
+  textFit.DrawLatex(0.6,0.65,text)
+  
+  text = 'pT,truth = {}-{} GeV/c'.format(min_pt_truth, max_pt_truth)
+  textFit = ROOT.TLatex()
+  textFit.SetTextSize(0.035)
+  textFit.SetNDC()
+  textFit.DrawLatex(0.6,0.6,text)
+  
+  output_filename = os.path.join(outputDir, 'hTheta_g_MC_R{}_B{}_{}-{}.pdf'.format(jetR, beta, min_pt_truth, max_pt_truth))
+  c.SaveAs(output_filename)
+  c.Close()
 
 #---------------------------------------------------------------
 def plotDeltaR(f, jetR, jet_matching_distance, outputDir):
