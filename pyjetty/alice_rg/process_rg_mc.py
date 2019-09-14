@@ -134,6 +134,14 @@ def initializeHistograms(jetR_list, beta_list):
 
   for jetR in jetR_list:
     
+    name = 'hJetPt_Truth_R{}'.format(jetR)
+    hJetPt_Truth = ROOT.TH1F(name, name, 300, 0, 300)
+    hDict[name] = hJetPt_Truth
+    
+    name = 'hJES_R{}'.format(jetR)
+    hJES = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+    hDict[name] = hJES
+    
     name = 'hDeltaR_All_R{}'.format(jetR)
     hDeltaR_All = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
     hDict[name] = hDeltaR_All
@@ -174,9 +182,11 @@ def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_dist
     
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      jet_selector_truth_matched = fj.SelectorPtMin(5.0)
       print('jet definition is:', jet_def)
-      print('jet selector is:', jet_selector,'\n')
+      print('jet selector for det-level is:', jet_selector_det,'\n')
+      print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
       
       # Define SoftDrop settings
       zcut = 0.1
@@ -185,10 +195,10 @@ def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_dist
       
       # Then can use list comprehension to iterate over the groupby and do jet-finding
       # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-      result = [analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd, beta, jet_matching_distance, hDict) for fj_particles_det, fj_particles_truth in zip(df_fjparticles['fj_particles_det'], df_fjparticles['fj_particles_truth'])]
+      result = [analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict) for fj_particles_det, fj_particles_truth in zip(df_fjparticles['fj_particles_det'], df_fjparticles['fj_particles_truth'])]
 
 #---------------------------------------------------------------
-def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd, beta, jet_matching_distance, hDict):
+def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict):
 
   # Check that the entries exist appropriately
   # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -199,19 +209,25 @@ def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector, sd,
   # Do jet finding
   cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
   jets_det = fj.sorted_by_pt(cs_det.inclusive_jets())
-  jets_det_selected = jet_selector(jets_det)
+  jets_det_selected = jet_selector_det(jets_det)
   
   cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
   jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
-  jets_truth_selected = jet_selector(jets_truth)
+  jets_truth_selected = jet_selector_det(jets_truth)
+  jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
+
+  jetR = jet_def.R()
+
+  # Fill truth-level jet histograms (before matching)
+  for jet_truth in jets_truth_selected:
+    fillJetHistograms(jet_truth, hDict, jetR)
 
   # Set number of jet matches for each jet in user_index (to ensure unique matches)
-  jetR = jet_def.R()
-  setNJetMatches(jets_det_selected, jets_truth_selected, jet_matching_distance, jetR)
+  setNJetMatches(jets_det_selected, jets_truth_selected_matched, jet_matching_distance, jetR)
   
   # Loop through jets and fill response if both det and truth jets are unique match
   for jet_det in jets_det_selected:
-    for jet_truth in jets_truth_selected:
+    for jet_truth in jets_truth_selected_matched:
       
       # Check additional acceptance criteria
       if not analysis_utils.is_det_jet_accepted(jet_det):
@@ -255,6 +271,11 @@ def setNJetMatches(jets_det_selected, jets_truth_selected, jet_matching_distance
         jet_truth.set_user_index(jet_truth.user_index() + 1)
 
 #---------------------------------------------------------------
+def fillJetHistograms(jet, hDict, jetR):
+
+  hDict['hJetPt_Truth_R{}'.format(jetR)].Fill(jet.pt())
+
+#---------------------------------------------------------------
 def fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta):
   
   jet_pt_det_ungroomed = jet_det.pt()
@@ -262,6 +283,9 @@ def fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta):
   
   theta_g_det = theta_g(jet_det, sd, jetR)
   theta_g_truth = theta_g(jet_truth, sd, jetR)
+  
+  JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
+  hDict['hJES_R{}'.format(jetR)].Fill(jet_pt_truth_ungroomed, JES)
   
   hDict['hResponse_JetPt_R{}'.format(jetR)].Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
   
