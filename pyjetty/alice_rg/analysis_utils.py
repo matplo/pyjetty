@@ -102,6 +102,20 @@ def is_det_jet_accepted(jet_det):
   return accept_jet
 
 #---------------------------------------------------------------
+# Normalize a histogram by its integral
+#---------------------------------------------------------------
+def scale_by_integral(h):
+  
+  if h.GetSumw2() is 0:
+    h.Sumw2()
+  
+  integral = h.Integral()
+  if integral > 0:
+    h.Scale(1./integral)
+  else:
+    print('Integral is 0, check for problem')
+
+#---------------------------------------------------------------
 # Plot and save a 1D histogram
 #---------------------------------------------------------------
 def plotHist(h, outputFilename, drawOptions = "", setLogy = False, setLogz = False):

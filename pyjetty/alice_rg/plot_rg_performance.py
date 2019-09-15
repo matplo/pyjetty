@@ -34,9 +34,10 @@ ROOT.gStyle.SetOptTitle(0)
 debugLevel = 0
 
 #---------------------------------------------------------------
-def plot_rg_performance(inputFile, configFile, outputDir):
+def plot_rg_performance(mcFile, dataFile, configFile, outputDir):
   
-  f = ROOT.TFile(inputFile, 'READ')
+  fMC = ROOT.TFile(mcFile, 'READ')
+  fData = ROOT.TFile(dataFile, 'READ')
   
   # Read config file
   with open(configFile, 'r') as stream:
@@ -54,78 +55,106 @@ def plot_rg_performance(inputFile, configFile, outputDir):
 
   for jetR in jetR_list:
 
-    plotDeltaR(f, jetR, jet_matching_distance, outputDir)
-    plotJER(f, jetR, outputDir)
-    plotJES(f, jetR, outputDir)
-    plotJESproj(f, jetR, outputDir)
-    plotJetRecoEfficiency(f, jetR, outputDir)
+    plotDeltaR(fMC, jetR, jet_matching_distance, outputDir)
+    plotJER(fMC, jetR, outputDir)
+    plotJES(fMC, jetR, outputDir)
+    plotJESproj(fMC, jetR, outputDir)
+    plotJetRecoEfficiency(fMC, jetR, outputDir)
 
     for beta in beta_list:
 
-      plotRg(f, jetR, beta, outputDir)
+      plotRg(fMC, fData, jetR, beta, outputDir)
 
 #---------------------------------------------------------------
-def plotRg(f, jetR, beta, outputDir):
+def plotRg(fMC, fData, jetR, beta, outputDir):
 
   # (pt-det, pt-truth, theta_g-det, theta_g-truth)
   name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
-  hRM = f.Get(name)
+  hRM = fMC.Get(name)
+  
+  if fData:
+    name = 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)
+    hThetaG_JetPt = fData.Get(name)
+  else:
+    hThetaG_JetPt = None
 
-  plotRgProjection(hRM, jetR, beta, 20, 40, outputDir)
-  plotRgProjection(hRM, jetR, beta, 40, 60, outputDir)
-  plotRgProjection(hRM, jetR, beta, 100, 120, outputDir)
+  plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 20, 40, outputDir)
+  plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 40, 60, outputDir)
+  plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 60, 80, outputDir)
+  plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 80, 100, outputDir)
 
 #---------------------------------------------------------------
-def plotRgProjection(hRM, jetR, beta, min_pt_truth, max_pt_truth, outputDir):
+def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, outputDir):
 
-  hRM.GetAxis(1).SetRange(min_pt_truth, max_pt_truth)
+  rebin_val = 5
+  
+  # Get histogram of theta_g in data, for given pt-det cut
+  if hThetaG_JetPt:
+    hThetaG_JetPt.GetXaxis().SetRange(min_pt_det, max_pt_det)
+    hThetaG_data = hThetaG_JetPt.ProjectionY()
+    hThetaG_data.SetMarkerStyle(21)
+    hThetaG_data.SetMarkerSize(1)
+    analysis_utils.scale_by_integral(hThetaG_data)
+    hThetaG_data.Rebin(rebin_val)
+
+  # Get histograms of theta_g in MC, for a given pt-det cut
+  hRM.GetAxis(0).SetRange(min_pt_det, max_pt_det)
   
   hThetaG_det = hRM.Projection(2)
   hThetaG_det.SetName('hThetaG_det')
   hThetaG_det.SetLineColor(2)
   hThetaG_det.SetLineWidth(2)
-  
+  analysis_utils.scale_by_integral(hThetaG_det)
+  hThetaG_det.Rebin(rebin_val)
+
   hThetaG_truth = hRM.Projection(3)
   hThetaG_truth.SetName('hThetaG_truth')
   hThetaG_truth.GetYaxis().SetTitle('#frac{dN}{d#theta_{g}}')
   hThetaG_truth.SetLineColor(4)
   hThetaG_truth.SetLineWidth(2)
+  analysis_utils.scale_by_integral(hThetaG_truth)
+  hThetaG_truth.Rebin(rebin_val)
 
+  # Draw histogram
   c = ROOT.TCanvas("c","c: hist",600,450)
   c.cd()
   ROOT.gPad.SetLeftMargin(0.15)
-  
-  hThetaG_truth.Draw('hist E')
+
+  if hThetaG_JetPt:
+    hThetaG_data.Draw('E P')
+  hThetaG_truth.Draw('hist E same')
   hThetaG_det.Draw('hist E same')
   
-  leg = ROOT.TLegend(0.6,0.75,0.8,0.85, "")
+  leg = ROOT.TLegend(0.65,0.75,0.85,0.9, "")
   leg.SetFillColor(10)
   leg.SetBorderSize(0)
   leg.SetFillStyle(1)
   leg.SetTextSize(0.04)
-  leg.AddEntry(hThetaG_det, "det-level", "L")
-  leg.AddEntry(hThetaG_truth, "truth-level", "L")
+  if hThetaG_JetPt:
+    leg.AddEntry(hThetaG_data, "data", "P")
+  leg.AddEntry(hThetaG_det, "MC det", "L")
+  leg.AddEntry(hThetaG_truth, "MC truth", "L")
   leg.Draw("same")
   
   text = 'R = {}'.format(jetR)
   textFit = ROOT.TLatex()
   textFit.SetTextSize(0.04)
   textFit.SetNDC()
-  textFit.DrawLatex(0.6,0.7,text)
+  textFit.DrawLatex(0.65,0.7,text)
   
   text = '#beta = {}'.format(beta)
   textFit = ROOT.TLatex()
   textFit.SetTextSize(0.04)
   textFit.SetNDC()
-  textFit.DrawLatex(0.6,0.65,text)
+  textFit.DrawLatex(0.65,0.65,text)
   
-  text = 'pT,truth = {}-{} GeV/c'.format(min_pt_truth, max_pt_truth)
+  text = 'pT,det = {}-{} GeV/c'.format(min_pt_det, max_pt_det)
   textFit = ROOT.TLatex()
   textFit.SetTextSize(0.035)
   textFit.SetNDC()
-  textFit.DrawLatex(0.6,0.6,text)
+  textFit.DrawLatex(0.65,0.6,text)
   
-  output_filename = os.path.join(outputDir, 'hTheta_g_MC_R{}_B{}_{}-{}.pdf'.format(jetR, beta, min_pt_truth, max_pt_truth))
+  output_filename = os.path.join(outputDir, 'hTheta_g_MC_R{}_B{}_{}-{}.pdf'.format(jetR, beta, min_pt_det, max_pt_det))
   c.SaveAs(output_filename)
   c.Close()
 
@@ -341,10 +370,14 @@ def plotJetRecoEfficiency(f, jetR, outputDir):
 if __name__ == '__main__':
   # Define arguments
   parser = argparse.ArgumentParser(description='Plot analysis histograms')
-  parser.add_argument('-f', '--inputFile', action='store',
-                      type=str, metavar='inputFile',
+  parser.add_argument('-r', '--mcFile', action='store',
+                      type=str, metavar='mcFile',
                       default='AnalysisResults.root',
-                      help='Path of ROOT file containing TTrees')
+                      help='Path of MC ROOT file')
+  parser.add_argument('-d', '--dataFile', action='store',
+                      type=str, metavar='dataFile',
+                      default='AnalysisResults.root',
+                      help='Path of data ROOT file')
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
                       default='analysis_config.yaml',
@@ -358,19 +391,20 @@ if __name__ == '__main__':
   args = parser.parse_args()
   
   print('Configuring...')
-  print('inputFile: \'{0}\''.format(args.inputFile))
+  print('mcFile: \'{0}\''.format(args.mcFile))
+  print('dataFile: \'{0}\''.format(args.dataFile))
   print('configFile: \'{0}\''.format(args.configFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
   print('----------------------------------------------------------------')
   
-  # If invalid inputFile is given, exit
-  if not os.path.exists(args.inputFile):
-    print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
+  # If invalid mcFile is given, exit
+  if not os.path.exists(args.mcFile):
+    print('File \"{0}\" does not exist! Exiting!'.format(args.mcFile))
     sys.exit(0)
-  
+
   # If invalid configFile is given, exit
   if not os.path.exists(args.configFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  plot_rg_performance(inputFile = args.inputFile, configFile = args.configFile, outputDir = args.outputDir)
+  plot_rg_performance(mcFile = args.mcFile, dataFile = args.dataFile, configFile = args.configFile, outputDir = args.outputDir)
