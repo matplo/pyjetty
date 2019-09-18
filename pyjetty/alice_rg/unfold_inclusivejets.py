@@ -145,13 +145,6 @@ def unfoldJetSpectrum(hJetSpectrumMeasuredPerBin, hJetSpectrumTruePerBin, respon
   leg.SetFillStyle(0)
   leg.SetTextSize(0.04)
 
-  # For measured spectra, divide by bin width to produce per GeV spectra
-  hJetSpectrumMeasuredPerGeV = hJetSpectrumMeasuredPerBin.Clone()
-  hJetSpectrumMeasuredPerGeV.SetName("hJetSpectrumMeasuredPerGeV")
-  hJetSpectrumMeasuredRebinnedPerGeV = hJetSpectrumMeasuredPerGeV.Rebin(nBinsTruth, "{}New".format(hJetSpectrumMeasuredPerGeV.GetName()), truthBinArray)
-  hJetSpectrumMeasuredPerGeV.Scale(1., "width")
-  hJetSpectrumMeasuredRebinnedPerGeV.Scale(1., "width")
-
   hJetSpectrumUnfoldedPerBin = None
   hJetSpectrumUnfoldedPerGeV = None
   
@@ -410,7 +403,7 @@ def plotKinematicEfficiency(fResponse, hname_response, min_pt_det, max_pt_det, m
   rebinVal = 5
   hJetSpectrumTrueCutPerBin.Rebin(5)
   hJetSpectrumTrueCutPerBin.Scale(1., "width")
-  outputFilename = os.path.join(output_dir, "hJetSpectrumTrueCutPerBin")
+  outputFilename = os.path.join(output_dir, "hJetSpectrumTrueCutPerBin.pdf")
   plotHist(hJetSpectrumTrueCutPerBin, outputFilename, "hist E", True)
   
   # Get fine-binned response matrix (Measured, True), with full pT-det range, and project truth distribution
@@ -420,7 +413,7 @@ def plotKinematicEfficiency(fResponse, hname_response, min_pt_det, max_pt_det, m
   hJetSpectrumTrueUncutPerBin.SetName("hJetSpectrumTrueUncutPerBin_KinEff")
   hJetSpectrumTrueUncutPerBin.Rebin(5)
   hJetSpectrumTrueUncutPerBin.Scale(1., "width")
-  outputFilename = os.path.join(output_dir, "hJetSpectrumTrueUncutPerBin")
+  outputFilename = os.path.join(output_dir, "hJetSpectrumTrueUncutPerBin.pdf")
   plotHist(hJetSpectrumTrueUncutPerBin, outputFilename, "hist E", True)
   
   # Plot the ratio of the spectra
