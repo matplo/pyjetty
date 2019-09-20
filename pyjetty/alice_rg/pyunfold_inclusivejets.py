@@ -80,8 +80,6 @@ def pyunfold_inclusivejets(input_file_data, input_file_response, output_dir, fil
 
   data = numpy.array(hJetSpectrumMeasuredPerBin)[1:-1] # exclude underflow/overflow bins
   data_err = 0.1*data
-  print('data: {}'.format(data))
-  print('data_err: {}'.format(data_err))
 
   #--------------------------------------------------------------
   # Get kinematic efficiency
@@ -108,8 +106,6 @@ def pyunfold_inclusivejets(input_file_data, input_file_response, output_dir, fil
   
   efficiencies = numpy.array(hKinematicEfficiency)[1:-1]
   efficiencies_err = 0.01*efficiencies
-  #print('efficiency: {}'.format(efficiencies))
-  #print('efficiency_err: {}'.format(efficiencies_err))
   
   #--------------------------------------------------------------
   # Prior
@@ -117,6 +113,11 @@ def pyunfold_inclusivejets(input_file_data, input_file_response, output_dir, fil
   cause_lim = numpy.logspace(0, 3, n_bins_truth)
   jeff_prior = pyunfold.priors.jeffreys_prior(cause_lim)
   
+  for bin in range(1, n_bins_truth + 1):
+    val = hJetSpectrumTrueUncutPerBin.GetBinContent(bin)
+    bin_val = hJetSpectrumTrueUncutPerBin.GetBinCenter(bin)
+    new_val = val * pow(bin_val, -0.5)
+    hJetSpectrumTrueUncutPerBin.SetBinContent(bin, new_val)
   integral = hJetSpectrumTrueUncutPerBin.Integral()
   prior_truth = root_numpy.hist2array(hJetSpectrumTrueUncutPerBin) / integral
   
@@ -128,57 +129,57 @@ def pyunfold_inclusivejets(input_file_data, input_file_response, output_dir, fil
   response = root_numpy.hist2array(hResponseMatrix)
   #response.shape = (-1, n_bins_det)
   response_err = 0*response
-  print('response: {}'.format(response))
-  #print('response_err: {}'.format(response_err))
 
   # check response normalization:
   print('response column sum: {}'.format(response.sum(axis=0)))
   
   #--------------------------------------------------------------
   # Unfold spectrum
+  # All histograms at this point are per-bin -- we will divide by bin width when plotting
 
   unfolded_result = pyunfold.iterative_unfold(data=data, data_err=data_err, response=response, response_err=response_err, efficiencies=efficiencies, efficiencies_err=efficiencies_err, callbacks=[pyunfold.callbacks.Logger()], prior=prior_truth)
 
   final_result = unfolded_result['unfolded']
-  print('final_result: {}'.format(final_result))
-
   stat_err = unfolded_result['stat_err']
-  print('stat_err: {}'.format(stat_err))
-
   sys_err = unfolded_result['sys_err']
-  print('sys_err: {}'.format(sys_err))
 
   hFinalResult = ROOT.TH1F('hFinalResult', 'hFinalResult', n_bins_truth, truth_bin_array)
   root_numpy.array2hist(final_result, hFinalResult, stat_err)
+
+  plot_unfolding_result(hJetSpectrumMeasuredPerBin, hJetSpectrumTrueUncutPerBin, hFinalResult, n_events_response, output_dir, file_format)
   
-  #--------------------------------------------------------------
+#--------------------------------------------------------------
+def plot_unfolding_result(hData, hPrior, hUnfolded, n_events_response, output_dir, file_format):
+  
   c = ROOT.TCanvas("c","c: hist",600,450)
   c.cd()
   c.cd().SetLeftMargin(0.15)
   c.SetLogy()
   
-  hJetSpectrumMeasuredPerBin.SetMarkerStyle(21)
-  hJetSpectrumMeasuredPerBin.SetMarkerColor(1)
+  hData.SetMarkerStyle(21)
+  hData.SetMarkerColor(1)
+  hData.Scale(1., 'width')
   
-  hJetSpectrumTrueUncutPerBin.SetMarkerStyle(22)
-  hJetSpectrumTrueUncutPerBin.SetMarkerColor(2)
-  hJetSpectrumTrueUncutPerBin.Scale(1./n_events_response)
-
-  hFinalResult.SetMarkerStyle(23)
-  hFinalResult.SetMarkerColor(4)
+  hPrior.SetMarkerStyle(22)
+  hPrior.SetMarkerColor(2)
+  hPrior.Scale(1./n_events_response, 'width')
   
-  hJetSpectrumMeasuredPerBin.DrawCopy()
-  hJetSpectrumTrueUncutPerBin.DrawCopy('same')
-  hFinalResult.DrawCopy('same')
+  hUnfolded.SetMarkerStyle(23)
+  hUnfolded.SetMarkerColor(4)
+  hUnfolded.Scale(1., 'width')
   
-  leg = ROOT.TLegend(0.3,0.7,0.88,0.93,'')
+  hData.DrawCopy()
+  hPrior.DrawCopy('same')
+  hUnfolded.DrawCopy('same')
+  
+  leg = ROOT.TLegend(0.5,0.7,0.88,0.88,'')
   leg.SetFillColor(10)
   leg.SetBorderSize(0)
   leg.SetFillStyle(0)
   leg.SetTextSize(0.04)
-  leg.AddEntry(hJetSpectrumMeasuredPerBin, 'Data', 'P')
-  leg.AddEntry(hJetSpectrumTrueUncutPerBin, 'Prior', 'P')
-  leg.AddEntry(hFinalResult, 'Unfolded', 'P')
+  leg.AddEntry(hData, 'Data', 'P')
+  leg.AddEntry(hPrior, 'Prior', 'P')
+  leg.AddEntry(hUnfolded, 'Unfolded', 'P')
   leg.Draw("same")
   
   outputFilename = os.path.join(output_dir, "hFinalResult" + file_format)
