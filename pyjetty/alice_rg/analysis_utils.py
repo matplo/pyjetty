@@ -102,6 +102,20 @@ def is_det_jet_accepted(jet_det):
   return accept_jet
 
 #---------------------------------------------------------------
+# Check if truth-jet passes acceptance criteria
+#---------------------------------------------------------------
+def is_truth_jet_accepted(jet_truth):
+  
+  accept_jet = True
+  
+  for track in jet_truth.constituents():
+    
+    if track.pt() > 100.:
+      accept_jet = False
+
+  return accept_jet
+
+#---------------------------------------------------------------
 # Normalize a histogram by its integral
 #---------------------------------------------------------------
 def scale_by_integral(h):
