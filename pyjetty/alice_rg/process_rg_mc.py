@@ -32,6 +32,9 @@ import fjext
 # Analysis utilities
 import analysis_utils
 
+# Load RooUnfold library
+ROOT.gSystem.Load("libRooUnfold.so")
+
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
@@ -168,6 +171,14 @@ def initializeHistograms(jetR_list, beta_list):
       hResponse_JetPt_ThetaG.GetAxis(3).SetTitle('#theta_{g,truth}')
       hDict[name] = hResponse_JetPt_ThetaG
 
+      name = 'roounfold_response_R{}_B{}'.format(jetR, beta)
+      hist_measured = hResponse_JetPt_ThetaG.Projection(2, 0)
+      hist_measured.SetName('hist_measured_R{}_B{}'.format(jetR, beta))
+      hist_truth = hResponse_JetPt_ThetaG.Projection(3, 1)
+      hist_truth.SetName('hist_truth_R{}_B{}'.format(jetR, beta))
+      roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name, name) # Sets up binning
+      hDict[name] = roounfold_response
+
   return hDict
 
 #---------------------------------------------------------------
@@ -292,6 +303,8 @@ def fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta):
   x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth])
   x_array = array('d', x)
   hDict['hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)].Fill(x_array)
+
+  hDict['roounfold_response_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_det_ungroomed, theta_g_det, jet_pt_truth_ungroomed, theta_g_truth)
 
 #---------------------------------------------------------------
 def theta_g(jet, sd, jetR):
