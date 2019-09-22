@@ -4,6 +4,7 @@
 import fastjet as fj
 import fjcontrib
 
+
 class CSEventSubtractor(object):
 	def __init__(self, **kwargs):
 
