@@ -92,6 +92,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
   if hThetaG_JetPt:
     hThetaG_JetPt.GetXaxis().SetRange(min_pt_det, max_pt_det)
     hThetaG_data = hThetaG_JetPt.ProjectionY()
+    hThetaG_data.GetYaxis().SetTitle('#frac{dN}{d#theta_{g}}')
     hThetaG_data.SetMarkerStyle(21)
     hThetaG_data.SetMarkerSize(1)
     analysis_utils.scale_by_integral(hThetaG_data)
@@ -359,7 +360,7 @@ def plotJetRecoEfficiency(f, jetR, outputDir):
   
   histEfficiency.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
   histEfficiency.GetYaxis().SetTitle("Efficiency")
-  histEfficiency.GetXaxis().SetRangeUser(0., 150.)
+  histEfficiency.GetXaxis().SetRangeUser(0., 300.)
   histEfficiency.GetYaxis().SetRangeUser(0.4, 1.2)
   histEfficiency.SetMarkerStyle(21)
   histEfficiency.SetMarkerColor(1)
