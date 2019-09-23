@@ -22,6 +22,7 @@ import pandas
 import numpy as np
 import ROOT
 import yaml
+from array import *
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -47,7 +48,11 @@ def process_rg_data(inputFile, configFile, outputDir):
     config = yaml.safe_load(stream)
   
   jetR_list = config['jetR']
-  beta_list = config['beta']
+
+  # config['beta'] is a dictionary of dictionaries, where each dict is for a value of beta
+  beta_dict = config['beta']
+  beta_list = list(beta_dict.keys())
+  print('beta list: {}'.format(beta_list))
   
   # Create output dir
   if not outputDir.endswith("/"):
@@ -56,7 +61,7 @@ def process_rg_data(inputFile, configFile, outputDir):
     os.makedirs(outputDir)
 
   # Initialize histogram dictionary
-  hDict = initializeHistograms(jetR_list, beta_list)
+  hDict = initializeHistograms(jetR_list, beta_list, beta_dict)
 
   # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
   #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
@@ -91,8 +96,9 @@ def process_rg_data(inputFile, configFile, outputDir):
   print('--- {} seconds ---'.format(time.time() - start_time))
 
 #---------------------------------------------------------------
-def initializeHistograms(jetR_list, beta_list):
+def initializeHistograms(jetR_list, beta_list, beta_dict):
   
+  # Store histograms in a dictionary
   hDict = {}
   
   name = 'hNevents'
@@ -103,34 +109,49 @@ def initializeHistograms(jetR_list, beta_list):
   
     name = 'hJetPt_R{}'.format(jetR)
     hJetPt = ROOT.TH1F(name, name, 300, 0, 300)
-    hJetPt.GetXaxis().SetTitle('p_{T,jet}')
+    hJetPt.GetXaxis().SetTitle('p_{T,ch jet}')
     hJetPt.GetYaxis().SetTitle('dN/dp_{T}')
     hDict[name] = hJetPt
     
     name = 'hM_JetPt_R{}'.format(jetR)
     hM_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
-    hM_JetPt.GetXaxis().SetTitle('p_{T,jet}')
-    hM_JetPt.GetYaxis().SetTitle('m_{jet}')
+    hM_JetPt.GetXaxis().SetTitle('p_{T,ch jet}')
+    hM_JetPt.GetYaxis().SetTitle('m_{ch jet}')
     hDict[name] = hM_JetPt
     
     for beta in beta_list:
+      
+      # Retrieve histogram binnings from config file
+      binning_dict = beta_dict[beta]
+      pt_bins_det = (binning_dict['pt_bins_det'])
+      rg_bins_det = (binning_dict['rg_bins_det'])
+      n_pt_bins_det = len(pt_bins_det) - 1
+      n_rg_bins_det = len(rg_bins_det) - 1
+      det_pt_bin_array = array('d',pt_bins_det)
+      det_rg_bin_array = array('d',rg_bins_det)
+      
+      name = 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)
+      hThetaG_JetPt_Rebinned = ROOT.TH2F(name, name, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array)
+      hThetaG_JetPt_Rebinned.GetXaxis().SetTitle('p_{T,ch jet}')
+      hThetaG_JetPt_Rebinned.GetYaxis().SetTitle('#theta_{g,ch}')
+      hDict[name] = hThetaG_JetPt_Rebinned
 
       name = 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)
       hThetaG_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
-      hThetaG_JetPt.GetXaxis().SetTitle('p_{T,jet}')
-      hThetaG_JetPt.GetYaxis().SetTitle('#theta_{g}')
+      hThetaG_JetPt.GetXaxis().SetTitle('p_{T,ch jet}')
+      hThetaG_JetPt.GetYaxis().SetTitle('#theta_{g,ch}')
       hDict[name] = hThetaG_JetPt
 
       name = 'hZg_JetPt_R{}_B{}'.format(jetR, beta)
       hZg_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-      hZg_JetPt.GetXaxis().SetTitle('p_{T,jet}')
-      hZg_JetPt.GetYaxis().SetTitle('z_{g}')
+      hZg_JetPt.GetXaxis().SetTitle('p_{T,ch jet}')
+      hZg_JetPt.GetYaxis().SetTitle('z_{g,ch}')
       hDict[name] = hZg_JetPt
 
       name = 'hMg_JetPt_R{}_B{}'.format(jetR, beta)
       hMg_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
-      hMg_JetPt.GetXaxis().SetTitle('p_{T,jet}')
-      hMg_JetPt.GetYaxis().SetTitle('m_{g,jet}')
+      hMg_JetPt.GetXaxis().SetTitle('p_{T,ch jet}')
+      hMg_JetPt.GetYaxis().SetTitle('m_{g,ch jet}')
       hDict[name] = hMg_JetPt
 
   return hDict
@@ -205,6 +226,7 @@ def fillSoftDropHistograms(hDict, jet_sd, jet, jetR, beta):
   mg = jet_sd.m()
 
   hDict['hThetaG_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_ungroomed, theta_g)
+  hDict['hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)].Fill(jet_pt_ungroomed, theta_g)
   hDict['hZg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_ungroomed, zg)
   hDict['hMg_JetPt_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_ungroomed, mg)
 
