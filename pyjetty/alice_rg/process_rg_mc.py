@@ -33,7 +33,9 @@ import fjext
 import analysis_utils
 
 # Load RooUnfold library
-ROOT.gSystem.Load("libRooUnfold.so")
+print ('Loading libRooUnfold.so... ', end = '')
+rval = ROOT.gSystem.Load('$ROOUNFOLDDIR/libRooUnfold.so')
+print (rval)
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -122,7 +124,7 @@ def process_rg_data(inputFile, configFile, outputDir):
 
   # Plot histograms
   print('Save histograms...')
-  saveHistograms(hDict, outputDir)
+  saveHistograms(hDict, outputDir, jetR_list, beta_list)
 
   print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -174,8 +176,12 @@ def initializeHistograms(jetR_list, beta_list):
       name = 'roounfold_response_R{}_B{}'.format(jetR, beta)
       hist_measured = hResponse_JetPt_ThetaG.Projection(2, 0)
       hist_measured.SetName('hist_measured_R{}_B{}'.format(jetR, beta))
+      hist_measured.RebinX(5)
+      hist_measured.RebinY(5)
       hist_truth = hResponse_JetPt_ThetaG.Projection(3, 1)
       hist_truth.SetName('hist_truth_R{}_B{}'.format(jetR, beta))
+      hist_truth.RebinX(10)
+      hist_truth.RebinY(10)
       roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name, name) # Sets up binning
       hDict[name] = roounfold_response
 
@@ -315,8 +321,8 @@ def theta_g(jet, sd, jetR):
   return theta_g
 
 #---------------------------------------------------------------
-def saveHistograms(hDict, outputDir):
-  
+def saveHistograms(hDict, outputDir, jetR_list, beta_list):
+
   outputfilename = os.path.join(outputDir, 'AnalysisResults.root')
   fout = ROOT.TFile(outputfilename, 'recreate')
   fout.cd()
