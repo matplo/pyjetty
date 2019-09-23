@@ -19,10 +19,11 @@ import pythiaext
 import csevent
 
 import ROOT
+ROOT.gROOT.SetBatch(True)
 
 import numpy as np
 import array
-
+import copy
 
 def logbins(xmin, xmax, nbins):
 	if xmin <= 0:
@@ -37,7 +38,7 @@ class BoltzmannEvent(object):
 		self.configure_constants(mean_pt=0.7, multiplicity=1, max_eta=1, max_pt=100)
 		for key, value in kwargs.items():
 			self.__setattr__(key, value)
-		self.particles = []
+		self.particles = fj.vectorPJ()
 		self.funbg = ROOT.TF1("funbg", "2. / [0] * x * TMath::Exp(-(2. / [0]) * x)", 0, self.max_pt, 1);
 		self.funbg.SetParameter(0, self.mean_pt)
 		self.funbg.SetNpx(1000)
@@ -64,13 +65,15 @@ class BoltzmannEvent(object):
 	def generate(self, multiplicity=None, offset=0):
 		if multiplicity:
 			self.multiplicity = multiplicity
+		self.particles.clear()
 		for n in range(0, self.multiplicity):
 			_pt  = self.funbg.GetRandom(0, self.max_pt)
 			_eta = self.ROOT_random.Rndm() * self.max_eta * 2. - self.max_eta;
 			_phi = self.ROOT_random.Rndm() * ROOT.TMath.Pi() * 2. - ROOT.TMath.Pi();
 			_p = fj.PseudoJet()
 			_p.reset_PtYPhiM (_pt, _eta, _phi, 0.0)
-			self.particles.append(_p)
+			_p.set_user_index(n + offset)
+			self.particles.push_back(_p)
 			self.histogram_pt.Fill(_pt)
 			self.histogram_eta.Fill(_eta)
 			self.histogram_phi.Fill(_phi)
@@ -81,8 +84,14 @@ def main():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
 	pyconf.add_standard_pythia_args(parser)
 	parser.add_argument('--ignore-mycfg', help="ignore some settings hardcoded here", default=False, action='store_true')
+	parser.add_argument('--output', default="output.root", type=str)
+	parser.add_argument('--alpha', default=0, type=float)
+	parser.add_argument('--dRmax', default=0.25, type=float)
 
 	args = parser.parse_args()
+
+	if args.output == 'output.root':
+		args.output = 'output_alpha_{}_dRmax_{}.root'.format(args.alpha, args.dRmax)
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()
@@ -90,10 +99,9 @@ def main():
 	# set up our jet definition and a jet selector
 	jet_R0 = 0.4
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-	jet_selector = fj.SelectorPtMin(100.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
+	jet_selector = fj.SelectorPtMin(100.0) & fj.SelectorPtMax(110.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
+	jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
 	print(jet_def)
-
-	cs = csevent.CSEventSubtractor(alpha=0, max_distance=0.25, max_eta=1, bge_rho_grid_size=0.1)
 
 	mycfg = ['PhaseSpace:pThatMin = 100', 'PhaseSpace:pThatMax = 110']
 	if args.ignore_mycfg:
@@ -102,24 +110,72 @@ def main():
 	if not pythia:
 		print("[e] pythia initialization failed.")
 		return
+
+	sd = fjcontrib.SoftDrop(0, 0.1, 1.0)
+	cs = csevent.CSEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=1, bge_rho_grid_size=0.1)
+	be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000, max_eta=1, max_pt=5)
+
 	if args.nev < 100:
 		args.nev = 100
+
+	outf = ROOT.TFile(args.output, 'recreate')
+	outf.cd()
+	tn = ROOT.TNtuple('tn', 'tn', 'n:pt:phi:eta:cspt:csphi:cseta:dR:dpt:rg:csrg:z:csz')
+	hpt = ROOT.TH1F('hpt', 'hpt', 100, 50, 150)
+	hptcs = ROOT.TH1F('hptcs', 'hptcs', 100, 50, 150)
+	hdpt = ROOT.TH1F('hdpt', 'hdpt', 100, -50, 50)
+	hrg = ROOT.TH1F('hrg', 'hrg', 100, -1.1, 0.9)
+	hrgcs = ROOT.TH1F('hrgcs', 'hrgcs', 100, -1.1, 0.9)
+	hdrg = ROOT.TH1F('hdrg', 'hdrg', 100, -1.1, 0.9)
+
 	for i in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
-		parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
-		signal_jets = jet_selector(jet_def(parts))
-		cs_parts = cs.process_event(parts)
-		cs_signal_jets = jet_selector(jet_def(cs_parts))
 
-		sd = fjcontrib.SoftDrop(0, 0.1, 1.0)
-		for i,j in enumerate(signal_jets):
-			j_sd = sd.result(j)
-			sd_info = fjcontrib.get_SD_jet_info(j_sd)
-			# print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(sd_info.z, sd_info.dR, sd_info.mu))
+		parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
+		signal_jets = fj.sorted_by_pt(jet_selector(jet_def(parts)))
+
+		if len(signal_jets) < 1:
+			continue
+
+		bg_parts = be.generate()
+
+		full_event = bg_parts
+		sjet = signal_jets[0]
+		for psj in sjet.constituents(): full_event.push_back(psj)
+
+		cs_parts = cs.process_event(full_event)
+		cs_signal_jets = fj.sorted_by_pt(jet_selector_cs(jet_def(cs_parts)))
+
+		sd_signal_jet = sd.result(sjet)
+		sd_info_signal_jet = fjcontrib.get_SD_jet_info(sd_signal_jet)
+
+		for j in cs_signal_jets:
+			sd_j = sd.result(j)
+			sd_info_j = fjcontrib.get_SD_jet_info(sd_j)
+			rho = cs.bge_rho.rho()
+			tn.Fill(i, 
+					sjet.pt(), sjet.phi(), sjet.eta(), 
+					j.pt(), j.phi(), j.eta(),
+					j.delta_R(sjet), j.pt() - sjet.pt(),
+					sd_info_signal_jet.dR, sd_info_j.dR,
+					sd_info_signal_jet.z, sd_info_j.z)
+			hpt.Fill(sjet.pt())
+			hptcs.Fill(j.pt())
+			hdpt.Fill(j.pt() - sjet.pt())
+			hrg.Fill(sd_info_signal_jet.dR)
+			hrgcs.Fill(sd_info_j.dR)
+			if sd_info_j.dR > 0 and sd_info_signal_jet.dR > 0:
+				hdrg.Fill(sd_info_j.dR - sd_info_signal_jet.dR)
+
+		# for i,j in enumerate(signal_jets):
+		# 	j_sd = sd.result(j)
+		# 	sd_info = fjcontrib.get_SD_jet_info(j_sd)
+		# 	# print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(sd_info.z, sd_info.dR, sd_info.mu))
 
 	pythia.stat()
-
+	outf.Write()
+	outf.Close()
 
 
 if __name__ == '__main__':

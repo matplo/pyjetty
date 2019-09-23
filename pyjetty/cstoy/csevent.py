@@ -65,7 +65,7 @@ class CSEventSubtractor(object):
 	def process_event(self, full_event):
 		self.bge_rho.set_particles(full_event);
 		# the correction of the whole event with ConstituentSubtractor
-		self.corrected_event = self.subtractor.subtract_event(full_event);
+		self.corrected_event = self.subtractor.subtract_event(full_event, self.max_eta);
 		# if you want to use the information about hard proxies, use this version:
 		#  vector<PseudoJet> corrected_event=subtractor.subtract_event(full_event,hard_event_charged);  // here all charged hard particles are used for hard proxies. In real experiment, this corresponds to charged tracks from primary vertex. Optionally, one can add among the hard proxies also high pt calorimeter clusters after some basic pileup correction.
 		return self.corrected_event
