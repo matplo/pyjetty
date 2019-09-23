@@ -118,8 +118,9 @@ def main():
 		return
 
 	sd = fjcontrib.SoftDrop(0, 0.1, 1.0)
-	cs = csevent.CSEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=1, bge_rho_grid_size=0.1, max_pt_correct=100)
-	be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000, max_eta=1, max_pt=100)
+	max_eta = 1
+	cs = csevent.CSEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=max_eta, bge_rho_grid_size=0.25, max_pt_correct=100)
+	be = BoltzmannEvent(mean_pt=0.6, multiplicity=1000 * max_eta * 2, max_eta=max_eta, max_pt=100)
 
 	if args.nev < 100:
 		args.nev = 100
@@ -152,6 +153,12 @@ def main():
 
 		cs_parts = cs.process_event(full_event)
 		cs_signal_jets = fj.sorted_by_pt(jet_selector_cs(jet_def(cs_parts)))
+
+		# max_eta_part = max([j.eta() for j in full_event])
+		# print ('number of particles', len(full_event), max_eta_part)
+		# mean_pt = sum([j.pt() for j in bg_parts]) / len(bg_parts)
+		# print ('mean pt in bg', mean_pt)
+		# print ('number of CS particles', len(cs_parts))
 
 		sd_signal_jet = sd.result(sjet)
 		sd_info_signal_jet = fjcontrib.get_SD_jet_info(sd_signal_jet)
