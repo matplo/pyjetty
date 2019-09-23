@@ -33,7 +33,9 @@ import fjext
 import analysis_utils
 
 # Load RooUnfold library
-ROOT.gSystem.Load("libRooUnfold.so")
+print ('Loading libRooUnfold.so... ', end = '')
+rval = ROOT.gSystem.Load('$ROOUNFOLDDIR/libRooUnfold.so')
+print (rval)
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -42,7 +44,7 @@ ROOT.gROOT.SetBatch(True)
 debugLevel = 0
 
 #---------------------------------------------------------------
-def process_rg_data(inputFile, configFile, outputDir):
+def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir):
   
   start_time = time.time()
   
@@ -54,11 +56,21 @@ def process_rg_data(inputFile, configFile, outputDir):
   beta_list = config['beta']
   jet_matching_distance = config['jet_matching_distance']
   
+  # Read pt-hat scale factor, if applicable
+  scale_factor = 1.
+  if pthat_bin > 0:
+    with open(scaleFactorFile, 'r') as stream2:
+      scaleFactorDict = yaml.safe_load(stream2)
+    scale_factor = scaleFactorDict[pthat_bin]
+    print('pt-hat scale factor: {}'.format(scale_factor))
+
   # Create output dir
   if not outputDir.endswith("/"):
     outputDir = outputDir + "/"
   if not os.path.exists(outputDir):
     os.makedirs(outputDir)
+
+  print('----------------------------------------------------------------')
 
   # Initialize histogram dictionary
   hDict = initializeHistograms(jetR_list, beta_list)
@@ -118,11 +130,11 @@ def process_rg_data(inputFile, configFile, outputDir):
 
   # Find jets and fill histograms
   print('Find jets...')
-  analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_distance, outputDir)
+  analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_distance, scale_factor, outputDir)
 
   # Plot histograms
   print('Save histograms...')
-  saveHistograms(hDict, outputDir)
+  saveHistograms(hDict, outputDir, jetR_list, beta_list)
 
   print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -174,15 +186,19 @@ def initializeHistograms(jetR_list, beta_list):
       name = 'roounfold_response_R{}_B{}'.format(jetR, beta)
       hist_measured = hResponse_JetPt_ThetaG.Projection(2, 0)
       hist_measured.SetName('hist_measured_R{}_B{}'.format(jetR, beta))
+      hist_measured.RebinX(5)
+      hist_measured.RebinY(5)
       hist_truth = hResponse_JetPt_ThetaG.Projection(3, 1)
       hist_truth.SetName('hist_truth_R{}_B{}'.format(jetR, beta))
+      hist_truth.RebinX(10)
+      hist_truth.RebinY(10)
       roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name, name) # Sets up binning
       hDict[name] = roounfold_response
 
   return hDict
 
 #---------------------------------------------------------------
-def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_distance, outputDir):
+def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_distance, scale_factor, outputDir):
   
   fj.ClusterSequence.print_banner()
   print()
@@ -206,10 +222,10 @@ def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_dist
       
       # Then can use list comprehension to iterate over the groupby and do jet-finding
       # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-      result = [analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict) for fj_particles_det, fj_particles_truth in zip(df_fjparticles['fj_particles_det'], df_fjparticles['fj_particles_truth'])]
+      result = [analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, scale_factor, hDict) for fj_particles_det, fj_particles_truth in zip(df_fjparticles['fj_particles_det'], df_fjparticles['fj_particles_truth'])]
 
 #---------------------------------------------------------------
-def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict):
+def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, scale_factor, hDict):
 
   # Check that the entries exist appropriately
   # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -258,7 +274,7 @@ def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
         #Check that match is unique
         if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
 
-          fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta)
+          fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta, scale_factor)
 
 #---------------------------------------------------------------
 # Loop through jets and store number of matching candidates in user_index
@@ -287,7 +303,7 @@ def fillJetHistograms(jet, hDict, jetR):
   hDict['hJetPt_Truth_R{}'.format(jetR)].Fill(jet.pt())
 
 #---------------------------------------------------------------
-def fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta):
+def fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta, scale_factor):
   
   jet_pt_det_ungroomed = jet_det.pt()
   jet_pt_truth_ungroomed = jet_truth.pt()
@@ -304,7 +320,7 @@ def fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta):
   x_array = array('d', x)
   hDict['hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)].Fill(x_array)
 
-  hDict['roounfold_response_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_det_ungroomed, theta_g_det, jet_pt_truth_ungroomed, theta_g_truth)
+  hDict['roounfold_response_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_det_ungroomed, theta_g_det, jet_pt_truth_ungroomed, theta_g_truth, scale_factor)
 
 #---------------------------------------------------------------
 def theta_g(jet, sd, jetR):
@@ -315,8 +331,8 @@ def theta_g(jet, sd, jetR):
   return theta_g
 
 #---------------------------------------------------------------
-def saveHistograms(hDict, outputDir):
-  
+def saveHistograms(hDict, outputDir, jetR_list, beta_list):
+
   outputfilename = os.path.join(outputDir, 'AnalysisResults.root')
   fout = ROOT.TFile(outputfilename, 'recreate')
   fout.cd()
@@ -335,7 +351,15 @@ if __name__ == '__main__':
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
                       default='analysis_config.yaml',
-                      help="Path of config file for jetscape analysis")
+                      help="Path of config file for analysis")
+  parser.add_argument('-b', '--pthat_bin', action='store',
+                      type=int, metavar='pthat_bin',
+                      default='0',
+                      help="pt hat bin of input file")
+  parser.add_argument('-w', '--scaleFactorFile', action='store',
+                      type=str, metavar='scaleFactorFile',
+                      default='scaleFactors.yaml',
+                      help="Path of config file containing pt-hat weights")
   parser.add_argument('-o', '--outputDir', action='store',
                       type=str, metavar='outputDir',
                       default='./TestOutput',
@@ -348,7 +372,9 @@ if __name__ == '__main__':
   print('inputFile: \'{0}\''.format(args.inputFile))
   print('configFile: \'{0}\''.format(args.configFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
-  print('----------------------------------------------------------------')
+  if args.pthat_bin > 0:
+    print('pt-hat bin: {}'.format(args.pthat_bin))
+    print('pt-hat scale factor file: {}'.format(args.scaleFactorFile))
   
   # If invalid inputFile is given, exit
   if not os.path.exists(args.inputFile):
@@ -360,4 +386,4 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  process_rg_data(inputFile = args.inputFile, configFile = args.configFile, outputDir = args.outputDir)
+  process_rg_data(inputFile = args.inputFile, configFile = args.configFile, pthat_bin = args.pthat_bin, scaleFactorFile = args.scaleFactorFile, outputDir = args.outputDir)
