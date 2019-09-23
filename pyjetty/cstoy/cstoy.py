@@ -87,11 +87,17 @@ def main():
 	parser.add_argument('--output', default="output.root", type=str)
 	parser.add_argument('--alpha', default=0, type=float)
 	parser.add_argument('--dRmax', default=0.25, type=float)
+	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 
 	args = parser.parse_args()
 
 	if args.output == 'output.root':
 		args.output = 'output_alpha_{}_dRmax_{}.root'.format(args.alpha, args.dRmax)
+
+	if os.path.isfile(args.output):
+		if not args.overwrite:
+			print('[i] output', args.output, 'exists - use --overwrite to do just that...')
+			return
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()
@@ -112,15 +118,15 @@ def main():
 		return
 
 	sd = fjcontrib.SoftDrop(0, 0.1, 1.0)
-	cs = csevent.CSEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=1, bge_rho_grid_size=0.1)
-	be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000, max_eta=1, max_pt=5)
+	cs = csevent.CSEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=1, bge_rho_grid_size=0.1, max_pt_correct=100)
+	be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000, max_eta=1, max_pt=100)
 
 	if args.nev < 100:
 		args.nev = 100
 
 	outf = ROOT.TFile(args.output, 'recreate')
 	outf.cd()
-	tn = ROOT.TNtuple('tn', 'tn', 'n:pt:phi:eta:cspt:csphi:cseta:dR:dpt:rg:csrg:z:csz')
+	tn = ROOT.TNtuple('tn', 'tn', 'n:pt:phi:eta:cspt:csphi:cseta:dR:dpt:rg:csrg:z:csz:dRg:dzg')
 	hpt = ROOT.TH1F('hpt', 'hpt', 100, 50, 150)
 	hptcs = ROOT.TH1F('hptcs', 'hptcs', 100, 50, 150)
 	hdpt = ROOT.TH1F('hdpt', 'hdpt', 100, -50, 50)
@@ -158,8 +164,8 @@ def main():
 					sjet.pt(), sjet.phi(), sjet.eta(), 
 					j.pt(), j.phi(), j.eta(),
 					j.delta_R(sjet), j.pt() - sjet.pt(),
-					sd_info_signal_jet.dR, sd_info_j.dR,
-					sd_info_signal_jet.z, sd_info_j.z)
+					sd_info_signal_jet.dR, sd_info_j.dR, sd_info_j.dR - sd_info_signal_jet.dR,
+					sd_info_signal_jet.z, sd_info_j.z, sd_info_j.z - sd_info_signal_jet.z)
 			hpt.Fill(sjet.pt())
 			hptcs.Fill(j.pt())
 			hdpt.Fill(j.pt() - sjet.pt())

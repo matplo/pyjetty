@@ -1,0 +1,88 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul
+#x p_{T}
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hpt :p E : title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hptcs :p E  : title=bg&CS
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul
+#logy 0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hdpt :hist +f1001 +a20 : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hdpt :hist +f1001 +a20 : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hdpt :hist +f1001 +a20 : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hdpt :hist +f1001 +a20 : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=0.2
+#x #Delta p_{T}
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul
+#logy 1
+#x #Delta R_{g} or R_{g}
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrg :p E : title=vacuum (v)
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS (r)
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hdrg :p E : title=#Delta R_{g} = v - r
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 0
+#x #Delta R_{g} or R_{g}
+#xrange -0.1, 0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrg :p E : title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_2.0.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_2.0.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=2
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 0
+#x #Delta R_{g} or R_{g}
+#xrange -0.1, 0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrg :p E : title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=0.8
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 0
+#x #Delta R_{g} or R_{g}
+#xrange -0.1, 0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrg :p E : title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.4.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.4.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=0.4
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 0
+#x #Delta R_{g} or R_{g}
+#xrange -0.1, 0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrg :p E : title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=0.2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=0.2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=0.2
