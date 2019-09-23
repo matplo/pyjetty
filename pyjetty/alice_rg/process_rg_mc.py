@@ -33,9 +33,11 @@ import fjext
 import analysis_utils
 
 # Load RooUnfold library
-print ('Loading libRooUnfold.so... ', end = '')
-rval = ROOT.gSystem.Load('$ROOUNFOLDDIR/libRooUnfold.so')
-print (rval)
+enable_roounfold = True
+if enable_roounfold:
+  print ('Loading libRooUnfold.so... ', end = '')
+  rval = ROOT.gSystem.Load('$ROOUNFOLDDIR/libRooUnfold.so')
+  print (rval)
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -53,7 +55,8 @@ def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir
     config = yaml.safe_load(stream)
   
   jetR_list = config['jetR']
-  beta_list = config['beta']
+  beta_dict = config['beta']
+  beta_list = list(beta_dict.keys())
   jet_matching_distance = config['jet_matching_distance']
   
   # Read pt-hat scale factor, if applicable
@@ -73,7 +76,7 @@ def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir
   print('----------------------------------------------------------------')
 
   # Initialize histogram dictionary
-  hDict = initializeHistograms(jetR_list, beta_list)
+  hDict = initializeHistograms(jetR_list, beta_list, beta_dict)
 
   # ------------------------------------------------------------------------
   # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
@@ -139,7 +142,7 @@ def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir
   print('--- {} seconds ---'.format(time.time() - start_time))
 
 #---------------------------------------------------------------
-def initializeHistograms(jetR_list, beta_list):
+def initializeHistograms(jetR_list, beta_list, beta_dict):
   
   hDict = {}
   
@@ -169,31 +172,79 @@ def initializeHistograms(jetR_list, beta_list):
     
     for beta in beta_list:
       
+      # Retrieve histogram binnings from config file
+      binning_dict = beta_dict[beta]
+      pt_bins_det = (binning_dict['pt_bins_det'])
+      rg_bins_det = (binning_dict['rg_bins_det'])
+      pt_bins_truth = (binning_dict['pt_bins_truth'])
+      rg_bins_truth = (binning_dict['rg_bins_truth'])
+      n_pt_bins_det = len(pt_bins_det) - 1
+      n_rg_bins_det = len(rg_bins_det) - 1
+      n_pt_bins_truth = len(pt_bins_truth) - 1
+      n_rg_bins_truth = len(rg_bins_truth) - 1
+      det_pt_bin_array = array('d',pt_bins_det)
+      det_rg_bin_array = array('d',rg_bins_det)
+      truth_pt_bin_array = array('d',pt_bins_truth)
+      truth_rg_bin_array = array('d',rg_bins_truth)
+      
+      # Create THn of response
+      dim = 0;
+      title = []
+      nbins = []
+      min = []
+      max = []
+      bin_edges = []
+        
+      title.append('p_{T,det}')
+      nbins.append(n_pt_bins_det)
+      bin_edges.append(det_pt_bin_array)
+      min.append(det_pt_bin_array[0])
+      max.append(det_pt_bin_array[-1])
+      dim+=1
+        
+      title.append('p_{T,truth}')
+      nbins.append(n_pt_bins_truth)
+      bin_edges.append(truth_pt_bin_array)
+      min.append(truth_pt_bin_array[0])
+      max.append(truth_pt_bin_array[-1])
+      dim+=1
+        
+      title.append('#theta_{g,det}')
+      nbins.append(n_rg_bins_det)
+      bin_edges.append(det_rg_bin_array)
+      min.append(det_rg_bin_array[0])
+      max.append(det_rg_bin_array[-1])
+      dim+=1
+        
+      title.append('#theta_{g,truth}')
+      nbins.append(n_rg_bins_truth)
+      bin_edges.append(truth_rg_bin_array)
+      min.append(truth_rg_bin_array[0])
+      max.append(truth_rg_bin_array[-1])
+      dim+=1
+      
       name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
-      nbins = ([300, 300, 150, 150])
-      xmin = ([0, 0, 0, 0])
-      xmax = ([300, 300, 1.5, 1.5])
+      nbins = (nbins)
+      xmin = (min)
+      xmax = (max)
       nbins_array = array('i', nbins)
       xmin_array = array('d', xmin)
       xmax_array = array('d', xmax)
-      hResponse_JetPt_ThetaG = ROOT.THnSparseF(name, name, 4, nbins_array, xmin_array, xmax_array)
-      hResponse_JetPt_ThetaG.GetAxis(0).SetTitle('p_{T,det}')
-      hResponse_JetPt_ThetaG.GetAxis(1).SetTitle('p_{T,truth}')
-      hResponse_JetPt_ThetaG.GetAxis(2).SetTitle('#theta_{g,det}')
-      hResponse_JetPt_ThetaG.GetAxis(3).SetTitle('#theta_{g,truth}')
+      hResponse_JetPt_ThetaG = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+      for i in range(0, dim):
+        hResponse_JetPt_ThetaG.GetAxis(i).SetTitle(title[i])
+        hResponse_JetPt_ThetaG.SetBinEdges(i, bin_edges[i])
       hDict[name] = hResponse_JetPt_ThetaG
-
-      name = 'roounfold_response_R{}_B{}'.format(jetR, beta)
-      hist_measured = hResponse_JetPt_ThetaG.Projection(2, 0)
-      hist_measured.SetName('hist_measured_R{}_B{}'.format(jetR, beta))
-      hist_measured.RebinX(5)
-      hist_measured.RebinY(5)
-      hist_truth = hResponse_JetPt_ThetaG.Projection(3, 1)
-      hist_truth.SetName('hist_truth_R{}_B{}'.format(jetR, beta))
-      hist_truth.RebinX(10)
-      hist_truth.RebinY(10)
-      roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name, name) # Sets up binning
-      hDict[name] = roounfold_response
+      
+      # Create RooUnfoldResponse object as well, using same binning as the THn
+      if enable_roounfold:
+        name = 'roounfold_response_R{}_B{}'.format(jetR, beta)
+        hist_measured = hResponse_JetPt_ThetaG.Projection(2, 0)
+        hist_measured.SetName('hist_measured_R{}_B{}'.format(jetR, beta))
+        hist_truth = hResponse_JetPt_ThetaG.Projection(3, 1)
+        hist_truth.SetName('hist_truth_R{}_B{}'.format(jetR, beta))
+        roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name, name) # Sets up binning
+        hDict[name] = roounfold_response
 
   return hDict
 
@@ -320,7 +371,8 @@ def fillResponseHistograms(jet_det, jet_truth, sd, hDict, jetR, beta, scale_fact
   x_array = array('d', x)
   hDict['hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)].Fill(x_array)
 
-  hDict['roounfold_response_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_det_ungroomed, theta_g_det, jet_pt_truth_ungroomed, theta_g_truth, scale_factor)
+  if enable_roounfold:
+    hDict['roounfold_response_R{}_B{}'.format(jetR, beta)].Fill(jet_pt_det_ungroomed, theta_g_det, jet_pt_truth_ungroomed, theta_g_truth, scale_factor)
 
 #---------------------------------------------------------------
 def theta_g(jet, sd, jetR):
