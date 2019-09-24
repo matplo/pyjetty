@@ -200,7 +200,7 @@ def plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName,
   myBlankHisto.SetNdivisions(505)
   myBlankHisto.SetXTitle('#theta_{g}')
   myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-  myBlankHisto.SetYTitle('#frac{dN}{d#theta_{g}}')
+  myBlankHisto.SetYTitle('#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}')
   myBlankHisto.SetMaximum(3)
   myBlankHisto.SetMinimum(0.)
   myBlankHisto.Draw("E")
@@ -215,6 +215,7 @@ def plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName,
     #h = h2D.ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) # exclude under- and over-flow bins
     h = h2D.ProjectionY()
     
+    # Normalize by integral, i.e. N_jets,inclusive in this pt-bin (cross-check this)
     integral = h.Integral()
     h.Scale(1./integral, 'width')
     
