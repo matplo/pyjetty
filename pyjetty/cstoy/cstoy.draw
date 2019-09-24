@@ -5,134 +5,161 @@
 #title: smart group
 #legend pos=ul
 #x p_{T}
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hpt :p E : title=vacuum
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hptcs :p E  : title=bg&CS #alpha=0 #DeltaR_{max}=2.0
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hptcs :p E  : title=bg&CS #alpha=0 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hptcs :p E  : title=bg&CS #alpha=0 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hptcs :p E  : title=bg&CS #alpha=0 #DeltaR_{max}=0.2
-
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hpt :hist l: title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hptcs :p E +m50  : title=bg&CS #alpha=0 #DeltaR_{max}=2.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hptcs :p E +m50  : title=bg&CS #alpha=0 #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hptcs :p E +m50  : title=bg&CS #alpha=0 #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hptcs :p E +m50  : title=bg&CS #alpha=0 #DeltaR_{max}=0.2
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ll
+#legend pos=ul title=#alpha=0
 #logy 0
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0 #DeltaR_{max}=0.2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.2
 #x #Delta p_{T}
 #rebin 1
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ll
+#legend pos=ul title=#alpha=0.5
 #logy 0
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_2.0.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0.5 #DeltaR_{max}=2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.8.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0.5 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.4.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0.5 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.2.root 		:hdpt :p E : title=#Delta p_{T} #alpha=0.5 #DeltaR_{max}=0.2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_2.0.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.8.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.4.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.2.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.2
 #x #Delta p_{T}
 #rebin 1
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ll
+#legend pos=ul title=#alpha=2
 #logy 0
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_2.0.root 		:hdpt :p E : title=#Delta p_{T} #alpha=2.0 #DeltaR_{max}=2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.8.root 		:hdpt :p E : title=#Delta p_{T} #alpha=2.0 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.4.root 		:hdpt :p E : title=#Delta p_{T} #alpha=2.0 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.2.root 		:hdpt :p E : title=#Delta p_{T} #alpha=2.0 #DeltaR_{max}=0.2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_2.0.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.8.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.4.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.2.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.2
 #x #Delta p_{T}
 #rebin 1
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ll
+#legend pos=ul title=#alpha=4
 #logy 0
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_2.0.root 		:hdpt :p E : title=#Delta p_{T} #alpha=4.0 #DeltaR_{max}=2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.8.root 		:hdpt :p E : title=#Delta p_{T} #alpha=4.0 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.4.root 		:hdpt :p E : title=#Delta p_{T} #alpha=4.0 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.2.root 		:hdpt :p E : title=#Delta p_{T} #alpha=4.0 #DeltaR_{max}=0.2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_2.0.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.8.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.4.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.2.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.2
 #x #Delta p_{T}
 #rebin 1
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ul
+#legend pos=ul title=#alpha=8
+#logy 0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_2.0.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_0.8.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_0.4.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_0.2.root 		:hdpt :p E +m50 : title=#Delta p_{T} #DeltaR_{max}=0.2
+#x #Delta p_{T}
+#maxy 2e3
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul title=#alpha=0 #Delta R_{max} = 0.8
 #logy 1
 #x #Delta R_{g} or R_{g}
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrg :p E : title=vacuum (v)
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS (r)
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hdrg :p E : title=#Delta R_{g} = v - r
-
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrg :hist l: title=vacuum (v)
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS (r)
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hdrg :p E +m50 : title=#Delta R_{g} = v - r
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ur
+#legend pos=ur title=#Delta R_{max}=2
 #logy 0
 #x #Delta R_{g} or R_{g}
 #xrange -0.1, 0.5
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrg :p E : title=vacuum
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_2.0.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_2.0.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_2.0.root 		:hrgcs :p E : title=bg&CS #alpha=2.0 #DeltaR_{max}=2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrg :hist l: title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_2.0.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_2.0.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=1.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_2.0.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=2.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_2.0.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=4.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_2.0.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=8.0
 #rebin 1
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ur
+#legend pos=ur title=#Delta R_{max}=0.8
 #logy 0
 #x #Delta R_{g} or R_{g}
 #xrange -0.1, 0.5
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrg :p E : title=vacuum
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=0.8
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.8.root 		:hrgcs :p E : title=bg&CS #alpha=2.0 #DeltaR_{max}=0.8
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrg :hist l: title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=1.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=2.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=4.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=8.0
 #rebin 1
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ur
+#legend pos=ur title=#Delta R_{max}=0.4
 #logy 0
 #x #Delta R_{g} or R_{g}
 #xrange -0.1, 0.5
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrg :p E : title=vacuum
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.4.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.4.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=0.4
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.4.root 		:hrgcs :p E : title=bg&CS #alpha=2.0 #DeltaR_{max}=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrg :hist l: title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.4.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.4.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=1.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.4.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=2.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.4.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=4.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_0.4.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=8.0
 #rebin 1
+#maxy 2e3
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ur
+#legend pos=ur title=#Delta R_{max}=0.2
 #logy 0
 #x #Delta R_{g} or R_{g}
 #xrange -0.1, 0.5
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrg :p E : title=vacuum
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=0 #DeltaR_{max}=0.2
-#/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=0.5 #DeltaR_{max}=0.2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=1.0 #DeltaR_{max}=0.2
-#/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=2.0 #DeltaR_{max}=0.2
-/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.2.root 		:hrgcs :p E : title=bg&CS #alpha=4.0 #DeltaR_{max}=0.2
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrg :hist l: title=vacuum
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.5_dRmax_0.2.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0.5
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_1.0_dRmax_0.2.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=1.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_2.0_dRmax_0.2.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=2.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_4.0_dRmax_0.2.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=4.0
+/Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_8.0_dRmax_0.2.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=8.0
 #rebin 1
+#maxy 2e3
