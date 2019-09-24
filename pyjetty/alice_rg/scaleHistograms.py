@@ -64,6 +64,8 @@ def scaleHistograms(configFile):
       name = key.GetName()
       if "Scaled" in name:
         continue
+      if "roounfold" in name:
+        continue
       obj = f.Get(name)
       if obj:
         ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers, outlierLimit, outlierNBinsThreshold, bin-1, EndPtHardBin, name)
@@ -106,7 +108,7 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
     obj.Scale(scaleFactor)
     if verbose:
       print("TH1 %s was scaled..." % obj.GetName())
-  elif obj.InheritsFrom(ROOT.THnSparse.Class()):
+  elif obj.InheritsFrom(ROOT.THnBase.Class()):
     obj.Scale(scaleFactor)
     if verbose:
       print("THnSparse %s was scaled..." % obj.GetName())
