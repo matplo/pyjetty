@@ -41,7 +41,7 @@ function make_module()
 	echo "prereq heppy/main_${HEPPY_USER_PYTHON_VERSION}"	>> ${modulefile}
 
 	add_path_module ${modulefile} PYTHONPATH ${heppy_dir}
-	setalias_module ${modulefile} heppy_cd "cd ${heppy_dir}"
+	setalias_module ${modulefile} pyjetty_cd "cd ${heppy_dir}"
 
 	dirinst=${1}
 	echo_info "installation directory ${dirinst}"
