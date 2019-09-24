@@ -78,12 +78,7 @@ def unfoldSingleOutputList(fData, fResponse, unfolded_dict, jetR, beta, beta_dic
   plot_RM_slices(fResponse, jetR, beta, beta_dict, output_dir, file_format)
   
   # Plot the kinematic efficiency from the response THn
-  #plotKinematicEfficiency(fResponse, jetR, beta, output_dir, file_format)
-  #
-  # The kinematic efficiency is the ratio:
-  #   Numerator: 2D truth-level projection using no cut on det-level
-  #   Denominator: 2D truth-level projection using [pt-det, rg-det] cut on det-level
-  #
+  plot_kinematic_efficiency(fResponse, jetR, beta, beta_dict, output_dir, file_format)
   # Can either pass this to the RooUnfoldResponse object, or else can apply it afterward
   # (Need to think...)
 
@@ -96,7 +91,6 @@ def unfoldSingleOutputList(fData, fResponse, unfolded_dict, jetR, beta, beta_dic
   #setPrior(hResponseMatrix, hJetSpectrumTrueUncutPerBin, outputDir, fileFormat)
   #
   # (Need to think how to modify the prior...)
-
 
   # Unfold spectrum
   if hData_PerBin and response:
@@ -148,81 +142,50 @@ def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_di
   plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format)
 
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
-  #plotResultFolded(response, hJetSpectrumUnfoldedPerGeV, hJetSpectrumMeasuredPerGeV, i, regularizationParamName, output_dir, file_format)
-  
-  # Refolding test -- unfold measured spectrum with response1, then apply response2 to unfolded result, and compare to the measured spectrum.
-  #performRefoldingTest(response1, response2, hJetSpectrumMeasuredPerBin, hJetSpectrumMeasuredPerGeV, i, regularizationParamName, output_dir, file_format)
-  
+  k = 2
+  #plot_refolding_test(response, unfolded_dict[k], hData_PerBin, k, regularizationParamName, beta_dict, output_dir, file_format)
+
   # Unfolding test -- unfold the smeared det-level result with response, and compare to truth-level MC.
   #performUnfoldingTest(responseNoKinEff, hJetSpectrumMCDetPerBin, hJetSpectrumTruePerBin, i, regularizationParamName, output_dir, file_format)
 
 #################################################################################################
-# Plot various slices of the response matrix (from the THn)
+# Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
 #################################################################################################
-def plotRegParamSystematic():
+def plot_refolding_test(response, hUnfolded, hData_PerBin, i, regularizationParamName, beta_dict, outputDir, fileFormat):
   
-  #Plot the spectra comparing only k=+1 and k-1 to the main result
-  xRangeMin = min_pt_reported
-  xRangeMax = max_pt_reported
-  yAxisTitle = "#frac{d#sigma}{dp_{T}} [mb (GeV/c)^{-1}]"
-  ratioYAxisTitle = "Ratio to k={}".format(reg_param)
-  outputFilename = os.path.join(output_dir, "hJetSpectraUnfoldedRatio" + file_format)
-  legendTitle = "{} Unfolding".format(type)
-  hLegendLabel = "k = {}".format(reg_param-1)
-  h2LegendLabel = "k = {}".format(reg_param)
-  h3LegendLabel = "k = {}".format(reg_param+1)
-  if hLowerkResult and hMainResult and hHigherkResult:
-    # To get sensible error bars, assume main result has no errors
-    for bin in range(1, hMainResult.GetNbinsX() + 1):
-      hMainResult.SetBinError(bin, 0)
-    plotSpectra(hLowerkResult, hMainResult, hHigherkResult, 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, hLegendLabel, h2LegendLabel, h3LegendLabel)
-
-
-########################################################################################################
-# Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)   ####
-########################################################################################################
-def plotResultFolded(response, hJetSpectrumUnfoldedPerGeV, hJetSpectrumMeasuredPerGeV, i, regularizationParamName, outputDir, fileFormat):
+  # In principle should use two statistically independent response matrices
   
-  hFoldedTruthPerGeV = response.ApplyToTruth(hJetSpectrumUnfoldedPerGeV) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment, despite its name)
-  hFoldedTruthPerGeV.Scale(1., "width") # Divide by bin width to create per GeV spectrum
+  hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment)
+  
+  binning_dict = beta_dict[beta]
+  pt_bins_truth = (binning_dict['pt_bins_truth'])
+  rg_bins_truth = (binning_dict['rg_bins_truth'])
+  n_pt_bins_truth = len(pt_bins_truth) - 1
+  n_rg_bins_truth = len(rg_bins_truth) - 1
+  truth_pt_bin_array = array('d',pt_bins_truth)
+  truth_rg_bin_array = array('d',rg_bins_truth)
+  
+  for bin in range(1, n_pt_bins_truth-1):
+    min_pt_truth = pt_bins_truth[bin]
+    max_pt_truth = pt_bins_truth[bin+1]
+    
+    plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName, min_pt_truth, max_pt_truth, n_rg_bins_truth, truth_rg_bin_array, output_dir, file_format)
+
+  
+  
+  hFoldedTruth.Scale(1., "width") # Divide by bin width to create per GeV spectrum
   xRangeMin = 0
   xRangeMax = 250
   yAxisTitle = "#frac{d#sigma}{dp_{T}} [mb (GeV/c)^{-1}]"
   legendTitle = ""
   h1LegendLabel = "Folded truth, {} = {}".format(regularizationParamName,i)
   h2LegendLabel = "Measured Pb-Pb"
-  ratioYAxisTitle = "Folded truth / Measured Pb-Pb"
+  ratioYAxisTitle = "Folded truth / Measured"
   outputDirFoldedPbPbTruth = outputDir + "FoldedPbPbTruth/"
   if not os.path.exists(outputDirFoldedPbPbTruth):
     os.makedirs(outputDirFoldedPbPbTruth)
   outputFilename = os.path.join(outputDirFoldedPbPbTruth, "hJetSpectraFoldedPbPbTruth{}_{}{}".format(type, i, fileFormat))
   plotSpectra(hFoldedTruthPerGeV, hJetSpectrumMeasuredPerGeV, "", 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, h1LegendLabel, h2LegendLabel)
-
-########################################################################################################
-# Refolding test    ############################################################################
-########################################################################################################
-def performRefoldingTest(response1, response2, hJetSpectrumMeasuredPerBin, hJetSpectrumMeasuredPerGeV, i, regularizationParamName, outputDir, fileFormat):
-  
-  # unfold measured spectrum with response1, then apply response2 to unfolded result.
-  unfold1 = RooUnfoldBayes(response1, hJetSpectrumMeasuredPerBin, i)
-  hJetSpectrumUnfolded1PerGeV = unfold1.Hreco() # Produces the truth distribution, with errors, PerBin (will scale by bin width below)
-  hFoldedPbPbTruth1PerGeV = response2.ApplyToTruth(hJetSpectrumUnfolded1PerGeV) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment, despite its name)
-  
-  # Then compare the refolded result to the measured spectrum
-  hFoldedPbPbTruth1PerGeV.Scale(1., "width") # Divide by bin width to create per GeV spectrum
-  xRangeMin = 10
-  xRangeMax = 140
-  yAxisTitle = "#frac{d#sigma}{dp_{T}} [mb (GeV/c)^{-1}]"
-  h1LegendLabel = "Unfolded+refolded p-p, {} = {}".format(regularizationParamName,i)
-  h2LegendLabel = "Measured p-p"
-  legendTitle = ""
-
-  ratioYAxisTitle = "Refolded / Measured"
-  outputDirRefoldingTest = outputDir + "RefoldingTest/"
-  if not os.path.exists(outputDirRefoldingTest):
-    os.makedirs(outputDirRefoldingTest)
-  outputFilename = os.path.join(outputDirRefoldingTest, "hJetSpectraRefoldingTest_{}{}".format( i, fileFormat))
-  plotSpectra(hFoldedPbPbTruth1PerGeV, hJetSpectrumMeasuredPerGeV, "", 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, h1LegendLabel, h2LegendLabel,"",2.2)
 
 ########################################################################################################
 # Closure test    ############################################################################
@@ -252,6 +215,28 @@ def performUnfoldingTest(response, hJetSpectrumMCDetPerBin, hJetSpectrumTruePerB
     os.makedirs(outputDirClosureTest)
   outputFilename = os.path.join(outputDirClosureTest, "hJetSpectraUnfoldingTest_{}{}".format( i, fileFormat))
   plotSpectra(hJetSpectrumUnfolded2PerGeV, hJetSpectrumTruePerGeV, "", 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, h1LegendLabel, h2LegendLabel)
+
+#################################################################################################
+# Plot various slices of the response matrix (from the THn)
+#################################################################################################
+def plotRegParamSystematic():
+  
+  #Plot the spectra comparing only k=+1 and k-1 to the main result
+  xRangeMin = min_pt_reported
+  xRangeMax = max_pt_reported
+  yAxisTitle = "#frac{d#sigma}{dp_{T}} [mb (GeV/c)^{-1}]"
+  ratioYAxisTitle = "Ratio to k={}".format(reg_param)
+  outputFilename = os.path.join(output_dir, "hJetSpectraUnfoldedRatio" + file_format)
+  legendTitle = "{} Unfolding".format(type)
+  hLegendLabel = "k = {}".format(reg_param-1)
+  h2LegendLabel = "k = {}".format(reg_param)
+  h3LegendLabel = "k = {}".format(reg_param+1)
+  if hLowerkResult and hMainResult and hHigherkResult:
+    # To get sensible error bars, assume main result has no errors
+    for bin in range(1, hMainResult.GetNbinsX() + 1):
+      hMainResult.SetBinError(bin, 0)
+    plotSpectra(hLowerkResult, hMainResult, hHigherkResult, 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, hLegendLabel, h2LegendLabel, h3LegendLabel)
+
 
 ##################################################################################################
 # Set prior in repsonse matrix
@@ -315,46 +300,6 @@ def setPrior(hResponseMatrix, hJetSpectrumTrueUncutPerBin, outputDir, fileFormat
   hKinematicEfficiencyAfter.SetMarkerStyle(21)
   outputFilename = os.path.join(priorFolder, "hKinematicEfficiencyAfter{}".format(fileFormat))
   plotHist(hKinematicEfficiencyAfter, outputFilename, "P E")
-
-###################################################################################################
-# Plot kinematic efficiency (i.e. (pT-truth projection of response matrix with measured pT-det range
-# selected) / (pT-truth projection of response matrix with full pT-det range selected)
-###################################################################################################
-def plotKinematicEfficiency(fResponse, hname_response, min_pt_det, max_pt_det, min_pt_gen, max_pt_gen, min_pt_reported, max_pt_reported, output_dir, file_format):
-  
-  # Get fine-binned response matrix (Measured, True), with pT-det range cut to desired range, and project truth distribution
-  hResponseMatrixCut = getResponseMatrix(fResponse, hname_response, min_pt_det, max_pt_det, 0, max_pt_gen, 0, 0, 0, 0, "Cut", output_dir)
-  hJetSpectrumTrueCutPerBin = hResponseMatrixCut.ProjectionY()
-  hJetSpectrumTrueCutPerBin.SetName("hJetSpectrumTrueCutPerBin")
-  rebinVal = 5
-  hJetSpectrumTrueCutPerBin.Rebin(5)
-  hJetSpectrumTrueCutPerBin.Scale(1., "width")
-  outputFilename = os.path.join(output_dir, "hJetSpectrumTrueCutPerBin.pdf")
-  plotHist(hJetSpectrumTrueCutPerBin, outputFilename, "hist E", True)
-  
-  # Get fine-binned response matrix (Measured, True), with full pT-det range, and project truth distribution
-  fMinPt = 0 # Min value of pTdet in response matrix
-  hResponseMatrixUncut = getResponseMatrix(fResponse, hname_response, fMinPt, max_pt_gen, 0, max_pt_gen, 0, 0, 0, 0, "Uncut", output_dir)
-  hJetSpectrumTrueUncutPerBin = hResponseMatrixUncut.ProjectionY()
-  hJetSpectrumTrueUncutPerBin.SetName("hJetSpectrumTrueUncutPerBin_KinEff")
-  hJetSpectrumTrueUncutPerBin.Rebin(5)
-  hJetSpectrumTrueUncutPerBin.Scale(1., "width")
-  outputFilename = os.path.join(output_dir, "hJetSpectrumTrueUncutPerBin.pdf")
-  plotHist(hJetSpectrumTrueUncutPerBin, outputFilename, "hist E", True)
-  
-  # Plot the ratio of the spectra
-  hKinematicEfficiency = hJetSpectrumTrueCutPerBin.Clone()
-  hKinematicEfficiency.SetName("hKinematicEfficiency")
-  hKinematicEfficiency.Divide(hJetSpectrumTrueCutPerBin, hJetSpectrumTrueUncutPerBin, 1., 1., "B")
-  
-  hKinematicEfficiency.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
-  hKinematicEfficiency.GetYaxis().SetTitle("Kinematic Efficiency")
-  hKinematicEfficiency.SetMarkerStyle(21)
-  hKinematicEfficiency.SetMarkerColor(2)
-  
-  text = "p_{T}^{det} #in [%d, %d] GeV" % (min_pt_det, max_pt_det)
-  outputFilename = os.path.join(output_dir, "hKinematicEfficiency_{}_{}{}".format(min_pt_det, max_pt_det, file_format))
-  plotHist(hKinematicEfficiency, outputFilename, "P E", False, False, text)
 
 ########################################################################################################
 # Plot spectra and ratio of h (and h3, if supplied) to h2    ###########################################
@@ -596,69 +541,6 @@ def plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName,
 #################################################################################################
 # Plot various slices of the response matrix (from the THn)
 #################################################################################################
-def plot_RM_slices(fResponse, jetR, beta, beta_dict, output_dir, file_format):
-  
-  # (pt-det, pt-true, theta_g-det, theta_g-true)
-  name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
-  hResponse = fResponse.Get(name)
-  
-  # Fix pt-true, and plot the 2D theta_g response
-  binning_dict = beta_dict[beta]
-  pt_bins_truth = binning_dict['pt_bins_truth']
-  n_pt_bins_truth = len(pt_bins_truth) - 1
-  
-  for bin in range(1, n_pt_bins_truth-1):
-    min_pt_truth = pt_bins_truth[bin]
-    max_pt_truth = pt_bins_truth[bin+1]
-    
-    plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format)
-
-#################################################################################################
-# Plot 2D theta_g response for a fixed range of pt-truth
-#################################################################################################
-def plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format):
-  
-  hResponse4D = hResponse.Clone()
-  hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
-  
-  hResponse4D.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
-  hResponse_ThetaG = hResponse4D.Projection(3,2)
-  hResponse_ThetaG.SetName('hResponse_ThetaG_R{}_B{}_{}_{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
-  
-  hResponse_ThetaG_Normalized = normalizeResponseMatrix(hResponse_ThetaG)
-  
-  text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)
-  
-  outputFilename = os.path.join(output_dir, '{}{}'.format(hResponse_ThetaG.GetName(), file_format))
-  plotHist(hResponse_ThetaG_Normalized, outputFilename, 'colz', False, True, text)
-
-################################################################################################
-# Normalize response matrix
-# Normalize the truth projection to 1
-################################################################################################
-def normalizeResponseMatrix(hResponseMatrix):
-  
-  # Make projection onto true axis (y-axis), and scale appropriately
-  hTruthProjectionBefore = hResponseMatrix.ProjectionY('{}_py'.format(hResponseMatrix.GetName()),1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
-  hTruthProjectionBefore.SetName("hTruthProjectionBefore")
-  
-  # Loop through truth-level bins, and apply normalization factor to all bins.
-  nBinsY = hResponseMatrix.GetNbinsY() # truth
-  nBinsX = hResponseMatrix.GetNbinsX() # det
-  for truthBin in range(1,nBinsY+1):
-    normalizationFactor = hTruthProjectionBefore.GetBinContent(truthBin)
-    if normalizationFactor > 0:
-      truthBinCenter = hTruthProjectionBefore.GetXaxis().GetBinCenter(truthBin)
-      
-      for detBin in range(1,nBinsX+1):
-        binContent = hResponseMatrix.GetBinContent(detBin, truthBin)
-        hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
-
-  return hResponseMatrix
-
-#################################################################################################
-# Plot various slices of the response matrix (from the THn)
-#################################################################################################
 def plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format):
   
   binning_dict = beta_dict[beta]
@@ -749,6 +631,197 @@ def plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regu
   outputFilename = os.path.join(output_dir, 'hUnfoldedPt_R{}_B{}{}'.format(jetR, beta, file_format))
   c.SaveAs(outputFilename)
   c.Close()
+
+###################################################################################################
+# Plot kinematic efficiency
+# The kinematic efficiency is the ratio:
+#   Numerator: 2D truth-level projection [pt-true, rg-true] using no cut on det-level
+#   Denominator: 2D truth-level projection [pt-true, rg-true] using [pt-det, rg-det] cut on det-level
+###################################################################################################
+def plot_kinematic_efficiency(fResponse, jetR, beta, beta_dict, output_dir, file_format):
+  
+  # (pt-det, pt-true, theta_g-det, theta_g-true)
+  name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
+  hResponse = fResponse.Get(name).Clone()
+  hResponse.SetName('hResponse_KinEff_JetPt_ThetaG_R{}_B{}'.format(jetR, beta))
+  
+  # Denominator -- by default, under/over-flow bins are included in projection
+  hDenominator = hResponse.Projection(3, 1)
+  hDenominator.SetName('{}_Denominator'.format(hDenominator.GetName()))
+  
+  # Numerator -- cut on det-level input binning
+  binning_dict = beta_dict[beta]
+  pt_bins_det = (binning_dict['pt_bins_det'])
+  rg_bins_det = (binning_dict['rg_bins_det'])
+  min_pt_det = pt_bins_det[0]
+  max_pt_det = pt_bins_det[-1]
+  min_rg_det = rg_bins_det[0]
+  max_rg_det = rg_bins_det[-1]
+  print('pt: {}-{}'.format(min_pt_det, max_pt_det))
+  print('rg: {}-{}'.format(min_rg_det, max_rg_det))
+  hResponse.GetAxis(0).SetRangeUser(min_pt_det, max_pt_det)
+  hResponse.GetAxis(2).SetRangeUser(min_rg_det, max_rg_det)
+  hNumerator = hResponse.Projection(3, 1)
+  hNumerator.SetName('{}_Numerator'.format(hNumerator.GetName()))
+  
+  hKinematicEfficiency = hNumerator.Clone()
+  hKinematicEfficiency.SetName('hKinematicEfficiency_R{}_B{}'.format(jetR, beta))
+  hKinematicEfficiency.Divide(hDenominator)
+  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency2D{}'.format(file_format))
+  plotHist(hKinematicEfficiency, outputFilename, "colz")
+  
+  plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, beta, beta_dict, output_dir, file_format)
+
+#################################################################################################
+# Unfold jet spectrum
+#################################################################################################
+def plot_kinematic_efficiency_projections(hKinematicEfficiency2D, jetR, beta, beta_dict, output_dir, file_format):
+  
+  binning_dict = beta_dict[beta]
+  pt_bins_truth = (binning_dict['pt_bins_truth'])
+  rg_bins_truth = (binning_dict['rg_bins_truth'])
+  n_pt_bins_truth = len(pt_bins_truth) - 1
+  n_rg_bins_truth = len(rg_bins_truth) - 1
+  truth_pt_bin_array = array('d',pt_bins_truth)
+  truth_rg_bin_array = array('d',rg_bins_truth)
+  
+  setOptions()
+  ROOT.gROOT.ForceStyle()
+  
+  name = 'cKinEff_R{}_B{}'.format(jetR, beta)
+  c = ROOT.TCanvas(name, name, 600, 450)
+  c.Draw()
+  
+  c.cd()
+  myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+  myPad.SetLeftMargin(0.2)
+  myPad.SetTopMargin(0.07)
+  myPad.SetRightMargin(0.04)
+  myPad.SetBottomMargin(0.13)
+  myPad.Draw()
+  myPad.cd()
+  
+  myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_rg_bins_truth, truth_rg_bin_array)
+  myBlankHisto.SetNdivisions(505)
+  myBlankHisto.SetXTitle('#theta_{g}')
+  myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+  myBlankHisto.SetYTitle('#varepsilon_{kin}')
+  myBlankHisto.SetMaximum(2)
+  myBlankHisto.SetMinimum(0.)
+  myBlankHisto.Draw("E")
+  
+  leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
+  setupLegend(leg,0.04)
+  
+  for bin in range(1, n_pt_bins_truth-1):
+    min_pt_truth = pt_bins_truth[bin]
+    max_pt_truth = pt_bins_truth[bin+1]
+    
+    hKinematicEfficiency2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    h = hKinematicEfficiency2D.ProjectionY()
+    h.SetName('hKinematicEfficiency_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+    
+    if bin == 1:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(20)
+    elif bin == 2:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(21)
+    elif bin == 3:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(22)
+    elif bin == 4:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(23)
+    elif bin == 5:
+      h.SetMarkerSize(2)
+      h.SetMarkerStyle(33)
+    else:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(19)
+    h.SetMarkerColor(600-6+bin)
+    h.SetLineStyle(1)
+    h.SetLineWidth(2)
+    h.SetLineColor(600-6+bin)
+    
+    h.DrawCopy('P X0 same')
+    
+    label = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    leg.AddEntry(h, label, 'Pe')
+  
+  leg.Draw()
+
+  text_latex = ROOT.TLatex()
+  text_latex.SetNDC()
+  text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
+  text_latex.DrawLatex(0.3, 0.85, text)
+
+  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency_R{}_B{}{}'.format(jetR, beta, file_format))
+  c.SaveAs(outputFilename)
+  c.Close()
+
+#################################################################################################
+# Plot various slices of the response matrix (from the THn)
+#################################################################################################
+def plot_RM_slices(fResponse, jetR, beta, beta_dict, output_dir, file_format):
+  
+  # (pt-det, pt-true, theta_g-det, theta_g-true)
+  name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
+  hResponse = fResponse.Get(name)
+  
+  # Fix pt-true, and plot the 2D theta_g response
+  binning_dict = beta_dict[beta]
+  pt_bins_truth = binning_dict['pt_bins_truth']
+  n_pt_bins_truth = len(pt_bins_truth) - 1
+  
+  for bin in range(1, n_pt_bins_truth-1):
+    min_pt_truth = pt_bins_truth[bin]
+    max_pt_truth = pt_bins_truth[bin+1]
+    
+    plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format)
+
+#################################################################################################
+# Plot 2D theta_g response for a fixed range of pt-truth
+#################################################################################################
+def plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format):
+  
+  hResponse4D = hResponse.Clone()
+  hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
+  
+  hResponse4D.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+  hResponse_ThetaG = hResponse4D.Projection(3,2)
+  hResponse_ThetaG.SetName('hResponse_ThetaG_R{}_B{}_{}_{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+  
+  hResponse_ThetaG_Normalized = normalizeResponseMatrix(hResponse_ThetaG)
+  
+  text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)
+  
+  outputFilename = os.path.join(output_dir, '{}{}'.format(hResponse_ThetaG.GetName(), file_format))
+  plotHist(hResponse_ThetaG_Normalized, outputFilename, 'colz', False, True, text)
+
+################################################################################################
+# Normalize response matrix
+# Normalize the truth projection to 1
+################################################################################################
+def normalizeResponseMatrix(hResponseMatrix):
+  
+  # Make projection onto true axis (y-axis), and scale appropriately
+  hTruthProjectionBefore = hResponseMatrix.ProjectionY('{}_py'.format(hResponseMatrix.GetName()),1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
+  hTruthProjectionBefore.SetName("hTruthProjectionBefore")
+  
+  # Loop through truth-level bins, and apply normalization factor to all bins.
+  nBinsY = hResponseMatrix.GetNbinsY() # truth
+  nBinsX = hResponseMatrix.GetNbinsX() # det
+  for truthBin in range(1,nBinsY+1):
+    normalizationFactor = hTruthProjectionBefore.GetBinContent(truthBin)
+    if normalizationFactor > 0:
+      truthBinCenter = hTruthProjectionBefore.GetXaxis().GetBinCenter(truthBin)
+      
+      for detBin in range(1,nBinsX+1):
+        binContent = hResponseMatrix.GetBinContent(detBin, truthBin)
+        hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
+
+  return hResponseMatrix
 
 ###################################################################################################
 # Plot basic histogram
