@@ -105,11 +105,11 @@ def main():
 	# set up our jet definition and a jet selector
 	jet_R0 = 0.4
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-	jet_selector = fj.SelectorPtMin(100.0) & fj.SelectorPtMax(110.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
+	jet_selector = fj.SelectorPtMin(80.0) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
 	jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
 	print(jet_def)
 
-	mycfg = ['PhaseSpace:pThatMin = 100', 'PhaseSpace:pThatMax = 110']
+	mycfg = ['PhaseSpace:pThatMin = 80', 'PhaseSpace:pThatMax = -1']
 	if args.ignore_mycfg:
 		mycfg = []
 	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
