@@ -159,253 +159,6 @@ def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_di
 #################################################################################################
 # Plot various slices of the response matrix (from the THn)
 #################################################################################################
-def plot_unfolded_rg(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format):
-
-  binning_dict = beta_dict[beta]
-  pt_bins_truth = (binning_dict['pt_bins_truth'])
-  rg_bins_truth = (binning_dict['rg_bins_truth'])
-  n_pt_bins_truth = len(pt_bins_truth) - 1
-  n_rg_bins_truth = len(rg_bins_truth) - 1
-  truth_pt_bin_array = array('d',pt_bins_truth)
-  truth_rg_bin_array = array('d',rg_bins_truth)
-  
-  for bin in range(1, n_pt_bins_truth-1):
-    min_pt_truth = pt_bins_truth[bin]
-    max_pt_truth = pt_bins_truth[bin+1]
-    
-    plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName, min_pt_truth, max_pt_truth, n_rg_bins_truth, truth_rg_bin_array, output_dir, file_format)
-
-#################################################################################################
-# Plot various slices of the response matrix (from the THn)
-#################################################################################################
-def plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName, min_pt_truth, max_pt_truth, n_rg_bins_truth, truth_rg_bin_array, output_dir, file_format):
-
-  setOptions()
-  ROOT.gROOT.ForceStyle()
-  
-  name = 'cResult_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
-  c = ROOT.TCanvas(name, name, 600, 450)
-  c.Draw()
-  
-  c.cd()
-  myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-  myPad.SetLeftMargin(0.2)
-  myPad.SetTopMargin(0.07)
-  myPad.SetRightMargin(0.04)
-  myPad.SetBottomMargin(0.13)
-  myPad.Draw()
-  myPad.cd()
-  
-  myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_rg_bins_truth, truth_rg_bin_array)
-  myBlankHisto.SetNdivisions(505)
-  myBlankHisto.SetXTitle('#theta_{g}')
-  myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-  myBlankHisto.SetYTitle('#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}')
-  myBlankHisto.SetMaximum(3)
-  myBlankHisto.SetMinimum(0.)
-  myBlankHisto.Draw("E")
-  
-  leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
-  setupLegend(leg,0.04)
-
-  for i in range(1, reg_param_final + 3):
-
-    h2D = unfolded_dict[i]
-    h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    #h = h2D.ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) # exclude under- and over-flow bins
-    h = h2D.ProjectionY()
-    
-    # Normalize by integral, i.e. N_jets,inclusive in this pt-bin (cross-check this)
-    integral = h.Integral()
-    h.Scale(1./integral, 'width')
-    
-    if i == 1:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(20)
-    elif i == 2:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(21)
-    elif i == 3:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(22)
-    elif i == 4:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(23)
-    elif i == 5:
-      h.SetMarkerSize(2)
-      h.SetMarkerStyle(33)
-    elif i == 6:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(34)
-    elif i == 7:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(35)
-    elif i == 8:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(36)
-    else:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(19)
-    h.SetMarkerColor(600-6+i)
-    h.SetLineStyle(1)
-    h.SetLineWidth(2)
-    h.SetLineColor(600-6+i)
-
-    h.DrawCopy('PE X0 same')
-      
-    label = '{} = {}'.format(regularizationParamName, i)
-    leg.AddEntry(h, label, 'Pe')
-
-  leg.Draw()
-
-  text_latex = ROOT.TLatex()
-  text_latex.SetNDC()
-  text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
-  text_latex.DrawLatex(0.45, 0.85, text)
-  
-  text_latex = ROOT.TLatex()
-  text_latex.SetNDC()
-  text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
-  text_latex.DrawLatex(0.45, 0.75, text)
-      
-  outputFilename = os.path.join(output_dir, 'hUnfolded_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, file_format))
-  c.SaveAs(outputFilename)
-  c.Close()
-
-#################################################################################################
-# Plot various slices of the response matrix (from the THn)
-#################################################################################################
-def plot_RM_slices(fResponse, jetR, beta, beta_dict, output_dir, file_format):
-  
-  # (pt-det, pt-true, theta_g-det, theta_g-true)
-  name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
-  hResponse = fResponse.Get(name)
-  
-  # Fix pt-true, and plot the 2D theta_g response
-  binning_dict = beta_dict[beta]
-  pt_bins_truth = binning_dict['pt_bins_truth']
-  n_pt_bins_truth = len(pt_bins_truth) - 1
-  
-  for bin in range(1, n_pt_bins_truth-1):
-    min_pt_truth = pt_bins_truth[bin]
-    max_pt_truth = pt_bins_truth[bin+1]
-    
-    plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format)
-
-#################################################################################################
-# Plot 2D theta_g response for a fixed range of pt-truth
-#################################################################################################
-def plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format):
-  
-  hResponse4D = hResponse.Clone()
-  hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
-  
-  hResponse4D.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
-  hResponse_ThetaG = hResponse4D.Projection(3,2)
-  hResponse_ThetaG.SetName('hResponse_ThetaG_R{}_B{}_{}_{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
-  
-  text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)
-  
-  outputFilename = os.path.join(output_dir, '{}{}'.format(hResponse_ThetaG.GetName(), file_format))
-  plotHist(hResponse_ThetaG, outputFilename, 'colz', False, True, text)
-
-#################################################################################################
-# Plot various slices of the response matrix (from the THn)
-#################################################################################################
-def plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format):
-  
-  binning_dict = beta_dict[beta]
-  pt_bins_truth = (binning_dict['pt_bins_truth'])
-  n_pt_bins_truth = len(pt_bins_truth) - 1
-  truth_pt_bin_array = array('d',pt_bins_truth)
-  
-  setOptions()
-  ROOT.gROOT.ForceStyle()
-  
-  name = 'cResultPt_R{}_B{}'.format(jetR, beta)
-  c = ROOT.TCanvas(name, name, 600, 450)
-  c.Draw()
-  
-  c.cd()
-  myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-  myPad.SetLeftMargin(0.2)
-  myPad.SetTopMargin(0.07)
-  myPad.SetRightMargin(0.04)
-  myPad.SetBottomMargin(0.13)
-  myPad.Draw()
-  myPad.cd()
-  
-  myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_pt_bins_truth, truth_pt_bin_array)
-  myBlankHisto.SetNdivisions(505)
-  myBlankHisto.SetXTitle('#it{p}_{T, ch jet}')
-  myBlankHisto.GetYaxis().SetTitleOffset(2.2)
-  myBlankHisto.SetYTitle('#frac{dN}{d#it{p}_{T, ch jet}}')
-  myBlankHisto.SetMaximum(5000)
-  myBlankHisto.SetMinimum(0.)
-  myBlankHisto.Draw("E")
-  
-  leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
-  setupLegend(leg,0.04)
-  
-  for i in range(1, reg_param_final + 3):
-    
-    h2D = unfolded_dict[i]
-    h2D.GetXaxis().SetRangeUser(5., 120.)
-    h = h2D.ProjectionX()
-    
-    h.Scale(1., 'width')
-    
-    if i == 1:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(20)
-    elif i == 2:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(21)
-    elif i == 3:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(22)
-    elif i == 4:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(23)
-    elif i == 5:
-      h.SetMarkerSize(2)
-      h.SetMarkerStyle(33)
-    elif i == 6:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(34)
-    elif i == 7:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(35)
-    elif i == 8:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(36)
-    else:
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(19)
-    h.SetMarkerColor(600-6+i)
-    h.SetLineStyle(1)
-    h.SetLineWidth(2)
-    h.SetLineColor(600-6+i)
-    
-    h.DrawCopy('PE X0 same')
-    
-    label = '{} = {}'.format(regularizationParamName, i)
-    leg.AddEntry(h, label, 'Pe')
-  
-  leg.Draw()
-
-  text_latex = ROOT.TLatex()
-  text_latex.SetNDC()
-  text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
-  text_latex.DrawLatex(0.45, 0.75, text)
-
-  outputFilename = os.path.join(output_dir, 'hUnfoldedPt_R{}_B{}{}'.format(jetR, beta, file_format))
-  c.SaveAs(outputFilename)
-  c.Close()
-
-#################################################################################################
-# Plot various slices of the response matrix (from the THn)
-#################################################################################################
 def plotRegParamSystematic():
   
   #Plot the spectra comparing only k=+1 and k-1 to the main result
@@ -603,59 +356,6 @@ def plotKinematicEfficiency(fResponse, hname_response, min_pt_det, max_pt_det, m
   outputFilename = os.path.join(output_dir, "hKinematicEfficiency_{}_{}{}".format(min_pt_det, max_pt_det, file_format))
   plotHist(hKinematicEfficiency, outputFilename, "P E", False, False, text)
 
-################################################################################################
-# Normalize response matrix
-# Normalize the pT-truth projection to 1
-################################################################################################
-def normalizeResponseMatrix(hResponseMatrix, minPtDet, maxPtDet, minPtGen, maxPtGen, outputDir, fileFormat):
-  
-  # Plot response matrix before normalization
-  outputFilename = os.path.join(outputDir, "hResponseMatrixBeforeNormalization" + fileFormat)
-  #plotHist(hResponseMatrix, outputFilename, "colz")
-  
-  # Make projection onto pT-true axis (y-axis), and scale appropriately
-  hTruthProjectionBefore = hResponseMatrix.ProjectionY("_py",1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
-  hTruthProjectionBefore.SetName("hTruthProjectionBefore")
-  
-  # Loop through truth-level bins, and apply normalization factor to all bins.
-  nBinsY = hResponseMatrix.GetNbinsY() # pT-gen
-  nBinsX = hResponseMatrix.GetNbinsX() # pT-det
-  for truthBin in range(1,nBinsY+1):
-    normalizationFactor = hTruthProjectionBefore.GetBinContent(truthBin)
-    if normalizationFactor > 0:
-      truthBinCenter = hTruthProjectionBefore.GetXaxis().GetBinCenter(truthBin)
-      
-      for detBin in range(1,nBinsX+1):
-        binContent = hResponseMatrix.GetBinContent(detBin, truthBin)
-        hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
-
-  # Plot response matrix
-  outputFilename = os.path.join(outputDir, "{}_{}_{}{}".format(hResponseMatrix.GetName(), minPtDet, maxPtDet, fileFormat))
-  c = ROOT.TCanvas("c","c: hist",600,450)
-  c.cd()
-  c.cd().SetLeftMargin(0.15)
-
-  hResponseMatrix.Draw("colz")
-  line = ROOT.TLine(minPtDet,0,minPtDet,250)
-  line.SetLineColor(0)
-  line.SetLineStyle(2)
-  line.Draw("same")
-  line2 = ROOT.TLine(maxPtDet,0,maxPtDet,250)
-  line2.SetLineColor(0)
-  line2.SetLineStyle(2)
-  line2.Draw("same")
-  line3 = ROOT.TLine(0,minPtGen,100,minPtGen)
-  line3.SetLineColor(0)
-  line3.SetLineStyle(2)
-  line3.Draw("same")
-  line4 = ROOT.TLine(0,maxPtGen,100,maxPtGen)
-  line4.SetLineColor(0)
-  line4.SetLineStyle(2)
-  line4.Draw("same")
-  
-  c.SaveAs(outputFilename)
-  c.Close()
-
 ########################################################################################################
 # Plot spectra and ratio of h (and h3, if supplied) to h2    ###########################################
 ########################################################################################################
@@ -774,6 +474,279 @@ def plotSpectra(h, h2, h3, nEvents, xRangeMin, xRangeMax, yAxisTitle, ratioYAxis
     leg2.AddEntry(h2, h2LegendLabel, "l")
   leg2.Draw("same")
   
+  c.SaveAs(outputFilename)
+  c.Close()
+
+#################################################################################################
+# Plot various slices of the response matrix (from the THn)
+#################################################################################################
+def plot_unfolded_rg(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format):
+  
+  binning_dict = beta_dict[beta]
+  pt_bins_truth = (binning_dict['pt_bins_truth'])
+  rg_bins_truth = (binning_dict['rg_bins_truth'])
+  n_pt_bins_truth = len(pt_bins_truth) - 1
+  n_rg_bins_truth = len(rg_bins_truth) - 1
+  truth_pt_bin_array = array('d',pt_bins_truth)
+  truth_rg_bin_array = array('d',rg_bins_truth)
+  
+  for bin in range(1, n_pt_bins_truth-1):
+    min_pt_truth = pt_bins_truth[bin]
+    max_pt_truth = pt_bins_truth[bin+1]
+    
+    plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName, min_pt_truth, max_pt_truth, n_rg_bins_truth, truth_rg_bin_array, output_dir, file_format)
+
+#################################################################################################
+# Plot various slices of the response matrix (from the THn)
+#################################################################################################
+def plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName, min_pt_truth, max_pt_truth, n_rg_bins_truth, truth_rg_bin_array, output_dir, file_format):
+  
+  setOptions()
+  ROOT.gROOT.ForceStyle()
+  
+  name = 'cResult_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+  c = ROOT.TCanvas(name, name, 600, 450)
+  c.Draw()
+  
+  c.cd()
+  myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+  myPad.SetLeftMargin(0.2)
+  myPad.SetTopMargin(0.07)
+  myPad.SetRightMargin(0.04)
+  myPad.SetBottomMargin(0.13)
+  myPad.Draw()
+  myPad.cd()
+  
+  myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_rg_bins_truth, truth_rg_bin_array)
+  myBlankHisto.SetNdivisions(505)
+  myBlankHisto.SetXTitle('#theta_{g}')
+  myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+  myBlankHisto.SetYTitle('#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}')
+  myBlankHisto.SetMaximum(3)
+  myBlankHisto.SetMinimum(0.)
+  myBlankHisto.Draw("E")
+  
+  leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
+  setupLegend(leg,0.04)
+  
+  for i in range(1, reg_param_final + 3):
+    
+    h2D = unfolded_dict[i]
+    h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    #h = h2D.ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) # exclude under- and over-flow bins
+    h = h2D.ProjectionY()
+    
+    # Normalize by integral, i.e. N_jets,inclusive in this pt-bin (cross-check this)
+    integral = h.Integral()
+    h.Scale(1./integral, 'width')
+    
+    if i == 1:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(20)
+    elif i == 2:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(21)
+    elif i == 3:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(22)
+    elif i == 4:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(23)
+    elif i == 5:
+      h.SetMarkerSize(2)
+      h.SetMarkerStyle(33)
+    elif i == 6:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(34)
+    elif i == 7:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(35)
+    elif i == 8:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(36)
+    else:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(19)
+    h.SetMarkerColor(600-6+i)
+    h.SetLineStyle(1)
+    h.SetLineWidth(2)
+    h.SetLineColor(600-6+i)
+    
+    h.DrawCopy('PE X0 same')
+    
+    label = '{} = {}'.format(regularizationParamName, i)
+    leg.AddEntry(h, label, 'Pe')
+
+  leg.Draw()
+
+  text_latex = ROOT.TLatex()
+  text_latex.SetNDC()
+  text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
+  text_latex.DrawLatex(0.45, 0.85, text)
+
+  text_latex = ROOT.TLatex()
+  text_latex.SetNDC()
+  text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
+  text_latex.DrawLatex(0.45, 0.75, text)
+  
+  outputFilename = os.path.join(output_dir, 'hUnfolded_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, file_format))
+  c.SaveAs(outputFilename)
+  c.Close()
+
+#################################################################################################
+# Plot various slices of the response matrix (from the THn)
+#################################################################################################
+def plot_RM_slices(fResponse, jetR, beta, beta_dict, output_dir, file_format):
+  
+  # (pt-det, pt-true, theta_g-det, theta_g-true)
+  name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
+  hResponse = fResponse.Get(name)
+  
+  # Fix pt-true, and plot the 2D theta_g response
+  binning_dict = beta_dict[beta]
+  pt_bins_truth = binning_dict['pt_bins_truth']
+  n_pt_bins_truth = len(pt_bins_truth) - 1
+  
+  for bin in range(1, n_pt_bins_truth-1):
+    min_pt_truth = pt_bins_truth[bin]
+    max_pt_truth = pt_bins_truth[bin+1]
+    
+    plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format)
+
+#################################################################################################
+# Plot 2D theta_g response for a fixed range of pt-truth
+#################################################################################################
+def plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format):
+  
+  hResponse4D = hResponse.Clone()
+  hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
+  
+  hResponse4D.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+  hResponse_ThetaG = hResponse4D.Projection(3,2)
+  hResponse_ThetaG.SetName('hResponse_ThetaG_R{}_B{}_{}_{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+  
+  hResponse_ThetaG_Normalized = normalizeResponseMatrix(hResponse_ThetaG)
+  
+  text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)
+  
+  outputFilename = os.path.join(output_dir, '{}{}'.format(hResponse_ThetaG.GetName(), file_format))
+  plotHist(hResponse_ThetaG_Normalized, outputFilename, 'colz', False, True, text)
+
+################################################################################################
+# Normalize response matrix
+# Normalize the truth projection to 1
+################################################################################################
+def normalizeResponseMatrix(hResponseMatrix):
+  
+  # Make projection onto true axis (y-axis), and scale appropriately
+  hTruthProjectionBefore = hResponseMatrix.ProjectionY('{}_py'.format(hResponseMatrix.GetName()),1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
+  hTruthProjectionBefore.SetName("hTruthProjectionBefore")
+  
+  # Loop through truth-level bins, and apply normalization factor to all bins.
+  nBinsY = hResponseMatrix.GetNbinsY() # truth
+  nBinsX = hResponseMatrix.GetNbinsX() # det
+  for truthBin in range(1,nBinsY+1):
+    normalizationFactor = hTruthProjectionBefore.GetBinContent(truthBin)
+    if normalizationFactor > 0:
+      truthBinCenter = hTruthProjectionBefore.GetXaxis().GetBinCenter(truthBin)
+      
+      for detBin in range(1,nBinsX+1):
+        binContent = hResponseMatrix.GetBinContent(detBin, truthBin)
+        hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
+
+  return hResponseMatrix
+
+#################################################################################################
+# Plot various slices of the response matrix (from the THn)
+#################################################################################################
+def plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format):
+  
+  binning_dict = beta_dict[beta]
+  pt_bins_truth = (binning_dict['pt_bins_truth'])
+  n_pt_bins_truth = len(pt_bins_truth) - 1
+  truth_pt_bin_array = array('d',pt_bins_truth)
+  
+  setOptions()
+  ROOT.gROOT.ForceStyle()
+  
+  name = 'cResultPt_R{}_B{}'.format(jetR, beta)
+  c = ROOT.TCanvas(name, name, 600, 450)
+  c.Draw()
+  
+  c.cd()
+  myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+  myPad.SetLeftMargin(0.2)
+  myPad.SetTopMargin(0.07)
+  myPad.SetRightMargin(0.04)
+  myPad.SetBottomMargin(0.13)
+  myPad.Draw()
+  myPad.cd()
+  
+  myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_pt_bins_truth, truth_pt_bin_array)
+  myBlankHisto.SetNdivisions(505)
+  myBlankHisto.SetXTitle('#it{p}_{T, ch jet}')
+  myBlankHisto.GetYaxis().SetTitleOffset(2.2)
+  myBlankHisto.SetYTitle('#frac{dN}{d#it{p}_{T, ch jet}}')
+  myBlankHisto.SetMaximum(5000)
+  myBlankHisto.SetMinimum(0.)
+  myBlankHisto.Draw("E")
+  
+  leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
+  setupLegend(leg,0.04)
+  
+  for i in range(1, reg_param_final + 3):
+    
+    h2D = unfolded_dict[i]
+    h2D.GetXaxis().SetRangeUser(5., 120.)
+    h = h2D.ProjectionX()
+    
+    h.Scale(1., 'width')
+    
+    if i == 1:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(20)
+    elif i == 2:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(21)
+    elif i == 3:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(22)
+    elif i == 4:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(23)
+    elif i == 5:
+      h.SetMarkerSize(2)
+      h.SetMarkerStyle(33)
+    elif i == 6:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(34)
+    elif i == 7:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(35)
+    elif i == 8:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(36)
+    else:
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(19)
+    h.SetMarkerColor(600-6+i)
+    h.SetLineStyle(1)
+    h.SetLineWidth(2)
+    h.SetLineColor(600-6+i)
+    
+    h.DrawCopy('PE X0 same')
+    
+    label = '{} = {}'.format(regularizationParamName, i)
+    leg.AddEntry(h, label, 'Pe')
+  
+  leg.Draw()
+
+  text_latex = ROOT.TLatex()
+  text_latex.SetNDC()
+  text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
+  text_latex.DrawLatex(0.45, 0.75, text)
+
+  outputFilename = os.path.join(output_dir, 'hUnfoldedPt_R{}_B{}{}'.format(jetR, beta, file_format))
   c.SaveAs(outputFilename)
   c.Close()
 
