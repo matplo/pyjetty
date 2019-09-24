@@ -98,7 +98,7 @@
 #title: smart group
 #legend pos=ur title=#Delta R_{max}=2
 #logy 0
-#x #Delta R_{g} or R_{g}
+#x #Delta R_{g}
 #xrange -0.1, 0.5
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrg :hist l: title=vacuum
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_2.0.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
@@ -116,7 +116,7 @@
 #title: smart group
 #legend pos=ur title=#Delta R_{max}=0.8
 #logy 0
-#x #Delta R_{g} or R_{g}
+#x #Delta R_{g}
 #xrange -0.1, 0.5
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrg :hist l: title=vacuum
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.8.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
@@ -134,7 +134,7 @@
 #title: smart group
 #legend pos=ur title=#Delta R_{max}=0.4
 #logy 0
-#x #Delta R_{g} or R_{g}
+#x #Delta R_{g}
 #xrange -0.1, 0.5
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrg :hist l: title=vacuum
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.4.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
@@ -152,7 +152,7 @@
 #title: smart group
 #legend pos=ur title=#Delta R_{max}=0.2
 #logy 0
-#x #Delta R_{g} or R_{g}
+#x #Delta R_{g}
 #xrange -0.1, 0.5
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrg :hist l: title=vacuum
 /Users/ploskon/devel/pyjetty/pyjetty/cstoy/output_alpha_0.0_dRmax_0.2.root 		:hrgcs :p E +m50 : title=bg&CS #alpha=0
