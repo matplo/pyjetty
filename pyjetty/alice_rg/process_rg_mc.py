@@ -58,6 +58,7 @@ def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir
   beta_dict = config['beta']
   beta_list = list(beta_dict.keys())
   jet_matching_distance = config['jet_matching_distance']
+  reject_tracks_fraction = config['reject_tracks_fraction']
   
   # Read pt-hat scale factor, if applicable
   scale_factor = 1.
@@ -84,6 +85,13 @@ def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir
   print('--- {} seconds ---'.format(time.time() - start_time))
   print('Convert ROOT trees to pandas dataframes...')
   track_df_det = analysis_utils.load_dataframe(inputFile, 'tree_Particle')
+
+  if reject_tracks_fraction > 1e-3:
+    n_remove = int(reject_tracks_fraction * len(track_df_det.index))
+    print('Removing {} of {} det-level tracks'.format(n_remove, len(track_df_det.index)))
+    np.random.seed()
+    indices_remove = np.random.choice(track_df_det.index, n_remove, replace=False)
+    track_df_det.drop(indices_remove, inplace=True)
 
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
