@@ -82,6 +82,10 @@ def unfoldSingleOutputList(fData, fResponse, unfolded_dict, jetR, beta, beta_dic
   plot_kinematic_efficiency(fResponse, jetR, beta, beta_dict, output_dir, file_format)
   # Can either pass this to the RooUnfoldResponse object, or else can apply it afterward
   # (Need to think...)
+  
+  # Get MC-det and MC-truth 2D projections for unfolding closure test
+  hMC_Det = get_MCdet2D(fResponse, jetR, beta)
+  hMC_Truth = get_MCtruth2D(fResponse, jetR, beta)
 
   # Set prior
   # Get the (matched) truth-level jet spectrum from the THn (for prior)
@@ -94,14 +98,14 @@ def unfoldSingleOutputList(fData, fResponse, unfolded_dict, jetR, beta, beta_dic
   # (Need to think how to modify the prior...)
 
   # Unfold spectrum
-  if hData_PerBin and response:
+  if hData_PerBin and response and hMC_Det and hMC_Truth:
     
-    unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_dict, reg_param_final, min_pt_reported, max_pt_reported, output_dir, file_format)
+    unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_dict, reg_param_final, min_pt_reported, max_pt_reported, hMC_Det, hMC_Truth, output_dir, file_format)
 
 #################################################################################################
 # Unfold jet spectrum
 #################################################################################################
-def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_dict, reg_param_final, min_pt_reported, max_pt_reported, output_dir, file_format):
+def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_dict, reg_param_final, min_pt_reported, max_pt_reported, hMC_Det, hMC_Truth, output_dir, file_format):
   
   regularizationParamName = "n_iter"
   
@@ -115,9 +119,6 @@ def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_di
   leg.SetBorderSize(0)
   leg.SetFillStyle(0)
   leg.SetTextSize(0.04)
-
-  hJetSpectrumUnfoldedPerBin = None
-  hJetSpectrumUnfoldedPerGeV = None
   
   # Loop over values of regularization parameter
   for i in range(1, reg_param_final + 3):
@@ -130,7 +131,7 @@ def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_di
     print('Unfolding with {} = {}'.format(regularizationParamName, i))
     errorType = ROOT.RooUnfold.kCovToy
     hUnfolded = unfoldBayes.Hreco(errorType) # Produces the truth distribution, with errors, PerBin (will scale by bin width below, after refolding checks)
-    hUnfolded.SetName('hJetSpectrumUnfoldedPerGeV_R{}_B{}_{}'.format(jetR, beta, i))
+    hUnfolded.SetName('hUnfolded_R{}_B{}_{}'.format(jetR, beta, i))
     
     # Plot Pearson correlation coeffs for each k, to get a measure of the correlation between the bins
     covarianceMatrix = unfoldBayes.Ereco(errorType) # Get the covariance matrix
@@ -142,43 +143,20 @@ def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_di
 
   plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format)
 
+  #--------------------------------------------------------------
+  
+  # Smear MC truth spectrum according to the error bars on the measured spectrum, for closure test
+  measuredErrors = getMeasuredErrors(hData_PerBin)
+  smearSpectrum(hMC_Det, measuredErrors)
+
   # Loop over values of regularization parameter to do unfolding checks
   for i in range(1, reg_param_final + 3):
     
     # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
     plot_refolding_test(response, unfolded_dict[i], hData_PerBin, i, regularizationParamName, jetR, beta, beta_dict, output_dir, file_format)
 
-  # Unfolding test -- unfold the smeared det-level result with response, and compare to truth-level MC.
-  #performUnfoldingTest(responseNoKinEff, hJetSpectrumMCDetPerBin, hJetSpectrumTruePerBin, i, regularizationParamName, output_dir, file_format)
-
-########################################################################################################
-# Closure test    ############################################################################
-########################################################################################################
-def performUnfoldingTest(response, hJetSpectrumMCDetPerBin, hJetSpectrumTruePerBin, i, regularizationParamName, outputDir, fileFormat):
-  
-  # Generate the PerGeV MC truth spectrum, for plotting below
-  hJetSpectrumTruePerGeV = hJetSpectrumTruePerBin.Clone()
-  hJetSpectrumTruePerGeV.SetName("hJetSpectrumTruePerGeVcopy")
-  hJetSpectrumTruePerGeV.Scale(1., "width")
-  
-  # Unfold smeared det-level spectrum with RM
-  unfold2 = RooUnfoldBayes(response, hJetSpectrumMCDetPerBin, i)
-  hJetSpectrumUnfolded2PerGeV = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin (will scale by bin width below)
-  
-  # Then compare to truth-level MC
-  hJetSpectrumUnfolded2PerGeV.Scale(1., "width") # Divide by bin width to create per GeV spectrum
-  xRangeMin = 20
-  xRangeMax = 140
-  yAxisTitle = "#frac{1}{N_{evts}}#frac{dN}{dp_{T}} [GeV^{-1}]"
-  legendTitle = ""
-  h1LegendLabel = "Unfolded MC det, {} = {}".format(regularizationParamName,i)
-  h2LegendLabel = "MC Truth"
-  ratioYAxisTitle = "Unfolded MC det / Truth"
-  outputDirClosureTest = outputDir + "UnfoldingTest/"
-  if not os.path.exists(outputDirClosureTest):
-    os.makedirs(outputDirClosureTest)
-  outputFilename = os.path.join(outputDirClosureTest, "hJetSpectraUnfoldingTest_{}{}".format( i, fileFormat))
-  plotSpectra(hJetSpectrumUnfolded2PerGeV, hJetSpectrumTruePerGeV, "", 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, h1LegendLabel, h2LegendLabel)
+    # Unfold the smeared det-level result with response, and compare to truth-level MC.
+    plot_closure_test(response, hMC_Det, hMC_Truth, i, regularizationParamName, jetR, beta, beta_dict, output_dir, file_format)
 
 #################################################################################################
 # Plot various slices of the response matrix (from the THn)
@@ -713,6 +691,124 @@ def plot_refolded_slice(hFoldedTruth, hData_PerBin, i, jetR, beta, regularizatio
   plot_rg_ratio(hFolded_rg, hData_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
 #################################################################################################
+# Closure test
+#################################################################################################
+def plot_closure_test(response, hMC_Det, hMC_Truth, i, regularizationParamName, jetR, beta, beta_dict, output_dir, file_format):
+  
+  output_dir_closure = os.path.join(output_dir, 'ClosureTest')
+  if not os.path.isdir(output_dir_closure):
+    os.makedirs(output_dir_closure)
+
+  # Unfold smeared det-level spectrum with RM
+  unfold2 = ROOT.RooUnfoldBayes(response, hMC_Det, i)
+  hUnfolded2 = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin d
+
+  binning_dict = beta_dict[beta]
+  pt_bins_truth = (binning_dict['pt_bins_truth'])
+  n_pt_bins_truth = len(pt_bins_truth) - 1
+  truth_pt_bin_array = array('d',pt_bins_truth)
+
+  for bin in range(1, n_pt_bins_truth-1):
+    min_pt_truth = pt_bins_truth[bin]
+    max_pt_truth = pt_bins_truth[bin+1]
+    
+    plot_closure_slice(hUnfolded2, hMC_Truth, i, jetR, beta, regularizationParamName, min_pt_truth, max_pt_truth, output_dir_closure, file_format)
+
+#################################################################################################
+# Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+#################################################################################################
+def plot_closure_slice(hUnfolded, hMC_Truth, i, jetR, beta, regularizationParamName, min_pt_truth, max_pt_truth, output_dir, file_format):
+  
+  hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+  hUnfolded_rg = hUnfolded.ProjectionY()
+  hUnfolded_rg.SetName('hUnfolded_rg_R{}_B{}_{}_{}-{}'.format(jetR, beta, i, min_pt_truth, max_pt_truth))
+  
+  hMC_Truth.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+  hMCTruth_rg = hMC_Truth.ProjectionY()
+  hMCTruth_rg.SetName('hMCTruth_rg_R{}_B{}_{}_{}-{}'.format(jetR, beta, i, min_pt_truth, max_pt_truth))
+  
+  yAxisTitle = '#frac{1}{N_{jet,inc}} #frac{dN}{d#theta_{g}}'
+  legendTitle = ''
+  h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(regularizationParamName,i)
+  h2LegendLabel = 'MC-truth'
+  ratioYAxisTitle = 'Unfolded MC det / Truth'
+  outputFilename = os.path.join(output_dir, 'hClosure_R{}_B{}_{}-{}_{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, i, file_format))
+  plot_rg_ratio(hUnfolded_rg, hMCTruth_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+
+#################################################################################################
+# Get errors from measured spectrum, stored as dictionary {bin:error}
+#################################################################################################
+def getMeasuredErrors(h):
+  
+  dictErrors = {}
+  for binx in range(0, h.GetNbinsX()+1):
+    for biny in range(0, h.GetNbinsY()+1):
+      global_bin = h.GetBin(binx, biny)
+      content = h.GetBinContent(global_bin)
+      error = h.GetBinError(global_bin)
+      if content!=0:
+        dictErrors[global_bin] = error/content
+      #print('Bin ({},{}) with content {} has error {}'.format(binx, biny, content, error/content))
+      else:
+        print('    Error: check your historgram ranges - something might be wrong')
+        print('    Bin {}, content {}, error {}'.format(global_bin, content, error))
+        dictErrors[global_bin] = 0
+  return dictErrors
+
+#################################################################################################
+# Smear spectrum according to the error bars on the measured spectrum
+#################################################################################################
+def smearSpectrum(h, measuredErrors):
+  
+  # Zero errors in all bins
+  for binx in range(0, h.GetNbinsX() + 1):
+    for biny in range(0, h.GetNbinsY() + 1):
+      global_bin = h.GetBin(binx, biny)
+      h.SetBinError(global_bin, 0)
+  
+  # Loop through relevant bins and smear content according to errors in measured data, and set new errors
+  r = ROOT.TRandom3(0)
+  for bin, error in measuredErrors.items():
+    content = h.GetBinContent(bin)
+    errorNew = error * content
+    contentNew = content + r.Gaus(0, errorNew)
+    h.SetBinContent(bin, contentNew)
+    h.SetBinError(bin, errorNew)
+    #print('Setting bin {} to have relative error {}'.format(bin, errorNew/contentNew))
+
+#################################################################################################
+# Get MC-det 2D projection
+#################################################################################################
+def get_MCdet2D(fResponse, jetR, beta):
+  
+  # (pt-det, pt-true, theta_g-det, theta_g-true)
+  name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
+  hResponse = fResponse.Get(name)
+  
+  hResponse4D = hResponse.Clone()
+  hResponse4D.SetName('{}_clone'.format(hResponse4D.GetName()))
+  
+  hMC_Det = hResponse4D.Projection(2,0)
+  hMC_Det.SetName('hMC_Det_R{}_B{}'.format(jetR, beta))
+  return hMC_Det
+
+#################################################################################################
+# Get MC-det 2D projection
+#################################################################################################
+def get_MCtruth2D(fResponse, jetR, beta):
+  
+  # (pt-det, pt-true, theta_g-det, theta_g-true)
+  name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
+  hResponse = fResponse.Get(name)
+  
+  hResponse4D = hResponse.Clone()
+  hResponse4D.SetName('{}_clone'.format(hResponse4D.GetName()))
+  
+  hMC_Truth = hResponse4D.Projection(3,1)
+  hMC_Truth.SetName('hMC_Truth_R{}_B{}'.format(jetR, beta))
+  return hMC_Truth
+
+#################################################################################################
 # Plot spectra and ratio of h (and h3, if supplied) to h2
 #################################################################################################
 def plot_rg_ratio(h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, beta, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
@@ -820,7 +916,7 @@ def plot_rg_ratio(h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det
 
   text_latex = ROOT.TLatex()
   text_latex.SetNDC()
-  text = str(min_pt_det) + ' < #it{p}_{T,det ch jet} < ' + str(max_pt_det)
+  text = str(min_pt_det) + ' < #it{p}_{T,ch jet} < ' + str(max_pt_det)
   text_latex.DrawLatex(0.25, 0.85, text)
 
   text_latex = ROOT.TLatex()
