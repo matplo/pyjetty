@@ -10,14 +10,13 @@ import ROOT
 import yaml
 
 # Load the RooUnfold library
-#ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/osx_x86-64/RooUnfold/latest/lib/libRooUnfold.dylib")
 ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnfold.so")
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
 # Suppress a lot of standard output
-#ROOT.gErrorIgnoreLevel = ROOT.kWarning
+ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 # Set plotting options
 ROOT.gStyle.SetOptStat(0)
@@ -61,6 +60,8 @@ def roounfold_rg(input_file_data, input_file_response, config_file, output_dir, 
 ###################################################################################################
 def unfoldSingleOutputList(fData, fResponse, unfolded_dict, jetR, beta, beta_dict, reg_param_final, min_pt_reported, max_pt_reported, output_dir, file_format):
 
+  print('jetR = {},  beta = {}'.format(jetR, beta))
+  
   # Get data jet spectrum
   name = 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)
   hData_PerBin = fData.Get(name)
@@ -105,7 +106,7 @@ def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_di
   regularizationParamName = "n_iter"
   
   # Create canvas to superpose iterations on one plot, to examine convergence
-  c1 = ROOT.TCanvas("c1","c1: histos",600,450)
+  c1 = ROOT.TCanvas('c1_{}_{}'.format(jetR, beta),'c1_{}_{}: histos'.format(jetR, beta),600,450)
   c1.cd()
   c1.SetLogy()
   ROOT.gPad.SetLeftMargin(0.15)
@@ -141,51 +142,14 @@ def unfoldJetSpectrum(hData_PerBin, response, unfolded_dict, jetR, beta, beta_di
 
   plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regularizationParamName, min_pt_reported, max_pt_reported, output_dir, file_format)
 
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
-  k = 2
-  #plot_refolding_test(response, unfolded_dict[k], hData_PerBin, k, regularizationParamName, beta_dict, output_dir, file_format)
+  # Loop over values of regularization parameter to do unfolding checks
+  for i in range(1, reg_param_final + 3):
+    
+    # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+    plot_refolding_test(response, unfolded_dict[i], hData_PerBin, i, regularizationParamName, jetR, beta, beta_dict, output_dir, file_format)
 
   # Unfolding test -- unfold the smeared det-level result with response, and compare to truth-level MC.
   #performUnfoldingTest(responseNoKinEff, hJetSpectrumMCDetPerBin, hJetSpectrumTruePerBin, i, regularizationParamName, output_dir, file_format)
-
-#################################################################################################
-# Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
-#################################################################################################
-def plot_refolding_test(response, hUnfolded, hData_PerBin, i, regularizationParamName, beta_dict, outputDir, fileFormat):
-  
-  # In principle should use two statistically independent response matrices
-  
-  hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment)
-  
-  binning_dict = beta_dict[beta]
-  pt_bins_truth = (binning_dict['pt_bins_truth'])
-  rg_bins_truth = (binning_dict['rg_bins_truth'])
-  n_pt_bins_truth = len(pt_bins_truth) - 1
-  n_rg_bins_truth = len(rg_bins_truth) - 1
-  truth_pt_bin_array = array('d',pt_bins_truth)
-  truth_rg_bin_array = array('d',rg_bins_truth)
-  
-  for bin in range(1, n_pt_bins_truth-1):
-    min_pt_truth = pt_bins_truth[bin]
-    max_pt_truth = pt_bins_truth[bin+1]
-    
-    plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName, min_pt_truth, max_pt_truth, n_rg_bins_truth, truth_rg_bin_array, output_dir, file_format)
-
-  
-  
-  hFoldedTruth.Scale(1., "width") # Divide by bin width to create per GeV spectrum
-  xRangeMin = 0
-  xRangeMax = 250
-  yAxisTitle = "#frac{d#sigma}{dp_{T}} [mb (GeV/c)^{-1}]"
-  legendTitle = ""
-  h1LegendLabel = "Folded truth, {} = {}".format(regularizationParamName,i)
-  h2LegendLabel = "Measured Pb-Pb"
-  ratioYAxisTitle = "Folded truth / Measured"
-  outputDirFoldedPbPbTruth = outputDir + "FoldedPbPbTruth/"
-  if not os.path.exists(outputDirFoldedPbPbTruth):
-    os.makedirs(outputDirFoldedPbPbTruth)
-  outputFilename = os.path.join(outputDirFoldedPbPbTruth, "hJetSpectraFoldedPbPbTruth{}_{}{}".format(type, i, fileFormat))
-  plotSpectra(hFoldedTruthPerGeV, hJetSpectrumMeasuredPerGeV, "", 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, h1LegendLabel, h2LegendLabel)
 
 ########################################################################################################
 # Closure test    ############################################################################
@@ -236,7 +200,6 @@ def plotRegParamSystematic():
     for bin in range(1, hMainResult.GetNbinsX() + 1):
       hMainResult.SetBinError(bin, 0)
     plotSpectra(hLowerkResult, hMainResult, hHigherkResult, 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, hLegendLabel, h2LegendLabel, h3LegendLabel)
-
 
 ##################################################################################################
 # Set prior in repsonse matrix
@@ -300,127 +263,6 @@ def setPrior(hResponseMatrix, hJetSpectrumTrueUncutPerBin, outputDir, fileFormat
   hKinematicEfficiencyAfter.SetMarkerStyle(21)
   outputFilename = os.path.join(priorFolder, "hKinematicEfficiencyAfter{}".format(fileFormat))
   plotHist(hKinematicEfficiencyAfter, outputFilename, "P E")
-
-########################################################################################################
-# Plot spectra and ratio of h (and h3, if supplied) to h2    ###########################################
-########################################################################################################
-def plotSpectra(h, h2, h3, nEvents, xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
-  
-  c = ROOT.TCanvas("c","c: pT",800,850)
-  c.cd()
-  pad1 = ROOT.TPad("pad1", "pad1", 0, 0.3, 1, 1.0)
-  pad1.SetBottomMargin(0)
-  pad1.SetLeftMargin(0.15)
-  pad1.SetRightMargin(0.05)
-  pad1.SetTopMargin(0.05)
-  pad1.SetLogy()
-  pad1.Draw()
-  pad1.cd()
-  
-  h.SetLineColor(1)
-  h.SetLineWidth(2)
-  h.SetLineStyle(1)
-  
-  h.Scale(1./nEvents, scalingOptions)
-  h.GetYaxis().SetTitle(yAxisTitle)
-  h.GetYaxis().SetTitleSize(0.06)
-  h.GetXaxis().SetRangeUser(xRangeMin, xRangeMax)
-  h.GetYaxis().SetRangeUser(2e-10,2e-3)
-  h.GetYaxis().SetLabelFont(43)
-  h.GetYaxis().SetLabelSize(20)
-  xAxisTitle = h.GetXaxis().GetTitle()
-  h.GetXaxis().SetTitle("")
-  
-  h2.SetLineColor(4)
-  h2.SetLineWidth(2)
-  h2.SetLineStyle(1)
-  
-  h.Draw("hist E")
-  h2.Draw("hist same E")
-  
-  if h3:
-    h3.SetLineColor(2)
-    h3.SetLineWidth(2)
-    h3.SetLineStyle(1)
-    h3.Scale(1./nEvents, scalingOptions)
-    h3.Draw("hist same")
-
-  c.cd()
-  pad2 = ROOT.TPad("pad2", "pad2", 0, 0.05, 1, 0.3)
-  pad2.SetTopMargin(0)
-  pad2.SetBottomMargin(0.35)
-  pad2.SetLeftMargin(0.15)
-  pad2.SetRightMargin(0.05)
-  pad2.Draw()
-  pad2.cd()
-
-  # plot ratio h/h2
-  hRatio = h.Clone()
-  hRatio.Divide(h2)
-  hRatio.SetMarkerStyle(21)
-  hRatio.SetMarkerColor(1)
-  
-  hRatio.GetXaxis().SetRangeUser(xRangeMin,xRangeMax)
-  hRatio.GetXaxis().SetTitleSize(30)
-  hRatio.GetXaxis().SetTitleFont(43)
-  hRatio.GetXaxis().SetTitleOffset(4.)
-  hRatio.GetXaxis().SetLabelFont(43)
-  hRatio.GetXaxis().SetLabelSize(20)
-  hRatio.GetXaxis().SetTitle(xAxisTitle)
-  
-  hRatio.GetYaxis().SetTitle(ratioYAxisTitle)
-  hRatio.GetYaxis().SetTitleSize(20)
-  hRatio.GetYaxis().SetTitleFont(43)
-  hRatio.GetYaxis().SetTitleOffset(2.2)
-  hRatio.GetYaxis().SetLabelFont(43)
-  hRatio.GetYaxis().SetLabelSize(20)
-  hRatio.GetYaxis().SetNdivisions(505)
-  min= hRatio.GetBinContent(hRatio.GetMinimumBin())
-  max= hRatio.GetBinContent(hRatio.GetMaximumBin())
-  #automatic zoom-in for a very small scatter of the points
-  if min>0.5 and max<1.5:
-    hRatio.GetYaxis().SetRangeUser(0.5,1.5)
-  elif yRatioMax>2:
-    hRatio.GetYaxis().SetRangeUser(0,yRatioMax)
-  else:
-    hRatio.GetYaxis().SetRangeUser(2-yRatioMax,yRatioMax)
-  
-  hRatio.Draw("P E")
-  
-  # plot ratio h3/h2
-  if h3:
-    hRatio3 = h3.Clone()
-    hRatio3.Divide(h2)
-    hRatio3.SetMarkerStyle(21)
-    hRatio3.SetMarkerColor(2)
-    hRatio3.Draw("P E same")
-
-  line = ROOT.TLine(xRangeMin,1,xRangeMax,1)
-  line.SetLineColor(920+2)
-  line.SetLineStyle(2)
-  line.Draw()
-
-  pad1.cd()
-
-  if nEvents > 2:
-    textNEvents = ROOT.TLatex()
-    textNEvents.SetNDC()
-    textNEvents.DrawLatex(0.55,0.6,"#it{N}_{events} = %d" % nEvents)
-
-  leg2 = ROOT.TLegend(0.3,0.7,0.88,0.93,legendTitle)
-  leg2.SetFillColor(10)
-  leg2.SetBorderSize(0)
-  leg2.SetFillStyle(0)
-  leg2.SetTextSize(0.04)
-  leg2.AddEntry(h, hLegendLabel, "l")
-  if h3:
-    leg2.AddEntry(h3, h3LegendLabel, "l")
-  if h2:
-    leg2.AddEntry(h2, h2LegendLabel, "l")
-  leg2.Draw("same")
-  
-  c.SaveAs(outputFilename)
-  c.Close()
 
 #################################################################################################
 # Plot various slices of the response matrix (from the THn)
@@ -657,8 +499,6 @@ def plot_kinematic_efficiency(fResponse, jetR, beta, beta_dict, output_dir, file
   max_pt_det = pt_bins_det[-1]
   min_rg_det = rg_bins_det[0]
   max_rg_det = rg_bins_det[-1]
-  print('pt: {}-{}'.format(min_pt_det, max_pt_det))
-  print('rg: {}-{}'.format(min_rg_det, max_rg_det))
   hResponse.GetAxis(0).SetRangeUser(min_pt_det, max_pt_det)
   hResponse.GetAxis(2).SetRangeUser(min_rg_det, max_rg_det)
   hNumerator = hResponse.Projection(3, 1)
@@ -667,7 +507,7 @@ def plot_kinematic_efficiency(fResponse, jetR, beta, beta_dict, output_dir, file
   hKinematicEfficiency = hNumerator.Clone()
   hKinematicEfficiency.SetName('hKinematicEfficiency_R{}_B{}'.format(jetR, beta))
   hKinematicEfficiency.Divide(hDenominator)
-  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency2D{}'.format(file_format))
+  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency2D_R{}_B{}{}'.format(jetR, beta, file_format))
   plotHist(hKinematicEfficiency, outputFilename, "colz")
   
   plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, beta, beta_dict, output_dir, file_format)
@@ -765,6 +605,10 @@ def plot_kinematic_efficiency_projections(hKinematicEfficiency2D, jetR, beta, be
 #################################################################################################
 def plot_RM_slices(fResponse, jetR, beta, beta_dict, output_dir, file_format):
   
+  output_dir_RM = os.path.join(output_dir, 'RM')
+  if not os.path.isdir(output_dir_RM):
+    os.makedirs(output_dir_RM)
+  
   # (pt-det, pt-true, theta_g-det, theta_g-true)
   name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
   hResponse = fResponse.Get(name)
@@ -778,7 +622,7 @@ def plot_RM_slices(fResponse, jetR, beta, beta_dict, output_dir, file_format):
     min_pt_truth = pt_bins_truth[bin]
     max_pt_truth = pt_bins_truth[bin+1]
     
-    plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir, file_format)
+    plot_ThetaG_Response(jetR, beta, min_pt_truth, max_pt_truth, hResponse, output_dir_RM, file_format)
 
 #################################################################################################
 # Plot 2D theta_g response for a fixed range of pt-truth
@@ -822,6 +666,170 @@ def normalizeResponseMatrix(hResponseMatrix):
         hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
 
   return hResponseMatrix
+
+#################################################################################################
+# Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+#################################################################################################
+def plot_refolding_test(response, hUnfolded, hData_PerBin, i, regularizationParamName, jetR, beta, beta_dict, output_dir, file_format):
+  
+  # In principle should use two statistically independent response matrices
+  
+  output_dir_refolding = os.path.join(output_dir, 'Refolding')
+  if not os.path.isdir(output_dir_refolding):
+    os.makedirs(output_dir_refolding)
+  
+  hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment)
+  
+  binning_dict = beta_dict[beta]
+  pt_bins_det = (binning_dict['pt_bins_det'])
+  n_pt_bins_det = len(pt_bins_det) - 1
+  det_pt_bin_array = array('d',pt_bins_det)
+  
+  for bin in range(1, n_pt_bins_det):
+    min_pt_det = pt_bins_det[bin]
+    max_pt_det = pt_bins_det[bin+1]
+    
+    plot_refolded_slice(hFoldedTruth, hData_PerBin, i, jetR, beta, regularizationParamName, min_pt_det, max_pt_det, output_dir_refolding, file_format)
+
+#################################################################################################
+# Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+#################################################################################################
+def plot_refolded_slice(hFoldedTruth, hData_PerBin, i, jetR, beta, regularizationParamName, min_pt_det, max_pt_det, output_dir, file_format):
+  
+  hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
+  hFolded_rg = hFoldedTruth.ProjectionY()
+  hFolded_rg.SetName('hFolded_rg_R{}_B{}_{}_{}-{}'.format(jetR, beta, i, min_pt_det, max_pt_det))
+  
+  hData_PerBin.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
+  hData_rg = hData_PerBin.ProjectionY()
+  hData_rg.SetName('hData_rg_R{}_B{}_{}_{}-{}'.format(jetR, beta, i, min_pt_det, max_pt_det))
+  
+  yAxisTitle = '#frac{1}{N_{jet,inc}} #frac{dN}{d#theta_{g}}'
+  legendTitle = ''
+  h1LegendLabel = 'Folded truth, {} = {}'.format(regularizationParamName,i)
+  h2LegendLabel = 'Measured pp'
+  ratioYAxisTitle = 'Folded truth / Measured'
+  outputFilename = os.path.join(output_dir, 'hFoldedTruth_R{}_B{}_{}-{}_{}{}'.format(jetR, beta, min_pt_det, max_pt_det, i, file_format))
+  plot_rg_ratio(hFolded_rg, hData_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+
+#################################################################################################
+# Plot spectra and ratio of h (and h3, if supplied) to h2
+#################################################################################################
+def plot_rg_ratio(h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, beta, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
+  
+  c = ROOT.TCanvas("c","c: pT",800,850)
+  c.cd()
+  pad1 = ROOT.TPad("pad1", "pad1", 0, 0.3, 1, 1.0)
+  pad1.SetBottomMargin(0)
+  pad1.SetLeftMargin(0.15)
+  pad1.SetRightMargin(0.05)
+  pad1.SetTopMargin(0.05)
+  pad1.Draw()
+  pad1.cd()
+  
+  h.SetLineColor(1)
+  h.SetLineWidth(2)
+  h.SetLineStyle(1)
+  
+  h.Scale(1./h.Integral(), scalingOptions)
+  h.GetYaxis().SetTitle(yAxisTitle)
+  h.GetYaxis().SetTitleSize(0.06)
+  h.GetYaxis().SetRangeUser(0., 3.)
+  h.GetYaxis().SetLabelFont(43)
+  h.GetYaxis().SetLabelSize(20)
+  xAxisTitle = h.GetXaxis().GetTitle()
+  h.GetXaxis().SetTitle("")
+  
+  h2.SetLineColor(4)
+  h2.SetLineWidth(2)
+  h2.SetLineStyle(1)
+  h2.Scale(1./h2.Integral(), scalingOptions)
+  
+  h.Draw("hist same E")
+  h2.Draw("hist same E")
+  
+  if h3:
+    h3.SetLineColor(2)
+    h3.SetLineWidth(2)
+    h3.SetLineStyle(1)
+    h3.Scale(1./h3.Integral(), scalingOptions)
+    h3.Draw("hist same")
+  
+  c.cd()
+  pad2 = ROOT.TPad("pad2", "pad2", 0, 0.05, 1, 0.3)
+  pad2.SetTopMargin(0)
+  pad2.SetBottomMargin(0.35)
+  pad2.SetLeftMargin(0.15)
+  pad2.SetRightMargin(0.05)
+  pad2.Draw()
+  pad2.cd()
+
+  # plot ratio h/h2
+  hRatio = h.Clone()
+  hRatio.Divide(h2)
+  hRatio.SetMarkerStyle(21)
+  hRatio.SetMarkerColor(1)
+  
+  hRatio.GetXaxis().SetTitleSize(30)
+  hRatio.GetXaxis().SetTitleFont(43)
+  hRatio.GetXaxis().SetTitleOffset(4.)
+  hRatio.GetXaxis().SetLabelFont(43)
+  hRatio.GetXaxis().SetLabelSize(20)
+  hRatio.GetXaxis().SetTitle(xAxisTitle)
+  
+  hRatio.GetYaxis().SetTitle(ratioYAxisTitle)
+  hRatio.GetYaxis().SetTitleSize(20)
+  hRatio.GetYaxis().SetTitleFont(43)
+  hRatio.GetYaxis().SetTitleOffset(2.2)
+  hRatio.GetYaxis().SetLabelFont(43)
+  hRatio.GetYaxis().SetLabelSize(20)
+  hRatio.GetYaxis().SetNdivisions(505)
+  min= hRatio.GetBinContent(hRatio.GetMinimumBin())
+  max= hRatio.GetBinContent(hRatio.GetMaximumBin())
+  #automatic zoom-in for a very small scatter of the points
+  if min>0.5 and max<1.5:
+    hRatio.GetYaxis().SetRangeUser(0.5,1.5)
+  elif yRatioMax>2:
+    hRatio.GetYaxis().SetRangeUser(0,yRatioMax)
+  else:
+    hRatio.GetYaxis().SetRangeUser(2-yRatioMax,yRatioMax)
+
+  hRatio.Draw("P E")
+
+  # plot ratio h3/h2
+  if h3:
+    hRatio3 = h3.Clone()
+    hRatio3.Divide(h2)
+    hRatio3.SetMarkerStyle(21)
+    hRatio3.SetMarkerColor(2)
+    hRatio3.Draw("P E same")
+  
+  pad1.cd()
+  
+  leg2 = ROOT.TLegend(0.55,0.7,0.88,0.93,legendTitle)
+  leg2.SetFillColor(10)
+  leg2.SetBorderSize(0)
+  leg2.SetFillStyle(0)
+  leg2.SetTextSize(0.04)
+  leg2.AddEntry(h, hLegendLabel, "l")
+  if h3:
+    leg2.AddEntry(h3, h3LegendLabel, "l")
+  if h2:
+    leg2.AddEntry(h2, h2LegendLabel, "l")
+  leg2.Draw("same")
+
+  text_latex = ROOT.TLatex()
+  text_latex.SetNDC()
+  text = str(min_pt_det) + ' < #it{p}_{T,det ch jet} < ' + str(max_pt_det)
+  text_latex.DrawLatex(0.25, 0.85, text)
+
+  text_latex = ROOT.TLatex()
+  text_latex.SetNDC()
+  text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
+  text_latex.DrawLatex(0.25, 0.75, text)
+
+  c.SaveAs(outputFilename)
+  c.Close()
 
 ###################################################################################################
 # Plot basic histogram
