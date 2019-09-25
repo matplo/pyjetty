@@ -78,10 +78,29 @@ def plotRg(fMC, fData, jetR, beta, outputDir):
   else:
     hThetaG_JetPt = None
 
+  plot2D_statistics(hThetaG_JetPt.Clone(), jetR, beta, outputDir)
+
   plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 20, 40, outputDir)
   plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 40, 60, outputDir)
   plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 60, 80, outputDir)
   plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 80, 100, outputDir)
+
+#---------------------------------------------------------------
+def plot2D_statistics(hThetaG_JetPt, jetR, beta, outputDir):
+
+  c = ROOT.TCanvas("c","c: hist",600,450)
+  c.cd()
+  ROOT.gPad.SetLeftMargin(0.15)
+  
+  hThetaG_JetPt.SetMarkerSize(0.5)
+  hThetaG_JetPt.GetXaxis().SetRangeUser(0, 100)
+  hThetaG_JetPt.RebinX(5)
+  hThetaG_JetPt.RebinY(5)
+  hThetaG_JetPt.Draw('text colz')
+
+  output_filename = os.path.join(outputDir, 'h2D_statistics_R{}_B{}.pdf'.format(jetR, beta))
+  c.SaveAs(output_filename)
+  c.Close()
 
 #---------------------------------------------------------------
 def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, outputDir):
