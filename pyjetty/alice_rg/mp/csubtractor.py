@@ -57,10 +57,6 @@ class CEventSubtractor(mputils.MPBase):
 		print(self)
 		print(self.subtractor.description())
 
-	def configure_constants(self, **kwargs):
-		for key, value in kwargs.items():
-			self.__setattr__(key, value)
-
 	def process_event(self, full_event):
 		self.bge_rho.set_particles(full_event);
 		# the correction of the whole event with ConstituentSubtractor
