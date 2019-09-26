@@ -65,29 +65,23 @@ def process_rg_data(inputFile, configFile, outputDir):
   hDict = initializeHistograms(jetR_list, beta_list, beta_dict)
 
   # Create analysis helper class
-  io = analysis_io.analysis_io(input_file=inputFile)
   utils = analysis_utils.analysis_utils()
 
-  # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
-  #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
+  # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
-  print('Convert ROOT trees to pandas dataframes...')
-  track_df = io.load_dataframe(io.input_file, track_tree_name='tree_Particle')
-
-  # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
+  io = analysis_io.analysis_io(input_file=inputFile, track_tree_name='tree_Particle')
+  df_fjparticles = io.load_data()
   print('--- {} seconds ---'.format(time.time() - start_time))
-  df_fjparticles = io.group_fjparticles()
   
   if debugLevel > 0:
     print(df_fjparticles.dtypes)
     print(df_fjparticles)
-  print('--- {} seconds ---'.format(time.time() - start_time))
 
   # Print number of events
   nEvents = len(df_fjparticles.index)
   hDict['hNevents'].Fill(1, nEvents)
   print('Number of events: {}'.format(nEvents))
-  nTracks = len(track_df.index)
+  nTracks = len(io.track_df.index)
   print('Number of tracks: {}'.format(nTracks))
 
   # Find jets and fill histograms

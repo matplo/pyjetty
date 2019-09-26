@@ -30,10 +30,11 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
+import analysis_io
 import analysis_utils
 
 # Load RooUnfold library
-enable_roounfold = True
+enable_roounfold = False
 if enable_roounfold:
   print ('Loading libRooUnfold.so... ', end = '')
   rval = ROOT.gSystem.Load('$ROOUNFOLDDIR/libRooUnfold.so')
@@ -44,6 +45,9 @@ ROOT.gROOT.SetBatch(True)
 
 # Set debug level (0 = no debug info, 1 = some debug info, 2 = all debug info)
 debugLevel = 0
+
+# Create analysis helper class
+utils = analysis_utils.analysis_utils()
 
 #---------------------------------------------------------------
 def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir):
@@ -79,51 +83,34 @@ def process_rg_data(inputFile, configFile, pthat_bin, scaleFactorFile, outputDir
   # Initialize histogram dictionary
   hDict = initializeHistograms(jetR_list, beta_list, beta_dict)
 
-  # ------------------------------------------------------------------------
-  # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
-  #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
+  # Use IO class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
-  print('Convert ROOT trees to pandas dataframes...')
-  track_df_det = analysis_utils.load_dataframe(inputFile, 'tree_Particle')
-
-  if reject_tracks_fraction > 1e-3:
-    n_remove = int(reject_tracks_fraction * len(track_df_det.index))
-    print('Removing {} of {} det-level tracks'.format(n_remove, len(track_df_det.index)))
-    np.random.seed()
-    indices_remove = np.random.choice(track_df_det.index, n_remove, replace=False)
-    track_df_det.drop(indices_remove, inplace=True)
-
-  # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
+  io_det = analysis_io.analysis_io(input_file=inputFile, track_tree_name='tree_Particle')
+  df_fjparticles_det = io_det.load_data(reject_tracks_fraction)
   print('--- {} seconds ---'.format(time.time() - start_time))
-  df_fjparticles_det = analysis_utils.group_fjparticles(track_df_det)
-  
+
   if debugLevel > 0:
     print(df_fjparticles_det.dtypes)
     print(df_fjparticles_det)
-  print('--- {} seconds ---'.format(time.time() - start_time))
 
   # ------------------------------------------------------------------------
-  # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
-  #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
-  print('Convert ROOT trees to pandas dataframes...')
-  track_df_truth = analysis_utils.load_dataframe(inputFile, 'tree_Particle_gen')
 
-  # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
+  # Use IO class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
+  io_truth = analysis_io.analysis_io(input_file=inputFile, track_tree_name='tree_Particle_gen')
+  df_fjparticles_truth = io_truth.load_data()
   print('--- {} seconds ---'.format(time.time() - start_time))
-  df_fjparticles_truth = analysis_utils.group_fjparticles(track_df_truth)
-  
+
   if debugLevel > 0:
     print(df_fjparticles_truth.dtypes)
     print(df_fjparticles_truth)
-  print('--- {} seconds ---'.format(time.time() - start_time))
 
   # Print number of events
   nEvents = len(df_fjparticles_truth.index)
   hDict['hNevents'].Fill(1, nEvents)
   print('Number of events: {}'.format(nEvents))
-  nTracks = len(track_df_det.index)
+  nTracks = len(io_det.track_df.index)
   print('Number of det tracks: {}'.format(nTracks))
-  nTracks = len(track_df_truth.index)
+  nTracks = len(io_truth.track_df.index)
   print('Number of truth tracks: {}'.format(nTracks))
   # ------------------------------------------------------------------------
 
@@ -316,7 +303,7 @@ def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
     for jet_truth in jets_truth_selected_matched:
       
       # Check additional acceptance criteria
-      if not analysis_utils.is_det_jet_accepted(jet_det):
+      if not utils.is_det_jet_accepted(jet_det):
         continue
       
       if debugLevel > 0:
