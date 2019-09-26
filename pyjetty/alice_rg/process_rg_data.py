@@ -30,6 +30,7 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
+import analysis_io
 import analysis_utils
 
 # Prevent ROOT from stealing focus when plotting
@@ -63,15 +64,19 @@ def process_rg_data(inputFile, configFile, outputDir):
   # Initialize histogram dictionary
   hDict = initializeHistograms(jetR_list, beta_list, beta_dict)
 
+  # Create analysis helper class
+  io = analysis_io.analysis_io(input_file=inputFile)
+  utils = analysis_utils.analysis_utils()
+
   # Convert ROOT TTree to pandas dataframe with one row per jet constituent:
   #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   print('--- {} seconds ---'.format(time.time() - start_time))
   print('Convert ROOT trees to pandas dataframes...')
-  track_df = analysis_utils.load_dataframe(inputFile, 'tree_Particle')
+  track_df = io.load_dataframe(io.input_file, track_tree_name='tree_Particle')
 
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
-  df_fjparticles = analysis_utils.group_fjparticles(track_df)
+  df_fjparticles = io.group_fjparticles()
   
   if debugLevel > 0:
     print(df_fjparticles.dtypes)
@@ -87,7 +92,7 @@ def process_rg_data(inputFile, configFile, outputDir):
 
   # Find jets and fill histograms
   print('Find jets...')
-  analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir)
+  analyzeEvents(utils, df_fjparticles, hDict, jetR_list, beta_list, outputDir)
 
   # Plot histograms
   print('Save histograms...')
@@ -157,7 +162,7 @@ def initializeHistograms(jetR_list, beta_list, beta_dict):
   return hDict
 
 #---------------------------------------------------------------
-def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir):
+def analyzeEvents(utils, df_fjparticles, hDict, jetR_list, beta_list, outputDir):
   
   fj.ClusterSequence.print_banner()
   print()
@@ -178,10 +183,10 @@ def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir):
       print('SoftDrop groomer is: {}'.format(sd.description()));
 
       # Use list comprehension to do jet-finding and fill histograms
-      result = [analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict) for fj_particles in df_fjparticles]
+      result = [analyzeJets(utils, fj_particles, jet_def, jet_selector, sd, beta, hDict) for fj_particles in df_fjparticles]
 
 #---------------------------------------------------------------
-def analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict):
+def analyzeJets(utils, fj_particles, jet_def, jet_selector, sd, beta, hDict):
   
   # Do jet finding
   cs = fj.ClusterSequence(fj_particles, jet_def)
@@ -197,7 +202,7 @@ def analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict):
       print(jet)
     
     # Check additional acceptance criteria
-    if not analysis_utils.is_det_jet_accepted(jet):
+    if not utils.is_det_jet_accepted(jet):
       continue
     
     # Fill histograms
