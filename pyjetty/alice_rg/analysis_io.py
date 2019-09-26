@@ -33,7 +33,6 @@ class analysis_io(analysis_base.analysis_base):
     self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
     self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej']
     self.reset_dataframes()
-    print(self)
   
   #---------------------------------------------------------------
   # Clear dataframes
@@ -58,11 +57,14 @@ class analysis_io(analysis_base.analysis_base):
     self.reset_dataframes()
 
     print('Convert ROOT trees to pandas dataframes...')
+    print('    track_tree_name = {}'.format(self.track_tree_name))
+
+    
     self.track_df = self.load_dataframe()
     
     if self.reject_tracks_fraction > 1e-3:
       n_remove = int(reject_tracks_fraction * len(self.track_df.index))
-      print('Removing {} of {} tracks from {}'.format(n_remove, len(self.track_df.index), self.track_tree_name))
+      print('    Removing {} of {} tracks from {}'.format(n_remove, len(self.track_df.index), self.track_tree_name))
       np.random.seed()
       indices_remove = np.random.choice(self.track_df.index, n_remove, replace=False)
       self.track_df.drop(indices_remove, inplace=True)
