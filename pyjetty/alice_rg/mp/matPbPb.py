@@ -2,6 +2,7 @@
 
 import mputils
 import csubtractor
+import treewriter
 
 import uproot
 import pandas as pd
@@ -157,6 +158,8 @@ class MPJetAnalysis(mputils.MPBase):
 		dfout['ptsub'] = [j.pt() - self.rho * j.area() for j in self.jets_detok]
 		return dfout
 
+	def fill_tree_writer(self, tw):
+		tw.fill_branch('jet', [j for j in self.jets_detok])
 
 def analyze_file_list(file_inputs=[], output_prefix='jets', tree_name='tree_Particle'):
 	eventIO = MPJetAnalysisFileIO(file_input=None, tree_name=tree_name)
@@ -166,6 +169,8 @@ def analyze_file_list(file_inputs=[], output_prefix='jets', tree_name='tree_Part
 	# bg_estimator = fj.GridMedianBackgroundEstimator(0.9, 0.25)
 	# print('[i]', bg_estimator.description())
 	an = MPJetAnalysis()
+
+	tw = treewriter.RTreeWriter()
 
 	output_std = None
 	output_cs004 = None
@@ -190,7 +195,10 @@ def analyze_file_list(file_inputs=[], output_prefix='jets', tree_name='tree_Part
 			output_std = an.df()
 		else:
 			output_std.append(an.df(), ignore_index = True)
+		an.fill_tree_writer(tw)
+		tw.fill_tree()
 
+	tw.write_and_close()
 	print('[i] analyzed events:', eventIO.event_number)
 
 	joblib.dump(output_std, '{}_std.pd'.format(output_prefix))

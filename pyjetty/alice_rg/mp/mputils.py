@@ -36,3 +36,21 @@ class CursorSpin(object):
 		CursorSpin._cpos = CursorSpin._cpos + 1
 		if CursorSpin._cpos >= len(CursorSpin._cursor):
 			CursorSpin._cpos = 0
+
+class Type(object):
+	_float = type(0.)
+	_int = type(0)
+	_list = type([0,1])
+	_tuple = type((0,1))
+	def __init__(self):
+		pass
+	def is_float(x):
+		return (float == type(x))
+	def is_int(x):
+		return (int == type(x))
+	def is_list(x):
+		return (list == type(x))
+	def is_tuple(x):
+		return (tuple == type(x))
+	def is_dict(x):
+		return (dict == type(x))
