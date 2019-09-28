@@ -85,7 +85,6 @@ class MPJetAnalysis(mputils.MPBase):
 									sd_betas=[0, 2],
 									show_progress=False)
 		self.jet_eta_max = self.particle_eta_max - self.jet_R * 1.05
-		self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
 		self.jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.jet_eta_max)
 		self.particle_selector = fj.SelectorPtMin(0.15) & fj.SelectorAbsRapMax(self.particle_eta_max)
