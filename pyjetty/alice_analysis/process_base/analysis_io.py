@@ -20,7 +20,7 @@ import fastjet as fj
 import fjext
 
 # Base class
-from pyjetty.alice_rg.process_base import base
+from pyjetty.alice_analysis.process_base import base
 
 ################################################################
 class analysis_io(base.base):

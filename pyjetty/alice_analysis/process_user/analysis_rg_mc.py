@@ -30,9 +30,9 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
-from pyjetty.alice_rg.process_base import analysis_io
-from pyjetty.alice_rg.process_base import analysis_utils
-from pyjetty.alice_rg.process_base import analysis_base
+from pyjetty.alice_analysis.process_base import analysis_io
+from pyjetty.alice_analysis.process_base import analysis_utils
+from pyjetty.alice_analysis.process_base import analysis_base
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)

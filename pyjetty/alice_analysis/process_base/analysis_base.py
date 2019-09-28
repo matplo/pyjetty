@@ -18,8 +18,8 @@ import ROOT
 import yaml
 
 # Analysis utilities
-from pyjetty.alice_rg.process_base import base
-from pyjetty.alice_rg.process_base import analysis_utils
+from pyjetty.alice_analysis.process_base import base
+from pyjetty.alice_analysis.process_base import analysis_utils
 
 ################################################################
 class analysis_base(base.base):
