@@ -27,12 +27,12 @@ OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 #echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
-module use /software/users/james/heppy/modules
+source scl_source enable devtoolset-7
+module use /home/software/users/ploskon/heppy-devtools7/modules
 module load heppy/main_python
-module use /software/users/james/pyjetty/modules
-module load pyjetty/main_python
-module list
+source /home/software/users/ploskon/RooUnfold-gitlab/build/setup.sh
+export ROOUNFOLDDIR=/home/software/users/ploskon/RooUnfold-gitlab/build
 
 # Run python script via pipenv
 cd /software/users/james/pyjetty/pyjetty/alice_rg
-pipenv run python process_rg_mc.py -c analysis_config.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+pipenv run python process_user/analysis_rg_mc.py -c config/analysis_config.yaml -f $INPUT_FILE -o $OUTPUT_DIR

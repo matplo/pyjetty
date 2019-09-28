@@ -1,0 +1,21 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=lr
+#logx 1
+#x p_{T}^{jet} (GeV/c)
+#y fraction
+#miny 0
+#maxy 1
+pythia_lund_sd.root 		:hjptq_r			:p   : title=quark jets
+pythia_lund_sd.root 		:hjptsdq_r			:p -k: title=quark SD
+pythia_lund_sd.root 		:hjptsdqkt10_r		:p -k: title=quark SD k_{T} > 10
+pythia_lund_sd.root 		:hjptsdqkt30_r		:p -k: title=quark SD k_{T} > 30
+
+pythia_lund_sd.root 		:hjptg_r			:p    : title=gluon jets
+pythia_lund_sd.root 		:hjptsdg_r			:p -k : title=glue SD
+pythia_lund_sd.root 		:hjptsdgkt10_r		:p -k : title=glue SD k_{T} > 10
+pythia_lund_sd.root 		:hjptsdgkt30_r		:p -k : title=glue SD k_{T} > 30
+

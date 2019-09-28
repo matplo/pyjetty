@@ -3,11 +3,10 @@
 
 import fastjet as fj
 import fjcontrib
+import mputils
 
-
-class CSEventSubtractor(object):
+class CEventSubtractor(mputils.MPBase):
 	def __init__(self, **kwargs):
-
 		# constants
 		# self.max_eta=4  # specify the maximal pseudorapidity for the input particles. It is used for the subtraction. Particles with eta>|max_eta| are removed and not used during the subtraction (they are not returned). The same parameter should be used for the GridMedianBackgroundEstimator as it is demonstrated in this example. If JetMedianBackgroundEstimator is used, then lower parameter should be used  (to avoid including particles outside this range). 
 		# self.max_eta_jet=3  # the maximal pseudorapidity for selected jets. Not used for the subtraction - just for the final output jets in this example.
@@ -22,7 +21,6 @@ class CSEventSubtractor(object):
 
 		# set the default values
 		self.configure_constants(	max_eta=4, 
-									max_eta_jet=3,
 									bge_rho_grid_size=0.2,
 									max_distance=0.3,
 									alpha=1,
@@ -32,8 +30,7 @@ class CSEventSubtractor(object):
 									CSS=1.0,
 									max_pt_correct=5.)
 
-		for key, value in kwargs.items():
-			self.__setattr__(key, value)
+		super(CEventSubtractor, self).__init__(**kwargs)
 
 		# background estimator
 		self.bge_rho = fj.GridMedianBackgroundEstimator(self.max_eta, self.bge_rho_grid_size)  # Maximal pseudo-rapidity cut max_eta is used inside ConstituentSubtraction, but in GridMedianBackgroundEstimator, the range is specified by maximal rapidity cut. Therefore, it is important to apply the same pseudo-rapidity cut also for particles used for background estimation (specified by function "set_particles") and also derive the rho dependence on rapidity using this max pseudo-rapidity cut to get the correct rescaling function!  
@@ -56,11 +53,9 @@ class CSEventSubtractor(object):
 		# subtractor.set_use_nearby_hard(0.2,2);  // In this example, if there is a hard proxy within deltaR distance of 0.2, then the CS distance is multiplied by factor of 2, i.e. such particle is less favoured in the subtraction procedure. If you uncomment this line, then also uncomment line 106.
 		
 		self.subtractor.initialize();
-		print(self.subtractor.description())
 
-	def configure_constants(self, **kwargs):
-		for key, value in kwargs.items():
-			self.__setattr__(key, value)
+		print(self)
+		print(self.subtractor.description())
 
 	def process_event(self, full_event):
 		self.bge_rho.set_particles(full_event);
