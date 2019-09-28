@@ -152,6 +152,7 @@ class MPJetAnalysis(mputils.MPBase):
 			print(' . sd:', _sd.description())
 
 	def __del__(self):
+		print('[i] writing {}'.format(self.fout.GetName()))
 		self.fout.Write()
 		self.fout.Purge()
 		self.fout.Close()
@@ -239,7 +240,12 @@ def analyze_file_list(file_inputs=[], output_prefix='rg', tree_name='tree_Partic
 
 	ad = MPAnalysisDriver(file_list=file_inputs, analyses_list = anl, tree_name=tree_name)
 	ad.run()
-	# print(ad)	
+
+	print()
+	print('    ---')
+	print()
+	print(ad)	
+	print('[i] done.')
 
 def main():
 	parser = argparse.ArgumentParser(description='analyze PbPb data', prog=os.path.basename(__file__))

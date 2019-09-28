@@ -32,4 +32,4 @@ module load pyjetty/main_python
 # Run python script via pipenv
 ##cd /software/users/james/pyjetty/pyjetty/alice_rg
 ##pipenv run python process_rg_mc.py -c analysis_config.yaml -f $INPUT_FILE -b $BIN -w $SCALE_FACTOR_PATH -o $OUTPUT_DIR
-${HEPPYDIR}/scripts/pipenv_heppy.sh run "${PYJETTYDIR}/pyjetty/alice_rg/mp/matPbPb.py --input ${INPUT_FILE} --outprefix ${OUTPUT_PREFIX}"
+${HEPPYDIR}/scripts/pipenv_heppy.sh run "${PYJETTYDIR}/pyjetty/alice_analysis/mp/matPbPb.py --input ${INPUT_FILE} --outprefix ${OUTPUT_PREFIX}"

@@ -4,7 +4,8 @@ FILE_PATHS='/rstorage/u/alice/LHC18qr/147-148/files.txt'
 NFILES=$(cat $FILE_PATHS | wc -l)
 echo "N files to process: ${NFILES}"
 
-STOP=$(( NFILES / 10 ))
+STOP=$(( NFILES ))
+# STOP=$(( NFILES / 10 ))
 # STOP=$(( 2 ))
 START=$(( 1 ))
 
