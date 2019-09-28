@@ -65,7 +65,8 @@ class MPJetAnalysisFileIO(mputils.MPBase):
 		# Load event tree into dataframe, and apply event selection
 		self.event_tree = uproot.open(file_input)[self.event_tree_name]
 		if not self.event_tree:
-			print('[e] Tree {} not found in file {}'.format(self.tree_event_name, file_input))
+			print('[e] Tree {} not found in file {}'.format(self.event_tree_name, file_input))
+			return False
 		self.event_df_orig = self.event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
 		self.event_df_orig.reset_index(drop=True)
 		self.event_df = self.event_df_orig.query('is_ev_rej == 0')
@@ -75,6 +76,7 @@ class MPJetAnalysisFileIO(mputils.MPBase):
 		self.track_tree = uproot.open(file_input)[self.track_tree_name]
 		if not self.track_tree:
 			print('[e] Tree {} not found in file {}'.format(tree_name, file_input))
+			return False
 		self.track_df_orig = self.track_tree.pandas.df()
 		# Merge event info into track tree
 		self.track_df = pd.merge(self.track_df_orig, self.event_df, on=['run_number', 'ev_id'])
@@ -84,6 +86,7 @@ class MPJetAnalysisFileIO(mputils.MPBase):
 		# (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
 		self.df_events = self.track_df_grouped.apply(self.get_event)
 		self.event_number = self.event_number + len(self.df_events)
+		return True
 
 
 class MPAnalysisDriver(mputils.MPBase):
@@ -99,8 +102,8 @@ class MPAnalysisDriver(mputils.MPBase):
 		for file_input in self.file_list:
 			if os.path.isfile(file_input):
 				print('[i] processing', file_input)
-				self.eventIO.load_file(file_input)
-				r = [self.process_event(event) for event in self.eventIO.df_events]
+				if self.eventIO.load_file(file_input):
+					r = [self.process_event(event) for event in self.eventIO.df_events]
 			else:
 				print('[w] skip - not a file? ', file_input)
 
