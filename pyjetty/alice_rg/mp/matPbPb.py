@@ -19,6 +19,12 @@ import joblib
 import argparse
 import os
 
+class DataEvent(object):
+	def __init__(self, particles, run_number, ev_id):
+		self.particles = particles
+		self.run_number = run_number
+		self.ev_id = ev_id
+
 class MPJetAnalysisFileIO(mputils.MPBase):
 	def __init__(self, **kwargs):
 		self.configure_constants(file_input = None, tree_name='tree_Particle')
@@ -32,17 +38,24 @@ class MPJetAnalysisFileIO(mputils.MPBase):
 		self.track_df_orig = None
 		self.track_df = None
 		self.track_df_grouped = None
-		self.df_fjparticles = None
+		self.df_events = None
 		self.event_tree = None
 		self.event_df_orig = None
 		self.event_df = None
 		self.track_tree = None
 		self.track_tree_name = None
 
-	def get_fjparticles(self, df_tracks):
+	def get_event(self, df_tracks):
 		# Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
-		fj_particles = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)  
-		return fj_particles
+		event = DataEvent([], -1, -1)
+		event.particles = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)  
+		if len(event.particles) > 0:
+			event.run_number = float(df_tracks['run_number'].values[0])
+			event.ev_id = float(df_tracks['ev_id'].values[0])
+		else:
+			event.run_number = -1
+			event.ev_id = -1
+		return event
 
 	def load_file(self, file_input, tree_name='tree_Particle'):
 		self.file_input = file_input
@@ -69,8 +82,27 @@ class MPJetAnalysisFileIO(mputils.MPBase):
 		#     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
 		self.track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
 		# (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
-		self.df_fjparticles = self.track_df_grouped.apply(self.get_fjparticles)
-		self.event_number = self.event_number + len(self.df_fjparticles)
+		self.df_events = self.track_df_grouped.apply(self.get_event)
+		self.event_number = self.event_number + len(self.df_events)
+
+
+class MPAnalysisDriver(mputils.MPBase):
+	def __init__(self, **kwargs):
+		self.configure_constants(	analyses_list=[], 
+									file_list=[],
+									tree_name='tree_Particle')
+		super(MPAnalysisDriver, self).__init__(**kwargs)
+		self.eventIO = MPJetAnalysisFileIO(file_input=None, tree_name=self.tree_name)
+		print(self)
+
+	def run(self):
+		for file_input in self.file_list:
+			self.eventIO.load_file(file_input)
+			r = [self.process_event(event) for event in self.eventIO.df_events]
+
+	def process_event(self, event):
+		for an in self.analyses_list:
+			an.process_event(event)
 
 
 class MPJetAnalysis(mputils.MPBase):
@@ -83,13 +115,27 @@ class MPJetAnalysis(mputils.MPBase):
 									bge_rho_grid_size=-1, # no background subtraction for -1
 									sd_z_cuts=[0.1],
 									sd_betas=[0, 2],
-									show_progress=False)
+									show_progress=False,
+									name="MPJetAnalysis",
+									output_prefix='./')
 		self.jet_eta_max = self.particle_eta_max - self.jet_R * 1.05
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
 		self.jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.jet_eta_max)
 		self.particle_selector = fj.SelectorPtMin(0.15) & fj.SelectorAbsRapMax(self.particle_eta_max)
 		self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		self.bg_estimator = None
+		self.constit_subtractor = None
+		self.jet_output = None
+		self.event_output = None
+		self.fout = None
 		super(MPJetAnalysis, self).__init__(**kwargs)
+		self.filename_output ='{}{}.root'.format(self.output_prefix, self.name)
+		if self.fout is None:
+			self.fout = ROOT.TFile(self.filename_output, 'recreate')
+		if self.jet_output is None:
+			self.jet_output = treewriter.RTreeWriter(tree_name='tjet', fout=self.fout)
+		if self.event_output is None:
+			self.event_output = treewriter.RTreeWriter(tree_name='tev', fout=self.fout)
 		fj.ClusterSequence.print_banner()
 		print()
 		print(self)
@@ -105,27 +151,25 @@ class MPJetAnalysis(mputils.MPBase):
 		for _sd in self.sds:
 			print(' . sd:', _sd.description())
 
-	def analyze_file_data(self, df_fjparticles, bg_estimator=None, csub=None, embed_parts=None,
-							jet_root_output=None):
-		# Use list comprehension to do jet-finding and fill histograms
-		result = [self.analyze_jets_from_particles(fj_particles, bg_estimator, csub, embed_parts, jet_root_output) for fj_particles in df_fjparticles]
+	def __del__(self):
+		self.fout.Write()
+		self.fout.Purge()
+		self.fout.Close()
 
-	def analyze_jets_from_particles(self, fj_particles, bg_estimator=None, csub=None, embed_parts=None,
-									jet_root_output=None):
-		if self.show_progress: mputils.CursorSpin()
+	def process_event(self, event):
 		# assume this is done already (when creating the ntuples):
 		# self.fj_particles_selected = self.particle_selector(fj_particles)
-		if csub:
-			self.fj_particles_selected = csub.process_event(fj_particles)
+		if self.constit_subtractor:
+			self.fj_particles_selected = self.constit_subtractor.process_event(event.particles)
 		else:
-			self.fj_particles_selected = fj_particles
+			self.fj_particles_selected = event.particles
 		self.cs = fj.ClusterSequenceArea(self.fj_particles_selected, self.jet_def, self.jet_area_def)
 		# self.cs = fj.ClusterSequence(self.fj_particles_selected, self.jet_def)
 		self.jets = fj.sorted_by_pt(self.cs.inclusive_jets())
 		self.rho = 0
-		if bg_estimator:
-			bg_estimator.set_particles(fj_particles);
-			self.rho = bg_estimator.rho()
+		if self.bg_estimator:
+			self.bg_estimator.set_particles(self.fj_particles_selected);
+			self.rho = self.bg_estimator.rho()
 		if self.jets[0].pt() - self.rho * self.jets[0].area() < self.jet_pt_min:
 			return False
 		self.jets_selected = self.jet_selector(self.jets)
@@ -143,81 +187,59 @@ class MPJetAnalysis(mputils.MPBase):
 				self.sd_jets[isd].append(jet_sd)
 				self.sd_jets_info[isd].append(fjcontrib.get_SD_jet_info(jet_sd))
 
-		if jet_root_output:
-			jet_root_output.fill_branch('jet', [j for j in self.jets_detok])
+		if self.event_output:
+			self.event_output.fill_branch('ev_id', event.ev_id)
+			self.event_output.fill_branch('run_number', event.run_number)
+			self.event_output.fill_branch('rho', self.rho)
+			self.event_output.fill_tree()
+
+		if self.jet_output:
+			self.jet_output.fill_branch('ev_id', event.ev_id)
+			self.jet_output.fill_branch('run_number', event.run_number)
+			self.jet_output.fill_branch('rho', self.rho)
+			self.jet_output.fill_branch('jet', [j for j in self.jets_detok])
+			self.jet_output.fill_branch('jet_ptsub', [j.pt() - (self.rho * j.area()) for j in self.jets_detok])
 			for isd, sd in enumerate(self.sds):
 				bname = 'jet_sd{}pt'.format(self.sd_betas[isd])
-				jet_root_output.fill_branch(bname, [j.pt() for j in self.sd_jets[isd]])
+				self.jet_output.fill_branch(bname, [j.pt() for j in self.sd_jets[isd]])
 				bname = 'jet_sd{}zg'.format(self.sd_betas[isd])
-				jet_root_output.fill_branch(bname, [j.z for j in self.sd_jets_info[isd]])
+				self.jet_output.fill_branch(bname, [j.z for j in self.sd_jets_info[isd]])
 				bname = 'jet_sd{}Rg'.format(self.sd_betas[isd])
-				jet_root_output.fill_branch(bname, [j.dR for j in self.sd_jets_info[isd]])
+				self.jet_output.fill_branch(bname, [j.dR for j in self.sd_jets_info[isd]])
 				bname = 'jet_sd{}thetag'.format(self.sd_betas[isd])
-				jet_root_output.fill_branch(bname, [j.dR/self.jet_R for j in self.sd_jets_info[isd]])
-			jet_root_output.fill_tree()
+				self.jet_output.fill_branch(bname, [j.dR/self.jet_R for j in self.sd_jets_info[isd]])
+			self.jet_output.fill_tree()
 		return True
 
-	def df(self):
-		dfout = pd.DataFrame({	'pt' : [j.pt() for j in self.jets_detok],
-								'a' : [j.area() for j in self.jets_detok],
-								'eta' : [j.eta() for j in self.jets_detok],
-								'phi' : [j.phi() for j in self.jets_detok]})
-		for isd, sd in enumerate(self.sds):
-			dfout['sd{}pt'.format(self.sd_betas[isd])] = [j.pt() for j in self.sd_jets[isd]]
-			dfout['sd{}zg'.format(self.sd_betas[isd])] = [j.z for j in self.sd_jets_info[isd]]
-			dfout['sd{}Rg'.format(self.sd_betas[isd])] = [j.dR for j in self.sd_jets_info[isd]]
-			dfout['sd{}thetag'.format(self.sd_betas[isd])] = [j.dR/self.jet_R for j in self.sd_jets_info[isd]]
 
-		dfout['ptsub'] = [j.pt() - self.rho * j.area() for j in self.jets_detok]
-		return dfout
+def analyze_file_list(file_inputs=[], output_prefix='rg', tree_name='tree_Particle'):
 
+	anl = []
 
-def analyze_file_list(file_inputs=[], output_prefix='jets', tree_name='tree_Particle'):
-	jet_tw = treewriter.RTreeWriter(tree_name='t', file_name='{}_std.root'.format(output_prefix))
+	bg_rho_range = fj.SelectorAbsRapMax(0.9)
+	bg_jet_def = fj.JetDefinition(fj.kt_algorithm, 0.4)
+	bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(0.9))
+	bg_estimator = fj.JetMedianBackgroundEstimator(bg_rho_range, bg_jet_def, bg_area_def)
+	print('[i]', bg_estimator.description())
+	an_std = MPJetAnalysis(output_prefix=output_prefix, name='std', bg_estimator=bg_estimator)
+	anl.append(an_std)
 
-	eventIO = MPJetAnalysisFileIO(file_input=None, tree_name=tree_name)
-	# cs008 = csubtractor.CEventSubtractor(alpha=0, max_distance=0.8, max_eta=0.9, bge_rho_grid_size=0.25, max_pt_correct=100)
+	g_bg_estimator = fj.GridMedianBackgroundEstimator(0.9, 0.4)
+	print('[i]', g_bg_estimator.description())
+	an_gbg = MPJetAnalysis(output_prefix=output_prefix, name='bgb', bg_estimator=g_bg_estimator)
+	anl.append(an_gbg)
+
 	cs004 = csubtractor.CEventSubtractor(alpha=0, max_distance=0.4, max_eta=0.9, bge_rho_grid_size=0.25, max_pt_correct=100)
+	an_cs_004 = MPJetAnalysis(output_prefix=output_prefix, name='cs004', bg_estimator=cs004.bge_rho, constit_subtractor=cs004)
+	anl.append(an_cs_004)
+
 	cs404 = csubtractor.CEventSubtractor(alpha=4, max_distance=0.4, max_eta=0.9, bge_rho_grid_size=0.25, max_pt_correct=100)
-	# bg_estimator = fj.GridMedianBackgroundEstimator(0.9, 0.25)
-	# print('[i]', bg_estimator.description())
-	an = MPJetAnalysis()
+	an_cs_404 = MPJetAnalysis(output_prefix=output_prefix, name='cs404', bg_estimator=cs404.bge_rho, constit_subtractor=cs404)
+	anl.append(an_cs_404)
 
-	output_std = None
-	output_cs004 = None
-	output_cs404 = None
-	for file_input in file_inputs:
-		eventIO.load_file(file_input)
-		# rv = an.analyze_file_data(df_fjparticles=eventIO.df_fjparticles, bg_estimator=None, csub=cs008, embed_parts=None)
-		_rv = an.analyze_file_data(df_fjparticles=eventIO.df_fjparticles, bg_estimator=None, csub=cs004, embed_parts=None)
-		if output_cs004 is None:
-			output_cs004 = an.df()
-		else:
-			output_cs004.append(an.df(), ignore_index = True)
-
-		_rv = an.analyze_file_data(df_fjparticles=eventIO.df_fjparticles, bg_estimator=None, csub=cs404, embed_parts=None)
-		if output_cs404 is None:
-			output_cs404 = an.df()
-		else:
-			output_cs404.append(an.df(), ignore_index = True)
-
-		_rv = an.analyze_file_data(df_fjparticles=eventIO.df_fjparticles, 
-									bg_estimator=cs404.bge_rho, 
-									csub=None, 
-									embed_parts=None,
-									jet_root_output=jet_tw)
-		if output_std is None:
-			output_std = an.df()
-		else:
-			output_std.append(an.df(), ignore_index = True)
-
-	print('[i] analyzed events:', eventIO.event_number)
-
-	joblib.dump(output_std, '{}_std.pd'.format(output_prefix))
-	joblib.dump(output_cs004, '{}_cs004.pd'.format(output_prefix))
-	joblib.dump(output_cs404, '{}_cs404.pd'.format(output_prefix))
-
-	jet_tw.write_and_close()
+	ad = MPAnalysisDriver(file_list=file_inputs, analyses_list = anl, tree_name=tree_name)
+	ad.run()
+	# print(ad)	
 
 def main():
 	parser = argparse.ArgumentParser(description='analyze PbPb data', prog=os.path.basename(__file__))

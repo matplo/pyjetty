@@ -23,7 +23,7 @@ class MPBase(object):
 		variables = self.__dict__.keys()
 		for v in variables:
 			s.append('{} = {}'.format(v, self.__dict__[v]))
-		return "[i] {} with \n .  {}".format(self.__class__.__name__, '\n .  '.join(s))
+		return "\n[i] {} with \n .  {}".format(self.__class__.__name__, '\n .  '.join(s))
 
 import sys
 

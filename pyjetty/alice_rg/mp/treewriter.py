@@ -15,19 +15,21 @@ class RTreeWriter(mputils.MPBase):
 		super(RTreeWriter, self).__init__(**kwargs)
 		if self.tree is None:
 			if self.fout is None:
+				print('[i] new file {}'.format(self.file_name))
 				self.fout = ROOT.TFile(self.file_name, 'recreate')
-			if self.fout is not None:
+			else:
+				self.name = self.fout.GetName()
+				self.file_name = self.name
 				self.fout.cd()
 				if self.tree_name is None:
 					self.tree_name = 't'+self.name
 				self.tree = ROOT.TTree(self.tree_name, self.tree_name)
 		self.branch_containers = {}
-		print(self)
 
 	def _fill_branch(self, bname, value):
 		b = self.tree.GetBranch(bname)
 		if not b:
-			print('[i] creating branch named', bname)
+			print('[i] RTreeWriter {} tree {}: creating branch [{}]'.format(self.name, self.tree.GetName(), bname))
 			self.branch_containers[bname] = ROOT.std.vector('float')()
 			b = self.tree.Branch(bname, self.branch_containers[bname])
 		if b:
