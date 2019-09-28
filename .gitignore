@@ -12,4 +12,4 @@ Pipfile.lock
 /modules
 *~
 #*
-
+*.log
