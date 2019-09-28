@@ -97,8 +97,12 @@ class MPAnalysisDriver(mputils.MPBase):
 
 	def run(self):
 		for file_input in self.file_list:
-			self.eventIO.load_file(file_input)
-			r = [self.process_event(event) for event in self.eventIO.df_events]
+			if os.path.isfile(file_input):
+				print('[i] processing', file_input)
+				self.eventIO.load_file(file_input)
+				r = [self.process_event(event) for event in self.eventIO.df_events]
+			else:
+				print('[w] skip - not a file? ', file_input)
 
 	def process_event(self, event):
 		for an in self.analyses_list:
@@ -249,12 +253,21 @@ def analyze_file_list(file_inputs=[], output_prefix='rg', tree_name='tree_Partic
 
 def main():
 	parser = argparse.ArgumentParser(description='analyze PbPb data', prog=os.path.basename(__file__))
-	parser.add_argument('--input', required=True, default="", type=str)
+	parser.add_argument('--input', default="", type=str)
 	parser.add_argument('--outprefix', default="matPbPb_out_jets", type=str)
 
 	args = parser.parse_args()
-	
-	analyze_file_list([args.input], args.outprefix)
+
+	filename, file_extension = os.path.splitext(args.input)
+
+	if file_extension == '.root':
+		analyze_file_list([args.input], args.outprefix)
+	else:
+		if args.input_file:
+			clines = []
+			with open(args.input_file) as f:
+				clines = [l.strip('\n') for l in f.readlines()]
+			analyze_file_list(clines, args.outprefix)
 
 if __name__ == '__main__':
 	main()
