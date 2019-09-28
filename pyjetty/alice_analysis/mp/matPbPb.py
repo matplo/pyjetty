@@ -263,9 +263,9 @@ def main():
 	if file_extension == '.root':
 		analyze_file_list([args.input], args.outprefix)
 	else:
-		if args.input_file:
+		if args.input:
 			clines = []
-			with open(args.input_file) as f:
+			with open(args.input) as f:
 				clines = [l.strip('\n') for l in f.readlines()]
 			analyze_file_list(clines, args.outprefix)
 
