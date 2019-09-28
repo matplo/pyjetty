@@ -2,9 +2,11 @@
 
 """
   Analysis script to read a ROOT TTree of track information
-  and do jet-finding, and save basic histograms.
+  and do jet-finding, and save histograms of generalized angularity.
   
-  Author: James Mulligan (james.mulligan@berkeley.edu)
+  Based on process_rg_data by James Mulligan (james.mulligan@berkeley.edu)
+
+  Ezra Lesser (elesser@berkeley.edu)
 """
 
 from __future__ import print_function
@@ -35,20 +37,20 @@ import analysis_utils
 ROOT.gROOT.SetBatch(True)
 
 # Set debug level (0 = no debug info, 1 = some debug info, 2 = all debug info)
-debugLevel = 0
+debugLevel = 2
 
 #---------------------------------------------------------------
-def process_rg_data(inputFile, configFile, outputDir):
-  
+def process_angularity_data(inputFile, configFile, outputDir):
+
   start_time = time.time()
-  
+
   # Read config file
   with open(configFile, 'r') as stream:
     config = yaml.safe_load(stream)
-  
+
   jetR_list = config['jetR']
   beta_list = config['beta']
-  
+
   # Create output dir
   if not outputDir.endswith("/"):
     outputDir = outputDir + "/"
@@ -67,7 +69,7 @@ def process_rg_data(inputFile, configFile, outputDir):
   # Transform the track dataframe into a SeriesGroupBy object of fastjet particles per event
   print('--- {} seconds ---'.format(time.time() - start_time))
   df_fjparticles = analysis_utils.group_fjparticles(track_df)
-  
+
   if debugLevel > 0:
     print(df_fjparticles.dtypes)
     print(df_fjparticles)
@@ -92,27 +94,27 @@ def process_rg_data(inputFile, configFile, outputDir):
 
 #---------------------------------------------------------------
 def initializeHistograms(jetR_list, beta_list):
-  
+
   hDict = {}
-  
+
   name = 'hNevents'
   hNevents = ROOT.TH1F(name, name, 2, -0.5, 1.5)
   hDict[name] = hNevents
 
   for jetR in jetR_list:
-  
+
     name = 'hJetPt_R{}'.format(jetR)
     hJetPt = ROOT.TH1F(name, name, 300, 0, 300)
     hJetPt.GetXaxis().SetTitle('p_{T,jet}')
     hJetPt.GetYaxis().SetTitle('dN/dp_{T}')
     hDict[name] = hJetPt
-    
+
     name = 'hM_JetPt_R{}'.format(jetR)
     hM_JetPt = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
     hM_JetPt.GetXaxis().SetTitle('p_{T,jet}')
     hM_JetPt.GetYaxis().SetTitle('m_{jet}')
     hDict[name] = hM_JetPt
-    
+
     for beta in beta_list:
 
       name = 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)
@@ -137,20 +139,20 @@ def initializeHistograms(jetR_list, beta_list):
 
 #---------------------------------------------------------------
 def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir):
-  
+
   fj.ClusterSequence.print_banner()
   print()
-  
+
   for jetR in jetR_list:
-    
+
     for beta in beta_list:
-    
+
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
       jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
       print('jet definition is:', jet_def)
       print('jet selector is:', jet_selector,'\n')
-      
+
       # Define SoftDrop settings
       zcut = 0.1
       sd = fjcontrib.SoftDrop(beta, zcut, jetR)
@@ -162,7 +164,7 @@ def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, outputDir):
 
 #---------------------------------------------------------------
 def analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict):
-  
+
   # Do jet finding
   cs = fj.ClusterSequence(fj_particles, jet_def)
   jets = fj.sorted_by_pt(cs.inclusive_jets())
@@ -171,35 +173,36 @@ def analyzeJets(fj_particles, jet_def, jet_selector, sd, beta, hDict):
   # Loop through jets
   jetR = jet_def.R()
   for jet in jets_selected:
-    
+
     if debugLevel > 1:
-      print('jet:')
-      print(jet)
-    
+      print("jet:", jet)
+      print("constit 0:", jet.constituents()[0])
+
     # Check additional acceptance criteria
     if not analysis_utils.is_det_jet_accepted(jet):
       continue
-    
+
     # Fill histograms
     fillJetHistograms(hDict, jet, jetR)
-    
+
     # Perform SoftDrop grooming and fill histograms
     jet_sd = sd.result(jet)
     fillSoftDropHistograms(hDict, jet_sd, jet, jetR, beta)
 
 #---------------------------------------------------------------
 def fillJetHistograms(hDict, jet, jetR):
-  
+
   jet_pt = jet.pt()
 
+  #hDict['hJetN_R%s' % jetR].Fill(jet
   hDict['hJetPt_R{}'.format(jetR)].Fill(jet_pt)
   hDict['hM_JetPt_R{}'.format(jetR)].Fill(jet_pt, jet.m())
 
 #---------------------------------------------------------------
 def fillSoftDropHistograms(hDict, jet_sd, jet, jetR, beta):
-  
+
   jet_pt_ungroomed = jet.pt()
-  
+
   sd_info = fjcontrib.get_SD_jet_info(jet_sd)
   theta_g = sd_info.dR / jetR
   zg = sd_info.z
@@ -211,7 +214,7 @@ def fillSoftDropHistograms(hDict, jet_sd, jet, jetR, beta):
 
 #---------------------------------------------------------------
 def saveHistograms(hDict, outputDir):
-  
+
   outputfilename = os.path.join(outputDir, 'AnalysisResults.root')
   fout = ROOT.TFile(outputfilename, 'recreate')
   fout.cd()
@@ -235,24 +238,25 @@ if __name__ == '__main__':
                       type=str, metavar='outputDir',
                       default='./TestOutput',
                       help='Output directory for QA plots to be written to')
-  
+
   # Parse the arguments
   args = parser.parse_args()
-  
+
   print('Configuring...')
   print('inputFile: \'{0}\''.format(args.inputFile))
   print('configFile: \'{0}\''.format(args.configFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
   print('----------------------------------------------------------------')
-  
+
   # If invalid inputFile is given, exit
   if not os.path.exists(args.inputFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
     sys.exit(0)
-  
+
   # If invalid configFile is given, exit
   if not os.path.exists(args.configFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  process_rg_data(inputFile = args.inputFile, configFile = args.configFile, outputDir = args.outputDir)
+  process_angularity_data(inputFile = args.inputFile, configFile = args.configFile, 
+                          outputDir = args.outputDir)

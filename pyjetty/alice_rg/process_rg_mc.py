@@ -195,10 +195,14 @@ def analyzeEvents(df_fjparticles, hDict, jetR_list, beta_list, jet_matching_dist
       
       # Then can use list comprehension to iterate over the groupby and do jet-finding
       # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-      result = [analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict) for fj_particles_det, fj_particles_truth in zip(df_fjparticles['fj_particles_det'], df_fjparticles['fj_particles_truth'])]
+      result = [analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, 
+                            jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict) 
+                for fj_particles_det, fj_particles_truth in 
+                zip(df_fjparticles['fj_particles_det'], df_fjparticles['fj_particles_truth'])]
 
 #---------------------------------------------------------------
-def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict):
+def analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, 
+                jet_selector_truth_matched, sd, beta, jet_matching_distance, hDict):
 
   # Check that the entries exist appropriately
   # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -347,4 +351,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  process_rg_data(inputFile = args.inputFile, configFile = args.configFile, outputDir = args.outputDir)
+  process_rg_data(inputFile = args.inputFile, configFile = args.configFile, 
+                  outputDir = args.outputDir)

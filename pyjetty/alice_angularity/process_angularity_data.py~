@@ -35,10 +35,10 @@ import analysis_utils
 ROOT.gROOT.SetBatch(True)
 
 # Set debug level (0 = no debug info, 1 = some debug info, 2 = all debug info)
-debugLevel = 0
+debugLevel = 1
 
 #---------------------------------------------------------------
-def process_rg_data(inputFile, configFile, outputDir):
+def process_angularity_data(inputFile, configFile, outputDir):
   
   start_time = time.time()
   
@@ -192,6 +192,7 @@ def fillJetHistograms(hDict, jet, jetR):
   
   jet_pt = jet.pt()
 
+  #hDict['hJetN_R%s' % jetR].Fill(jet
   hDict['hJetPt_R{}'.format(jetR)].Fill(jet_pt)
   hDict['hM_JetPt_R{}'.format(jetR)].Fill(jet_pt, jet.m())
 
@@ -255,4 +256,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  process_rg_data(inputFile = args.inputFile, configFile = args.configFile, outputDir = args.outputDir)
+  process_angularity_data(inputFile = args.inputFile, configFile = args.configFile, 
+                          outputDir = args.outputDir)
