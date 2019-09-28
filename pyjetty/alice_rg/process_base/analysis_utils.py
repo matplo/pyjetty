@@ -24,9 +24,10 @@ import fastjet as fj
 import fjext
 
 # Base class
-import analysis_base
+from pyjetty.alice_rg.process_base import base
 
-class analysis_utils(analysis_base.analysis_base):
+################################################################
+class analysis_utils(base.base):
   
   #---------------------------------------------------------------
   # Constructor

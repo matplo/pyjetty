@@ -4,7 +4,8 @@
   Analysis IO class for jet analysis with track dataframe.
   Each instance of the class handles the IO of a *single* track tree.
   
-  Author: James Mulligan (james.mulligan@berkeley.edu)
+  Authors: James Mulligan
+           Mateusz Ploskon
 """
 
 from __future__ import print_function
@@ -19,9 +20,10 @@ import fastjet as fj
 import fjext
 
 # Base class
-import analysis_base
+from pyjetty.alice_rg.process_base import base
 
-class analysis_io(analysis_base.analysis_base):
+################################################################
+class analysis_io(base.base):
   
   #---------------------------------------------------------------
   # Constructor

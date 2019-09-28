@@ -3,11 +3,11 @@
 """
   Analysis base class.
   
-  copied from mputils.py
+  Author: Mateusz Ploskon
 """
 
 ################################################################
-class analysis_base(object):
+class base(object):
   
   #---------------------------------------------------------------
   # Constructor
