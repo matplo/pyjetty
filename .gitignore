@@ -10,3 +10,6 @@ Pipfile
 Pipfile.lock
 *.pyc
 /modules
+*~
+#*
+
