@@ -106,11 +106,13 @@ class MPJetAnalysis(mputils.MPBase):
 		for _sd in self.sds:
 			print(' . sd:', _sd.description())
 
-	def analyze_file_data(self, df_fjparticles, bg_estimator=None, csub=None, embed_parts=None):
+	def analyze_file_data(self, df_fjparticles, bg_estimator=None, csub=None, embed_parts=None,
+							jet_root_output=None):
 		# Use list comprehension to do jet-finding and fill histograms
-		result = [self.analyze_jets_from_particles(fj_particles, bg_estimator, csub, embed_parts) for fj_particles in df_fjparticles]
+		result = [self.analyze_jets_from_particles(fj_particles, bg_estimator, csub, embed_parts, jet_root_output) for fj_particles in df_fjparticles]
 
-	def analyze_jets_from_particles(self, fj_particles, bg_estimator=None, csub=None, embed_parts=None):
+	def analyze_jets_from_particles(self, fj_particles, bg_estimator=None, csub=None, embed_parts=None,
+									jet_root_output=None):
 		if self.show_progress: mputils.CursorSpin()
 		# assume this is done already (when creating the ntuples):
 		# self.fj_particles_selected = self.particle_selector(fj_particles)
@@ -142,6 +144,18 @@ class MPJetAnalysis(mputils.MPBase):
 				self.sd_jets[isd].append(jet_sd)
 				self.sd_jets_info[isd].append(fjcontrib.get_SD_jet_info(jet_sd))
 
+		if jet_root_output:
+			jet_root_output.fill_branch('jet', [j for j in self.jets_detok])
+			for isd, sd in enumerate(self.sds):
+				bname = 'jet_sd{}pt'.format(self.sd_betas[isd])
+				jet_root_output.fill_branch(bname, [j.pt() for j in self.sd_jets[isd]])
+				bname = 'jet_sd{}zg'.format(self.sd_betas[isd])
+				jet_root_output.fill_branch(bname, [j.z for j in self.sd_jets_info[isd]])
+				bname = 'jet_sd{}Rg'.format(self.sd_betas[isd])
+				jet_root_output.fill_branch(bname, [j.dR for j in self.sd_jets_info[isd]])
+				bname = 'jet_sd{}thetag'.format(self.sd_betas[isd])
+				jet_root_output.fill_branch(bname, [j.dR/self.jet_R for j in self.sd_jets_info[isd]])
+			jet_root_output.fill_tree()
 		return True
 
 	def df(self):
@@ -158,10 +172,10 @@ class MPJetAnalysis(mputils.MPBase):
 		dfout['ptsub'] = [j.pt() - self.rho * j.area() for j in self.jets_detok]
 		return dfout
 
-	def fill_tree_writer(self, tw):
-		tw.fill_branch('jet', [j for j in self.jets_detok])
 
 def analyze_file_list(file_inputs=[], output_prefix='jets', tree_name='tree_Particle'):
+	jet_tw = treewriter.RTreeWriter(tree_name='t', file_name='{}_std.root'.format(output_prefix))
+
 	eventIO = MPJetAnalysisFileIO(file_input=None, tree_name=tree_name)
 	# cs008 = csubtractor.CEventSubtractor(alpha=0, max_distance=0.8, max_eta=0.9, bge_rho_grid_size=0.25, max_pt_correct=100)
 	cs004 = csubtractor.CEventSubtractor(alpha=0, max_distance=0.4, max_eta=0.9, bge_rho_grid_size=0.25, max_pt_correct=100)
@@ -169,8 +183,6 @@ def analyze_file_list(file_inputs=[], output_prefix='jets', tree_name='tree_Part
 	# bg_estimator = fj.GridMedianBackgroundEstimator(0.9, 0.25)
 	# print('[i]', bg_estimator.description())
 	an = MPJetAnalysis()
-
-	tw = treewriter.RTreeWriter()
 
 	output_std = None
 	output_cs004 = None
@@ -190,21 +202,23 @@ def analyze_file_list(file_inputs=[], output_prefix='jets', tree_name='tree_Part
 		else:
 			output_cs404.append(an.df(), ignore_index = True)
 
-		_rv = an.analyze_file_data(df_fjparticles=eventIO.df_fjparticles, bg_estimator=cs404.bge_rho, csub=None, embed_parts=None)
+		_rv = an.analyze_file_data(df_fjparticles=eventIO.df_fjparticles, 
+									bg_estimator=cs404.bge_rho, 
+									csub=None, 
+									embed_parts=None,
+									jet_root_output=jet_tw)
 		if output_std is None:
 			output_std = an.df()
 		else:
 			output_std.append(an.df(), ignore_index = True)
-		an.fill_tree_writer(tw)
-		tw.fill_tree()
 
-	tw.write_and_close()
 	print('[i] analyzed events:', eventIO.event_number)
 
 	joblib.dump(output_std, '{}_std.pd'.format(output_prefix))
 	joblib.dump(output_cs004, '{}_cs004.pd'.format(output_prefix))
 	joblib.dump(output_cs404, '{}_cs404.pd'.format(output_prefix))
 
+	jet_tw.write_and_close()
 
 def main():
 	parser = argparse.ArgumentParser(description='analyze PbPb data', prog=os.path.basename(__file__))

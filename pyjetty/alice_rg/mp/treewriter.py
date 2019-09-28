@@ -7,15 +7,22 @@ class RTreeWriter(mputils.MPBase):
 	_fj_psj_type = type(fj.PseudoJet())
 	_fj_psj_vector_type = type(fj.vectorPJ())
 	def __init__(self, **kwargs):
-		self.configure_constants(tree=None, name="RTreeWriter", filename="RTreeWriter.root", fout=None)
+		self.configure_constants(	tree=None, 
+									tree_name=None,
+									name="RTreeWriter", 
+									file_name="RTreeWriter.root", 
+									fout=None)
 		super(RTreeWriter, self).__init__(**kwargs)
 		if self.tree is None:
 			if self.fout is None:
-				self.fout = ROOT.TFile(self.filename, 'recreate')
+				self.fout = ROOT.TFile(self.file_name, 'recreate')
 			if self.fout is not None:
 				self.fout.cd()
-				self.tree = ROOT.TTree('t'+self.name, 't'+self.name)
+				if self.tree_name is None:
+					self.tree_name = 't'+self.name
+				self.tree = ROOT.TTree(self.tree_name, self.tree_name)
 		self.branch_containers = {}
+		print(self)
 
 	def _fill_branch(self, bname, value):
 		b = self.tree.GetBranch(bname)
