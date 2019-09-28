@@ -110,9 +110,6 @@ def pyunfold_inclusivejets(input_file_data, input_file_response, output_dir, fil
   #--------------------------------------------------------------
   # Prior
   # Can use any numpy array that sums to 1
-  cause_lim = numpy.logspace(0, 3, n_bins_truth)
-  jeff_prior = pyunfold.priors.jeffreys_prior(cause_lim)
-  
   for bin in range(1, n_bins_truth + 1):
     val = hJetSpectrumTrueUncutPerBin.GetBinContent(bin)
     bin_val = hJetSpectrumTrueUncutPerBin.GetBinCenter(bin)
@@ -146,6 +143,8 @@ def pyunfold_inclusivejets(input_file_data, input_file_response, output_dir, fil
   hFinalResult = ROOT.TH1F('hFinalResult', 'hFinalResult', n_bins_truth, truth_bin_array)
   root_numpy.array2hist(final_result, hFinalResult, stat_err)
 
+  # Apply RM to unfolded result, as a simple crosscheck
+
   plot_unfolding_result(hJetSpectrumMeasuredPerBin, hJetSpectrumTrueUncutPerBin, hFinalResult, n_events_response, output_dir, file_format)
   
 #--------------------------------------------------------------
@@ -155,6 +154,8 @@ def plot_unfolding_result(hData, hPrior, hUnfolded, n_events_response, output_di
   c.cd()
   c.cd().SetLeftMargin(0.15)
   c.SetLogy()
+  
+  eta_acceptance = 2*(0.9-0.4)
   
   hData.SetMarkerStyle(21)
   hData.SetMarkerColor(1)

@@ -9,7 +9,6 @@ import numpy
 import ROOT
 
 # Load the RooUnfold library
-#ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/osx_x86-64/RooUnfold/latest/lib/libRooUnfold.dylib")
 ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnfold.so")
 
 # Prevent ROOT from stealing focus when plotting
@@ -24,13 +23,26 @@ ROOT.gStyle.SetOptTitle(0)
 
 ###########################################################################################
 ###########################################################################################
-def unfold_inclusivejets(input_file_data, input_file_response, output_dir, file_format):
+def roounfold_inclusivejets(input_file_data, input_file_response, output_dir, file_format):
 
   fData = ROOT.TFile(input_file_data)
   fResponse = ROOT.TFile(input_file_response)
   
+  # Create output dir for unfolding histograms and result
+  if not os.path.isdir(output_dir):
+    os.makedirs(output_dir)
+  
+  # Read config file
+  with open(configFile, 'r') as stream:
+    config = yaml.safe_load(stream)
+  
+  jetR_list = config['jetR']
+  beta_list = config['beta']
+  
   # Unfolding settings
   reg_param = 4
+
+  #--------------------------------------------------------------
 
   # Set pT range of input spectrum for unfolding
   min_pt_det = 10
@@ -41,21 +53,55 @@ def unfold_inclusivejets(input_file_data, input_file_response, output_dir, file_
   max_pt_reported = 100
 
   # Set pT range of response spectrum
-  min_pt_gen = 5
+  min_pt_gen = 10
   max_pt_gen = 300
 
   # Define pT-det and pT-truth binning
-  bin_array_truth = ([min_pt_gen, 10, 20, 30, 40, 50, 60, 70, 80, 100, 120, 140, 190, 240, max_pt_gen])
-  bin_array_det = ([min_pt_det, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, max_pt_det])
-  
-  n_bins_det = len(bin_array_det) - 1
-  det_bin_array = array('d',bin_array_det)
-  n_bins_truth = len(bin_array_truth) - 1
-  truth_bin_array = array('d',bin_array_truth)
+  pt_bin_array_truth = ([min_pt_gen, 20, 30, 40, 50, 60, 70, 80, 100, 120, 140, 190, 240, max_pt_gen])
+  pt_bin_array_det = ([min_pt_det, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, max_pt_det])
 
-  # Create output dir for unfolding histograms and result
-  if not os.path.isdir(output_dir):
-    os.makedirs(output_dir)
+  n_pt_bins_det = len(pt_bin_array_det) - 1
+  det_pt_bin_array = array('d',pt_bin_array_det)
+  n_pt_bins_truth = len(pt_bin_array_truth) - 1
+  pt_truth_bin_array = array('d',pt_bin_array_truth)
+  print('n_pt_bins_det: {}'.format(n_pt_bins_det))
+  print('n_pt_bins_truth: {}'.format(n_pt_bins_truth))
+  
+  #--------------------------------------------------------------
+  
+  # Set pT range of input spectrum for unfolding
+  min_rg_det = 0.
+  max_rg_det = 1.2
+  
+  # Set pT range of output spectrum
+  min_rg_reported = 20
+  max_rg_reported = 100
+  
+  # Set pT range of response spectrum
+  min_rg_gen = 0.
+  max_rg_gen = 1.5
+  
+  # Define pT-det and pT-truth binning
+  rg_bin_array_truth = ([min_rg_gen, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, max_rg_gen])
+  rg_bin_array_det = ([min_rg_det, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, max_rg_det])
+  
+  n_rg_bins_det = len(rg_bin_array_det) - 1
+  det_rg_bin_array = array('d',rg_bin_array_det)
+  n_rg_bins_truth = len(rg_bin_array_truth) - 1
+  rg_truth_bin_array = array('d',rg_bin_array_truth)
+  print('n_rg_bins_det: {}'.format(n_rg_bins_det))
+  print('n_rg_bins_truth: {}'.format(n_rg_bins_truth))
+  
+  #--------------------------------------------------------------
+  
+  for jetR in jetR_list:
+    for beta in beta_list:
+  
+  
+  
+  
+  
+  
   
   # Define an empty dictionary to store the final unfolded histograms from each label
   hUnfoldedResultDict = {}
@@ -666,4 +712,4 @@ if __name__ == '__main__':
     print("File \"{0}\" does not exist! Exiting!".format(args.inputFileResponse))
     sys.exit(0)
 
-  unfold_inclusivejets(input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, output_dir = args.outputDir, file_format = args.imageFormat)
+  roounfold_inclusivejets(input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, output_dir = args.outputDir, file_format = args.imageFormat)
