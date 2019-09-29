@@ -123,6 +123,10 @@ class analysis_rg_data(analysis_base.analysis_base):
     h = ROOT.TH1F(name, name, 2, -0.5, 1.5)
     h.Fill(1, self.nEvents)
     setattr(self, name, h)
+    
+    name = 'hTrackEtaPhi'
+    h = ROOT.TH2F(name, name, 200, -1., 1., 628, 0., 6.28)
+    setattr(self, name, h)
 
     for jetR in self.jetR_list:
     
@@ -136,6 +140,10 @@ class analysis_rg_data(analysis_base.analysis_base):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('m_{ch jet}')
+      setattr(self, name, h)
+      
+      name = 'hZ_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
       
       for beta in self.beta_list:
@@ -174,6 +182,9 @@ class analysis_rg_data(analysis_base.analysis_base):
   # Main function to loop through and analyze events
   #---------------------------------------------------------------
   def analyzeEvents(self):
+    
+    # Fill track histograms
+    [self.fillTrackHistograms(fj_particles) for fj_particles in self.df_fjparticles]
     
     fj.ClusterSequence.print_banner()
     print()
@@ -232,9 +243,13 @@ class analysis_rg_data(analysis_base.analysis_base):
   def fillJetHistograms(self, jet, jetR):
     
     jet_pt = jet.pt()
-  
+    
     getattr(self, 'hJetPt_R{}'.format(jetR)).Fill(jet_pt)
     getattr(self, 'hM_JetPt_R{}'.format(jetR)).Fill(jet_pt, jet.m())
+  
+    for constituent in jet.constituents():
+      z = constituent.pt() / jet_pt
+      getattr(self, 'hZ_R{}'.format(jetR)).Fill(jet_pt, z)
 
   #---------------------------------------------------------------
   # Fill soft drop histograms
@@ -252,6 +267,14 @@ class analysis_rg_data(analysis_base.analysis_base):
     getattr(self, 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)).Fill(jet_pt_ungroomed, theta_g)
     getattr(self, 'hZg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, zg)
     getattr(self, 'hMg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, mg)
+
+  #---------------------------------------------------------------
+  # Fill track histograms.
+  #---------------------------------------------------------------
+  def fillTrackHistograms(self, fj_particles):
+    
+    for track in fj_particles:
+      self.hTrackEtaPhi.Fill(track.eta(), track.phi())
 
 ##################################################################
 if __name__ == '__main__':

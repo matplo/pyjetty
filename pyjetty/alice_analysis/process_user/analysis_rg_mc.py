@@ -166,6 +166,10 @@ class analysis_rg_mc(analysis_base.analysis_base):
     h = ROOT.TH1F(name, name, 2, -0.5, 1.5)
     h.Fill(1, self.nEvents_det)
     setattr(self, name, h)
+    
+    name = 'hTrackEtaPhi'
+    h = ROOT.TH2F(name, name, 200, -1., 1., 628, 0., 6.28)
+    setattr(self, name, h)
 
     for jetR in self.jetR_list:
       
@@ -180,6 +184,14 @@ class analysis_rg_mc(analysis_base.analysis_base):
       name = 'hDeltaR_All_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
       setattr(self, name, h)
+      
+      name = 'hZ_Truth_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+      setattr(self, name, h)
+      
+      name = 'hZ_Det_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+      setattr(self, name, h)
 
       name = 'hResponse_JetPt_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 300, 0, 300)
@@ -188,6 +200,12 @@ class analysis_rg_mc(analysis_base.analysis_base):
       setattr(self, name, h)
 
       for beta in self.beta_list:
+        
+        name = 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
+        setattr(self, name, h)
         
         # Retrieve histogram binnings
         n_pt_bins_det = getattr(self, 'n_pt_bins_det_B{}'.format(beta))
@@ -253,6 +271,9 @@ class analysis_rg_mc(analysis_base.analysis_base):
   #---------------------------------------------------------------
   def analyzeEvents(self):
     
+    # Fill track histograms
+    [self.fillTrackHistograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
+    
     fj.ClusterSequence.print_banner()
     print()
     
@@ -276,6 +297,19 @@ class analysis_rg_mc(analysis_base.analysis_base):
         # Then can use list comprehension to iterate over the groupby and do jet-finding
         # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
         result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+
+  #---------------------------------------------------------------
+  # Fill track histograms.
+  #---------------------------------------------------------------
+  def fillTrackHistograms(self, fj_particles_det):
+
+    # Check that the entries exist appropriately
+    # (need to check how this can happen -- but it is only a tiny fraction of events)
+    if type(fj_particles_det) != fj.vectorPJ:
+      return
+    
+    for track in fj_particles_det:
+      self.hTrackEtaPhi.Fill(track.eta(), track.phi())
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
@@ -303,7 +337,11 @@ class analysis_rg_mc(analysis_base.analysis_base):
 
     # Fill truth-level jet histograms (before matching)
     for jet_truth in jets_truth_selected:
-      self.fillJetHistograms(jet_truth, jetR)
+      self.fillTruthJetHistograms(jet_truth, jetR)
+    
+    # Fill det-level jet histograms (before matching)
+    for jet_det in jets_det_selected:
+      self.fillDetJetHistograms(jet_det, jetR)
 
     # Set number of jet matches for each jet in user_index (to ensure unique matches)
     self.setNJetMatches(jets_det_selected, jets_truth_selected_matched, jetR)
@@ -354,11 +392,24 @@ class analysis_rg_mc(analysis_base.analysis_base):
           jet_truth.set_user_index(jet_truth.user_index() + 1)
 
   #---------------------------------------------------------------
-  # Fill jet histograms
+  # Fill truth jet histograms
   #---------------------------------------------------------------
-  def fillJetHistograms(self, jet, jetR):
+  def fillTruthJetHistograms(self, jet, jetR):
 
     getattr(self, 'hJetPt_Truth_R{}'.format(jetR)).Fill(jet.pt())
+  
+    for constituent in jet.constituents():
+      z = constituent.pt() / jet.pt()
+      getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
+
+  #---------------------------------------------------------------
+  # Fill det jet histograms
+  #---------------------------------------------------------------
+  def fillDetJetHistograms(self, jet, jetR):
+    
+    for constituent in jet.constituents():
+      z = constituent.pt() / jet.pt()
+      getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet.pt(), z)
 
   #---------------------------------------------------------------
   # Fill response histograms
@@ -374,6 +425,9 @@ class analysis_rg_mc(analysis_base.analysis_base):
     JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
     getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
     
+    theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
+    getattr(self, 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
+
     getattr(self, 'hResponse_JetPt_R{}'.format(jetR)).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
     
     x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth])
