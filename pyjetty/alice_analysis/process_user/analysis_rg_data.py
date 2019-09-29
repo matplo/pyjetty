@@ -52,15 +52,15 @@ class analysis_rg_data(analysis_base.analysis_base):
   #---------------------------------------------------------------
   def process_rg_data(self):
     
-    start_time = time.time()
+    self.start_time = time.time()
 
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
-    print('--- {} seconds ---'.format(time.time() - start_time))
+    print('--- {} seconds ---'.format(time.time() - self.start_time))
     io = analysis_io.analysis_io(input_file=self.input_file, track_tree_name='tree_Particle')
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
-    print('--- {} seconds ---'.format(time.time() - start_time))
+    print('--- {} seconds ---'.format(time.time() - self.start_time))
 
     # Initialize configuration and histograms
     self.initialize_config()
@@ -68,14 +68,14 @@ class analysis_rg_data(analysis_base.analysis_base):
     print(self)
 
     # Find jets and fill histograms
-    print('Find jets...')
+    print('Analyze events...')
     self.analyzeEvents()
 
     # Plot histograms
     print('Save histograms...')
     analysis_base.analysis_base.saveHistograms(self)
 
-    print('--- {} seconds ---'.format(time.time() - start_time))
+    print('--- {} seconds ---'.format(time.time() - self.start_time))
 
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -150,15 +150,21 @@ class analysis_rg_data(analysis_base.analysis_base):
   def analyzeEvents(self):
     
     # Fill track histograms
-    [self.fillTrackHistograms(fj_particles) for fj_particles in self.df_fjparticles]
+    print('--- {} seconds ---'.format(time.time() - self.start_time))
+    print('Fill track histograms')
+    [[self.fillTrackHistograms(track) for track in fj_particles] for fj_particles in self.df_fjparticles]
+    print('--- {} seconds ---'.format(time.time() - self.start_time))
     
+    print('Find jets...')
     fj.ClusterSequence.print_banner()
     print()
     
     for jetR in self.jetR_list:
       
       for beta in self.beta_list:
-      
+        
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
+
         # Set jet definition and a jet selector
         jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
         jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
@@ -172,7 +178,7 @@ class analysis_rg_data(analysis_base.analysis_base):
 
         # Use list comprehension to do jet-finding and fill histograms
         result = [self.analyzeJets(fj_particles, jet_def, jet_selector, sd, beta) for fj_particles in self.df_fjparticles]
-
+        
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
@@ -235,11 +241,10 @@ class analysis_rg_data(analysis_base.analysis_base):
   #---------------------------------------------------------------
   # Fill track histograms.
   #---------------------------------------------------------------
-  def fillTrackHistograms(self, fj_particles):
+  def fillTrackHistograms(self, track):
     
-    for track in fj_particles:
-      self.hTrackEtaPhi.Fill(track.eta(), track.phi())
-      self.hTrackPt.Fill(track.pt())
+    self.hTrackEtaPhi.Fill(track.eta(), track.phi())
+    self.hTrackPt.Fill(track.pt())
 
 ##################################################################
 if __name__ == '__main__':
