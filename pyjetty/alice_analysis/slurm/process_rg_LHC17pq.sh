@@ -34,5 +34,5 @@ module load pyjetty/main_python
 module list
 
 # Run python script via pipenv
-cd /software/users/james/pyjetty/pyjetty/alice_rg
+cd /software/users/james/pyjetty/pyjetty/alice_analysis
 pipenv run python process_user/analysis_rg_data.py -c config/analysis_config.yaml -f $INPUT_FILE -o $OUTPUT_DIR

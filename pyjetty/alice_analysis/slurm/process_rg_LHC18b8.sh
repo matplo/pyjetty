@@ -34,5 +34,5 @@ source /home/software/users/ploskon/RooUnfold-gitlab/build/setup.sh
 export ROOUNFOLDDIR=/home/software/users/ploskon/RooUnfold-gitlab/build
 
 # Run python script via pipenv
-cd /software/users/james/pyjetty/pyjetty/alice_rg
+cd /software/users/james/pyjetty/pyjetty/alice_analysis
 pipenv run python process_user/analysis_rg_mc.py -c config/analysis_config.yaml -f $INPUT_FILE -o $OUTPUT_DIR
