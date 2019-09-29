@@ -223,8 +223,7 @@ class analysis_rg_data(analysis_base.analysis_base):
     for jet in jets_selected:
       
       if self.debug_level > 1:
-        print('jet:')
-        print(jet)
+        print('jet: {} with pt={}'.format(jet, jet.pt()))
       
       # Check additional acceptance criteria
       if not self.utils.is_det_jet_accepted(jet):

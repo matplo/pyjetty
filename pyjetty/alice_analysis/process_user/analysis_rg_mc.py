@@ -351,8 +351,10 @@ class analysis_rg_mc(analysis_base.analysis_base):
       for jet_truth in jets_truth_selected_matched:
         
         # Check additional acceptance criteria
+        # skip event if not satisfied -- since first jet in event is highest pt
         if not self.utils.is_det_jet_accepted(jet_det):
-          continue
+          self.hNevents.Fill(0)
+          return
         
         if self.debug_level > 0:
           print('deltaR: {}'.format(jet_det.delta_R(jet_truth)))

@@ -53,6 +53,7 @@ class analysis_base(base.base):
       config = yaml.safe_load(stream)
     
     self.jetR_list = config['jetR']
+    self.debug_level = config['debug_level']
 
   #---------------------------------------------------------------
   # Save all histograms
