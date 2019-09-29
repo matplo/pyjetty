@@ -94,39 +94,17 @@ class analysis_rg_data(analysis_base.analysis_base):
     
     # Retrieve list of beta values
     self.beta_list = list(beta_dict.keys())
-    
-    # Retrieve histogram binnings for each beta value
-    for beta in self.beta_list:
-      
-      binning_dict = beta_dict[beta]
-      pt_bins_det = (binning_dict['pt_bins_det'])
-      rg_bins_det = (binning_dict['rg_bins_det'])
-      
-      n_pt_bins_det = len(pt_bins_det) - 1
-      setattr(self, 'n_pt_bins_det_B{}'.format(beta), n_pt_bins_det)
-      
-      n_rg_bins_det = len(rg_bins_det) - 1
-      setattr(self, 'n_rg_bins_det_B{}'.format(beta), n_rg_bins_det)
-
-      det_pt_bin_array = array('d',pt_bins_det)
-      setattr(self, 'det_pt_bin_array_B{}'.format(beta), det_pt_bin_array)
-
-      det_rg_bin_array = array('d',rg_bins_det)
-      setattr(self, 'det_rg_bin_array_B{}'.format(beta), det_rg_bin_array)
   
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
   def initializeHistograms(self):
     
-    name = 'hNevents'
-    h = ROOT.TH1F(name, name, 2, -0.5, 1.5)
-    h.Fill(1, self.nEvents)
-    setattr(self, name, h)
+    self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
+    self.hNevents.Fill(1, self.nEvents)
     
-    name = 'hTrackEtaPhi'
-    h = ROOT.TH2F(name, name, 200, -1., 1., 628, 0., 6.28)
-    setattr(self, name, h)
+    self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
+    self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
 
     for jetR in self.jetR_list:
     
@@ -147,18 +125,6 @@ class analysis_rg_data(analysis_base.analysis_base):
       setattr(self, name, h)
       
       for beta in self.beta_list:
-        
-        # Retrieve histogram binnings
-        n_pt_bins_det = getattr(self, 'n_pt_bins_det_B{}'.format(beta))
-        det_pt_bin_array = getattr(self, 'det_pt_bin_array_B{}'.format(beta))
-        n_rg_bins_det = getattr(self, 'n_rg_bins_det_B{}'.format(beta))
-        det_rg_bin_array = getattr(self, 'det_rg_bin_array_B{}'.format(beta))
-        
-        name = 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('#theta_{g,ch}')
-        setattr(self, name, h)
 
         name = 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)
         h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
@@ -263,7 +229,6 @@ class analysis_rg_data(analysis_base.analysis_base):
     mg = jet_sd.m()
     
     getattr(self, 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, theta_g)
-    getattr(self, 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)).Fill(jet_pt_ungroomed, theta_g)
     getattr(self, 'hZg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, zg)
     getattr(self, 'hMg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, mg)
 
@@ -274,6 +239,7 @@ class analysis_rg_data(analysis_base.analysis_base):
     
     for track in fj_particles:
       self.hTrackEtaPhi.Fill(track.eta(), track.phi())
+      self.hTrackPt.Fill(track.pt())
 
 ##################################################################
 if __name__ == '__main__':

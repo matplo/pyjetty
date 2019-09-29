@@ -123,53 +123,17 @@ class analysis_rg_mc(analysis_base.analysis_base):
     
     # Retrieve list of beta values
     self.beta_list = list(beta_dict.keys())
-    
-    # Retrieve histogram binnings for each beta value
-    for beta in self.beta_list:
-      
-      binning_dict = beta_dict[beta]
-      pt_bins_det = (binning_dict['pt_bins_det'])
-      rg_bins_det = (binning_dict['rg_bins_det'])
-      pt_bins_truth = (binning_dict['pt_bins_truth'])
-      rg_bins_truth = (binning_dict['rg_bins_truth'])
-      
-      n_pt_bins_det = len(pt_bins_det) - 1
-      setattr(self, 'n_pt_bins_det_B{}'.format(beta), n_pt_bins_det)
-      
-      n_rg_bins_det = len(rg_bins_det) - 1
-      setattr(self, 'n_rg_bins_det_B{}'.format(beta), n_rg_bins_det)
 
-      n_pt_bins_truth = len(pt_bins_truth) - 1
-      setattr(self, 'n_pt_bins_truth_B{}'.format(beta), n_pt_bins_truth)
-
-      n_rg_bins_truth = len(rg_bins_truth) - 1
-      setattr(self, 'n_rg_bins_truth_B{}'.format(beta), n_rg_bins_truth)
-      
-      det_pt_bin_array = array('d',pt_bins_det)
-      setattr(self, 'det_pt_bin_array_B{}'.format(beta), det_pt_bin_array)
-      
-      det_rg_bin_array = array('d',rg_bins_det)
-      setattr(self, 'det_rg_bin_array_B{}'.format(beta), det_rg_bin_array)
-      
-      truth_pt_bin_array = array('d',pt_bins_truth)
-      setattr(self, 'truth_pt_bin_array_B{}'.format(beta), truth_pt_bin_array)
-
-      truth_rg_bin_array = array('d',rg_bins_truth)
-      setattr(self, 'truth_rg_bin_array_B{}'.format(beta), truth_rg_bin_array)
-  
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
   def initializeHistograms(self):
     
-    name = 'hNevents'
-    h = ROOT.TH1F(name, name, 2, -0.5, 1.5)
-    h.Fill(1, self.nEvents_det)
-    setattr(self, name, h)
+    self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
+    self.hNevents.Fill(1, self.nEvents_det)
     
-    name = 'hTrackEtaPhi'
-    h = ROOT.TH2F(name, name, 200, -1., 1., 628, 0., 6.28)
-    setattr(self, name, h)
+    self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
+    self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
 
     for jetR in self.jetR_list:
       
@@ -207,51 +171,12 @@ class analysis_rg_mc(analysis_base.analysis_base):
         h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
         setattr(self, name, h)
         
-        # Retrieve histogram binnings
-        n_pt_bins_det = getattr(self, 'n_pt_bins_det_B{}'.format(beta))
-        det_pt_bin_array = getattr(self, 'det_pt_bin_array_B{}'.format(beta))
-        n_rg_bins_det = getattr(self, 'n_rg_bins_det_B{}'.format(beta))
-        det_rg_bin_array = getattr(self, 'det_rg_bin_array_B{}'.format(beta))
-        n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
-        truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
-        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_B{}'.format(beta))
-        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_B{}'.format(beta))
-        
         # Create THn of response
-        dim = 0;
-        title = []
-        nbins = []
-        min = []
-        max = []
-        bin_edges = []
-        
-        title.append('p_{T,det}')
-        nbins.append(n_pt_bins_det)
-        bin_edges.append(det_pt_bin_array)
-        min.append(det_pt_bin_array[0])
-        max.append(det_pt_bin_array[-1])
-        dim+=1
-        
-        title.append('p_{T,truth}')
-        nbins.append(n_pt_bins_truth)
-        bin_edges.append(truth_pt_bin_array)
-        min.append(truth_pt_bin_array[0])
-        max.append(truth_pt_bin_array[-1])
-        dim+=1
-        
-        title.append('#theta_{g,det}')
-        nbins.append(n_rg_bins_det)
-        bin_edges.append(det_rg_bin_array)
-        min.append(det_rg_bin_array[0])
-        max.append(det_rg_bin_array[-1])
-        dim+=1
-        
-        title.append('#theta_{g,truth}')
-        nbins.append(n_rg_bins_truth)
-        bin_edges.append(truth_rg_bin_array)
-        min.append(truth_rg_bin_array[0])
-        max.append(truth_rg_bin_array[-1])
-        dim+=1
+        dim = 4;
+        title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
+        nbins = [100, 60, 130, 26]
+        min = [0., 0., 0., 0.]
+        max = [100., 300., 1.3, 1.3]
         
         name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
         nbins = (nbins)
@@ -263,7 +188,6 @@ class analysis_rg_mc(analysis_base.analysis_base):
         h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
         for i in range(0, dim):
           h.GetAxis(i).SetTitle(title[i])
-          h.SetBinEdges(i, bin_edges[i])
         setattr(self, name, h)
 
   #---------------------------------------------------------------
