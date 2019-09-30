@@ -9,6 +9,7 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF_noISR_noMPI_output.root 		:theta_g
 #normalize self
 #xrange 0,1
 #maxy 3.5
+#miny -0.1
 #grid xy
 #y 1/N_{jet} dN/d#theta_{g}
 #-----------------------
@@ -22,6 +23,7 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF___ISR___MPI_output.root 		:theta_g
 #normalize self
 #xrange 0,1
 #maxy 3.5
+#miny -0.1
 #grid xy
 #y 1/N_{jet} dN/d#theta_{g}
 
@@ -36,6 +38,7 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON__noISR_noMPI_output.root 		:theta_g
 #normalize self
 #xrange 0,1
 #maxy 3.5
+#miny -0.1
 #grid xy
 #y 1/N_{jet} dN/d#theta_{g}
 #-----------------------
@@ -49,6 +52,7 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON____ISR___MPI_output.root 		:theta_g
 #normalize self
 #xrange 0,1
 #maxy 3.5
+#miny -0.1
 #grid xy
 #y 1/N_{jet} dN/d#theta_{g}
 
@@ -58,7 +62,7 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON____ISR___MPI_output.root 		:theta_g
 #date
 #title PYTHIA8 pp #sqrt{s} = 5.02 TeV
 #legend pos=up title=Hadronization=Off anti-k_{T} R=0.4 ISR=Off MPI=Off SD,, alpha=50
-#comment 0.598,0.643,0.996,0.843, item= item=#beta=0 (filled) item=#beta=2 (hollow) tx_size=0.035
+#comment 0.707,0.711,0.963,0.911, item= item=#beta=0 (filled) item=#beta=2 (hollow) tx_size=0.035
 rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrOFF_noISR_noMPI_output.root 		:theta_g_beta0_pt20 :hist p +p20 EX0  	l +l1 : title=20 < p_{T}^{jet} < 40 GeV/c
 rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrOFF_noISR_noMPI_output.root 		:theta_g_beta2_pt20 :hist p +p24 EX0  	l +l9 -k noleg: title=20 < p_{T}^{jet} < 40 GeV/c
 rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF_noISR_noMPI_output.root 		:theta_g_beta0_pt80 :hist p +p29 +m120 EX0  	l +l1 : title=80 < p_{T}^{jet} < 100 GeV/c
@@ -67,6 +71,7 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF_noISR_noMPI_output.root 		:theta_g
 #normalize self
 #xrange 0,1
 #maxy 3.5
+#miny -0.1
 #grid xy
 #y 1/N_{jet} dN/d#theta_{g}
 
@@ -76,7 +81,7 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF_noISR_noMPI_output.root 		:theta_g
 #date
 #title PYTHIA8 pp #sqrt{s} = 5.02 TeV
 #legend pos=up title=Hadronization=On anti-k_{T} R=0.4 ISR=On MPI=On SD,, alpha=50
-#comment 0.16,0.376,0.557,0.577,  item= item=#beta=0 (filled) item=#beta=2 (hollow) tx_size=0.035
+#comment 0.707,0.711,0.963,0.911,  item= item=#beta=0 (filled) item=#beta=2 (hollow) tx_size=0.035
 rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR___MPI_output.root 		:theta_g_beta0_pt20 :hist p +p20 EX0  	l +l1 : title=20 < p_{T}^{jet} < 40 GeV/c
 rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR___MPI_output.root 		:theta_g_beta2_pt20 :hist p +p24 EX0  	l +l9 -k noleg: title=20 < p_{T}^{jet} < 40 GeV/c
 rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON____ISR___MPI_output.root 		:theta_g_beta0_pt80 :hist p +p29 +m120 EX0  	l +l1 : title=80 < p_{T}^{jet} < 100 GeV/c
@@ -85,5 +90,6 @@ rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON____ISR___MPI_output.root 		:theta_g
 #normalize self
 #xrange 0,1
 #maxy 3.5
+#miny -0.1
 #grid xy
 #y 1/N_{jet} dN/d#theta_{g}
