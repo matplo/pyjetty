@@ -25,6 +25,7 @@ def main():
 	parser.add_argument('--output', default=None, type=str)
 	parser.add_argument('--jetR', default=0.4, type=float)
 	parser.add_argument('--dry', default=False, action='store_true')
+	parser.add_argument('--overwrite', default=False, action='store_true')
 	args = parser.parse_args()	
 
 	if args.output is None:
@@ -43,6 +44,12 @@ def main():
 	print('[i] output goes to:', args.output)
 	if args.dry:
 		return
+	if os.path.exists(args.output):
+		print ('[w] output exists - skip.')
+		if args.overwrite:
+			print ('[w] output exists - overwrite ON')
+		else:
+			return
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()

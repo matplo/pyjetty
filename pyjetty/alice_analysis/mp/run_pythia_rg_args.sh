@@ -1,16 +1,19 @@
 #!/bin/bash
 
-for jetR in 0.4 0.6
+for hadrlevel in "--pythiaopts HadronLevel:all=off" "   "
 do
-	for pthatmin in 20 40 60 80
+	for jetR in 0.4 0.6
 	do
-		for mpilevel in "       " "--noMPI"
-			do
-				for isrlevel in "       " "--noISR"
+		for pthatmin in 20 40 60 80
+		do
+			for mpilevel in "       " "--noMPI"
 				do
-					# echo "./pythia_rg.py --nev 10000 --jetR ${jetR} --pthatmin ${pthatmin} --ecm 5020 ${mpilevel} ${isrlevel}"
-					./pythia_rg.py --nev 10000 --jetR ${jetR} --pthatmin ${pthatmin} --ecm 5020 ${mpilevel} ${isrlevel}
+					for isrlevel in "       " "--noISR"
+					do
+						# echo "./pythia_rg.py --nev 10000 --jetR ${jetR} --pthatmin ${pthatmin} --ecm 5020 ${mpilevel} ${isrlevel}"
+						./pythia_rg.py --nev 10000 --jetR ${jetR} --pthatmin ${pthatmin} --ecm 5020 ${mpilevel} ${isrlevel} ${hadrlevel}
+					done
 				done
-			done
+		done
 	done
 done

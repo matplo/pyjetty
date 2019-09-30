@@ -1,0 +1,128 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=Off anti-k_{T} R=0.4 20 < p_{T}^{jet} < 40 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrOFF_noISR_noMPI_output.root 		:theta_g_beta1_pt20 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrOFF_noISR___MPI_output.root 		:theta_g_beta1_pt20 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrOFF___ISR_noMPI_output.root 		:theta_g_beta1_pt20 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrOFF___ISR___MPI_output.root 		:theta_g_beta1_pt20 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=On anti-k_{T} R=0.4 20 < p_{T}^{jet} < 40 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrON__noISR_noMPI_output.root 		:theta_g_beta1_pt20 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrON__noISR___MPI_output.root 		:theta_g_beta1_pt20 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR_noMPI_output.root 		:theta_g_beta1_pt20 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR___MPI_output.root 		:theta_g_beta1_pt20 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=Off anti-k_{T} R=0.4 40 < p_{T}^{jet} < 60 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrOFF_noISR_noMPI_output.root 		:theta_g_beta1_pt40 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrOFF_noISR___MPI_output.root 		:theta_g_beta1_pt40 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrOFF___ISR_noMPI_output.root 		:theta_g_beta1_pt40 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrOFF___ISR___MPI_output.root 		:theta_g_beta1_pt40 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=On anti-k_{T} R=0.4 40 < p_{T}^{jet} < 60 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrON__noISR_noMPI_output.root 		:theta_g_beta1_pt40 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrON__noISR___MPI_output.root 		:theta_g_beta1_pt40 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrON____ISR_noMPI_output.root 		:theta_g_beta1_pt40 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin40.0_hadrON____ISR___MPI_output.root 		:theta_g_beta1_pt40 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=Off anti-k_{T} R=0.4 60 < p_{T}^{jet} < 80 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrOFF_noISR_noMPI_output.root 		:theta_g_beta1_pt60 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrOFF_noISR___MPI_output.root 		:theta_g_beta1_pt60 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrOFF___ISR_noMPI_output.root 		:theta_g_beta1_pt60 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrOFF___ISR___MPI_output.root 		:theta_g_beta1_pt60 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=On anti-k_{T} R=0.4 60 < p_{T}^{jet} < 80 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrON__noISR_noMPI_output.root 		:theta_g_beta1_pt60 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrON__noISR___MPI_output.root 		:theta_g_beta1_pt60 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrON____ISR_noMPI_output.root 		:theta_g_beta1_pt60 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin60.0_hadrON____ISR___MPI_output.root 		:theta_g_beta1_pt60 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=Off anti-k_{T} R=0.4 80 < p_{T}^{jet} < 100 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF_noISR_noMPI_output.root 		:theta_g_beta1_pt80 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF_noISR___MPI_output.root 		:theta_g_beta1_pt80 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF___ISR_noMPI_output.root 		:theta_g_beta1_pt80 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrOFF___ISR___MPI_output.root 		:theta_g_beta1_pt80 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5.02 TeV
+#legend pos=ul title=Hadronization=On anti-k_{T} R=0.4 80 < p_{T}^{jet} < 100 GeV/c SD #beta=1
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON__noISR_noMPI_output.root 		:theta_g_beta1_pt80 :hist p EX0  	l +l1 : title=ISR=Off MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON__noISR___MPI_output.root 		:theta_g_beta1_pt80 :hist p EX0 -k 	l +l2 : title=ISR=Off MPI=On
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON____ISR_noMPI_output.root 		:theta_g_beta1_pt80 :hist p EX0  	l +l1 : title=ISR=On MPI=Off
+rfiles/pythia_rg_jetR0.4_pthatmin80.0_hadrON____ISR___MPI_output.root 		:theta_g_beta1_pt80 :hist p EX0 -k 	l +l2 : title=ISR=On MPI=On
+#normalize self
+#xrange 0,1
+#maxy 3.5
+#grid xy
+#y 1/N_{jet} dN/d#theta_{g}
+
