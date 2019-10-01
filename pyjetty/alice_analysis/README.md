@@ -9,7 +9,7 @@ The framework has two stages:
 2. Post-processing: Perform analysis on the ensemble distributions,
       and plot final histograms.
 
-The processing machinery is contained in the `process`:
+The processing machinery is contained in:
   - `process/base`: Contains several shared common classes
       - the root base class: `base.py`
       - the processing base class: `process_base.py`
@@ -29,9 +29,9 @@ processing and post-processing codes.
 
 The directory `analysis` contains the post-processing machinery:
   - `analysis/base`: Contains several shared common classes
-  - the root base class: `base.py`
-  - the analysis base class: `analysis_base.py`
-  - an analysis utility class: `analysis_utils.py`
+       - the root base class: `base.py`
+      - the analysis base class: `analysis_base.py`
+      - an analysis utility class: `analysis_utils.py`
   - `analysis/user`: Contains user analysis classes, which should derive
     from `analysis/base.py`. Each user should implement
     their own analysis here, leveraging the functionalities in `analysis/base`.
@@ -41,7 +41,7 @@ The directory `analysis` contains the post-processing machinery:
 To process a single data file:
 
 ```
-python process/user/rg_pp/analysis_rg_data.py -f /path/to/AnalysisResults.root -c /path/to/my/config.yaml -o /path/to/my/outputdir
+python process/user/rg_pp/process_rg_data.py -f /path/to/AnalysisResults.root -c /path/to/my/config.yaml -o /path/to/my/outputdir
 ```
 
 
