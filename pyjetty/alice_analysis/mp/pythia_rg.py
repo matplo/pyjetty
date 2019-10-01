@@ -77,17 +77,34 @@ def main():
 	jet_output = treewriter.RTreeWriter(tree_name='tjet', fout=fout)
 	event_output = treewriter.RTreeWriter(tree_name='tev', fout=fout)
 
-	for i in tqdm.tqdm(range(args.nev)):
+	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
-		parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
+		# parts_final = pythiafjext.vectorize(pythia, True, -1, 1, False)
+		# parts_all = pythiafjext.vectorize_select(pythia, [], False);
+		parts_final = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], False);
+		# parts_neutral = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kNeutral], False);
+		# parts_charged = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], False);
+		# parts_charged_visible = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged, pythiafjext.kVisible], False);
+		# parts_charged_hadrons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged, pythiafjext.kHadron], False);
+		# print (len(parts_all), len(parts_final), len(parts_charged) + len(parts_neutral), len(parts_charged), len(parts_neutral))
+
+		# parts_hadrons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kHadron], False);
+		# parts_leptons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kLepton], False);
+		# parts_photons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kPhoton], False);
+		# print ('final', len(parts_final), 'h', len(parts_hadrons), 'l', len(parts_leptons), 'gamma', len(parts_photons), 'sum', len(parts_hadrons) + len(parts_leptons) + len(parts_photons))
+
+		parts = parts_final
 		jets = jet_selector(jet_def(parts))
 
-		event_output.fill_branch('ev_id', i)
+		event_output.fill_branch('ev_id', iev)
+		event_output.fill_branch('sigma', pythia.info.sigmaGen())
+		event_output.fill_branch('sigma_err', pythia.info.sigmaErr())
 		event_output.fill_tree()
 
 		for i,j in enumerate(jets):
-			jet_output.fill_branch('ev_id', i)
+			jet_output.fill_branch('ev_id', iev)
+			jet_output.fill_branch('sigma', pythia.info.sigmaGen())
 			jet_output.fill_branch('jet', j)
 			for isd, sd in enumerate(sds):
 				j_sd = sd.result(j)
