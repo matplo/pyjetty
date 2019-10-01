@@ -30,21 +30,21 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
-from pyjetty.alice_analysis.process_base import analysis_io
-from pyjetty.alice_analysis.process_base import analysis_utils
-from pyjetty.alice_analysis.process_base import analysis_base
+from pyjetty.alice_analysis.process.base import process_io
+from pyjetty.alice_analysis.process.base import process_utils
+from pyjetty.alice_analysis.process.base import process_base
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class analysis_rg_mc(analysis_base.analysis_base):
+class process_rg_mc(process_base.process_base):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(analysis_rg_mc, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(process_rg_mc, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
     self.initialize_config()
   
   #---------------------------------------------------------------
@@ -62,7 +62,7 @@ class analysis_rg_mc(analysis_base.analysis_base):
     # Use IO helper class to convert detector-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io_det = analysis_io.analysis_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io_det = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
     df_fjparticles_det = io_det.load_data(self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
@@ -72,7 +72,7 @@ class analysis_rg_mc(analysis_base.analysis_base):
 
     # Use IO helper class to convert truth-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
-    io_truth = analysis_io.analysis_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+    io_truth = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
     df_fjparticles_truth = io_truth.load_data()
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
@@ -99,7 +99,7 @@ class analysis_rg_mc(analysis_base.analysis_base):
     
     # Plot histograms
     print('Save histograms...')
-    analysis_base.analysis_base.saveHistograms(self)
+    process_base.process_base.saveHistograms(self)
     
     print('--- {} seconds ---'.format(time.time() - start_time))
   
@@ -109,7 +109,7 @@ class analysis_rg_mc(analysis_base.analysis_base):
   def initialize_config(self):
     
     # Call base class initialization
-    analysis_base.analysis_base.initialize_config(self)
+    process_base.process_base.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -373,7 +373,7 @@ class analysis_rg_mc(analysis_base.analysis_base):
 ##################################################################
 if __name__ == '__main__':
   # Define arguments
-  parser = argparse.ArgumentParser(description='Plot analysis histograms')
+  parser = argparse.ArgumentParser(description='Process MC')
   parser.add_argument('-f', '--inputFile', action='store',
                       type=str, metavar='inputFile',
                       default='AnalysisResults.root',
@@ -385,7 +385,7 @@ if __name__ == '__main__':
   parser.add_argument('-o', '--outputDir', action='store',
                       type=str, metavar='outputDir',
                       default='./TestOutput',
-                      help='Output directory for QA plots to be written to')
+                      help='Output directory for output to be written to')
   
   # Parse the arguments
   args = parser.parse_args()
@@ -405,5 +405,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = analysis_rg_mc(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis = process_rg_mc(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
   analysis.process_rg_mc()

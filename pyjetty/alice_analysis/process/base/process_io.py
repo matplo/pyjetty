@@ -20,16 +20,16 @@ import fastjet as fj
 import fjext
 
 # Base class
-from pyjetty.alice_analysis.process_base import base
+from pyjetty.alice_analysis.process.base import base
 
 ################################################################
-class analysis_io(base.base):
+class process_io(base.base):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', track_tree_name='tree_Particle', **kwargs):
-    super(analysis_io, self).__init__(**kwargs)
+    super(process_io, self).__init__(**kwargs)
     self.input_file = input_file
     self.track_tree_name = track_tree_name
     self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'

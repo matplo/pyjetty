@@ -30,21 +30,21 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
-from pyjetty.alice_analysis.process_base import analysis_io
-from pyjetty.alice_analysis.process_base import analysis_utils
-from pyjetty.alice_analysis.process_base import analysis_base
+from pyjetty.alice_analysis.process.base import process_io
+from pyjetty.alice_analysis.process.base import process_utils
+from pyjetty.alice_analysis.process.base import process_base
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class analysis_rg_data(analysis_base.analysis_base):
+class process_rg_data(process_base.process_base):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(analysis_rg_data, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(process_rg_data, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
     self.initialize_config()
 
   #---------------------------------------------------------------
@@ -56,7 +56,7 @@ class analysis_rg_data(analysis_base.analysis_base):
 
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
-    io = analysis_io.analysis_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
@@ -73,7 +73,7 @@ class analysis_rg_data(analysis_base.analysis_base):
 
     # Plot histograms
     print('Save histograms...')
-    analysis_base.analysis_base.saveHistograms(self)
+    process_base.process_base.saveHistograms(self)
 
     print('--- {} seconds ---'.format(time.time() - self.start_time))
 
@@ -83,7 +83,7 @@ class analysis_rg_data(analysis_base.analysis_base):
   def initialize_config(self):
     
     # Call base class initialization
-    analysis_base.analysis_base.initialize_config(self)
+    process_base.process_base.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -249,7 +249,7 @@ class analysis_rg_data(analysis_base.analysis_base):
 ##################################################################
 if __name__ == '__main__':
   # Define arguments
-  parser = argparse.ArgumentParser(description='Plot analysis histograms')
+  parser = argparse.ArgumentParser(description='Process data')
   parser.add_argument('-f', '--inputFile', action='store',
                       type=str, metavar='inputFile',
                       default='AnalysisResults.root',
@@ -257,11 +257,11 @@ if __name__ == '__main__':
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
                       default='config/analysis_config.yaml',
-                      help="Path of config file for jetscape analysis")
+                      help="Path of config file for analysis")
   parser.add_argument('-o', '--outputDir', action='store',
                       type=str, metavar='outputDir',
                       default='./TestOutput',
-                      help='Output directory for QA plots to be written to')
+                      help='Output directory for output to be written to')
   
   # Parse the arguments
   args = parser.parse_args()
@@ -282,5 +282,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = analysis_rg_data(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis = process_rg_data(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
   analysis.process_rg_data()
