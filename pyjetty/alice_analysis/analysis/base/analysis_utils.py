@@ -50,6 +50,14 @@ class analysis_utils(base.base):
       print('Integral is 0, check for problem')
 
   #---------------------------------------------------------------
+  # Remove periods from a label
+  #---------------------------------------------------------------
+  def remove_periods(self, text):
+  
+    string = str(text)
+    return string.replace('.', '')
+
+  #---------------------------------------------------------------
   # Plot and save a 1D histogram
   #---------------------------------------------------------------
   def plotHist(self, h, outputFilename, drawOptions = "", setLogy = False, setLogz = False):
