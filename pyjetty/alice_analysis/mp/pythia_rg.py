@@ -26,7 +26,8 @@ def main():
 	parser.add_argument('--jetR', default=0.4, type=float)
 	parser.add_argument('--dry', default=False, action='store_true')
 	parser.add_argument('--overwrite', default=False, action='store_true')
-	args = parser.parse_args()	
+	parser.add_argument('--charged', default=False, action='store_true')
+	args = parser.parse_args()
 
 	if args.output is None:
 		hlevel = 'on_'
@@ -41,6 +42,8 @@ def main():
 		if args.noMPI:
 			mpilevel = 'noMPI'
 		args.output = "pythia_rg_jetR{}_pthatmin{}_hadr{}_{}_{}.root".format(args.jetR, args.pthatmin, hlevel.upper(), isrlevel, mpilevel)
+		if args.charged:
+			args.output = args.output.replace('.root', '_charged.root')
 	print('[i] output goes to:', args.output)
 	if args.dry:
 		return
@@ -70,8 +73,8 @@ def main():
 
 	mycfg = []
 	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
-	if args.nev < 100:
-		args.nev = 100
+	if args.nev < 1:
+		args.nev = 1
 
 	fout = ROOT.TFile(args.output, 'recreate')
 	jet_output = treewriter.RTreeWriter(tree_name='tjet', fout=fout)
@@ -80,21 +83,12 @@ def main():
 	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
-		# parts_final = pythiafjext.vectorize(pythia, True, -1, 1, False)
-		# parts_all = pythiafjext.vectorize_select(pythia, [], False);
-		parts_final = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], False);
-		# parts_neutral = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kNeutral], False);
-		# parts_charged = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], False);
-		# parts_charged_visible = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged, pythiafjext.kVisible], False);
-		# parts_charged_hadrons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged, pythiafjext.kHadron], False);
-		# print (len(parts_all), len(parts_final), len(parts_charged) + len(parts_neutral), len(parts_charged), len(parts_neutral))
+		parts = []
+		if args.charged:
+			parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged]);
+		else:
+			parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal]);
 
-		# parts_hadrons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kHadron], False);
-		# parts_leptons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kLepton], False);
-		# parts_photons = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kPhoton], False);
-		# print ('final', len(parts_final), 'h', len(parts_hadrons), 'l', len(parts_leptons), 'gamma', len(parts_photons), 'sum', len(parts_hadrons) + len(parts_leptons) + len(parts_photons))
-
-		parts = parts_final
 		jets = jet_selector(jet_def(parts))
 
 		event_output.fill_branch('ev_id', iev)
