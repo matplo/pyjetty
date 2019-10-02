@@ -108,7 +108,6 @@ def pythia_config_from_args(args):
 		_extra = [ 	"Random:setSeed=on",
 					"Random:seed=0"]
 		sconfig_pythia.extend(_extra)
-		procsel += 1
 	if args.hardQCDlf:
 		_extra = [ 	"HardQCD:all=off",
 					"HardQCD:gg2gg=on",
