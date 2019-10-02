@@ -21,7 +21,7 @@ import ROOT
 import yaml
 
 # Analysis utilities
-import analysis_utils
+from pyjetty.alice_analysis.analysis.base import analysis_utils
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -32,6 +32,8 @@ ROOT.gStyle.SetOptTitle(0)
 
 # Set debug level (0 = no debug info, 1 = some debug info, 2 = all debug info)
 debugLevel = 0
+
+analysis_utils = analysis_utils.analysis_utils()
 
 #---------------------------------------------------------------
 def plot_rg_performance(mcFile, dataFile, configFile, outputDir):
@@ -44,7 +46,7 @@ def plot_rg_performance(mcFile, dataFile, configFile, outputDir):
     config = yaml.safe_load(stream)
   
   jetR_list = config['jetR']
-  beta_list = config['beta']
+  beta_list = list(config['beta'].keys())
   jet_matching_distance = config['jet_matching_distance']
   
   # Create output dir
@@ -98,14 +100,15 @@ def plot2D_statistics(hThetaG_JetPt, jetR, beta, outputDir):
   hThetaG_JetPt.RebinY(5)
   hThetaG_JetPt.Draw('text colz')
 
-  output_filename = os.path.join(outputDir, 'h2D_statistics_R{}_B{}.pdf'.format(jetR, beta))
+  output_filename = os.path.join(outputDir, 'h2D_statistics_R{}_B{}.pdf'.format(analysis_utils.remove_periods(jetR), beta))
   c.SaveAs(output_filename)
   c.Close()
 
 #---------------------------------------------------------------
 def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, outputDir):
 
-  rebin_val = 5
+  rebin_val_det = 5
+  rebin_val_truth = 1
   
   # Get histogram of theta_g in data, for given pt-det cut
   if hThetaG_JetPt:
@@ -115,7 +118,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
     hThetaG_data.SetMarkerStyle(21)
     hThetaG_data.SetMarkerSize(1)
     analysis_utils.scale_by_integral(hThetaG_data)
-    hThetaG_data.Rebin(rebin_val)
+    hThetaG_data.Rebin(rebin_val_det)
 
   # Get histograms of theta_g in MC, for a given pt-det cut
   hRM.GetAxis(0).SetRange(min_pt_det, max_pt_det)
@@ -125,7 +128,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
   hThetaG_det.SetLineColor(2)
   hThetaG_det.SetLineWidth(2)
   analysis_utils.scale_by_integral(hThetaG_det)
-  hThetaG_det.Rebin(rebin_val)
+  hThetaG_det.Rebin(rebin_val_det)
 
   hThetaG_truth = hRM.Projection(3)
   hThetaG_truth.SetName('hThetaG_truth')
@@ -133,7 +136,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
   hThetaG_truth.SetLineColor(4)
   hThetaG_truth.SetLineWidth(2)
   analysis_utils.scale_by_integral(hThetaG_truth)
-  hThetaG_truth.Rebin(rebin_val)
+  hThetaG_truth.Rebin(rebin_val_truth)
 
   # Draw histogram
   c = ROOT.TCanvas("c","c: hist",600,450)
@@ -174,7 +177,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
   textFit.SetNDC()
   textFit.DrawLatex(0.65,0.6,text)
   
-  output_filename = os.path.join(outputDir, 'hTheta_g_MC_R{}_B{}_{}-{}.pdf'.format(jetR, beta, min_pt_det, max_pt_det))
+  output_filename = os.path.join(outputDir, 'hTheta_g_MC_R{}_B{}_{}-{}.pdf'.format(analysis_utils.remove_periods(jetR), beta, min_pt_det, max_pt_det))
   c.SaveAs(output_filename)
   c.Close()
 
@@ -210,7 +213,7 @@ def plotDeltaR(f, jetR, jet_matching_distance, outputDir):
   textFit.SetNDC()
   textFit.DrawLatex(0.72,0.8,text)
 
-  output_filename = os.path.join(outputDir, '{}.pdf'.format(name))
+  output_filename = os.path.join(outputDir, '{}.pdf'.format(analysis_utils.remove_periods(name)))
   c.SaveAs(output_filename)
   c.Close()
 
@@ -240,7 +243,7 @@ def plotJER(f, jetR, outputDir):
   histJER.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
   histJER.GetYaxis().SetRangeUser(-0.01, 0.5)
   histJER.GetXaxis().SetRangeUser(5., 300.)
-  outputFilename = os.path.join(outputDir, "histJER_R{}.pdf".format(jetR))
+  outputFilename = os.path.join(outputDir, "histJER_R{}.pdf".format(analysis_utils.remove_periods(jetR)))
   histJER.SetMarkerStyle(21)
   histJER.SetMarkerColor(2)
   analysis_utils.plotHist(histJER, outputFilename, "hist P")
@@ -253,7 +256,7 @@ def plotJES(f, jetR, outputDir):
   histDeltaJES.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
   histDeltaJES.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
   histDeltaJES.GetXaxis().SetRangeUser(0., 200.)
-  outputFilename = os.path.join(outputDir, "histDeltaJES_R{}.pdf".format(jetR))
+  outputFilename = os.path.join(outputDir, "histDeltaJES_R{}.pdf".format(analysis_utils.remove_periods(jetR)))
   #analysis_utils.plotHist(histDeltaJES, outputFilename, "colz", False, True)
   
   histDeltaJES.RebinX(4)
@@ -261,7 +264,7 @@ def plotJES(f, jetR, outputDir):
   histDeltaJESprof.GetXaxis().SetRangeUser(0., 200.)
   histDeltaJESprof.GetYaxis().SetRangeUser(-0.8, 0.2)
   histDeltaJESprof.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
-  outputFilename = os.path.join(outputDir, "histDeltaJESprof_R{}.pdf".format(jetR))
+  outputFilename = os.path.join(outputDir, "histDeltaJESprof_R{}.pdf".format(analysis_utils.remove_periods(jetR)))
   histDeltaJESprof.SetMarkerStyle(21)
   histDeltaJESprof.SetMarkerColor(4)
   analysis_utils.plotHist(histDeltaJESprof, outputFilename, "P")
@@ -337,7 +340,7 @@ def plotJESproj(f, jetR, outputDir):
   leg.AddEntry(hJESProj3, "#it{p}_{T}^{gen} = 100-120 GeV", "P")
   leg.Draw("same")
   
-  outputFilename = os.path.join(outputDir, "histDeltaJESproj_R{}.pdf".format(jetR))
+  outputFilename = os.path.join(outputDir, "histDeltaJESproj_R{}.pdf".format(analysis_utils.remove_periods(jetR)))
   cJES.SaveAs(outputFilename)
   cJES.Close()
 
@@ -383,7 +386,7 @@ def plotJetRecoEfficiency(f, jetR, outputDir):
   histEfficiency.GetYaxis().SetRangeUser(0.4, 1.2)
   histEfficiency.SetMarkerStyle(21)
   histEfficiency.SetMarkerColor(1)
-  outputFilename = os.path.join(outputDir, '{}_R{}.pdf'.format(histEfficiency.GetName(), jetR))
+  outputFilename = os.path.join(outputDir, '{}_R{}.pdf'.format(analysis_utils.remove_periods(histEfficiency.GetName()), analysis_utils.remove_periods(jetR)))
   analysis_utils.plotHist(histEfficiency, outputFilename)
 
 #----------------------------------------------------------------------

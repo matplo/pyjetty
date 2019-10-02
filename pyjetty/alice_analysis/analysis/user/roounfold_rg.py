@@ -22,6 +22,8 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptTitle(0)
 
+analysis_utils = analysis_utils.analysis_utils()
+
 ###########################################################################################
 ###########################################################################################
 def roounfold_rg(input_file_data, input_file_response, config_file, output_dir, file_format):
@@ -67,7 +69,7 @@ def unfoldSingleOutputList(fData, fResponse, unfolded_dict, jetR, beta, beta_dic
   hData_PerBin = fData.Get(name)
   hData_PerBin.Sumw2()
   hData_PerBin.GetXaxis().SetRangeUser(0., 100.)
-  outputFilename = os.path.join(output_dir, 'hData_R{}_B{}{}'.format(jetR, beta, file_format))
+  outputFilename = os.path.join(output_dir, 'hData_R{}_B{}{}'.format(analysis_utils.remove_periods(jetR), beta, file_format))
   plotHist(hData_PerBin, outputFilename, 'colz', False, True)
   
   # Get RooUnfoldResponse object
@@ -354,7 +356,7 @@ def plot_rg(unfolded_dict, jetR, beta, reg_param_final, regularizationParamName,
   text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
   text_latex.DrawLatex(0.45, 0.75, text)
   
-  outputFilename = os.path.join(output_dir, 'hUnfolded_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, file_format))
+  outputFilename = os.path.join(output_dir, 'hUnfolded_R{}_B{}_{}-{}{}'.format(analysis_utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, file_format))
   c.SaveAs(outputFilename)
   c.Close()
 
@@ -448,7 +450,7 @@ def plot_unfolded_pt(unfolded_dict, jetR, beta, beta_dict, reg_param_final, regu
   text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
   text_latex.DrawLatex(0.45, 0.75, text)
 
-  outputFilename = os.path.join(output_dir, 'hUnfoldedPt_R{}_B{}{}'.format(jetR, beta, file_format))
+  outputFilename = os.path.join(output_dir, 'hUnfoldedPt_R{}_B{}{}'.format(analysis_utils.remove_periods(jetR), beta, file_format))
   c.SaveAs(outputFilename)
   c.Close()
 
@@ -485,7 +487,7 @@ def plot_kinematic_efficiency(fResponse, jetR, beta, beta_dict, output_dir, file
   hKinematicEfficiency = hNumerator.Clone()
   hKinematicEfficiency.SetName('hKinematicEfficiency_R{}_B{}'.format(jetR, beta))
   hKinematicEfficiency.Divide(hDenominator)
-  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency2D_R{}_B{}{}'.format(jetR, beta, file_format))
+  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency2D_R{}_B{}{}'.format(analysis_utils.remove_periods(jetR), beta, file_format))
   plotHist(hKinematicEfficiency, outputFilename, "colz")
   
   plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, beta, beta_dict, output_dir, file_format)
@@ -574,7 +576,7 @@ def plot_kinematic_efficiency_projections(hKinematicEfficiency2D, jetR, beta, be
   text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
   text_latex.DrawLatex(0.3, 0.85, text)
 
-  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency_R{}_B{}{}'.format(jetR, beta, file_format))
+  outputFilename = os.path.join(output_dir, 'hKinematicEfficiency_R{}_B{}{}'.format(analysis_utils.remove_periods(jetR), beta, file_format))
   c.SaveAs(outputFilename)
   c.Close()
 
@@ -687,7 +689,7 @@ def plot_refolded_slice(hFoldedTruth, hData_PerBin, i, jetR, beta, regularizatio
   h1LegendLabel = 'Folded truth, {} = {}'.format(regularizationParamName,i)
   h2LegendLabel = 'Measured pp'
   ratioYAxisTitle = 'Folded truth / Measured'
-  outputFilename = os.path.join(output_dir, 'hFoldedTruth_R{}_B{}_{}-{}_{}{}'.format(jetR, beta, min_pt_det, max_pt_det, i, file_format))
+  outputFilename = os.path.join(output_dir, 'hFoldedTruth_R{}_B{}_{}-{}_{}{}'.format(analysis_utils.remove_periods(jetR), beta, min_pt_det, max_pt_det, i, file_format))
   plot_rg_ratio(hFolded_rg, hData_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
 #################################################################################################
@@ -732,7 +734,7 @@ def plot_closure_slice(hUnfolded, hMC_Truth, i, jetR, beta, regularizationParamN
   h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(regularizationParamName,i)
   h2LegendLabel = 'MC-truth'
   ratioYAxisTitle = 'Unfolded MC det / Truth'
-  outputFilename = os.path.join(output_dir, 'hClosure_R{}_B{}_{}-{}_{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, i, file_format))
+  outputFilename = os.path.join(output_dir, 'hClosure_R{}_B{}_{}-{}_{}{}'.format(analysis_utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, i, file_format))
   plot_rg_ratio(hUnfolded_rg, hMCTruth_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
 #################################################################################################

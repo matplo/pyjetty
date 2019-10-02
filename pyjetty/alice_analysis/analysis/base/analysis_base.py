@@ -18,8 +18,8 @@ import ROOT
 import yaml
 
 # Analysis utilities
-from pyjetty.alice_analysis.process_base import base
-from pyjetty.alice_analysis.process_base import analysis_utils
+from pyjetty.alice_analysis.analysis.base import base
+from pyjetty.alice_analysis.analysis.base import analysis_utils
 
 ################################################################
 class analysis_base(base.base):
@@ -54,18 +54,3 @@ class analysis_base(base.base):
     
     self.jetR_list = config['jetR']
     self.debug_level = config['debug_level']
-
-  #---------------------------------------------------------------
-  # Save all histograms
-  #---------------------------------------------------------------
-  def saveHistograms(self):
-    
-    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
-    fout = ROOT.TFile(outputfilename, 'recreate')
-    fout.cd()
-    for attr in dir(self):
-      obj = getattr(self, attr)
-      types = (ROOT.TH1, ROOT.THnBase)
-      if isinstance(obj, types):
-        obj.Write()
-    fout.Close()

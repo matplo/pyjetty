@@ -24,7 +24,7 @@ import fastjet as fj
 import fjext
 
 # Base class
-from pyjetty.alice_analysis.process_base import base
+from pyjetty.alice_analysis.analysis.base import base
 
 ################################################################
 class analysis_utils(base.base):
@@ -34,34 +34,6 @@ class analysis_utils(base.base):
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
     super(analysis_utils, self).__init__(**kwargs)
-  
-  #---------------------------------------------------------------
-  # Check if det-jet passes acceptance criteria
-  #---------------------------------------------------------------
-  def is_det_jet_accepted(self, jet_det):
-    
-    accept_jet = True
-
-    for track in jet_det.constituents():
-
-      if track.pt() > 100.:
-        accept_jet = False
-
-    return accept_jet
-
-  #---------------------------------------------------------------
-  # Check if truth-jet passes acceptance criteria
-  #---------------------------------------------------------------
-  def is_truth_jet_accepted(self, jet_truth):
-    
-    accept_jet = True
-    
-    for track in jet_truth.constituents():
-      
-      if track.pt() > 100.:
-        accept_jet = False
-
-    return accept_jet
 
   #---------------------------------------------------------------
   # Normalize a histogram by its integral
@@ -76,6 +48,14 @@ class analysis_utils(base.base):
       h.Scale(1./integral)
     else:
       print('Integral is 0, check for problem')
+
+  #---------------------------------------------------------------
+  # Remove periods from a label
+  #---------------------------------------------------------------
+  def remove_periods(self, text):
+  
+    string = str(text)
+    return string.replace('.', '')
 
   #---------------------------------------------------------------
   # Plot and save a 1D histogram
