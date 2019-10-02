@@ -223,8 +223,8 @@ def generate():
 	# mycfg = ['PhaseSpace:pThatMin = 6']
 	mycfg = []
 	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
-	if args.nev < 100:
-		args.nev = 100
+	if args.nev < 1:
+		args.nev = 1
 
 	# jet_particle_eta_max = 0.9
 	hjet = HJetAnalysis(jet_particle_eta_max=0.9)
