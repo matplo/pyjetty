@@ -3,7 +3,7 @@ import pythia8
 
 def create_and_init_pythia(config_strings=[]):
 	pythia = pythia8.Pythia()
-	extra_s = ["Next:numberShowEvent = 0", "Next:numberShowInfo = 0", "Next:numberShowProcess = 0", "Stat:showProcessLevel = on"]
+	extra_s = ["Next:numberCount = 0", "Next:numberShowEvent = 0", "Next:numberShowInfo = 0", "Next:numberShowProcess = 0", "Stat:showProcessLevel = on"]
 	config_strings.extend(extra_s)
 	for s in config_strings:
 		pythia.readString(s)
