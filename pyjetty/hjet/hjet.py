@@ -233,12 +233,11 @@ def generate():
 		args.nev = 1
 
 	# jet_particle_eta_max = 0.9
-	hjet = HJetAnalysis(jet_particle_eta_max=0.9)
+	hjet = HJetAnalysis(jet_particle_eta_max=0.9, output=args.output)
 
 	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
-
 		parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
 		if len(parts) < 1:
 			continue
