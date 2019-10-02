@@ -17,6 +17,7 @@ import pythiaext
 
 import ROOT as r
 import array
+import random
 
 from pyjetty.mputils import MPBase
 from pyjetty.mputils import RTreeWriter
@@ -46,12 +47,19 @@ class V0Detector(MPBase):
 		self.V0_and = ((self.V0A_mult > 0) & (self.V0C_mult > 0))
 		self.V0_or = ((self.V0A_mult > 0) | (self.V0C_mult > 0))
 
+	def fill_branches(self, t, ev_id, weight=None):
+		t.fill_branch('V0w', weight)
+		t.fill_branch('mV0A', v0det.V0A_mult)
+		t.fill_branch('mV0C', v0det.V0C_mult)
+		t.fill_branch('mV0', v0det.V0_mult)
+
+
 class JetAnalysis(MPBase):
 	def __init__(self, **kwargs):
 		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, particles=None)
 		super(JetAnalysis, self).__init__(**kwargs)
 
-		self.bg_rho_range = fj.SelectorAbsRapMax(self.particle_eta_max)
+		self.bg_rho_range = fj.SelectorAbsEtaMax(self.particle_eta_max)
 		self.bg_jet_def = fj.JetDefinition(fj.kt_algorithm, self.jet_R)
 		self.bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
 		self.bg_estimator = fj.JetMedianBackgroundEstimator(self.bg_rho_range, self.bg_jet_def, self.bg_area_def)
@@ -59,7 +67,7 @@ class JetAnalysis(MPBase):
 
 		self.jet_eta_max = self.particle_eta_max - self.jet_R * 1.05
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
-		self.jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorAbsRapMax(self.jet_eta_max)
+		self.jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorAbsEtaMax(self.jet_eta_max)
 		self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
 
 		if self.particles:
@@ -75,15 +83,130 @@ class JetAnalysis(MPBase):
 			self.bg_estimator.set_particles(parts)
 			self.rho = self.bg_estimator.rho()
 			self.cs = fj.ClusterSequenceArea(parts, self.jet_def, self.jet_area_def)
-			self.jets = fj.sorted_by_pt(self.cs.inclusive_jets())
+			self.jets = fj.sorted_by_pt(self.jet_selector(self.cs.inclusive_jets()))
 			self.corr_jet_pt = [j.pt() - j.area() * self.rho for j in self.jets]
 
-def HJetAnalysis(MPBase):
+	def fill_branches(self, t, ev_id, weight):
+			if ev_id:
+				t.fill_branch('ev_id', ev_id)
+			if weight:
+				t.fill_branch('jetw', weight)
+			t.fill_branch('rho', self.rho)
+			t.fill_branch('jet', self.jets)
+			t.fill_branch('jet_ptcorr', self.corr_jet_pt)
+
+class HJetTree(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(output='hjet.root', trigger_ranges= [[6, 7] , [12, 22], [20, 30] ])
+		self.configure_from_args(	fout=None,
+									output='hjet_tree.root',
+									trigger_range = [6, 7],
+									jet_ana = None)
+		super(HJetTree, self).__init__(**kwargs)
+		if self.fout is None:
+			self.fout = r.TFile(self.output, 'RECREATE')
+		self.fout.cd()
+		self.tree_name='tjet_{}_{}_{}'.format(self.jet_ana.jet_R, self.trigger_range[0], self.trigger_range[1])
+		self.jet_output = RTreeWriter(tree_name=self.tree_name, fout=self.fout)
+
+	def analyze_event(self, jet_parts):
+		self.trigger_particle = None
+		t_selector = fj.SelectorPtRange(self.trigger_range[0], self.trigger_range[1])
+		t_candidates = t_selector(jet_parts)
+		if len(t_candidates) < 1:
+			return False
+		self.trigger_particle = random.choice(t_candidates)
+		return True
+
+	def fill_branches(self, ev_id, weight):
+		if self.jet_ana is None:
+			print('[e] no jet ana in hjettree...')
+			return False
+		if self.trigger_particle:
+			if self.trigger_particle:
+				self.dphis = [self.trigger_particle.delta_phi_to(j) for j in self.jet_ana.jets]
+				self.detas = [self.trigger_particle.eta() - j.eta() for j in self.jet_ana.jets]
+			else:
+				self.dphis = []
+				self.detas = []
+			self.jet_output.fill_branch('ev_id', ev_id)
+			self.jet_output.fill_branch('t_w', weight)			
+			self.jet_output.fill_branch('t_pt',  self.trigger_particle.pt())
+			self.jet_output.fill_branch('t_phi', self.trigger_particle.phi())
+			self.jet_output.fill_branch('t_eta', self.trigger_particle.eta())
+			self.jet_output.fill_branch('dphi', self.dphis)
+			self.jet_output.fill_branch('deta', self.detas)
+			self.jet_ana.fill_branches(self.jet_output, ev_id = None, weight = None)
+
+	def fill_tree(self):
+		self.jet_output.fill_tree()
+
+	def write_and_close_file(self):
+		self.fout.Write()
+		self.fout.Close()
+
+
+class HJetAnalysis(MPBase):
+	def __init__(self, **kwargs):
+		self.configure_from_args(jet_particle_eta_max = 0.9,
+								 output='hjet.root', 
+								 trigger_ranges = [ [6, 7] , [12, 22], [20, 30] ],
+								 jet_Rs = [0.2, 0.4, 0.6])
 		super(HJetAnalysis, self).__init__(**kwargs)
-		fout = r.TFile(self.output, 'RECREATE')
-		fout.cd()
+		self.fout = r.TFile(self.output, 'RECREATE')
+		self.fout.cd()
+		self.event_output = RTreeWriter(tree_name='tev', fout=self.fout)
+
+		self.hmV0M = r.TH1F('hmV0M', 'hmV0M', 1000, 0, 1000)
+		self.hmV0A = r.TH1F('hmV0A', 'hmV0A', 1000, 0, 1000)
+		self.hmV0C = r.TH1F('hmV0C', 'hmV0C', 1000, 0, 1000)
+
+		self.jet_particle_selector = fj.SelectorAbsRapMax(self.jet_particle_eta_max)
+
+		self.jet_ans = []
+		self.hjet_ts = []
+		for jR in self.jet_Rs:
+			j_ana = JetAnalysis(jet_R=jR, particle_eta_max=self.jet_particle_eta_max)
+			self.jet_ans.append(j_ana)
+			for tr in self.trigger_ranges:
+				hjet_tree = HJetTree(fout=self.fout, trigger_range=tr, jet_ana=j_ana)
+				self.hjet_ts.append(hjet_tree)
+
+	def analyze_event(self, ev_id, parts, pythia=None):
+		# V0 multiplicity and event props
+		v0det = V0Detector(particles=parts)
+		self.hmV0M.Fill(v0det.V0_mult)
+		self.hmV0A.Fill(v0det.V0A_mult)
+		self.hmV0C.Fill(v0det.V0C_mult)
+		self.event_output.fill_branch('ev_id', ev_id)
+		self.event_output.fill_branch('mV0A', v0det.V0A_mult)
+		self.event_output.fill_branch('mV0C', v0det.V0C_mult)
+		self.event_output.fill_branch('mV0', v0det.V0_mult)
+		if pythia:
+			ev_w = pythia.info.sigmaGen()
+		else:
+			ev_w = -1
+		self.event_output.fill_branch('weight', ev_w)
+		self.event_output.fill_tree()
+
+		# jet analysis...
+		jet_parts = self.jet_particle_selector(parts)
+
+		trigger_present = False
+		for hj in self.hjet_ts:
+			if hj.analyze_event(jet_parts):
+				trigger_present = True
+
+		if trigger_present:
+			for ja in self.jet_ans:
+				ja.analyze_event(jet_parts)
+			for hj in self.hjet_ts:
+				hj.fill_branches(ev_id, ev_w)
+				hj.fill_tree()
+
+	def finalize(self):
+		self.fout.Write()
+		self.fout.Close()
+		print('[i] written', self.fout.GetName())
 
 def generate():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
@@ -103,81 +226,21 @@ def generate():
 	if args.nev < 100:
 		args.nev = 100
 
-	fout = r.TFile(args.output, 'RECREATE')
-	fout.cd()	
-	tntriggers = r.TNtuple('triggers', 'triggers', 'eventid:mV0:hpt')
-	tnhjet = r.TNtuple('hjet', 'hjet', 'eventid:mV0:hpt:jetpt:dphi:deta')
-	jet_output = RTreeWriter(tree_name='tjet', fout=fout)
-	event_output = RTreeWriter(tree_name='tev', fout=fout)
+	# jet_particle_eta_max = 0.9
+	hjet = HJetAnalysis(jet_particle_eta_max=0.9)
 
-	hmV0M = r.TH1F('hmV0M', 'hmV0M', 1000, 0, 1000)
-	hmV0A = r.TH1F('hmV0A', 'hmV0A', 1000, 0, 1000)
-	hmV0C = r.TH1F('hmV0C', 'hmV0C', 1000, 0, 1000)
-
-	v0det = V0Detector()
-	hjet_a = JetAnalysis()
-	jet_particle_eta_max = 0.9
-	jet_particle_selector = fj.SelectorAbsRapMax(jet_particle_eta_max)
-
-	for i in tqdm.tqdm(range(args.nev)):
+	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
 
 		parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
-		jet_parts = jet_particle_selector(parts)
-
-		jet_lead_particle = None
-		jet_lead_particle_pt = 0.0
 		if len(parts) < 1:
 			continue
+		hjet.analyze_event(iev, parts, pythia)
 
-		jet_lead_particle = fj.sorted_by_pt(jet_parts)[0]
-		jet_lead_particle_pt = jet_lead_particle.pt()
-
-		v0det.analyze_event(parts)
-		hjet_a.analyze_event(jet_parts)
-
-		hmV0M.Fill(v0det.V0_mult)
-		hmV0A.Fill(v0det.V0A_mult)
-		hmV0C.Fill(v0det.V0C_mult)
-		tntriggers.Fill(i, v0det.V0_mult, jet_lead_particle_pt)
-		event_output.fill_branch('ev_id', i)
-		event_output.fill_branch('mV0A', v0det.V0A_mult)
-		event_output.fill_branch('mV0C', v0det.V0C_mult)
-		event_output.fill_branch('mV0', v0det.V0_mult)
-		event_output.fill_branch('lead_pt', jet_lead_particle_pt)
-		event_output.fill_branch('sigmaGen', pythia.info.sigmaGen())
-		event_output.fill_tree()
-
-		jets = hjet_a.jets
-		for i, j in enumerate(jets):
-			if jet_lead_particle:
-				dphi = jet_lead_particle.delta_phi_to(j)
-				deta = jet_lead_particle.eta() - j.eta()
-				tnhjet.Fill(i, v0det.V0_mult, jet_lead_particle_pt, j.pt(), dphi, deta)
-
-		dphis = []
-		detas = []
-		if jet_lead_particle:
-			dphis = [jet_lead_particle.delta_phi_to(j) for j in jets]
-			detas = [jet_lead_particle.eta() - j.eta() for j in jets]
-
-		jet_output.fill_branch('ev_id', i)
-		jet_output.fill_branch('mV0A', v0det.V0A_mult)
-		jet_output.fill_branch('mV0C', v0det.V0C_mult)
-		jet_output.fill_branch('mV0', v0det.V0_mult)
-		jet_output.fill_branch('lead_pt', jet_lead_particle_pt)
-		jet_output.fill_branch('sigmaGen', pythia.info.sigmaGen())
-		jet_output.fill_branch('jet', jets)
-		jet_output.fill_branch('jet_ptcorr', hjet_a.corr_jet_pt)
-		jet_output.fill_branch('dphi', dphis)
-		jet_output.fill_branch('deta', detas)
-		jet_output.fill_tree()
+	hjet.finalize()
 
 	pythia.stat()
-
-	fout.Write()
-	fout.Close()
 
 if __name__ == '__main__':
 	generate()
