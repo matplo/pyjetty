@@ -105,8 +105,8 @@ class HJetTree(MPBase):
 		if self.fout is None:
 			self.fout = r.TFile(self.output, 'RECREATE')
 		self.fout.cd()
-		self.tree_name='tjet_{}_{}_{}'.format(self.jet_ana.jet_R, self.trigger_range[0], self.trigger_range[1])
-		self.jet_output = RTreeWriter(tree_name=self.tree_name, fout=self.fout)
+		self.tree_name='tjet_0{}_{}_{}'.format(int(10*self.jet_ana.jet_R), int(self.trigger_range[0]), int(self.trigger_range[1]))
+		self.tree_writer = RTreeWriter(tree_name=self.tree_name, fout=self.fout)
 
 	def analyze_event(self, jet_parts):
 		self.trigger_particle = None
@@ -128,17 +128,17 @@ class HJetTree(MPBase):
 			else:
 				self.dphis = []
 				self.detas = []
-			self.jet_output.fill_branch('ev_id', ev_id)
-			self.jet_output.fill_branch('t_w', weight)			
-			self.jet_output.fill_branch('t_pt',  self.trigger_particle.pt())
-			self.jet_output.fill_branch('t_phi', self.trigger_particle.phi())
-			self.jet_output.fill_branch('t_eta', self.trigger_particle.eta())
-			self.jet_output.fill_branch('dphi', self.dphis)
-			self.jet_output.fill_branch('deta', self.detas)
-			self.jet_ana.fill_branches(self.jet_output, ev_id = None, weight = None)
+			self.tree_writer.fill_branch('ev_id', ev_id)
+			self.tree_writer.fill_branch('t_w', weight)			
+			self.tree_writer.fill_branch('t_pt',  self.trigger_particle.pt())
+			self.tree_writer.fill_branch('t_phi', self.trigger_particle.phi())
+			self.tree_writer.fill_branch('t_eta', self.trigger_particle.eta())
+			self.tree_writer.fill_branch('dphi', self.dphis)
+			self.tree_writer.fill_branch('deta', self.detas)
+			self.jet_ana.fill_branches(self.tree_writer, ev_id = None, weight = None)
 
 	def fill_tree(self):
-		self.jet_output.fill_tree()
+		self.tree_writer.fill_tree()
 
 	def write_and_close_file(self):
 		self.fout.Write()
@@ -149,7 +149,7 @@ class HJetAnalysis(MPBase):
 	def __init__(self, **kwargs):
 		self.configure_from_args(jet_particle_eta_max = 0.9,
 								 output='hjet.root', 
-								 trigger_ranges = [ [6, 7] , [12, 22], [20, 30] ],
+								 trigger_ranges = [ [0, 1e3], [6, 7] , [12, 22], [20, 30] ],
 								 jet_Rs = [0.2, 0.4, 0.6])
 		super(HJetAnalysis, self).__init__(**kwargs)
 		self.fout = r.TFile(self.output, 'RECREATE')
@@ -200,8 +200,14 @@ class HJetAnalysis(MPBase):
 			for ja in self.jet_ans:
 				ja.analyze_event(jet_parts)
 			for hj in self.hjet_ts:
-				hj.fill_branches(ev_id, ev_w)
-				hj.fill_tree()
+				if hj.trigger_particle:
+					hj.fill_branches(ev_id, ev_w)
+					hj.tree_writer.fill_branch('ev_id', ev_id)
+					hj.tree_writer.fill_branch('mV0A', v0det.V0A_mult)
+					hj.tree_writer.fill_branch('mV0C', v0det.V0C_mult)
+					hj.tree_writer.fill_branch('mV0', v0det.V0_mult)
+					hj.tree_writer.fill_branch('weight', ev_w)
+					hj.fill_tree()
 
 	def finalize(self):
 		self.fout.Write()
