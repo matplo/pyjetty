@@ -107,7 +107,8 @@ def plot2D_statistics(hThetaG_JetPt, jetR, beta, outputDir):
 #---------------------------------------------------------------
 def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, outputDir):
 
-  rebin_val = 5
+  rebin_val_det = 5
+  rebin_val_truth = 1
   
   # Get histogram of theta_g in data, for given pt-det cut
   if hThetaG_JetPt:
@@ -117,7 +118,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
     hThetaG_data.SetMarkerStyle(21)
     hThetaG_data.SetMarkerSize(1)
     analysis_utils.scale_by_integral(hThetaG_data)
-    hThetaG_data.Rebin(rebin_val)
+    hThetaG_data.Rebin(rebin_val_det)
 
   # Get histograms of theta_g in MC, for a given pt-det cut
   hRM.GetAxis(0).SetRange(min_pt_det, max_pt_det)
@@ -127,7 +128,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
   hThetaG_det.SetLineColor(2)
   hThetaG_det.SetLineWidth(2)
   analysis_utils.scale_by_integral(hThetaG_det)
-  hThetaG_det.Rebin(rebin_val)
+  hThetaG_det.Rebin(rebin_val_det)
 
   hThetaG_truth = hRM.Projection(3)
   hThetaG_truth.SetName('hThetaG_truth')
@@ -135,7 +136,7 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
   hThetaG_truth.SetLineColor(4)
   hThetaG_truth.SetLineWidth(2)
   analysis_utils.scale_by_integral(hThetaG_truth)
-  hThetaG_truth.Rebin(rebin_val)
+  hThetaG_truth.Rebin(rebin_val_truth)
 
   # Draw histogram
   c = ROOT.TCanvas("c","c: hist",600,450)
