@@ -18,8 +18,10 @@ import ROOT
 import yaml
 
 # Analysis utilities
-from pyjetty.alice_analysis.analysis.base import base
-from pyjetty.alice_analysis.analysis.base import analysis_utils
+#from pyjetty.alice_analysis.analysis.base import base
+#from pyjetty.alice_analysis.analysis.base import analysis_utils
+import base
+import analysis_utils
 
 ################################################################
 class analysis_base(base.base):
@@ -27,12 +29,13 @@ class analysis_base(base.base):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
+  def __init__(self, input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', **kwargs):
     super(analysis_base, self).__init__(**kwargs)
-    self.input_file = input_file
+    self.input_file_data = input_file_data
+    self.input_file_response = input_file_response
     self.config_file = config_file
     self.output_dir = output_dir
-    self.debug_level = debug_level # (0 = no debug info, 1 = some debug info, 2 = all debug info)
+    self.file_format = file_format
     
     # Create output dir
     if not self.output_dir.endswith("/"):
