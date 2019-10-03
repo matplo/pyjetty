@@ -23,7 +23,7 @@ class TreeUtils(object):
 		# print ("fname:", fname, "tdir:", tdir, "tname:", tname)
 		_tpath = self.tname
 		if len(tdir) == 0:
-			din = fin
+			din = self.fin
 		else:
 			# print ('getting ', tdir)
 			_tdir = self.fin.Get(tdir)

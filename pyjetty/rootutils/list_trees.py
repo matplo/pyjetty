@@ -5,7 +5,7 @@ import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 import os
 import argparse
-import rootutils
+import pyjetty.rootutils as rootutils
 
 
 def main():
