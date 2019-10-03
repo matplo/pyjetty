@@ -340,7 +340,6 @@ class run_rg_analysis(base.base):
     h.DrawCopy('PE X0 same')
     
     h_shape = getattr(self, 'hResult_shape_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
-    h.SetMarkerColor(0)
     h_shape.SetLineColor(0)
     h_shape.SetFillColor(color)
     h_shape.SetFillColorAlpha(color, 0.3)
@@ -353,17 +352,37 @@ class run_rg_analysis(base.base):
     h_corr.SetMarkerColorAlpha(color, 0)
     h_corr.SetLineWidth(1)
     h_corr.Draw('E2 same')
+
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE Preliminary'
+    text_latex.DrawLatex(0.57, 0.87, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
-    text_latex.DrawLatex(0.45, 0.85, text)
-    
+    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.57, 0.8, text)
+
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
-    text_latex.DrawLatex(0.45, 0.75, text)
+    text = 'R = ' + str(jetR) + '  #beta = ' + str(beta) + '   | #eta_{jet}| < 0.5'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.57, 0.73, text)
+
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.57, 0.66, text)
     
+    myLegend = ROOT.TLegend(0.25,0.7,0.5,0.85)
+    self.utils.setup_legend(myLegend,0.035)
+    myLegend.AddEntry(h, 'ALICE pp', 'pe')
+    myLegend.AddEntry(h_corr, 'Correlated uncertainty', 'f')
+    myLegend.AddEntry(h_shape, 'Shape uncertainty', 'f')
+    myLegend.Draw()
+  
     outputFilename = os.path.join(self.output_dir_final, 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
