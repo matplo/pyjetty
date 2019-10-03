@@ -43,6 +43,14 @@ class roounfold_rg(analysis_base.analysis_base):
   
     self.get_responses(rebin_response=False)
     
+    # Create output files to store results
+    for jetR in self.jetR_list:
+      for beta in self.beta_list:
+        fResult_name = os.path.join(self.output_dir, 'fResult_R{}_B{}.root'.format(jetR, beta))
+        setattr(self, 'fResult_name_R{}_B{}'.format(jetR, beta), fResult_name)
+        fResult = ROOT.TFile(fResult_name, 'RECREATE')
+        fResult.Close()
+    
     print(self)
   
   #---------------------------------------------------------------
@@ -236,8 +244,8 @@ class roounfold_rg(analysis_base.analysis_base):
     response = getattr(self, 'roounfold_response_R{}_B{}'.format(jetR, beta))
     hData = getattr(self, 'hThetaG_JetPt_R{}_B{}_rebinned'.format(jetR, beta))
     
-    fResult_name = os.path.join(self.output_dir, 'fResult_R{}_B{}.root'.format(jetR, beta))
-    fResult = ROOT.TFile(fResult_name, 'RECREATE')
+    fResult_name = getattr(self, 'fResult_name_R{}_B{}'.format(jetR, beta))
+    fResult = ROOT.TFile(fResult_name, 'UPDATE')
     
     for i in range(1, self.reg_param_final + 3):
       
@@ -647,6 +655,9 @@ class roounfold_rg(analysis_base.analysis_base):
     leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
     self.utils.setup_legend(leg,0.04)
     
+    fResult_name = getattr(self, 'fResult_name_R{}_B{}'.format(jetR, beta))
+    fResult = ROOT.TFile(fResult_name, 'UPDATE')
+    
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
     for bin in range(1, n_pt_bins_truth-1):
@@ -655,7 +666,9 @@ class roounfold_rg(analysis_base.analysis_base):
       
       hKinematicEfficiency2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
       h = hKinematicEfficiency2D.ProjectionY()
-      h.SetName('hKinematicEfficiency_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+      name = 'hKinematicEfficiency_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+      h.SetName(name)
+      h.Write()
       
       if bin == 1:
         h.SetMarkerSize(1.5)
@@ -695,6 +708,8 @@ class roounfold_rg(analysis_base.analysis_base):
     outputFilename = os.path.join(self.output_dir, 'hKinematicEfficiency_R{}_B{}{}'.format(self.utils.remove_periods(jetR), beta, self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
+
+    fResult.Close()
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
