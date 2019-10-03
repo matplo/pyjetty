@@ -57,13 +57,20 @@ class run_rg_analysis(base.base):
       
       binning_dict = beta_dict[beta]
       pt_bins_truth = (binning_dict['pt_bins_truth'])
-
+      rg_bins_truth = (binning_dict['rg_bins_truth'])
+      
       n_pt_bins_truth = len(pt_bins_truth) - 1
       setattr(self, 'n_pt_bins_truth_B{}'.format(beta), n_pt_bins_truth)
 
       truth_pt_bin_array = array('d',pt_bins_truth)
       setattr(self, 'truth_pt_bin_array_B{}'.format(beta), truth_pt_bin_array)
-      
+        
+      n_rg_bins_truth = len(rg_bins_truth) - 1
+      setattr(self, 'n_rg_bins_truth_B{}'.format(beta), n_rg_bins_truth)
+
+      truth_rg_bin_array = array('d',rg_bins_truth)
+      setattr(self, 'truth_rg_bin_array_B{}'.format(beta), truth_rg_bin_array)
+    
     self.reg_param_final = config['reg_param']
     self.min_pt_reported = 20
     self.max_pt_reported = 80
@@ -101,6 +108,16 @@ class run_rg_analysis(base.base):
       if not os.path.isdir(self.output_dir_trkeff):
         os.makedirs(self.output_dir_trkeff)
 
+    if self.do_systematics:
+      self.output_dir_systematics = os.path.join(self.output_dir, 'systematics')
+      if not os.path.isdir(self.output_dir_systematics):
+        os.makedirs(self.output_dir_systematics)
+
+    if self.do_plot_final_result:
+      self.output_dir_final = os.path.join(self.output_dir, 'final_results')
+      if not os.path.isdir(self.output_dir_final):
+        os.makedirs(self.output_dir_final)
+
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
@@ -128,16 +145,12 @@ class run_rg_analysis(base.base):
 
     # Tracking efficiency variation
     if self.kTrackEff in self.systematics_list:
-      analysis_trkeff = roounfold_rg.roounfold_rg(self.trkeff_data, self.trkeff_response, self.config_file, output_dir_trkeff, self.file_format)
+      analysis_trkeff = roounfold_rg.roounfold_rg(self.trkeff_data, self.trkeff_response, self.config_file, self.output_dir_trkeff, self.file_format)
       analysis_trkeff.roounfold_rg()
 
   #----------------------------------------------------------------------
   def compute_systematics(self, jetR, beta):
     print('Compute systematics...')
-  
-    self.output_dir_systematics = os.path.join(self.output_dir, 'systematics')
-    if not os.path.isdir(self.output_dir_systematics):
-      os.makedirs(self.output_dir_systematics)
 
     # Get main result
     path_main = os.path.join(self.output_dir_main, 'fResult.root')
@@ -160,6 +173,14 @@ class run_rg_analysis(base.base):
     hRegParam2.SetDirectory(0)
     setattr(self, name, hRegParam2)
     
+    # Get trkeff result
+    path_trkeff = os.path.join(self.output_dir_trkeff, 'fResult.root')
+    fTrkEff = ROOT.TFile(path_trkeff, 'READ')
+    name = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final)
+    hTrkEff = fTrkEff.Get(name)
+    hTrkEff.SetDirectory(0)
+    setattr(self, '{}_trkeff'.format(name), hTrkEff)
+    
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
@@ -181,6 +202,7 @@ class run_rg_analysis(base.base):
     hMain2D = getattr(self, 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final))
     hMain2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hMain = hMain2D.ProjectionY()
+    hMain.SetDirectory(0)
     integral = hMain.Integral()
     hMain.Scale(1./integral, 'width')
     setattr(self, 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hMain)
@@ -189,6 +211,7 @@ class run_rg_analysis(base.base):
     hRegParam1_2D = getattr(self, 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final+2))
     hRegParam1_2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hRegParam1 = hRegParam1_2D.ProjectionY()
+    hRegParam1.SetDirectory(0)
     integral = hRegParam1.Integral()
     hRegParam1.Scale(1./integral, 'width')
     setattr(self, 'hRegParam1_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hRegParam1)
@@ -197,10 +220,20 @@ class run_rg_analysis(base.base):
     hRegParam2_2D = getattr(self, 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final-2))
     hRegParam2_2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hRegParam2 = hRegParam2_2D.ProjectionY()
+    hRegParam2.SetDirectory(0)
     integral = hRegParam2.Integral()
     hRegParam2.Scale(1./integral, 'width')
     setattr(self, 'hRegParam2_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hRegParam2)
 
+    # Get trk eff
+    hTrkEff_2D = getattr(self, 'hUnfolded_R{}_B{}_{}_trkeff'.format(jetR, beta, self.reg_param_final))
+    hTrkEff_2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hTrkEff = hTrkEff_2D.ProjectionY()
+    hTrkEff.SetDirectory(0)
+    integral = hTrkEff.Integral()
+    hTrkEff.Scale(1./integral, 'width')
+    setattr(self, 'hTrkEff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hTrkEff)
+    
     #------------------------------------
     # Compute systematics
 
@@ -225,14 +258,85 @@ class run_rg_analysis(base.base):
     
     outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_RegParam2_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
     self.utils.plot_hist(hSystematic_RegParam2, outputFilename, 'P E')
+    
+    # Trk eff
+    name = 'hSystematic_TrkEff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hSystematic_TrkEff = hMain.Clone()
+    hSystematic_TrkEff.SetName(name)
+    hSystematic_TrkEff.Divide(hTrkEff)
+    self.change_to_per(hSystematic_TrkEff)
+    setattr(self, name, hSystematic_TrkEff)
+    
+    outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_TrkEff_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
+    self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, beta):
     print('Plot final results...')
 
-    output_dir_final = os.path.join(self.output_dir, 'final_results')
-    if not os.path.isdir(output_dir_final):
-      os.makedirs(output_dir_final)
+    self.utils.set_plotting_options()
+    ROOT.gROOT.ForceStyle()
+
+    # Loop through pt slices, and compute systematics for each 1D theta_g distribution
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
+  
+    for bin in range(1, n_pt_bins_truth-1):
+      min_pt_truth = truth_pt_bin_array[bin]
+      max_pt_truth = truth_pt_bin_array[bin+1]
+      
+      self.plot_theta(jetR, beta, min_pt_truth, max_pt_truth)
+
+  #----------------------------------------------------------------------
+  def plot_theta(self, jetR, beta, min_pt_truth, max_pt_truth):
+  
+    name = 'cResult_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    c = ROOT.TCanvas(name, name, 600, 450)
+    c.Draw()
+    
+    c.cd()
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_B{}'.format(beta))
+    truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_B{}'.format(beta))
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_rg_bins_truth, truth_rg_bin_array)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.SetXTitle('#theta_{g}')
+    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.SetYTitle('#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}')
+    myBlankHisto.SetMaximum(3)
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.Draw("E")
+    
+    h = getattr(self, 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+    h.SetMarkerSize(1.5)
+    h.SetMarkerStyle(20)
+    h.SetMarkerColor(600-6)
+    h.SetLineStyle(1)
+    h.SetLineWidth(2)
+    h.SetLineColor(600-6)
+      
+    h.DrawCopy('PE X0 same')
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
+    text_latex.DrawLatex(0.45, 0.85, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
+    text_latex.DrawLatex(0.45, 0.75, text)
+    
+    outputFilename = os.path.join(self.output_dir_final, 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format))
+    c.SaveAs(outputFilename)
+    c.Close()
 
   #----------------------------------------------------------------------
   def change_to_per(self, h):
