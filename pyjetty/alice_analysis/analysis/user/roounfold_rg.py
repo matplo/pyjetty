@@ -437,12 +437,11 @@ class roounfold_rg(analysis_base.analysis_base):
       name = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, i)
       h2D = getattr(self, name)
       h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-      #h = h2D.ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) # exclude under- and over-flow bins
       h = h2D.ProjectionY()
       
-      # Normalize by integral, i.e. N_jets,inclusive in this pt-bin (cross-check this)
-      integral = h.Integral()
-      h.Scale(1./integral, 'width')
+      # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
+      n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
+      h.Scale(1./n_jets_inclusive, 'width')
       
       if i == 1:
         h.SetMarkerSize(1.5)

@@ -195,49 +195,52 @@ class run_rg_analysis(base.base):
       max_pt_truth = truth_pt_bin_array[bin+1]
       
       self.compute_theta_systematic(jetR, beta, min_pt_truth, max_pt_truth)
-    
+
+  #----------------------------------------------------------------------
+  def get_theta_distribution(self, name2D, name1D, min_pt_truth, max_pt_truth):
+  
+    h2D = getattr(self, name2D)
+    h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    h = h2D.ProjectionY() # Better to use ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) ?
+    h.SetDirectory(0)
+  
+    n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
+    n_jets_tagged = h.Integral(1, h.GetNbinsX())
+    fraction_tagged =  n_jets_tagged/n_jets_inclusive
+  
+    h.Scale(1./n_jets_inclusive, 'width')
+  
+    setattr(self, name1D, h)
+    setattr(self, '{}_fraction_tagged'.format(name1D), fraction_tagged)
+
+    return h
+
   #----------------------------------------------------------------------
   def compute_theta_systematic(self, jetR, beta, min_pt_truth, max_pt_truth):
     
     #------------------------------------
     # Get 1D histograms
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin (cross-check this)
-
+    
     # Get main histogram
-    hMain2D = getattr(self, 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final))
-    hMain2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hMain = hMain2D.ProjectionY()
-    hMain.SetDirectory(0)
-    integral = hMain.Integral()
-    hMain.Scale(1./integral, 'width')
-    setattr(self, 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hMain)
+    name2D = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final)
+    name1D = 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hMain = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get reg param +2
-    hRegParam1_2D = getattr(self, 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final+2))
-    hRegParam1_2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hRegParam1 = hRegParam1_2D.ProjectionY()
-    hRegParam1.SetDirectory(0)
-    integral = hRegParam1.Integral()
-    hRegParam1.Scale(1./integral, 'width')
-    setattr(self, 'hRegParam1_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hRegParam1)
+    name2D = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final+2)
+    name1D = 'hRegParam1_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hRegParam1 = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get reg param -2
-    hRegParam2_2D = getattr(self, 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final-2))
-    hRegParam2_2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hRegParam2 = hRegParam2_2D.ProjectionY()
-    hRegParam2.SetDirectory(0)
-    integral = hRegParam2.Integral()
-    hRegParam2.Scale(1./integral, 'width')
-    setattr(self, 'hRegParam2_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hRegParam2)
+    name2D = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final-2)
+    name1D = 'hRegParam2_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hRegParam2 = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
-    hTrkEff_2D = getattr(self, 'hUnfolded_R{}_B{}_{}_trkeff'.format(jetR, beta, self.reg_param_final))
-    hTrkEff_2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hTrkEff = hTrkEff_2D.ProjectionY()
-    hTrkEff.SetDirectory(0)
-    integral = hTrkEff.Integral()
-    hTrkEff.Scale(1./integral, 'width')
-    setattr(self, 'hTrkEff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth), hTrkEff)
+    name2D = 'hUnfolded_R{}_B{}_{}_trkeff'.format(jetR, beta, self.reg_param_final)
+    name1D = 'hTrkEff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hTrkEff = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
     
     #------------------------------------
     # Compute systematics
@@ -331,7 +334,7 @@ class run_rg_analysis(base.base):
     myBlankHisto.SetXTitle('#theta_{g}')
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}')
-    myBlankHisto.SetMaximum(3)
+    myBlankHisto.SetMaximum(4.)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
@@ -348,8 +351,10 @@ class run_rg_analysis(base.base):
       
       fPythia = ROOT.TFile(fPythia_name, 'READ')
       hPythia = fPythia.Get(hname)
-      integral = hPythia.Integral()
-      hPythia.Scale(1./integral, 'width')
+      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+      n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_rg_bin_array[0]), hPythia.GetNbinsX())
+      fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
+      hPythia.Scale(1./n_jets_inclusive, 'width')
       hPythia.SetFillStyle(0)
       hPythia.SetMarkerSize(1.5)
       hPythia.SetMarkerStyle(23)
@@ -358,7 +363,9 @@ class run_rg_analysis(base.base):
       hPythia.SetLineWidth(1)
       hPythia.Draw('E2 same')
     
-    h = getattr(self, 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+    name = 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    h = getattr(self, name)
+    fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     color = 600-6
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
@@ -405,6 +412,19 @@ class run_rg_analysis(base.base):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.66, text)
     
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text_latex.SetTextSize(0.045)
+    text = 'f_{tagged}^{data} = %3.3f' % fraction_tagged
+    text_latex.DrawLatex(0.57, 0.59, text)
+    
+    if plot_pythia:
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text_latex.SetTextSize(0.045)
+      text = ('f_{tagged}^{data} = %3.3f' % fraction_tagged) + (', f_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+      text_latex.DrawLatex(0.57, 0.59, text)
+
     myLegend = ROOT.TLegend(0.25,0.7,0.5,0.85)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
