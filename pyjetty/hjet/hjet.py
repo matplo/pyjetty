@@ -160,7 +160,7 @@ class HJetAnalysis(MPBase):
 		self.hmV0A = r.TH1F('hmV0A', 'hmV0A', 1000, 0, 1000)
 		self.hmV0C = r.TH1F('hmV0C', 'hmV0C', 1000, 0, 1000)
 
-		self.jet_particle_selector = fj.SelectorAbsRapMax(self.jet_particle_eta_max)
+		self.jet_particle_selector = fj.SelectorAbsEtaMax(self.jet_particle_eta_max)
 
 		self.jet_ans = []
 		self.hjet_ts = []
