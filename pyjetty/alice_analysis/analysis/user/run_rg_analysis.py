@@ -185,7 +185,7 @@ class run_rg_analysis(base.base):
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
     
-    for bin in range(1, n_pt_bins_truth-1):
+    for bin in range(1, n_pt_bins_truth-3):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
@@ -244,10 +244,7 @@ class run_rg_analysis(base.base):
     hSystematic_RegParam1.Divide(hRegParam1)
     self.change_to_per(hSystematic_RegParam1)
     setattr(self, name, hSystematic_RegParam1)
-  
-    outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_RegParam1_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
-    self.utils.plot_hist(hSystematic_RegParam1, outputFilename, 'P E')
-  
+
     # Reg param -2
     name = 'hSystematic_RegParam2_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
     hSystematic_RegParam2 = hMain.Clone()
@@ -256,8 +253,19 @@ class run_rg_analysis(base.base):
     self.change_to_per(hSystematic_RegParam2)
     setattr(self, name, hSystematic_RegParam2)
     
-    outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_RegParam2_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
-    self.utils.plot_hist(hSystematic_RegParam2, outputFilename, 'P E')
+    name = 'hSystematic_RegParam_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hSystematic_RegParam = self.build_average(hSystematic_RegParam1, hSystematic_RegParam2)
+    setattr(self, name, hSystematic_RegParam)
+      
+    outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_RegParam_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
+    self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
+    
+    name = 'hResult_shape_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hResult_shape = hMain.Clone()
+    hResult_shape.SetName(name)
+    hResult_shape.SetDirectory(0)
+    self.AttachErrToHist(hResult_shape, hSystematic_RegParam)
+    setattr(self, name, hResult_shape)
     
     # Trk eff
     name = 'hSystematic_TrkEff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
@@ -269,6 +277,13 @@ class run_rg_analysis(base.base):
     
     outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_TrkEff_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
     self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
+  
+    name = 'hResult_trkeff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hResult_trkeff = hMain.Clone()
+    hResult_trkeff.SetName(name)
+    hResult_trkeff.SetDirectory(0)
+    self.AttachErrToHist(hResult_trkeff, hSystematic_TrkEff)
+    setattr(self, name, hResult_trkeff)
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, beta):
@@ -281,7 +296,7 @@ class run_rg_analysis(base.base):
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
   
-    for bin in range(1, n_pt_bins_truth-1):
+    for bin in range(1, n_pt_bins_truth-3):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
@@ -315,14 +330,29 @@ class run_rg_analysis(base.base):
     myBlankHisto.Draw("E")
     
     h = getattr(self, 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+    color = 600-6
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
-    h.SetMarkerColor(600-6)
+    h.SetMarkerColor(color)
     h.SetLineStyle(1)
     h.SetLineWidth(2)
-    h.SetLineColor(600-6)
-      
+    h.SetLineColor(color)
     h.DrawCopy('PE X0 same')
+    
+    h_shape = getattr(self, 'hResult_shape_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+    h.SetMarkerColor(0)
+    h_shape.SetLineColor(0)
+    h_shape.SetFillColor(color)
+    h_shape.SetFillColorAlpha(color, 0.3)
+    h_shape.SetFillStyle(1001)
+    h_shape.Draw('E2 same')
+    
+    h_corr = getattr(self, 'hResult_trkeff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
+    h_corr.SetFillStyle(0)
+    h_corr.SetLineColor(color)
+    h_corr.SetMarkerColorAlpha(color, 0)
+    h_corr.SetLineWidth(1)
+    h_corr.Draw('E2 same')
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -345,6 +375,36 @@ class run_rg_analysis(base.base):
       content = h.GetBinContent(bin)
       content_new = math.fabs(1-content)
       h.SetBinContent(bin, content_new*100)
+
+  #----------------------------------------------------------------------
+  def build_average(self, h1, h2, takeMaxDev=False):
+  
+    h_avg = h1.Clone()
+    h_avg.SetName('{}_avg'.format(h1.GetName()))
+  
+    for i in range(1, h_avg.GetNbinsX()+1):
+      value1 = h1.GetBinContent(i)
+      value2 = h2.GetBinContent(i)
+      avg =  0.5*(value1 + value2)
+      
+      if takeMaxDev:
+        if value1>value2:
+          avg = value1
+        else:
+          avg = value2
+    
+      h_avg.SetBinContent(i, avg)
+  
+    return h_avg
+
+  #----------------------------------------------------------------------
+  def AttachErrToHist(self, h, hPercError):
+  
+    #Fill array with lower bin edges of data histogram
+    for bin in range(1, h.GetNbinsX()+1):
+      content = h.GetBinContent(bin)
+      perErr = hPercError.GetBinContent(bin)
+      h.SetBinError(bin, content*perErr*0.01)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
