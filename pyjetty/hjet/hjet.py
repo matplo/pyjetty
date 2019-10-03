@@ -183,13 +183,18 @@ class HJetAnalysis(MPBase):
 		self.event_output.fill_branch('mV0', v0det.V0_mult)
 		if pythia:
 			ev_w = pythia.info.sigmaGen()
+			pthard = pythia.info.pTHat()
 		else:
 			ev_w = -1
+			pthard = -1
 		self.event_output.fill_branch('weight', ev_w)
-		self.event_output.fill_tree()
-
-		# jet analysis...
+		self.event_output.fill_branch('pthard', pthard)
 		jet_parts = self.jet_particle_selector(parts)
+		mTot = len(parts)
+		mCB  = len(jet_parts)
+		self.event_output.fill_branch('mTot', mTot)
+		self.event_output.fill_branch('mCB', mCB)
+		self.event_output.fill_tree()
 
 		trigger_present = False
 		for hj in self.hjet_ts:
@@ -206,7 +211,10 @@ class HJetAnalysis(MPBase):
 					hj.tree_writer.fill_branch('mV0A', v0det.V0A_mult)
 					hj.tree_writer.fill_branch('mV0C', v0det.V0C_mult)
 					hj.tree_writer.fill_branch('mV0', v0det.V0_mult)
+					hj.tree_writer.fill_branch('mTot', mTot)
+					hj.tree_writer.fill_branch('mCB', mCB)
 					hj.tree_writer.fill_branch('weight', ev_w)
+					hj.tree_writer.fill_branch('pthard', pthard)
 					hj.fill_tree()
 
 	def finalize(self):
