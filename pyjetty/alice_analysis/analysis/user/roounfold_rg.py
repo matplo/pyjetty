@@ -24,7 +24,7 @@ ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnf
 ROOT.gROOT.SetBatch(True)
 
 # Suppress a lot of standard output
-#ROOT.gErrorIgnoreLevel = ROOT.kWarning
+ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 ################################################################
 class roounfold_rg(analysis_base.analysis_base):
@@ -262,6 +262,12 @@ class roounfold_rg(analysis_base.analysis_base):
       hUnfolded.SetName(name)
       setattr(self, name, hUnfolded)
       hUnfolded.SetDirectory(0)
+
+      # Correct by kinematic efficiency
+      hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_B{}'.format(jetR, beta))
+      hUnfolded.Divide(hKinematicEfficiency)
+        
+      # Write result to file
       hUnfolded.Write()
       
       # Plot Pearson correlation coeffs for each k, to get a measure of the correlation between the bins
@@ -615,9 +621,15 @@ class roounfold_rg(analysis_base.analysis_base):
     hKinematicEfficiency = hNumerator.Clone()
     hKinematicEfficiency.SetName('hKinematicEfficiency_R{}_B{}'.format(jetR, beta))
     hKinematicEfficiency.Divide(hDenominator)
+    for bin in range(0, hKinematicEfficiency.GetNcells()+1):
+      hKinematicEfficiency.SetBinError(bin, 0)
     outputFilename = os.path.join(self.output_dir, 'hKinematicEfficiency2D_R{}_B{}{}'.format(self.utils.remove_periods(jetR), beta, self.file_format))
     self.utils.plot_hist(hKinematicEfficiency, outputFilename, 'colz')
     
+    # Save kinematic efficiency as class member
+    setattr(self, 'hKinematicEfficiency_R{}_B{}'.format(jetR, beta), hKinematicEfficiency)
+    
+    # Plot 1D kinematic efficiency
     self.plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, beta)
 
   #################################################################################################
@@ -655,9 +667,6 @@ class roounfold_rg(analysis_base.analysis_base):
     leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
     self.utils.setup_legend(leg,0.04)
     
-    fResult_name = getattr(self, 'fResult_name_R{}_B{}'.format(jetR, beta))
-    fResult = ROOT.TFile(fResult_name, 'UPDATE')
-    
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
     for bin in range(1, n_pt_bins_truth-1):
@@ -668,7 +677,6 @@ class roounfold_rg(analysis_base.analysis_base):
       h = hKinematicEfficiency2D.ProjectionY()
       name = 'hKinematicEfficiency_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
       h.SetName(name)
-      h.Write()
       
       if bin == 1:
         h.SetMarkerSize(1.5)
@@ -708,8 +716,6 @@ class roounfold_rg(analysis_base.analysis_base):
     outputFilename = os.path.join(self.output_dir, 'hKinematicEfficiency_R{}_B{}{}'.format(self.utils.remove_periods(jetR), beta, self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
-
-    fResult.Close()
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
