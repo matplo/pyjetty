@@ -50,13 +50,13 @@ class roounfold_rg(analysis_base.analysis_base):
   #---------------------------------------------------------------
   def get_responses(self, rebin_response=False):
     
-    response_file_name = 'response.root'
+    response_file_name = os.path.join(self.output_dir, 'response.root')
     if rebin_response:
       f = ROOT.TFile(response_file_name, 'RECREATE')
       f.Close()
     
     # Rebin response matrix, and create RooUnfoldResponse object
-    # (pt-det, pt-true, theta_g-det, theta_g-true)
+    # THn response matrix is: (pt-det, pt-true, theta_g-det, theta_g-true)
     for jetR in self.jetR_list:
       for beta in self.beta_list:
         
@@ -236,6 +236,9 @@ class roounfold_rg(analysis_base.analysis_base):
     response = getattr(self, 'roounfold_response_R{}_B{}'.format(jetR, beta))
     hData = getattr(self, 'hThetaG_JetPt_R{}_B{}_rebinned'.format(jetR, beta))
     
+    fResult_name = os.path.join(self.output_dir, 'fResult.root')
+    fResult = ROOT.TFile(fResult_name, 'RECREATE')
+    
     for i in range(1, self.reg_param_final + 3):
       
       # Set up the Bayesian unfolding object
@@ -250,11 +253,14 @@ class roounfold_rg(analysis_base.analysis_base):
       name = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, i)
       hUnfolded.SetName(name)
       setattr(self, name, hUnfolded)
+      hUnfolded.SetDirectory(0)
+      hUnfolded.Write()
       
       # Plot Pearson correlation coeffs for each k, to get a measure of the correlation between the bins
       covarianceMatrix = unfoldBayes.Ereco(self.errorType) # Get the covariance matrix
       #plotCorrelationCoefficients(covarianceMatrix, i, output_dir, file_format)
       
+    fResult.Close()
     print('Done unfolding')
       
     self.plot_unfolded_rg(jetR, beta)
