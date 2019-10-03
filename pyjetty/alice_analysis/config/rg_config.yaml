@@ -1,6 +1,6 @@
 # Analysis parameters
 debug_level: 0
-jetR: [0.4, 0.6]
+jetR: [0.4]
 beta:
   0:
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
@@ -25,4 +25,15 @@ reject_tracks_fraction: 0.0
 reg_param: 5
 
 # Plotting parameters
-fileFormat: ".pdf"
+file_format: '.pdf'
+output_dir: '/home/alidock/theta_g/roounfold_rg_output_FINAL'
+
+# Paths to processing output, to be used for unfolding
+main_data: '/home/alidock/theta_g/AnalysisResults/LHC17pq/19626/AnalysisResultsFinal.root'
+main_response: '/home/alidock/theta_g/AnalysisResults/LHC18b8/19526/AnalysisResultsFinal.root'
+
+trkeff_data: '/home/alidock/theta_g/AnalysisResults/LHC17pq/19626/AnalysisResultsFinal.root'
+trkeff_response: '/home/alidock/theta_g/AnalysisResults/LHC18b8_trkeff/19642/AnalysisResultsFinal.root'
+
+# Theory comparisons
+pythia: ''
