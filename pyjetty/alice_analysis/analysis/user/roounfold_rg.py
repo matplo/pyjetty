@@ -236,7 +236,7 @@ class roounfold_rg(analysis_base.analysis_base):
     response = getattr(self, 'roounfold_response_R{}_B{}'.format(jetR, beta))
     hData = getattr(self, 'hThetaG_JetPt_R{}_B{}_rebinned'.format(jetR, beta))
     
-    fResult_name = os.path.join(self.output_dir, 'fResult.root')
+    fResult_name = os.path.join(self.output_dir, 'fResult_R{}_B{}.root'.format(jetR, beta))
     fResult = ROOT.TFile(fResult_name, 'RECREATE')
     
     for i in range(1, self.reg_param_final + 3):

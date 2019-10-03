@@ -118,6 +118,11 @@ class run_rg_analysis(base.base):
       if not os.path.isdir(self.output_dir_final):
         os.makedirs(self.output_dir_final)
 
+    # Path to pythia results
+    self.pythia_20 = config['pythia_20']
+    self.pythia_40 = config['pythia_40']
+    self.pythia_60 = config['pythia_60']
+
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
@@ -153,7 +158,7 @@ class run_rg_analysis(base.base):
     print('Compute systematics...')
 
     # Get main result
-    path_main = os.path.join(self.output_dir_main, 'fResult.root')
+    path_main = os.path.join(self.output_dir_main, 'fResult_R{}_B{}.root'.format(jetR, beta))
     fMain = ROOT.TFile(path_main, 'READ')
     
     name = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final)
@@ -174,7 +179,7 @@ class run_rg_analysis(base.base):
     setattr(self, name, hRegParam2)
     
     # Get trkeff result
-    path_trkeff = os.path.join(self.output_dir_trkeff, 'fResult.root')
+    path_trkeff = os.path.join(self.output_dir_trkeff, 'fResult_R{}_B{}.root'.format(jetR, beta))
     fTrkEff = ROOT.TFile(path_trkeff, 'READ')
     name = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final)
     hTrkEff = fTrkEff.Get(name)
@@ -300,10 +305,11 @@ class run_rg_analysis(base.base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.plot_theta(jetR, beta, min_pt_truth, max_pt_truth)
+      self.plot_theta(jetR, beta, min_pt_truth, max_pt_truth, plot_pythia=False)
+      self.plot_theta(jetR, beta, min_pt_truth, max_pt_truth, plot_pythia=True)
 
   #----------------------------------------------------------------------
-  def plot_theta(self, jetR, beta, min_pt_truth, max_pt_truth):
+  def plot_theta(self, jetR, beta, min_pt_truth, max_pt_truth, plot_pythia=False):
   
     name = 'cResult_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -328,6 +334,29 @@ class run_rg_analysis(base.base):
     myBlankHisto.SetMaximum(3)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
+
+    if plot_pythia:
+      if math.fabs(min_pt_truth - 20) < 1e-3:
+        fPythia_name = self.pythia_20
+        hname = 'theta_g_beta{}_pt20'.format(beta)
+      if math.fabs(min_pt_truth - 40) < 1e-3:
+        fPythia_name = self.pythia_40
+        hname = 'theta_g_beta{}_pt40'.format(beta)
+      if math.fabs(min_pt_truth - 60) < 1e-3:
+        fPythia_name = self.pythia_60
+        hname = 'theta_g_beta{}_pt60'.format(beta)
+      
+      fPythia = ROOT.TFile(fPythia_name, 'READ')
+      hPythia = fPythia.Get(hname)
+      integral = hPythia.Integral()
+      hPythia.Scale(1./integral, 'width')
+      hPythia.SetFillStyle(0)
+      hPythia.SetMarkerSize(1.5)
+      hPythia.SetMarkerStyle(23)
+      hPythia.SetMarkerColor(1)
+      hPythia.SetLineColor(1)
+      hPythia.SetLineWidth(1)
+      hPythia.Draw('E2 same')
     
     h = getattr(self, 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth))
     color = 600-6
@@ -352,7 +381,7 @@ class run_rg_analysis(base.base):
     h_corr.SetMarkerColorAlpha(color, 0)
     h_corr.SetLineWidth(1)
     h_corr.Draw('E2 same')
-
+  
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = 'ALICE Preliminary'
@@ -381,9 +410,14 @@ class run_rg_analysis(base.base):
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_corr, 'Correlated uncertainty', 'f')
     myLegend.AddEntry(h_shape, 'Shape uncertainty', 'f')
+    if plot_pythia:
+      myLegend.AddEntry(hPythia, 'PYTHIA', 'pe')
     myLegend.Draw()
-  
-    outputFilename = os.path.join(self.output_dir_final, 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format))
+
+    name = 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format)
+    if plot_pythia:
+      name = 'hUnfolded_R{}_B{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format)
+    outputFilename = os.path.join(self.output_dir_final, name)
     c.SaveAs(outputFilename)
     c.Close()
 
