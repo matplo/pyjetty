@@ -28,6 +28,10 @@ reg_param: 5
 file_format: '.pdf'
 output_dir: '/home/alidock/theta_g/roounfold_rg_output_FINAL'
 
+do_unfolding: False
+do_systematics: True
+do_plot_final_result: False
+
 # Paths to processing output, to be used for unfolding
 main_data: '/home/alidock/theta_g/AnalysisResults/LHC17pq/19626/AnalysisResultsFinal.root'
 main_response: '/home/alidock/theta_g/AnalysisResults/LHC18b8/19526/AnalysisResultsFinal.root'
