@@ -137,28 +137,14 @@ class HJet(MPBase):
 def generate():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
 	parser.add_argument('-d', '--output-dir', help='output directory name - use with default file name', default='.', type=str)
-	parser.add_argument('-o', '--output', help='output file name', default='', type=str)
+	parser.add_argument('-o', '--output', help='output file name', default='', type=str)	
+	parser.add_argument('--overwrite', default=False, action='store_true')
 	parser.add_argument('--t-min', help='trigger pt min', default=6., type=float)
 	parser.add_argument('--t-max', help='trigger pt max', default=7., type=float)
 	parser.add_argument('--jet-R', help='jet finder R', default=0.4, type=float)
 	parser.add_argument('--charged', default=False, action='store_true')
 	pyconf.add_standard_pythia_args(parser)
 	args = parser.parse_args()	
-
-	# print the banner first
-	fj.ClusterSequence.print_banner()
-	print()
-
-	# mycfg = ['PhaseSpace:pThatMin = 6']
-	mycfg = []
-	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
-	if not pythia:
-		return
-	if args.nev < 1:
-		args.nev = 1
-
-	jet_particle_eta_max = 0.9
-	jet_particle_selector = fj.SelectorAbsEtaMax(jet_particle_eta_max)
 
 	if '.root' not in args.output:
 		rs = '0{}'.format(int(args.jet_R*10))
@@ -178,6 +164,26 @@ def generate():
 		if args.py_minbias > 0:
 			args.output += '_minbias'
 		args.output += '.root'
+
+	if os.path.exists(args.output):
+		if not args.overwrite:
+			print('[w] output file', args.output, 'exists - skipping.')
+			return
+
+	# print the banner first
+	fj.ClusterSequence.print_banner()
+	print()
+
+	# mycfg = ['PhaseSpace:pThatMin = 6']
+	mycfg = []
+	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
+	if not pythia:
+		return
+	if args.nev < 1:
+		args.nev = 1
+
+	jet_particle_eta_max = 0.9
+	jet_particle_selector = fj.SelectorAbsEtaMax(jet_particle_eta_max)
 
 	fout = r.TFile(args.output, 'RECREATE')
 	fout.cd()
