@@ -572,7 +572,7 @@ class roounfold_rg(analysis_base.analysis_base):
     text = 'R = ' + str(jetR) + '   #beta = ' + str(beta)
     text_latex.DrawLatex(0.45, 0.75, text)
     
-    outputFilename = os.path.join(self.output_dir, 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format))
+    outputFilename = os.path.join(self.output_dir, 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, int(min_pt_truth), int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
@@ -903,8 +903,8 @@ class roounfold_rg(analysis_base.analysis_base):
     h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
-    outputFilename = os.path.join(output_dir_refolding, 'hFoldedTruth_R{}_B{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_det, max_pt_det, i, self.file_format))
-    self.plot_rg_ratio(hFolded_rg, hData_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    outputFilename = os.path.join(output_dir_refolding, 'hFoldedTruth_R{}_B{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), beta, int(min_pt_det), int(max_pt_det), i, self.file_format))
+    self.plot_rg_ratio(hFolded_rg, hData_rg, None, yAxisTitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Closure test
@@ -949,7 +949,7 @@ class roounfold_rg(analysis_base.analysis_base):
     h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    outputFilename = os.path.join(output_dir_closure, 'hClosure_R{}_B{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, i, self.file_format))
+    outputFilename = os.path.join(output_dir_closure, 'hClosure_R{}_B{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), beta, int(min_pt_truth), int(max_pt_truth), i, self.file_format))
     self.plot_rg_ratio(hUnfolded_rg, hMCTruth_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################

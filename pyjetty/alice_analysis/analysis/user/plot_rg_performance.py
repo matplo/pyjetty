@@ -21,7 +21,9 @@ import ROOT
 import yaml
 
 # Analysis utilities
-from pyjetty.alice_analysis.analysis.base import analysis_utils
+#from pyjetty.alice_analysis.analysis.base import analysis_utils
+import analysis_utils
+
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -85,7 +87,6 @@ def plotRg(fMC, fData, jetR, beta, outputDir):
   plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 20, 40, outputDir)
   plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 40, 60, outputDir)
   plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 60, 80, outputDir)
-  plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, 80, 100, outputDir)
 
 #---------------------------------------------------------------
 def plot2D_statistics(hThetaG_JetPt, jetR, beta, outputDir):
@@ -141,41 +142,57 @@ def plotRgProjection(hRM, hThetaG_JetPt, jetR, beta, min_pt_det, max_pt_det, out
   # Draw histogram
   c = ROOT.TCanvas("c","c: hist",600,450)
   c.cd()
-  ROOT.gPad.SetLeftMargin(0.15)
 
-  if hThetaG_JetPt:
-    hThetaG_data.Draw('E P')
+  myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+  myPad.SetLeftMargin(0.2)
+  myPad.SetTopMargin(0.07)
+  myPad.SetRightMargin(0.04)
+  myPad.SetBottomMargin(0.13)
+  myPad.Draw()
+  myPad.cd()
+  
+  hThetaG_truth.GetYaxis().SetTitleOffset(1.5)
+  hThetaG_truth.SetMaximum(1.6*hThetaG_truth.GetMaximum())
+  hThetaG_truth.SetMinimum(0.)
+
+  #if hThetaG_JetPt:
+  #hThetaG_data.Draw('E P')
   hThetaG_truth.Draw('hist E same')
   hThetaG_det.Draw('hist E same')
   
-  leg = ROOT.TLegend(0.65,0.75,0.85,0.9, "")
+  leg = ROOT.TLegend(0.65,0.75,0.85,0.85, "")
   leg.SetFillColor(10)
   leg.SetBorderSize(0)
   leg.SetFillStyle(1)
   leg.SetTextSize(0.04)
-  if hThetaG_JetPt:
-    leg.AddEntry(hThetaG_data, "data", "P")
+  #if hThetaG_JetPt:
+  #leg.AddEntry(hThetaG_data, "data", "P")
   leg.AddEntry(hThetaG_det, "MC det", "L")
   leg.AddEntry(hThetaG_truth, "MC truth", "L")
   leg.Draw("same")
-  
+
+  text = 'ALICE Performance'
+  textFit = ROOT.TLatex()
+  textFit.SetNDC()
+  textFit.DrawLatex(0.3,0.85,text)
+
   text = 'R = {}'.format(jetR)
   textFit = ROOT.TLatex()
   textFit.SetTextSize(0.04)
   textFit.SetNDC()
-  textFit.DrawLatex(0.65,0.7,text)
+  textFit.DrawLatex(0.3,0.8,text)
   
   text = '#beta = {}'.format(beta)
   textFit = ROOT.TLatex()
   textFit.SetTextSize(0.04)
   textFit.SetNDC()
-  textFit.DrawLatex(0.65,0.65,text)
+  textFit.DrawLatex(0.3,0.75,text)
   
-  text = 'pT,det = {}-{} GeV/c'.format(min_pt_det, max_pt_det)
+  text = 'p_{T, ch jet}^{det} = ' + '{}-{} GeV/c'.format(min_pt_det, max_pt_det)
   textFit = ROOT.TLatex()
   textFit.SetTextSize(0.035)
   textFit.SetNDC()
-  textFit.DrawLatex(0.65,0.6,text)
+  textFit.DrawLatex(0.3,0.7,text)
   
   output_filename = os.path.join(outputDir, 'hTheta_g_MC_R{}_B{}_{}-{}.pdf'.format(analysis_utils.remove_periods(jetR), beta, min_pt_det, max_pt_det))
   c.SaveAs(output_filename)
@@ -246,7 +263,7 @@ def plotJER(f, jetR, outputDir):
   outputFilename = os.path.join(outputDir, "histJER_R{}.pdf".format(analysis_utils.remove_periods(jetR)))
   histJER.SetMarkerStyle(21)
   histJER.SetMarkerColor(2)
-  analysis_utils.plotHist(histJER, outputFilename, "hist P")
+  analysis_utils.plot_hist(histJER, outputFilename, "hist P")
 
 #---------------------------------------------------------------
 def plotJES(f, jetR, outputDir):
@@ -257,7 +274,7 @@ def plotJES(f, jetR, outputDir):
   histDeltaJES.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
   histDeltaJES.GetXaxis().SetRangeUser(0., 200.)
   outputFilename = os.path.join(outputDir, "histDeltaJES_R{}.pdf".format(analysis_utils.remove_periods(jetR)))
-  #analysis_utils.plotHist(histDeltaJES, outputFilename, "colz", False, True)
+  #analysis_utils.plot_hist(histDeltaJES, outputFilename, "colz", False, True)
   
   histDeltaJES.RebinX(4)
   histDeltaJESprof = histDeltaJES.ProfileX()
@@ -267,7 +284,7 @@ def plotJES(f, jetR, outputDir):
   outputFilename = os.path.join(outputDir, "histDeltaJESprof_R{}.pdf".format(analysis_utils.remove_periods(jetR)))
   histDeltaJESprof.SetMarkerStyle(21)
   histDeltaJESprof.SetMarkerColor(4)
-  analysis_utils.plotHist(histDeltaJESprof, outputFilename, "P")
+  analysis_utils.plot_hist(histDeltaJESprof, outputFilename, "P")
 
 
 #---------------------------------------------------------------
@@ -387,7 +404,7 @@ def plotJetRecoEfficiency(f, jetR, outputDir):
   histEfficiency.SetMarkerStyle(21)
   histEfficiency.SetMarkerColor(1)
   outputFilename = os.path.join(outputDir, '{}_R{}.pdf'.format(analysis_utils.remove_periods(histEfficiency.GetName()), analysis_utils.remove_periods(jetR)))
-  analysis_utils.plotHist(histEfficiency, outputFilename)
+  analysis_utils.plot_hist(histEfficiency, outputFilename)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
