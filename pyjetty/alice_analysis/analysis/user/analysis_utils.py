@@ -59,7 +59,7 @@ class analysis_utils(base.base):
   # Rebin THn according to specified binnings, saving both a rebinned
   # THn and a RooUnfoldResponse object, and write to file
   #---------------------------------------------------------------
-  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array):
+  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, power_law_offset=0.):
     
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
@@ -75,12 +75,12 @@ class analysis_utils(base.base):
     #roounfold_response.UseOverflow(True)
   
     # Loop through THn and fill rebinned THn
-    self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response)
+    self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, power_law_offset)
   
   #---------------------------------------------------------------
   # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
   #---------------------------------------------------------------
-  def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response):
+  def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, power_law_offset=0.):
 
     # I don't find any global bin index implementation, so I manually loop through axes (including under/over-flow)...
     for bin_0 in range(0, thn.GetAxis(0).GetNbins() + 2):
@@ -97,6 +97,13 @@ class analysis_utils(base.base):
             x = array('d', x_list)
             global_bin = thn.GetBin(x)
             content = thn.GetBinContent(global_bin)
+            
+            # Impose a custom prior, if desired
+            if math.fabs(power_law_offset) > 1e-3 :
+              #print('Scaling prior by power_law_offset={}'.format(power_law_offset))
+              if pt_true > 0.:
+                scale_factor = math.pow(pt_true, power_law_offset)
+                content = content*scale_factor
             
             # THn is filled as (pt_det, pt_true, theta_det, theta_true)
             thn_rebinned.Fill(x, content)

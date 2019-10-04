@@ -81,7 +81,7 @@ class run_rg_analysis(base.base):
     self.kMain, self.kUnfoldingRange1, self.kUnfoldingRange2, self.kPrior1, self.kPrior2, self.kTrackEff = range(0, 6)
 
     # Set which systematics should be performed
-    self.systematics_list = [self.kMain, self.kTrackEff]
+    self.systematics_list = [self.kMain, self.kPrior1, self.kTrackEff]
       
     # Load paths to processing output, to be unfolded
     self.main_data = config['main_data']
@@ -107,6 +107,11 @@ class run_rg_analysis(base.base):
       self.output_dir_trkeff = os.path.join(self.output_dir, 'trkeff')
       if not os.path.isdir(self.output_dir_trkeff):
         os.makedirs(self.output_dir_trkeff)
+
+    if self.kPrior1 in self.systematics_list:
+      self.output_dir_prior = os.path.join(self.output_dir, 'prior')
+      if not os.path.isdir(self.output_dir_prior):
+        os.makedirs(self.output_dir_prior)
 
     if self.do_systematics:
       self.output_dir_systematics = os.path.join(self.output_dir, 'systematics')
@@ -153,6 +158,11 @@ class run_rg_analysis(base.base):
       analysis_trkeff = roounfold_rg.roounfold_rg(self.trkeff_data, self.trkeff_response, self.config_file, self.output_dir_trkeff, self.file_format)
       analysis_trkeff.roounfold_rg()
 
+    # Prior variation
+    if self.kPrior1 in self.systematics_list:
+      analysis_prior = roounfold_rg.roounfold_rg(self.main_data, self.main_response, self.config_file, self.output_dir_prior, self.file_format, rebin_response=True, power_law_offset=0.5)
+      analysis_prior.roounfold_rg()
+
   #----------------------------------------------------------------------
   def compute_systematics(self, jetR, beta):
     print('Compute systematics...')
@@ -191,6 +201,14 @@ class run_rg_analysis(base.base):
     hTrkEff = fTrkEff.Get(name)
     hTrkEff.SetDirectory(0)
     setattr(self, '{}_trkeff'.format(name), hTrkEff)
+    
+    # Get prior result
+    path_prior1 = os.path.join(self.output_dir_prior, 'fResult_R{}_B{}.root'.format(jetR, beta))
+    fPrior1 = ROOT.TFile(path_prior1, 'READ')
+    name = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final)
+    hPrior1 = fPrior1.Get(name)
+    hPrior1.SetDirectory(0)
+    setattr(self, '{}_prior1'.format(name), hPrior1)
     
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
@@ -251,6 +269,11 @@ class run_rg_analysis(base.base):
     name1D = 'hTrkEff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
     hTrkEff = self.get_theta_distribution(jetR, beta, name2D, name1D, min_pt_truth, max_pt_truth)
     
+    # Get prior1
+    name2D = 'hUnfolded_R{}_B{}_{}_prior1'.format(jetR, beta, self.reg_param_final)
+    name1D = 'hPrior1_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hPrior1 = self.get_theta_distribution(jetR, beta, name2D, name1D, min_pt_truth, max_pt_truth)
+    
     #------------------------------------
     # Compute systematics
 
@@ -277,11 +300,25 @@ class run_rg_analysis(base.base):
     outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_RegParam_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
     self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
+    # Prior
+    name = 'hSystematic_Prior1_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
+    hSystematic_Prior1 = hMain.Clone()
+    hSystematic_Prior1.SetName(name)
+    hSystematic_Prior1.Divide(hPrior1)
+    self.change_to_per(hSystematic_Prior1)
+    setattr(self, name, hSystematic_Prior1)
+    
+    outputFilename = os.path.join(self.output_dir_systematics, 'hSystematic_Prior1_R{}_B{}_{}-{}{}'.format(jetR, beta, min_pt_truth, max_pt_truth, self.file_format))
+    self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
+    
+    # Add shape uncertainties in quadrature
+    hSystematic_Shape = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1)
+    
     name = 'hResult_shape_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
     hResult_shape = hMain.Clone()
     hResult_shape.SetName(name)
     hResult_shape.SetDirectory(0)
-    self.AttachErrToHist(hResult_shape, hSystematic_RegParam)
+    self.AttachErrToHist(hResult_shape, hSystematic_Shape)
     setattr(self, name, hResult_shape)
     
     # Trk eff
@@ -302,6 +339,21 @@ class run_rg_analysis(base.base):
     self.AttachErrToHist(hResult_trkeff, hSystematic_TrkEff)
     setattr(self, name, hResult_trkeff)
 
+  #----------------------------------------------------------------------
+  def add_in_quadrature(self, h1, h2):
+  
+    h_new = h1.Clone()
+    h_new.SetName('{}_new'.format(h1.GetName()))
+    
+    for i in range(1, h_new.GetNbinsX()+1):
+      value1 = h1.GetBinContent(i)
+      value2 = h2.GetBinContent(i)
+      new_value = math.sqrt(value1*value1 + value2*value2)
+      
+    h_new.SetBinContent(i, new_value)
+    
+    return h_new
+  
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, beta):
     print('Plot final results...')

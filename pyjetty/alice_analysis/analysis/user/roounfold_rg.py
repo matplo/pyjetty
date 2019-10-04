@@ -32,16 +32,16 @@ class roounfold_rg(analysis_base.analysis_base):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', **kwargs):
+  def __init__(self, input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, power_law_offset=0., **kwargs):
     
-    super(roounfold_rg, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
+    super(roounfold_rg, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, rebin_response, power_law_offset, **kwargs)
     
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
     
     self.initialize_config()
   
-    self.get_responses(rebin_response=False)
+    self.get_responses(self.rebin_response)
     
     # Create output files to store results
     for jetR in self.jetR_list:
@@ -89,7 +89,7 @@ class roounfold_rg(analysis_base.analysis_base):
         setattr(self, name_thn, thn)
         if rebin_response:
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
-          self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
+          self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
         
         # Also re-bin the data histogram
         hData = self.fData.Get(name_data)
@@ -208,16 +208,6 @@ class roounfold_rg(analysis_base.analysis_base):
     
     # Compute SD tagging rate
     self.compute_tagging_rate(jetR, beta)
-
-    # Set prior
-    # Get the (matched) truth-level jet spectrum from the THn (for prior)
-    #hPrior = hResponseMatrix.ProjectionY("_py",1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
-    # Normalize the response matrix by setting each pT-truth projection to the intended prior distribution
-    # Keep response matrix as per-bin probabilities (i.e. don't scale by bin width)
-    # Scale also hJetSpectrumTrueUncutPerBin accordingly, soas to preserve the kinematic efficiency
-    #setPrior(hResponseMatrix, hJetSpectrumTrueUncutPerBin, outputDir, fileFormat)
-    #
-    # (Need to think how to modify the prior...)
 
     # Unfold spectrum
     if hData_PerBin and hMC_Det and hMC_Truth:
@@ -399,69 +389,6 @@ class roounfold_rg(analysis_base.analysis_base):
       for bin in range(1, hMainResult.GetNbinsX() + 1):
         hMainResult.SetBinError(bin, 0)
       plotSpectra(hLowerkResult, hMainResult, hHigherkResult, 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, hLegendLabel, h2LegendLabel, h3LegendLabel)
-
-  ##################################################################################################
-  # Set prior in repsonse matrix
-  # RooUnfold takes the prior as the truth-axis projection of the response matrix.
-  # After normalizing the response matrix to our desired prior, RooUnfold will then
-  # automatically normalize the response matrix to conserve the number of jets (i.e. each bin of
-  # truth-axis projection normalized to 1).
-  ##################################################################################################
-  def setPrior(self, hResponseMatrix, hJetSpectrumTrueUncutPerBin, outputDir, fileFormat):
-    
-    priorFolder = os.path.join(outputDir, "PriorProperties/")
-    if not os.path.exists(priorFolder):
-      os.makedirs(priorFolder)
-    
-    # Plot response matrix before normalization
-    outputFilename = os.path.join(priorFolder, "hResponseMatrixBeforeNormalization" + fileFormat)
-    self.utils.plot_hist(hResponseMatrix, outputFilename, "colz")
-    
-    # Make projection onto pT-true axis (y-axis), and scale appropriately
-    hTruthProjectionBefore = hResponseMatrix.ProjectionY("_py",1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
-    hTruthProjectionBefore.SetName("hTruthProjectionBefore")
-
-    #hResponseMatrix has a detector min pT restriction
-    outputFilename = os.path.join(priorFolder, "hTruthProjectionBeforeNormalization" + fileFormat)
-    self.utils.plot_hist(hTruthProjectionBefore, outputFilename, "hist", True)
-    
-    #hJetSpectrumTrueUncutPerBin has no detector pT restriction
-    outputFilename = os.path.join(priorFolder, "hJetSpectrumTrueUncutPerBin_asPrior{}".format(fileFormat))
-    self.utils.plot_hist(hJetSpectrumTrueUncutPerBin, outputFilename,"hist", True)
-    
-    # Check kinematic efficiency before
-    hKinematicEfficiencyBefore = hTruthProjectionBefore.Clone()
-    hKinematicEfficiencyBefore.SetName("hKinematicEfficiencyBefore")
-    hKinematicEfficiencyBefore.Divide(hTruthProjectionBefore, hJetSpectrumTrueUncutPerBin, 1., 1., "B")
-    hKinematicEfficiencyBefore.SetMarkerStyle(21)
-    outputFilename = os.path.join(priorFolder, "hKinematicEfficiencyBefore{}".format(fileFormat))
-    self.utils.plot_hist(hKinematicEfficiencyBefore, outputFilename, "P E")
-    
-    # Loop through truth-level bins (of RM and uncut truth spectrum), and normalize each bin (of RM and uncut truth spectrum) to the prior
-    nBinsY = hResponseMatrix.GetNbinsY() # pT-gen
-    nBinsX = hResponseMatrix.GetNbinsX() # pT-det
-
-    # Plot truth projection after normalization (i.e. prior distribution)
-    hTruthProjectionAfter = hResponseMatrix.ProjectionY("_py",1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
-    hTruthProjectionAfter.SetName("hTruthProjectionAfterNormalization")
-    outputFilename = os.path.join(priorFolder, "hTruthProjectionAfterNormalization" + fileFormat)
-    self.utils.plot_hist(hTruthProjectionAfter, outputFilename, "hist", True)
-    
-    # Plot response matrix after normalization
-    outputFilename = os.path.join(priorFolder, "hResponseMatrixAfterNormalization" + fileFormat)
-    self.utils.plot_hist(hResponseMatrix, outputFilename, "colz")
-    
-    #Prior used for the unfolding
-    outputFilename = os.path.join(priorFolder, "hPriorForUnfolding{}".format(fileFormat))
-    self.utils.plot_hist(hJetSpectrumTrueUncutPerBin, outputFilename,"hist", True)
-    
-    # Check kinematic efficiency after normalization
-    hKinematicEfficiencyAfter = hTruthProjectionAfter.Clone()
-    hKinematicEfficiencyAfter.SetName("hKinematicEfficiencyAfter")
-    hKinematicEfficiencyAfter.Divide(hTruthProjectionAfter, hJetSpectrumTrueUncutPerBin, 1., 1., "B")
-    hKinematicEfficiencyAfter.SetMarkerStyle(21)
-    outputFilename = os.path.join(priorFolder, "hKinematicEfficiencyAfter{}".format(fileFormat))
-    self.utils.plot_hist(hKinematicEfficiencyAfter, outputFilename, "P E")
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
@@ -1192,5 +1119,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = roounfold_rg(input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat)
+  analysis = roounfold_rg(input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat,  rebin_response=False, power_law_offset=0.)
   analysis.roounfold_rg()
