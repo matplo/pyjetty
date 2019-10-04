@@ -205,6 +205,9 @@ class roounfold_rg(analysis_base.analysis_base):
     name = 'hMC_Truth_R{}_B{}'.format(jetR, beta)
     hMC_Truth = self.get_MCtruth2D(jetR, beta)
     setattr(self, name, hMC_Truth)
+    
+    # Compute SD tagging rate
+    self.compute_tagging_rate(jetR, beta)
 
     # Set prior
     # Get the (matched) truth-level jet spectrum from the THn (for prior)
@@ -220,6 +223,83 @@ class roounfold_rg(analysis_base.analysis_base):
     if hData_PerBin and hMC_Det and hMC_Truth:
       
       self.unfoldJetSpectrum(jetR, beta)
+
+  #################################################################################################
+  # Compute SD tagging rate, based on MC correction
+  #################################################################################################
+  def compute_tagging_rate(self, jetR, beta):
+    
+    # Get truth binnings, since we need to rebin the det-level histograms
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_B{}'.format(beta))
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_B{}'.format(beta))
+    n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_B{}'.format(beta))
+    truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_B{}'.format(beta))
+    
+    # Create a histogram to store the tagging fractions
+    name = 'hTaggingFractions_R{}_B{}'.format(jetR, beta)
+    h = ROOT.TH1F(name, name, n_pt_bins_truth, truth_pt_bin_array)
+    
+    # Get relevant histograms
+    name = 'hThetaG_JetPt_R{}_B{}_rebinned'.format(jetR, beta)
+    hData2D = getattr(self, name).Clone()
+    hData2D.SetName('{}_tagging'.format(hData2D.GetName()))
+    hData2D_rebinned = self.utils.rebin_data(hData2D, name, jetR, beta, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
+    
+    name = 'hMC_Det_R{}_B{}'.format(jetR, beta)
+    hMC_Det = getattr(self, name).Clone()
+    hMC_Det.SetName('{}_tagging'.format(hMC_Det.GetName()))
+    hMC_Det_rebinned = self.utils.rebin_data(hMC_Det, name, jetR, beta, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
+    
+    name = 'hMC_Truth_R{}_B{}'.format(jetR, beta)
+    hMC_Truth = getattr(self, name).Clone()
+    hMC_Truth.SetName('{}_tagging'.format(hMC_Truth.GetName()))
+    
+    # Compute the tagging fraction for each pt bin
+    for bin in range(1, n_pt_bins_truth-3):
+      min_pt_truth = truth_pt_bin_array[bin]
+      max_pt_truth = truth_pt_bin_array[bin+1]
+    
+      fraction_tagged = self.get_tagging_rate(jetR, beta, min_pt_truth, max_pt_truth, hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
+
+      x = (min_pt_truth + max_pt_truth)/2.
+      bin = h.FindBin(x)
+      h.SetBinContent(bin, fraction_tagged)
+
+    fResult_name = getattr(self, 'fResult_name_R{}_B{}'.format(jetR, beta))
+    fResult = ROOT.TFile(fResult_name, 'UPDATE')
+    h.Write()
+    fResult.Close()
+
+  #################################################################################################
+  # Compute SD tagging rate, based on MC correction
+  #################################################################################################
+  def get_tagging_rate(self, jetR, beta, min_pt_truth, max_pt_truth, hData2D, hMC_Det2D, hMC_Truth2D):
+
+    hData2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hData = hData2D.ProjectionY()
+    n_jets_inclusive = hData.Integral(0, hData.GetNbinsX()+1)
+    n_jets_tagged = hData.Integral(1, hData.GetNbinsX())
+    fraction_tagged_data =  n_jets_tagged/n_jets_inclusive
+    #print('fraction_tagged_data: {}'.format(fraction_tagged_data))
+
+    hMC_Det2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hMC_Det = hMC_Det2D.ProjectionY()
+    n_jets_inclusive = hMC_Det.Integral(0, hMC_Det.GetNbinsX()+1)
+    n_jets_tagged = hMC_Det.Integral(1, hMC_Det.GetNbinsX())
+    fraction_tagged_mc_det =  n_jets_tagged/n_jets_inclusive
+    #print('fraction_tagged_mc_det: {}'.format(fraction_tagged_mc_det))
+    
+    hMC_Truth2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hMC_Truth = hMC_Truth2D.ProjectionY()
+    n_jets_inclusive = hMC_Truth.Integral(0, hMC_Truth.GetNbinsX()+1)
+    n_jets_tagged = hMC_Truth.Integral(1, hMC_Truth.GetNbinsX())
+    fraction_tagged_mc_truth =  n_jets_tagged/n_jets_inclusive
+    #print('fraction_tagged_mc_truth: {}'.format(fraction_tagged_mc_truth))
+
+    fraction_tagged = fraction_tagged_data * fraction_tagged_mc_truth / fraction_tagged_mc_det
+    #print('fraction_tagged: {}'.format(fraction_tagged))
+
+    return fraction_tagged
 
   #################################################################################################
   # Unfold jet spectrum

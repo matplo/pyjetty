@@ -165,6 +165,12 @@ class run_rg_analysis(base.base):
     hMain = fMain.Get(name)
     hMain.SetDirectory(0)
     setattr(self, name, hMain)
+    
+    # Tagging rate histogram
+    name = 'hTaggingFractions_R{}_B{}'.format(jetR, beta)
+    hTaggingFractions = fMain.Get(name)
+    hTaggingFractions.SetDirectory(0)
+    setattr(self, name, hTaggingFractions)
 
     # Regularization parameter +2
     name = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final+2)
@@ -197,21 +203,24 @@ class run_rg_analysis(base.base):
       self.compute_theta_systematic(jetR, beta, min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
-  def get_theta_distribution(self, name2D, name1D, min_pt_truth, max_pt_truth):
+  def get_theta_distribution(self, jetR, beta, name2D, name1D, min_pt_truth, max_pt_truth):
   
     h2D = getattr(self, name2D)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     h = h2D.ProjectionY() # Better to use ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) ?
     h.SetDirectory(0)
-  
-    n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
+    
+    name = 'hTaggingFractions_R{}_B{}'.format(jetR, beta)
+    hTaggingFrac = getattr(self, name)
+    x = (min_pt_truth + max_pt_truth)/2.
+    fraction_tagged =  hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
+    setattr(self, '{}_fraction_tagged'.format(name1D), fraction_tagged)
+
     n_jets_tagged = h.Integral(1, h.GetNbinsX())
-    fraction_tagged =  n_jets_tagged/n_jets_inclusive
-  
+    n_jets_inclusive = n_jets_tagged/fraction_tagged
     h.Scale(1./n_jets_inclusive, 'width')
   
     setattr(self, name1D, h)
-    setattr(self, '{}_fraction_tagged'.format(name1D), fraction_tagged)
 
     return h
 
@@ -225,22 +234,22 @@ class run_rg_analysis(base.base):
     # Get main histogram
     name2D = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final)
     name1D = 'hMain_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
-    hMain = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
+    hMain = self.get_theta_distribution(jetR, beta, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get reg param +2
     name2D = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final+2)
     name1D = 'hRegParam1_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
-    hRegParam1 = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
+    hRegParam1 = self.get_theta_distribution(jetR, beta, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get reg param -2
     name2D = 'hUnfolded_R{}_B{}_{}'.format(jetR, beta, self.reg_param_final-2)
     name1D = 'hRegParam2_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
-    hRegParam2 = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
+    hRegParam2 = self.get_theta_distribution(jetR, beta, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
     name2D = 'hUnfolded_R{}_B{}_{}_trkeff'.format(jetR, beta, self.reg_param_final)
     name1D = 'hTrkEff_R{}_B{}_{}-{}'.format(jetR, beta, min_pt_truth, max_pt_truth)
-    hTrkEff = self.get_theta_distribution(name2D, name1D, min_pt_truth, max_pt_truth)
+    hTrkEff = self.get_theta_distribution(jetR, beta, name2D, name1D, min_pt_truth, max_pt_truth)
     
     #------------------------------------
     # Compute systematics
@@ -414,15 +423,15 @@ class run_rg_analysis(base.base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text_latex.SetTextSize(0.045)
-    text = 'f_{tagged}^{data} = %3.3f' % fraction_tagged
+    text_latex.SetTextSize(0.04)
+    text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
     text_latex.DrawLatex(0.57, 0.59, text)
     
     if plot_pythia:
       text_latex = ROOT.TLatex()
       text_latex.SetNDC()
-      text_latex.SetTextSize(0.045)
-      text = ('f_{tagged}^{data} = %3.3f' % fraction_tagged) + (', f_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+      text_latex.SetTextSize(0.04)
+      text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
       text_latex.DrawLatex(0.57, 0.59, text)
 
     myLegend = ROOT.TLegend(0.25,0.7,0.5,0.85)
