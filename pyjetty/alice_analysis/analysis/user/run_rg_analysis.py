@@ -495,9 +495,9 @@ class run_rg_analysis(base.base):
       myLegend.AddEntry(hPythia, 'PYTHIA', 'pe')
     myLegend.Draw()
 
-    name = 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format)
+    name = 'hUnfolded_R{}_B{}_{}-{}{}'.format(self.utils.remove_periods(jetR), beta, int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
-      name = 'hUnfolded_R{}_B{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), beta, min_pt_truth, max_pt_truth, self.file_format)
+      name = 'hUnfolded_R{}_B{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), beta, int(min_pt_truth), int(max_pt_truth), self.file_format)
     outputFilename = os.path.join(self.output_dir_final, name)
     c.SaveAs(outputFilename)
     c.Close()
