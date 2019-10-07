@@ -114,7 +114,8 @@ def fill_tree(signal_jet, emb_jet, tw, sd, rho, iev=None):
 	tw.fill_branch('sd_j_z', sd_info_signal_jet.z)
 	tw.fill_branch('sd_j_dR', sd_info_signal_jet.dR)
 
-	tw.fill_branch('ej', signal_jet)
+	tw.fill_branch('ej', emb_jet)
+	tw.fill_branch('ej_ptc', emb_jet.pt() - emb_jet.area() * rho)
 	tw.fill_branch('sd_ej', sd_emb_jet)
 	tw.fill_branch('sd_ej_cpt', sd_emb_jet.pt() - sd_emb_jet.area() * rho)
 	tw.fill_branch('sd_ej_z', sd_info_emb_jet.z)
@@ -127,22 +128,28 @@ def fill_tree(signal_jet, emb_jet, tw, sd, rho, iev=None):
 	tw.fill_branch('j_p1', p1)
 	tw.fill_branch('j_p2', p2)
 
+
 	pe1 = fj.PseudoJet()
 	pe2 = fj.PseudoJet()
 	has_parents_emb = sd_emb_jet.has_parents(pe1, pe2)
 	tw.fill_branch('ej_p1', pe1)
-	tw.fill_branch('ej_p1_ptc', pe1.pt() - pe1.area() * rho)
 	tw.fill_branch('ej_p2', pe2)
-	tw.fill_branch('ej_p2_ptc', pe2.pt() - pe2.area() * rho)
+	if has_parents_emb:
+		tw.fill_branch('ej_p1_ptc', pe1.pt() - pe1.area() * rho)
+		tw.fill_branch('ej_p2_ptc', pe2.pt() - pe2.area() * rho)
+	else:
+		tw.fill_branch('ej_p1_ptc', -1000)
+		tw.fill_branch('ej_p2_ptc', -1000)
 
 	mpt1 = 0.0
 	mpt2 = 0.0
 
 	if has_parents_signal and has_parents_emb:
 		mpt1 = matched_pt(pe1, p1)
-		tw.fill_branch('mpt1', mpt1)
 		mpt2 = matched_pt(pe2, p2)
-		tw.fill_branch('mpt2', mpt2)
+	tw.fill_branch('mpt1', mpt1)
+	tw.fill_branch('mpt2', mpt2)
+
 		# print('signal_jet:', has_parents, len(pe1.constituents()), len(pe2.constituents()))
 		# print('emb_jets', has_parents, len(pe1.constituents()), len(pe2.constituents()))
 
