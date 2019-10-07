@@ -34,29 +34,24 @@ class analysis_utils(base.base):
     super(analysis_utils, self).__init__(**kwargs)
   
   #---------------------------------------------------------------
-  # Rebin 2D data histogram according to specified binnings
+  # Rebin 2D (pt, theta) histogram according to specified binnings
   #---------------------------------------------------------------
-  def rebin_data(self, hData, name_data, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array):
+  def rebin_data(self, hData, name_data, jetR, beta, n_pt_bins, pt_bin_array, n_rg_bins, rg_bin_array):
     
     # Create empty TH2 with appropriate binning
     name = '{}_{}'.format(name_data, 'rebinned')
-    h = ROOT.TH2F(name, name, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array)
+    h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_rg_bins, rg_bin_array)
     h.Sumw2()
-  
-  #xmin = det_pt_bin_array[0]
-  # xmax = det_pt_bin_array[-1]
-  
-    for bin_x in range(1, hData.GetNbinsX() + 1):
-      for bin_y in range(1, hData.GetNbinsY() + 1):
+
+    # Loop over all bins (including under/over-flow -- needed for SD tagging rate), and fill rebinned histogram
+    for bin_x in range(0, hData.GetNbinsX() + 2):
+      for bin_y in range(0, hData.GetNbinsY() + 2):
         
         x = hData.GetXaxis().GetBinCenter(bin_x)
         y = hData.GetYaxis().GetBinCenter(bin_y)
           
-          #if x > xmin and x < xmax:
         content = hData.GetBinContent(bin_x, bin_y)
         h.Fill(x, y, content)
-
-    # Ignore under/over-flow appropriately, since we don't use them in the unfolding
 
     return h
 
@@ -64,7 +59,7 @@ class analysis_utils(base.base):
   # Rebin THn according to specified binnings, saving both a rebinned
   # THn and a RooUnfoldResponse object, and write to file
   #---------------------------------------------------------------
-  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array):
+  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, power_law_offset=0.):
     
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
@@ -75,24 +70,27 @@ class analysis_utils(base.base):
     hist_truth = thn_rebinned.Projection(3, 1)
     hist_truth.SetName('hist_truth_R{}_B{}'.format(jetR, beta))
     roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name_roounfold, name_roounfold) # Sets up binning
+
+    # Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold
+    #roounfold_response.UseOverflow(True)
   
     # Loop through THn and fill rebinned THn
-    self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response)
+    self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, power_law_offset)
   
   #---------------------------------------------------------------
   # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
   #---------------------------------------------------------------
-  def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response):
+  def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, power_law_offset=0.):
 
-    # I don't find any global bin index implementation, so I manually loop through axes...
-    for bin_0 in range(1, thn.GetAxis(0).GetNbins() + 1):
+    # I don't find any global bin index implementation, so I manually loop through axes (including under/over-flow)...
+    for bin_0 in range(0, thn.GetAxis(0).GetNbins() + 2):
       print(bin_0)
       pt_det = thn.GetAxis(0).GetBinCenter(bin_0)
-      for bin_1 in range(1, thn.GetAxis(1).GetNbins() + 1):
+      for bin_1 in range(0, thn.GetAxis(1).GetNbins() + 2):
         pt_true = thn.GetAxis(1).GetBinCenter(bin_1)
-        for bin_2 in range(1, thn.GetAxis(2).GetNbins() + 1):
+        for bin_2 in range(0, thn.GetAxis(2).GetNbins() + 2):
           theta_det = thn.GetAxis(2).GetBinCenter(bin_2)
-          for bin_3 in range(1, thn.GetAxis(3).GetNbins() + 1):
+          for bin_3 in range(0, thn.GetAxis(3).GetNbins() + 2):
             theta_true = thn.GetAxis(3).GetBinCenter(bin_3)
     
             x_list = (pt_det, pt_true, theta_det, theta_true)
@@ -100,15 +98,19 @@ class analysis_utils(base.base):
             global_bin = thn.GetBin(x)
             content = thn.GetBinContent(global_bin)
             
+            # Impose a custom prior, if desired
+            if math.fabs(power_law_offset) > 1e-3 :
+              #print('Scaling prior by power_law_offset={}'.format(power_law_offset))
+              if pt_true > 0.:
+                scale_factor = math.pow(pt_true, power_law_offset)
+                content = content*scale_factor
+            
             # THn is filled as (pt_det, pt_true, theta_det, theta_true)
             thn_rebinned.Fill(x, content)
             #print('Fill ({}, {}, {}, {}) to response'.format(pt_det, pt_true, theta_det, theta_true))
             
             # RooUnfoldResponse should be filled (pt_det, theta_det, pt_true, theta_true)
             roounfold_response.Fill(pt_det, theta_det, pt_true, theta_true, content)
-
-            # Need to handle under/over-flow appropriately
-            #thn.GetAxis(0).FindBin(x) # returns 0 or N+1 if under/over-flow
 
     print('writing response...')
     f = ROOT.TFile(response_file_name, 'UPDATE')

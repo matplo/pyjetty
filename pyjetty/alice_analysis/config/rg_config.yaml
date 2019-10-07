@@ -30,7 +30,7 @@ output_dir: '/home/alidock/theta_g/roounfold_rg_output_FINAL'
 
 do_unfolding: False
 do_systematics: True
-do_plot_final_result: False
+do_plot_final_result: True
 
 # Paths to processing output, to be used for unfolding
 main_data: '/home/alidock/theta_g/AnalysisResults/LHC17pq/19626/AnalysisResultsFinal.root'
@@ -40,4 +40,6 @@ trkeff_data: '/home/alidock/theta_g/AnalysisResults/LHC17pq/19626/AnalysisResult
 trkeff_response: '/home/alidock/theta_g/AnalysisResults/LHC18b8_trkeff/19642/AnalysisResultsFinal.root'
 
 # Theory comparisons
-pythia: ''
+pythia_20: '/home/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR___MPI_charged_output.root'
+pythia_40: '/home/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin40.0_hadrON____ISR___MPI_charged_output.root'
+pythia_60: '/home/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin60.0_hadrON____ISR___MPI_charged_output.root'
