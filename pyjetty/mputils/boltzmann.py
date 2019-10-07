@@ -2,18 +2,19 @@ import ROOT
 import fastjet as fj
 import numpy as np
 import array
-import mputils
+from pyjetty.mputils import MPBase
+from pyjetty.mputils import logbins
 
-class BoltzmannEvent(mputils.MPBase):
+class BoltzmannEvent(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_constants(mean_pt=0.7, multiplicity=1, max_eta=1, max_pt=100)
+		self.configure_from_args(mean_pt=0.7, multiplicity=1, max_eta=1, max_pt=100)
 		super(BoltzmannEvent, self).__init__(**kwargs)
 		self.particles = fj.vectorPJ()
 		self.funbg = ROOT.TF1("funbg", "2. / [0] * x * TMath::Exp(-(2. / [0]) * x)", 0, self.max_pt, 1);
 		self.funbg.SetParameter(0, self.mean_pt)
 		self.funbg.SetNpx(1000)
 		self.ROOT_random = ROOT.TRandom()
-		self.histogram_pt = ROOT.TH1F("BoltzmannEvent_pt", "BoltzmannEvent_pt;p_{T} (GeV/c)", 100, mputils.logbins(1e-1, self.max_pt, 100))
+		self.histogram_pt = ROOT.TH1F("BoltzmannEvent_pt", "BoltzmannEvent_pt;p_{T} (GeV/c)", 100, logbins(1e-1, self.max_pt, 100))
 		self.histogram_pt.SetDirectory(0)
 		self.histogram_eta = ROOT.TH1F("BoltzmannEvent_eta", "BoltzmannEvent_eta;#eta", 100, -self.max_eta, self.max_eta)
 		self.histogram_eta.SetDirectory(0)

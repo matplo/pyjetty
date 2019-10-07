@@ -3,9 +3,9 @@
 
 import fastjet as fj
 import fjcontrib
-import mputils
+from pyjetty.mputils import MPBase
 
-class CEventSubtractor(mputils.MPBase):
+class CEventSubtractor(MPBase):
 	def __init__(self, **kwargs):
 		# constants
 		# self.max_eta=4  # specify the maximal pseudorapidity for the input particles. It is used for the subtraction. Particles with eta>|max_eta| are removed and not used during the subtraction (they are not returned). The same parameter should be used for the GridMedianBackgroundEstimator as it is demonstrated in this example. If JetMedianBackgroundEstimator is used, then lower parameter should be used  (to avoid including particles outside this range). 
@@ -20,7 +20,7 @@ class CEventSubtractor(mputils.MPBase):
 		# self.max_pt_correct = 5.
 
 		# set the default values
-		self.configure_constants(	max_eta=4, 
+		self.configure_from_args(	max_eta=4, 
 									bge_rho_grid_size=0.2,
 									max_distance=0.3,
 									alpha=1,
