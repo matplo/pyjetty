@@ -1,0 +1,14 @@
+# Analysis parameters
+pTbins: [5, 20, 40, 60, 100]
+jetR: [0.1, 0.2, 0.3, 0.4]
+betas: [1, 1.5, 2]
+n_lambda_bins: 10000
+
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.04
+
+# Unfolding parameters
+reg_param: 5
+
+# Plotting parameters
+fileFormat: ".pdf"
