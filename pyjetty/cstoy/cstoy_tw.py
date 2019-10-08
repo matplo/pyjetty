@@ -218,7 +218,7 @@ def main():
 	sd = fjcontrib.SoftDrop(0, sd_zcut, jet_R0)
 
 	max_eta = 1
-	be = BoltzmannEvent(mean_pt=0.6, multiplicity=1000 * max_eta * 2, max_eta=max_eta, max_pt=100)
+	be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000 * max_eta * 2, max_eta=max_eta, max_pt=100)
 	ja = JetAnalysis(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
@@ -259,7 +259,7 @@ def main():
 		else:
 			ja.analyze_event(full_event)
 			rho = ja.rho
-			
+
 		r = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in ja.jets]
 
 		# emb_jets = fj.sorted_by_pt(jet_selector_cs(jet_def(full_event)))
