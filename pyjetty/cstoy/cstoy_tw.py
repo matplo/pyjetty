@@ -169,7 +169,7 @@ def main():
 	parser.add_argument('--ignore-mycfg', help="ignore some settings hardcoded here", default=False, action='store_true')
 	parser.add_argument('--output', default="output.root", type=str)
 	parser.add_argument('--alpha', default=0, type=float)
-	parser.add_argument('--dRmax', default=0.25, type=float)
+	parser.add_argument('--dRmax', default=0.0, type=float)
 	parser.add_argument('--zcut', default=0.1, type=float)
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--py-seed', help='pythia seed', default=-1, type=int)
@@ -218,7 +218,6 @@ def main():
 	sd = fjcontrib.SoftDrop(0, sd_zcut, jet_R0)
 
 	max_eta = 1
-	cs = CEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=max_eta, bge_rho_grid_size=0.25, max_pt_correct=100)
 	be = BoltzmannEvent(mean_pt=0.6, multiplicity=1000 * max_eta * 2, max_eta=max_eta, max_pt=100)
 	ja = JetAnalysis(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
@@ -250,12 +249,18 @@ def main():
 		# idxs = [psj.user_index() for psj in sjet.constituents()]
 		# print('pythia jet:', idxs)
 
-		# cs_parts = cs.process_event(full_event)
-		# rho = cs.bge_rho.rho()
 		# cs_signal_jets = fj.sorted_by_pt(jet_selector_cs(jet_def(cs_parts)))
 
-		ja.analyze_event(full_event)
-		r = [fill_tree(sjet, ej, tw, sd, ja.rho, iev) for ej in ja.jets]
+		if args.dRmax > 0:
+			cs = CEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=max_eta, bge_rho_grid_size=0.25, max_pt_correct=100)
+			cs_parts = cs.process_event(full_event)
+			rho = cs.bge_rho.rho()
+			ja.analyze_event(cs_parts)
+		else:
+			ja.analyze_event(full_event)
+			rho = ja.rho
+			
+		r = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in ja.jets]
 
 		# emb_jets = fj.sorted_by_pt(jet_selector_cs(jet_def(full_event)))
 		# r = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in emb_jets]

@@ -4,46 +4,62 @@
 #date
 #title: smart group
 #legend pos=ul
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dpt :p  : title=#delta p_{T}
+#logy 1
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dpt :p  : title=#delta p_{T} w/ #rho x A_{j}
+# output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dptcs :p  : title=#delta p_{T} w/ event CS
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
 #legend pos=ul
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_zgv :hist +l1 +f3003 +a80 +k3 : title=#delta z_{g} vacuum
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_zg :hist +l1 +f1001 +a10 +k2 : title=z_{g} all
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_zg_m1 :hist +l1 +f3004 +a50 +k32 : title=z_{g} lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_zg_m2 :hist +l1 +f3005 +a100 +k4 : title=z_{g} sub-lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_zg_m12 :hist +l1 +f1001 +a50 +k6 : title=z_{g} both match
+#logy 1
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_zgv :hist +l1 +f3003 +a80 +k3 : title=#delta z_{g} vacuum
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_zg :hist +l1 +f1001 +a10 +k2 : title=z_{g} hybrid
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_zg_m1 :hist +l1 +f3004 +a50 +k32 : title=z_{g} lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_zg_m2 :hist +l1 +f3005 +a100 +k4 : title=z_{g} sub-lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_zg_m12 :hist +l1 +f1001 +a25 +k6 : title=z_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 1
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dzg :hist +l1 +f1001 +a10 +k2 : title=#delta z_{g} hybrid
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dzg_m1 :hist +l1 +f3004 +a50 +k32 : title=#delta z_{g} lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dzg_m2 :hist +l1 +f3005 +a100 +k4 : title=#delta z_{g} sub-lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dzg_m12 :hist +l1 +f1001 +a25 +k6 : title=#delta z_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ll
+#logy 1
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_thetagv :hist +l1 +f3003 +a80 +k3 : title=#delta #theta_{g} vacuum
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_thetag :hist +l1 +f1001 +a10 +k2 : title=#delta #theta_{g} hybrid
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_thetag_m1 :hist +l1 +f3004 +a50 +k32 : title=#delta #theta_{g} lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_thetag_m2 :hist +l1 +f3005 +a100 +k4 : title=#delta #theta_{g} sub-lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_thetag_m12 :hist +l1 +f1001 +a25 +k6 : title=#delta #theta_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=lr
+#logy 1
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dthetag :hist +l1 +f1001 +a10 +k2 : title=#delta #theta_{g} hybrid
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dthetag_m1 :hist +l1 +f3004 +a50 +k32 : title=#delta #theta_{g} lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dthetag_m2 :hist +l1 +f3005 +a100 +k4 : title=#delta #theta_{g} sub-lead match
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_dthetag_m12 :hist +l1 +f1001 +a25 +k6 : title=#delta #theta_{g} both match
 #-----------------------
 #figure
 #geom 500x500
 #date
 #title: smart group
 #legend pos=ul
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dzg :hist +l1 +f1001 +a10 +k2 : title=#delta z_{g} all
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dzg_m1 :hist +l1 +f3004 +a50 +k32 : title=#delta z_{g} lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dzg_m2 :hist +l1 +f3005 +a100 +k4 : title=#delta z_{g} sub-lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dzg_m12 :hist +l1 +f1001 +a50 +k6 : title=#delta z_{g} both match
-#-----------------------
-#figure
-#geom 500x500
-#date
-#title: smart group
-#legend pos=ul
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_thetagv :hist +l1 +f3003 +a80 +k3 : title=#delta #theta_{g} vacuum
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_thetag :hist +l1 +f1001 +a10 +k2 : title=#delta #theta_{g} all
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_thetag_m1 :hist +l1 +f3004 +a50 +k32 : title=#delta #theta_{g} lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_thetag_m2 :hist +l1 +f3005 +a100 +k4 : title=#delta #theta_{g} sub-lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_thetag_m12 :hist +l1 +f1001 +a50 +k6 : title=#delta #theta_{g} both match
-#-----------------------
-#figure
-#geom 500x500
-#date
-#title: smart group
-#legend pos=ul
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dthetag :hist +l1 +f1001 +a10 +k2 : title=#delta #theta_{g} all
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dthetag_m1 :hist +l1 +f3004 +a50 +k32 : title=#delta #theta_{g} lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dthetag_m2 :hist +l1 +f3005 +a100 +k4 : title=#delta #theta_{g} sub-lead match
-hout_output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged.root 		:h_dthetag_m12 :hist +l1 +f1001 +a50 +k6 : title=#delta #theta_{g} both match
+#logy 1
+#x matched p_{T} prong
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_mpt1 :p  : title=matched p_{T} fraction leading prong
+output_alpha_0_dRmax_0.0_SDzcut_0.1_seed_merged_hout.root 		:h_mpt2 :p  : title=matched p_{T} fraction subleading prong
