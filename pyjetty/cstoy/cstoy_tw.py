@@ -141,8 +141,8 @@ def fill_tree(signal_jet, emb_jet, tw, sd, rho, iev=None):
 		tw.fill_branch('ej_p1_ptc', -1000)
 		tw.fill_branch('ej_p2_ptc', -1000)
 
-	mpt1 = 0.0
-	mpt2 = 0.0
+	mpt1 = -1.0 # not passed SD
+	mpt2 = -1.0 # not passed SD
 
 	if has_parents_signal and has_parents_emb:
 		mpt1 = matched_pt(pe1, p1)
