@@ -1,0 +1,23 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=lr
+#logx 1
+#logy 1
+#x p_{T}
+#y counts
+output_alice_efficiency.root 		:hpart_gen :p  : title=particles generator level
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=lr
+#logx 1
+#x p_{T}^{gen}
+#y efficiency
+output_alice_efficiency.root 		:heffi_pp :p : title=pp
+output_alice_efficiency.root 		:heffi_PbPb :p : title=PbPb
+

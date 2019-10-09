@@ -1,0 +1,156 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul
+##normalize self
+##scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+#y counts
+#logy 1
+# output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dpt :p  : title=#delta p_{T} w/ #rho x A_{j}
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dptcs :p  : title=#delta p_{T} w/ event CS
+#output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dptcs :p serror rect -k -l : title=#delta p_{T} w/ event CS
+#output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dptcs :hist graph  : title=#delta p_{T} w/ event CS
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul
+##normalize self
+##scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+#y counts
+#logy 1
+#x z_{g}
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zgv :hist +l1 +f3003 +a100 +k8 +w5 : title=z_{g} vacuum
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg :p EX0 +l1 +k2 : title=z_{g} hybrid
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg_m1 :hist +l1 +f3004 +a50 +k1 : title=z_{g} lead match
+# output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg_m2 :hist +l1 +f3005 +a100 +k4 +w3 : title=z_{g} sub-lead match
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg_m12 :hist +l1 +f3005 +a50 +k4 : title=z_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ll alpha=0
+##normalize self
+##scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+#y counts
+#xrange 0, 0.6
+#logy 0
+#x z_{g}
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zgv :hist +l1 +f3003 +a100 +k8 +w5 : title=z_{g} vacuum
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg :p EX0 +l1 +k2 : title=z_{g} hybrid
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg_m1 :hist +l1 +f3004 +a50 +k1 : title=z_{g} lead match
+# output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg_m2 :hist +l1 +f3005 +a100 +k4 +w3 : title=z_{g} sub-lead match
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_zg_m12 :hist +l1 +f3005 +a50 +k4 : title=z_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul
+##normalize self
+##scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+#y counts
+#logy 1
+#x #delta z_{g} = z_{g}^{hybrid} - z_{g}^{vacuum}
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dzg :p EX0 +l1 +k2 : title=#delta z_{g} hybrid
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dzg_m1 :hist +l1 +f3004 +a50 +k1 : title=#delta z_{g} lead match
+# output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dzg_m2 :hist +l1 +f3005 +a100 +k4 +w3 : title=#delta z_{g} sub-lead match
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dzg_m12 :hist +l1 +f3005 +a50 +k4 : title=#delta z_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ll
+##normalize self
+##scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+#y counts
+#logy 1
+#x #theta_{g}
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetagv :hist +l1 +f3003 +a100 +k8 +w5 : title=#theta_{g} vacuum
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag :p EX0 +l1 +k2 : title=#theta_{g} hybrid
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag_m1 :hist +l1 +f3004 +a50 +k1 : title=#theta_{g} lead match
+# output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag_m2 :hist +l1 +f3005 +a100 +k4 +w3 : title=#theta_{g} sub-lead match
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag_m12 :hist +l1 +f3005 +a50 +k4 : title=#theta_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+##normalize self
+##scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+#y counts
+#xrange -0.1, 1.3
+#logy 0
+#x #theta_{g}
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetagv :hist +l1 +f3003 +a100 +k8 +w5 : title=#theta_{g} vacuum
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag :p EX0 +l1 +k2 : title=#theta_{g} hybrid
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag_m1 :hist +l1 +f3004 +a50 +k1 : title=#theta_{g} lead match
+# output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag_m2 :hist +l1 +f3005 +a100 +k4 +w3 : title=#theta_{g} sub-lead match
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetag_m12 :hist +l1 +f3005 +a50 +k4 : title=#theta_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul
+##normalize self
+##scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+#y counts
+#logy 1
+#x #delta #theta_{g} = #theta_{g}^{hybrid} - #theta_{g}^{vacuum}
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dthetag :p EX0 +l1 +k2 : title=#delta #theta_{g} hybrid
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dthetag_m1 :hist +l1 +f3004 +a50 +k1 : title=#delta #theta_{g} lead match
+# output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dthetag_m2 :hist +l1 +f3005 +a100 +k4 +w3 : title=#delta #theta_{g} sub-lead match
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_dthetag_m12 :hist +l1 +f3005 +a50 +k4 : title=#delta #theta_{g} both match
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ll fcol=32
+###normalize self
+###scalebwidth 1 False
+##y 1/N_{jet} dN/dx
+##y counts
+#y counts
+#logy 1
+#x matched p_{T} prong
+#comment pos=ul item=comment: negative value means jet did not pass SD (vacuum or hybrid) tx_size=0.03
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_mpt1 :p  : title=matched p_{T} leading
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_mpt2 :p  : title=matched p_{T} subleading
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title vacuum
+#2dxrange 0, 0.51
+#2dyrange 0, 1.1
+#force_legend 1
+#legend 0.197,0.279,0.392,0.469
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetagzgv :colz over +yprof noleg: title=vacuum <z_{g}>
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title matched jets from hybrid events
+#2dxrange 0, 0.51
+#2dyrange 0, 1.1
+#force_legend 1
+#legend 0.197,0.279,0.392,0.469
+output_alpha_0_dRmax_0.25_SDzcut_0.2_emb_effi_seed_merged_hout.root 		:h_thetagzg :colz over +yprof noleg : title=hybrid <z_{g}>
+

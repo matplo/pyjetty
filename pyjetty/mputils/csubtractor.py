@@ -54,8 +54,8 @@ class CEventSubtractor(MPBase):
 		
 		self.subtractor.initialize();
 
-		print(self)
-		print(self.subtractor.description())
+		# print(self)
+		# print(self.subtractor.description())
 
 	def process_event(self, full_event):
 		self.bge_rho.set_particles(full_event);

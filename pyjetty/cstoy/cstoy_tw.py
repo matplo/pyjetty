@@ -19,22 +19,130 @@ import pythiaext
 import numpy as np
 import array
 import copy
+import random
+import uproot
+import pandas as pd
 
+from pyjetty.mputils import logbins
 from pyjetty.mputils import MPBase
 from pyjetty.mputils import BoltzmannEvent
 from pyjetty.mputils import CEventSubtractor
 from pyjetty.mputils import RTreeWriter
+from alice_efficiency import AliceChargedParticleEfficiency
 
 import ROOT
 ROOT.gROOT.SetBatch(True)
+
+class DataEvent(object):
+	def __init__(self, particles, run_number, ev_id):
+		self.particles = particles
+		self.run_number = run_number
+		self.ev_id = ev_id
+
+class MPJetAnalysisFileIO(MPBase):
+	def __init__(self, **kwargs):
+		self.configure_from_args(file_input = None, tree_name='tree_Particle')
+		self.event_number = 0
+		self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
+		super(MPJetAnalysisFileIO, self).__init__(**kwargs)
+		self.reset_dfs()
+		if self.file_input:
+			self.load_file(self.file_input, self.tree_name)
+
+	def reset_dfs(self):
+		self.track_df_orig = None
+		self.track_df = None
+		self.track_df_grouped = None
+		self.df_events = None
+		self.event_tree = None
+		self.event_df_orig = None
+		self.event_df = None
+		self.track_tree = None
+		self.track_tree_name = None
+
+	def get_event(self, df_tracks):
+		# Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
+		event = DataEvent([], -1, -1)
+		event.particles = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)  
+		if len(event.particles) > 0:
+			event.run_number = float(df_tracks['run_number'].values[0])
+			event.ev_id = float(df_tracks['ev_id'].values[0])
+		else:
+			event.run_number = -1
+			event.ev_id = -1
+		return event
+
+	def load_file(self, file_input, tree_name='tree_Particle'):
+		self.file_input = file_input
+		self.tree_name = tree_name
+		self.reset_dfs()
+		# Load event tree into dataframe, and apply event selection
+		self.event_tree = uproot.open(file_input)[self.event_tree_name]
+		if not self.event_tree:
+			print('[e] Tree {} not found in file {}'.format(self.event_tree_name, file_input))
+			return False
+		self.event_df_orig = self.event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
+		self.event_df_orig.reset_index(drop=True)
+		self.event_df = self.event_df_orig.query('is_ev_rej == 0')
+		self.event_df.reset_index(drop=True)
+		# Load track tree into dataframe
+		self.track_tree_name = 'PWGHF_TreeCreator/{}'.format(tree_name)
+		self.track_tree = uproot.open(file_input)[self.track_tree_name]
+		if not self.track_tree:
+			print('[e] Tree {} not found in file {}'.format(tree_name, file_input))
+			return False
+		self.track_df_orig = self.track_tree.pandas.df()
+		# Merge event info into track tree
+		self.track_df = pd.merge(self.track_df_orig, self.event_df, on=['run_number', 'ev_id'])
+		# (i) Group the track dataframe by event
+		#     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
+		self.track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
+		# (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
+		self.df_events = self.track_df_grouped.apply(self.get_event)
+		self.event_number = self.event_number + len(self.df_events)
+		return True
+
 
 class DataBackground(MPBase):
 	def __init__(self, **kwargs):
 		self.configure_from_args(file_list='PbPb_file_list.txt')	
 		super(DataBackground, self).__init__(**kwargs)
+		self.current_event_in_file = 0
+		self.file_io = None
+		self.list_of_files = []
+		self.read_file_list()
+
+	def set_file_list(self, sfile):
+		self.file_list = sfile
+		self.read_file_list()
+
+	def read_file_list(self):
+		self.list_of_files = []
+		with open(self.file_list) as f:
+			self.list_of_files = [fn.strip() for fn in f.readlines()]
+
+	def open_file(self):
+		self.file_io = None
+		self.current_event_in_file = 0
+		afile = random.choice(self.list_of_files)
+		print('[i] opening data file', afile)
+		self.file_io = MPJetAnalysisFileIO(file_input=afile)
+		print('    number of events', len(self.file_io.df_events))
 
 	def load_event(self):
-		self.particles = fj.vectorPJ()
+		if self.file_io is None:
+			self.open_file()
+		if self.file_io is None:
+			print('[e] unable to load the background file')
+		if self.current_event_in_file >= len(self.file_io.df_events):
+			self.current_event_in_file = 0
+			self.file_io = None
+			return self.load_event()
+		event = self.file_io.df_events[self.current_event_in_file]
+		_tmp = [p.set_user_index(10000+ip) for ip,p in enumerate(event.particles)]
+		# print('loaded event:', self.current_event_in_file)
+		self.current_event_in_file = self.current_event_in_file + 1
+		self.particles = event.particles
 		return self.particles
 
 class JetAnalysis(MPBase):
@@ -117,6 +225,8 @@ def fill_tree(signal_jet, emb_jet, tw, sd, rho, iev=None):
 	sd_emb_jet = sd.result(emb_jet)
 	sd_info_emb_jet = fjcontrib.get_SD_jet_info(sd_emb_jet)
 
+	tw.fill_branch('rho', rho)
+
 	tw.fill_branch('j', signal_jet)
 	tw.fill_branch('sd_j', sd_signal_jet)
 	tw.fill_branch('sd_j_z', sd_info_signal_jet.z)
@@ -180,8 +290,9 @@ def main():
 	parser.add_argument('--dRmax', default=0.0, type=float)
 	parser.add_argument('--zcut', default=0.1, type=float)
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
-	parser.add_argument('--py-seed', help='pythia seed', default=-1, type=int)
 	parser.add_argument('--embed', help='run embedding from a file list', default='', type=str)
+	parser.add_argument('--efficiency', help='apply charged particle efficiency', default=False, action='store_true')
+
 	args = parser.parse_args()
 
 	if args.output == 'output.root':
@@ -190,6 +301,8 @@ def main():
 			args.output = 'output_alpha_{}_dRmax_{}_SDzcut_{}_seed_{}.root'.format(args.alpha, args.dRmax, args.zcut, args.py_seed)
 		if args.embed:
 			args.output = args.output.replace('.root', '_emb.root')
+		if args.efficiency:
+			args.output = args.output.replace('.root', '_effi.root')
 
 	if os.path.isfile(args.output):
 		if not args.overwrite:
@@ -198,22 +311,22 @@ def main():
 
 	print(args)
 
+	# alice specific
+	max_eta = 0.9
+
 	# print the banner first
 	fj.ClusterSequence.print_banner()
 	print()
 	# set up our jet definition and a jet selector
 	jet_R0 = 0.4
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-	jet_selector = fj.SelectorPtMin(80.0) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
-	jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
+	jet_selector = fj.SelectorPtMin(80.0) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
+	jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
 	# jet_selector = fj.SelectorPtMin(10.0) & fj.SelectorPtMax(20.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
 	# jet_selector_cs = fj.SelectorPtMin(0.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
 	print(jet_def)
 
 	mycfg = ['PhaseSpace:pThatMin = 80', 'PhaseSpace:pThatMax = -1']
-	if args.py_seed >= 0:
-		mycfg.append('Random:setSeed=on')
-		mycfg.append('Random:seed={}'.format(args.py_seed))
 
 	# mycfg = []
 	if args.ignore_mycfg:
@@ -226,15 +339,22 @@ def main():
 	sd_zcut = args.zcut
 	sd = fjcontrib.SoftDrop(0, sd_zcut, jet_R0)
 
-	max_eta = 1
 	ja = JetAnalysis(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 
 	be = None
 	embd = None
 	if len(args.embed) > 0:
 		embd = DataBackground(file_list=args.embed)
+		print(embd)
 	else:
 		be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000 * max_eta * 2, max_eta=max_eta, max_pt=100)
+		print(be)
+
+	cs = None
+	if args.dRmax > 0:
+		cs = CEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=max_eta, bge_rho_grid_size=0.25, max_pt_correct=100)
+		print(cs)
+
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
 	if args.nev < 1:
@@ -245,12 +365,22 @@ def main():
 	t = ROOT.TTree('t', 't')
 	tw = RTreeWriter(tree=t)
 
+	# effi_pp = AliceChargedParticleEfficiency(csystem='pp')
+	effi_PbPb = None
+	if args.efficiency:
+		effi_PbPb = AliceChargedParticleEfficiency(csystem='PbPb')
+		print(effi_PbPb)
+
 	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
 
 		parts_pythia = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
-		parts = parts_selector(parts_pythia)
+		parts_gen = parts_selector(parts_pythia)
+		if effi_PbPb:
+			parts = effi_PbPb.apply_efficiency(parts_gen)
+		else:
+			parts = parts_gen
 
 		signal_jets = fj.sorted_by_pt(jet_selector(jet_def(parts)))
 		if len(signal_jets) < 1:
@@ -264,13 +394,8 @@ def main():
 		full_event = bg_parts
 
 		lc = [full_event.push_back(psj) for psj in sjet.constituents()]
-		# idxs = [psj.user_index() for psj in sjet.constituents()]
-		# print('pythia jet:', idxs)
 
-		# cs_signal_jets = fj.sorted_by_pt(jet_selector_cs(jet_def(cs_parts)))
-
-		if args.dRmax > 0:
-			cs = CEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=max_eta, bge_rho_grid_size=0.25, max_pt_correct=100)
+		if cs:
 			cs_parts = cs.process_event(full_event)
 			rho = cs.bge_rho.rho()
 			ja.analyze_event(cs_parts)
@@ -280,19 +405,10 @@ def main():
 
 		r = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in ja.jets]
 
-		# emb_jets = fj.sorted_by_pt(jet_selector_cs(jet_def(full_event)))
-		# r = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in emb_jets]
-
-		# max_eta_part = max([j.eta() for j in full_event])
-		# print ('number of particles', len(full_event), max_eta_part)
-		# mean_pt = sum([j.pt() for j in bg_parts]) / len(bg_parts)
-		# print ('mean pt in bg', mean_pt)
-		# print ('number of CS particles', len(cs_parts))
-
-
 	pythia.stat()
 	outf.Write()
 	outf.Close()
+	print('[i] written', outf.GetName())
 
 
 if __name__ == '__main__':

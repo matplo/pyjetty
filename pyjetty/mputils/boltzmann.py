@@ -21,7 +21,7 @@ class BoltzmannEvent(MPBase):
 		self.histogram_phi = ROOT.TH1F("BoltzmannEvent_phi", "BoltzmannEvent_phi;#varphi (rad)", 100, -ROOT.TMath.Pi(), ROOT.TMath.Pi())
 		self.histogram_phi.SetDirectory(0)
 		self.nEvent = 0
-		print (self)
+		# print (self)
 
 	def _boltzmann(self, pt):
 		return 2. / self.mean_pt * pt * math.exp(-(2. / self.mean_pt) * pt);
