@@ -28,6 +28,14 @@ from pyjetty.mputils import RTreeWriter
 import ROOT
 ROOT.gROOT.SetBatch(True)
 
+class DataBackground(MPBase):
+	def __init__(self, **kwargs):
+		self.configure_from_args(file_list='PbPb_file_list.txt')	
+		super(DataBackground, self).__init__(**kwargs)
+
+	def load_event(self):
+		self.particles = fj.vectorPJ()
+		return self.particles
 
 class JetAnalysis(MPBase):
 	def __init__(self, **kwargs):
@@ -173,14 +181,15 @@ def main():
 	parser.add_argument('--zcut', default=0.1, type=float)
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--py-seed', help='pythia seed', default=-1, type=int)
-
+	parser.add_argument('--embed', help='run embedding from a file list', default='', type=str)
 	args = parser.parse_args()
 
 	if args.output == 'output.root':
 		args.output = 'output_alpha_{}_dRmax_{}_SDzcut_{}.root'.format(args.alpha, args.dRmax, args.zcut)
 		if args.py_seed >= 0:
 			args.output = 'output_alpha_{}_dRmax_{}_SDzcut_{}_seed_{}.root'.format(args.alpha, args.dRmax, args.zcut, args.py_seed)
-
+		if args.embed:
+			args.output = args.output.replace('.root', '_emb.root')
 
 	if os.path.isfile(args.output):
 		if not args.overwrite:
@@ -218,8 +227,14 @@ def main():
 	sd = fjcontrib.SoftDrop(0, sd_zcut, jet_R0)
 
 	max_eta = 1
-	be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000 * max_eta * 2, max_eta=max_eta, max_pt=100)
 	ja = JetAnalysis(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
+
+	be = None
+	embd = None
+	if len(args.embed) > 0:
+		embd = DataBackground(file_list=args.embed)
+	else:
+		be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000 * max_eta * 2, max_eta=max_eta, max_pt=100)
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
 	if args.nev < 1:
@@ -242,7 +257,10 @@ def main():
 			continue
 		sjet = signal_jets[0]
 
-		bg_parts = be.generate(offset=10000)
+		if embd:
+			bg_parts = embd.load_event()
+		else:
+			bg_parts = be.generate(offset=10000)
 		full_event = bg_parts
 
 		lc = [full_event.push_back(psj) for psj in sjet.constituents()]
