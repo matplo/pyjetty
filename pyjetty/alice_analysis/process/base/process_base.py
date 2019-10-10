@@ -55,6 +55,22 @@ class process_base(base.base):
     self.jetR_list = config['jetR']
     self.debug_level = config['debug_level']
 
+    # Check if constituent subtractor is included, and initialize it if so
+    self.do_constituent_subtraction = False
+    if 'constituent_subtractor' in config:
+      print('Constituent subtractor is enabled.')
+      self.do_constituent_subtraction = True
+      constituent_subtractor = config['constituent_subtractor']
+      
+      self.max_distance = constituent_subtractor['max_distance']
+      self.alpha = constituent_subtractor['alpha']
+      self.max_eta = constituent_subtractor['max_eta']
+      self.bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
+      self.max_pt_correct = constituent_subtractor['max_pt_correct']
+      self.ghost_area = constituent_subtractor['ghost_area']
+    else:
+      print('Constituent subtractor is disabled.')
+
   #---------------------------------------------------------------
   # Save all histograms
   #---------------------------------------------------------------

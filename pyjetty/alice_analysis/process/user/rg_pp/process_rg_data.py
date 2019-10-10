@@ -33,6 +33,7 @@ import fjext
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import process_base
+from pyjetty.mputils import CEventSubtractor
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -61,10 +62,15 @@ class process_rg_data(process_base.process_base):
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
-
+    
     # Initialize configuration and histograms
     self.initialize_config()
     self.initializeHistograms()
+    
+    # Create constituent subtractor, if configured
+    if self.do_constituent_subtraction:
+      self.constituent_subtractor = CEventSubtractor(max_distance=self.max_distance, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR)
+    
     print(self)
 
     # Find jets and fill histograms
@@ -184,6 +190,11 @@ class process_rg_data(process_base.process_base):
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
   def analyzeJets(self, fj_particles, jet_def, jet_selector, sd, beta):
+    
+    # Perform constituent subtraction
+    if self.do_constituent_subtraction:
+      fj_particles = self.constituent_subtractor.process_event(fj_particles)
+      rho = self.constituent_subtractor.bge_rho.rho()
     
     # Do jet finding
     cs = fj.ClusterSequence(fj_particles, jet_def)
