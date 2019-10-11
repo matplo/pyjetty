@@ -125,26 +125,33 @@ class process_ang_mc(process_base.process_base):
     
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
+
+    # Set configuration for analysis
+    self.pTbins = config['pTbins']
+    self.jetR_list = config['jetR']
+    self.beta_list = config['betas']
+    self.n_lambda_bins = config['n_lambda_bins']
     
+    '''
     # config['beta'] is a dictionary of dictionaries, where each dict is for a value of beta
     beta_dict = config['beta']
     
     # Retrieve list of beta values
     self.beta_list = list(beta_dict.keys())
-
+    '''
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
   def initializeHistograms(self):
-    
+    '''
     self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
     self.hNevents.Fill(1, self.nEvents_det)
     
     self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
-
+    '''
     for jetR in self.jetR_list:
-      
+      '''
       name = 'hJetPt_Truth_R{}'.format(jetR)
       h = ROOT.TH1F(name, name, 300, 0, 300)
       setattr(self, name, h)
@@ -164,7 +171,7 @@ class process_ang_mc(process_base.process_base):
       name = 'hZ_Det_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
-
+      '''
       name = 'hResponse_JetPt_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 300, 0, 300)
       h.GetXaxis().SetTitle('p_{T,det}')
@@ -172,21 +179,21 @@ class process_ang_mc(process_base.process_base):
       setattr(self, name, h)
 
       for beta in self.beta_list:
-        
+        '''
         name = 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
         setattr(self, name, h)
-        
+        '''
         # Create THn of response
         dim = 4;
-        title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-        nbins = [100, 60, 130, 26]
+        title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
+        nbins = [100, 60, 100, 25]
         min = [0., 0., 0., 0.]
-        max = [100., 300., 1.3, 1.3]
+        max = [100., 300., 1.0, 1.0]
         
-        name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
+        name = 'hResponse_JetpT_#lambda_R%s_#beta%s' % (jetR, beta)
         nbins = (nbins)
         xmin = (min)
         xmax = (max)
@@ -204,7 +211,7 @@ class process_ang_mc(process_base.process_base):
   def analyzeEvents(self):
     
     # Fill track histograms
-    [self.fillTrackHistograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
+    #[self.fillTrackHistograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
     
     fj.ClusterSequence.print_banner()
     print()
@@ -228,8 +235,12 @@ class process_ang_mc(process_base.process_base):
         
         # Then can use list comprehension to iterate over the groupby and do jet-finding
         # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-        result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+        result = [ self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
+                                    jet_selector_truth_matched, sd, beta)
+                   for fj_particles_det, fj_particles_truth in
+                   zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth']) ]
 
+  '''
   #---------------------------------------------------------------
   # Fill track histograms.
   #---------------------------------------------------------------
@@ -242,12 +253,14 @@ class process_ang_mc(process_base.process_base):
     
     for track in fj_particles_det:
       self.hTrackEtaPhi.Fill(track.eta(), track.phi())
+  '''
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta):
+  def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
+                  jet_selector_truth_matched, sd, beta):
 
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)

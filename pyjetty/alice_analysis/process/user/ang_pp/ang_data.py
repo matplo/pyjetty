@@ -138,17 +138,33 @@ class process_ang_data(process_base.process_base):
           pTmax = self.pTbins[i+1]
           name = "hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('\lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('\frac{dN}{d\lambda_{%s}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
           # Angularities with soft drop
           name = "hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('\lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('\frac{dN}{d\lambda_{%s}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
+          # Lambda vs pT plots to estimate the binning that will be needed
+          name = "hLambda_JetpT_R%s_B%s" % (jetR, beta)
+          h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
+                        self.n_lambda_bins, 0, 1)
+          h.GetXaxis().SetTitle('p_{T, jet}')
+          h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+          setattr(self, name, h)
+          
+          # Lambda vs pT plots to estimate the binning that will be needed -- with soft drop
+          name = "hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)
+          h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
+                        self.n_lambda_bins, 0, 1)
+          h.GetXaxis().SetTitle('p_{T, jet}')
+          h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+          setattr(self, name, h)
+          
         '''
         # Retrieve histogram binnings
         n_pt_bins_det = getattr(self, 'n_pt_bins_det_B{}'.format(beta))
@@ -253,9 +269,11 @@ class process_ang_data(process_base.process_base):
     jet_sd = sd.result(jet)
     lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
 
-    if pTmin:  # will be None if not a valid bin
-      getattr(self,"hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).Fill(l)
-      getattr(self,"hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).Fill(lsd)
+    if pTmin:  # pTmin will be None if not a valid bin
+      getattr(self, "hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).Fill(l)
+      getattr(self, "hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).Fill(lsd)
+      getattr(self, "hLambda_JetpT_R%s_B%s" % (jetR, beta)).Fill(jet.pt(), l)
+      getattr(self, "hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).Fill(jet.pt(), lsd)
 
     '''
     getattr(self, 'hJetPt_R{}'.format(jetR)).Fill(jet_pt)
