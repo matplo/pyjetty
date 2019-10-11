@@ -1,0 +1,71 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+<f1> 		:h_thetagzgv_pt20 :colz  : title=(j_pt > 20 && j_pt < 40)
+<f1> 		:h_thetagzgv_pt40 :colz  : title=(j_pt > 40 && j_pt < 60)
+<f1> 		:h_thetagzgv_pt60 :colz  : title=(j_pt > 60 && j_pt < 80)
+<f1> 		:h_thetagzgv_pt80 :colz  : title=(j_pt > 80 && j_pt < 100)
+<f1> 		:h_thetagzgv :colz  : title=#theta_{g} vs z_{g}
+<f1> 		:h_thetagzg_pt20 :colz  : title=(j_pt > 20 && j_pt < 40)
+<f1> 		:h_thetagzg_pt40 :colz  : title=(j_pt > 40 && j_pt < 60)
+<f1> 		:h_thetagzg_pt60 :colz  : title=(j_pt > 60 && j_pt < 80)
+<f1> 		:h_thetagzg_pt80 :colz  : title=(j_pt > 80 && j_pt < 100)
+<f1> 		:h_thetagzg :colz  : title=#theta_{g} vs z_{g}
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#normalize self
+#scalebwidth 1
+#maxy 75
+#xrange 0,1.3
+<f1> 		:h_thetagv_pt20 :p  : title=(j_pt > 20 && j_pt < 40)
+<f1> 		:h_thetag_pt20 :p  : title=hybrid
+<f1> 		:h_thetag_pt20_match :p  : title=h. w/ both match
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#normalize self
+#scalebwidth 1
+#maxy 75
+#xrange 0,1.3
+<f1> 		:h_thetagv_pt40 :p  : title=(j_pt > 40 && j_pt < 60)
+<f1> 		:h_thetag_pt40 :p  : title=hybrid
+<f1> 		:h_thetag_pt40_match :p  : title=h. w/ both match
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#normalize self
+#scalebwidth 1
+#maxy 75
+#xrange 0,1.3
+<f1> 		:h_thetagv_pt60 :p  : title=(j_pt > 60 && j_pt < 80)
+<f1> 		:h_thetag_pt60 :p  : title=hybrid
+<f1> 		:h_thetag_pt60_match :p  : title=h. w/ both match
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#normalize self
+#scalebwidth 1
+#maxy 75
+#xrange 0,1.3
+<f1> 		:h_thetagv_pt80 :p  : title=(j_pt > 80 && j_pt < 100)
+<f1> 		:h_thetag_pt80 :p  : title=hybrid
+<f1> 		:h_thetag_pt80_match :p  : title=h. w/ both match

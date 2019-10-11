@@ -292,7 +292,7 @@ def main():
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--embed', help='run embedding from a file list', default='', type=str)
 	parser.add_argument('--efficiency', help='apply charged particle efficiency', default=False, action='store_true')
-
+	parser.add_argument('--benchmark', help='benchmark pthat setting - 80 GeV', default=False, action='store_true')
 	args = parser.parse_args()
 
 	if args.output == 'output.root':
@@ -320,15 +320,19 @@ def main():
 	# set up our jet definition and a jet selector
 	jet_R0 = 0.4
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-	jet_selector = fj.SelectorPtMin(80.0) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
-	jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
-	# jet_selector = fj.SelectorPtMin(10.0) & fj.SelectorPtMax(20.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
-	# jet_selector_cs = fj.SelectorPtMin(0.0) & fj.SelectorAbsEtaMax(1 - 1.05 * jet_R0)
 	print(jet_def)
 
-	mycfg = ['PhaseSpace:pThatMin = 80', 'PhaseSpace:pThatMax = -1']
+	mycfg = []
+	if args.benchmark:
+		mycfg = ['PhaseSpace:pThatMin = 80', 'PhaseSpace:pThatMax = -1']
+		jet_selector = fj.SelectorPtMin(80.0) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
+		# jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
+	else:
+		args.py_biaspow = 4
+		args.py_biasref = 20
+		jet_selector = fj.SelectorPtMin(10.0) & fj.SelectorPtMax(150.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
+		# jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
 
-	# mycfg = []
 	if args.ignore_mycfg:
 		mycfg = []
 	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
@@ -385,25 +389,22 @@ def main():
 		signal_jets = fj.sorted_by_pt(jet_selector(jet_def(parts)))
 		if len(signal_jets) < 1:
 			continue
-		sjet = signal_jets[0]
 
-		if embd:
-			bg_parts = embd.load_event()
-		else:
-			bg_parts = be.generate(offset=10000)
-		full_event = bg_parts
-
-		lc = [full_event.push_back(psj) for psj in sjet.constituents()]
-
-		if cs:
-			cs_parts = cs.process_event(full_event)
-			rho = cs.bge_rho.rho()
-			ja.analyze_event(cs_parts)
-		else:
-			ja.analyze_event(full_event)
-			rho = ja.rho
-
-		r = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in ja.jets]
+		for sjet in signal_jets:
+			if embd:
+				bg_parts = embd.load_event()
+			else:
+				bg_parts = be.generate(offset=10000)
+			full_event = bg_parts
+			tmp = [full_event.push_back(psj) for psj in sjet.constituents()]
+			if cs:
+				cs_parts = cs.process_event(full_event)
+				rho = cs.bge_rho.rho()
+				ja.analyze_event(cs_parts)
+			else:
+				ja.analyze_event(full_event)
+				rho = ja.rho
+			tmp = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in ja.jets]
 
 	pythia.stat()
 	outf.Write()
