@@ -91,6 +91,11 @@ class process_rg_mc(process_base.process_base):
 
     # Initialize histograms
     self.initializeHistograms()
+    
+    # Create constituent subtractor, if configured
+    if self.do_constituent_subtraction:
+      self.constituent_subtractor = CEventSubtractor(max_distance=self.max_distance, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR)
+    
     print(self)
   
     # Find jets and fill histograms
@@ -246,6 +251,11 @@ class process_rg_mc(process_base.process_base):
     if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
       print('fj_particles type mismatch -- skipping event')
       return
+    
+    # Perform constituent subtraction on det-level, if applicable
+    if self.do_constituent_subtraction:
+      fj_particles_det = self.constituent_subtractor.process_event(fj_particles_det)
+      rho = self.constituent_subtractor.bge_rho.rho()
 
     # Do jet finding
     cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
