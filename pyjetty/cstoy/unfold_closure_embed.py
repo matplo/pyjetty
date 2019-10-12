@@ -7,7 +7,9 @@
 #       Simple example usage of the RooUnfold package using toy MC.
 #
 #  Author: Tim Adye <T.J.Adye@rl.ac.uk>
-#
+#  modified by matplo - example loop on tree w/ RTreeReader and unfold
+#  note: two files hardcoded - one for response matrix (Response) and different 
+# (largely stat indep - different background/smear) for cimparison (Test)
 # ==============================================================================
 
 import sys
