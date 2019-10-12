@@ -4,7 +4,8 @@
   Analysis class to read a ROOT TTree of MC track information
   and do jet-finding, and save response histograms.
   
-  Author: James Mulligan (james.mulligan@berkeley.edu)
+  Based on rg analysis by James Mulligan (james.mulligan@berkeley.edu)
+  Ezra Lesser (elesser@berkeley.edu)
 """
 
 from __future__ import print_function
@@ -30,9 +31,8 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
-from pyjetty.alice_analysis.process.base import process_io
-from pyjetty.alice_analysis.process.base import process_utils
-from pyjetty.alice_analysis.process.base import process_base
+from pyjetty.alice_analysis.process.base import process_io, process_utils, process_base
+from pyjetty.alice_analysis.process.user.ang_pp.helper import deltaR, lambda_beta_kappa
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -146,7 +146,7 @@ class process_ang_mc(process_base.process_base):
     '''
     self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
     self.hNevents.Fill(1, self.nEvents_det)
-    
+
     self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
     '''
@@ -172,7 +172,7 @@ class process_ang_mc(process_base.process_base):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
       '''
-      name = 'hResponse_JetPt_R{}'.format(jetR)
+      name = 'hResponse_JetpT_R%s' % jetR
       h = ROOT.TH2F(name, name, 300, 0, 300, 300, 0, 300)
       h.GetXaxis().SetTitle('p_{T,det}')
       h.GetYaxis().SetTitle('p_{T,truth}')
@@ -285,14 +285,15 @@ class process_ang_mc(process_base.process_base):
 
     jetR = jet_def.R()
 
+    '''
     # Fill truth-level jet histograms (before matching)
     for jet_truth in jets_truth_selected:
       self.fillTruthJetHistograms(jet_truth, jetR)
-    
+
     # Fill det-level jet histograms (before matching)
     for jet_det in jets_det_selected:
       self.fillDetJetHistograms(jet_det, jetR)
-
+    '''
     # Set number of jet matches for each jet in user_index (to ensure unique matches)
     self.setNJetMatches(jets_det_selected, jets_truth_selected_matched, jetR)
     
@@ -303,7 +304,7 @@ class process_ang_mc(process_base.process_base):
         # Check additional acceptance criteria
         # skip event if not satisfied -- since first jet in event is highest pt
         if not self.utils.is_det_jet_accepted(jet_det):
-          self.hNevents.Fill(0)
+          #self.hNevents.Fill(0)
           return
         
         if self.debug_level > 0:
@@ -312,10 +313,10 @@ class process_ang_mc(process_base.process_base):
           print('jet_truth matches: {}'.format(jet_truth.user_index()))
         
         # Check that jets match geometrically
-        deltaR = jet_det.delta_R(jet_truth)
-        getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), deltaR)
+        delta_R = jet_det.delta_R(jet_truth)
+        getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), delta_R)
         
-        if deltaR < self.jet_matching_distance*jetR:
+        if delta_R < self.jet_matching_distance * jetR:
 
           # Check that match is unique
           if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
@@ -338,11 +339,12 @@ class process_ang_mc(process_base.process_base):
     for jet_det in jets_det_selected:
       for jet_truth in jets_truth_selected:
         
-        if jet_det.delta_R(jet_truth) < self.jet_matching_distance*jetR:
+        if jet_det.delta_R(jet_truth) < self.jet_matching_distance * jetR:
           
           jet_det.set_user_index(jet_det.user_index() + 1)
           jet_truth.set_user_index(jet_truth.user_index() + 1)
 
+  '''
   #---------------------------------------------------------------
   # Fill truth jet histograms
   #---------------------------------------------------------------
@@ -353,7 +355,7 @@ class process_ang_mc(process_base.process_base):
     for constituent in jet.constituents():
       z = constituent.pt() / jet.pt()
       getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
-
+  
   #---------------------------------------------------------------
   # Fill det jet histograms
   #---------------------------------------------------------------
@@ -362,6 +364,7 @@ class process_ang_mc(process_base.process_base):
     for constituent in jet.constituents():
       z = constituent.pt() / jet.pt()
       getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet.pt(), z)
+  '''
 
   #---------------------------------------------------------------
   # Fill response histograms
@@ -370,22 +373,27 @@ class process_ang_mc(process_base.process_base):
     
     jet_pt_det_ungroomed = jet_det.pt()
     jet_pt_truth_ungroomed = jet_truth.pt()
-    
-    theta_g_det = self.theta_g(jet_det, sd, jetR)
-    theta_g_truth = self.theta_g(jet_truth, sd, jetR)
-    
+
+    # just use kappa = 1 for now
+    lambda_det = lambda_beta_kappa(jet_det, sd, jetR)
+    lambda_truth = lambda_beta_kappa(jet_truth, sd, jetR)
+
+    '''
     JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
     getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
     
     theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
-    getattr(self, 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
+    getattr(self, 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_truth_ungroomed,
+                                                                           theta_g_resolution)
+    '''
 
-    getattr(self, 'hResponse_JetPt_R{}'.format(jetR)).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
-    
-    x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth])
+    getattr(self, 'hResponse_JetpT_R%s' % jetR).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
+
+    x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, lambda_det, lambda_truth])
     x_array = array('d', x)
-    getattr(self, 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)).Fill(x_array)
+    getattr(self, 'hResponse_JetpT_#lambda_R%s_#beta%s' % (jetR, beta)).Fill(x_array)
 
+  '''
   #---------------------------------------------------------------
   # Compute theta_g
   #---------------------------------------------------------------
@@ -395,6 +403,7 @@ class process_ang_mc(process_base.process_base):
     sd_info = fjcontrib.get_SD_jet_info(jet_sd)
     theta_g = sd_info.dR / jetR
     return theta_g
+  '''
 
 ##################################################################
 if __name__ == '__main__':
