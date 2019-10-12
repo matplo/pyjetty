@@ -31,30 +31,20 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
-from pyjetty.alice_analysis.process_base import analysis_io
-from pyjetty.alice_analysis.process_base import analysis_utils
-from pyjetty.alice_analysis.process_base import analysis_base
+from pyjetty.alice_analysis.process.base import process_io, process_utils, process_base
+from pyjetty.alice_analysis.process.user.ang_pp.helper import deltaR, lambda_beta_kappa
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
-# Return \Delta{R} between two fastjet.PsuedoJet objects  
-def deltaR(pjet1, pjet2):
-  return np.sqrt( (pjet1.eta() - pjet2.eta())**2 + (pjet1.phi() - pjet2.phi())**2 )
-
-# Return jet angularity
-def lambda_beta_kappa(jet, jetR, beta, kappa):
-  return sum( [ (constit.pt() / jet.pt())**kappa * (deltaR(jet, constit) / jetR)**beta 
-                for constit in jet.constituents() ] )
-
 ################################################################
-class analysis_rg_data(analysis_base.analysis_base):
+class process_ang_data(process_base.process_base):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(analysis_rg_data, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(process_ang_data, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
     self.initialize_config()
 
   #---------------------------------------------------------------
@@ -66,7 +56,7 @@ class analysis_rg_data(analysis_base.analysis_base):
 
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io = analysis_io.analysis_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
@@ -83,7 +73,7 @@ class analysis_rg_data(analysis_base.analysis_base):
 
     # Plot histograms
     print('Save histograms...')
-    analysis_base.analysis_base.saveHistograms(self)
+    process_base.process_base.saveHistograms(self)
 
     print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -93,7 +83,7 @@ class analysis_rg_data(analysis_base.analysis_base):
   def initialize_config(self):
     
     # Call base class initialization
-    analysis_base.analysis_base.initialize_config(self)
+    process_base.process_base.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -110,10 +100,8 @@ class analysis_rg_data(analysis_base.analysis_base):
   #---------------------------------------------------------------
   def initializeHistograms(self):
     '''
-    name = 'hNevents'
-    h = ROOT.TH1F(name, name, 2, -0.5, 1.5)
-    h.Fill(1, self.nEvents)
-    setattr(self, name, h)
+    self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
+    self.hNevents.Fill(1, self.nEvents)
     '''
     for jetR in self.jetR_list:
       '''
@@ -136,19 +124,35 @@ class analysis_rg_data(analysis_base.analysis_base):
 
           # Angularities, \lambda_{\beta}^{\kappa}
           pTmax = self.pTbins[i+1]
-          name = "hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)
+          name = "hLambda_pT%i-%i_R%s_#beta%s" % (pTmin, pTmax, jetR, beta)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('\lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('\frac{dN}{d\lambda_{%s}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
           # Angularities with soft drop
-          name = "hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)
+          name = "hLambda_pT%i-%i_R%s_#beta%s_SD" % (pTmin, pTmax, jetR, beta)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('\lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('\frac{dN}{d\lambda_{%s}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
+          # Lambda vs pT plots to estimate the binning that will be needed
+          name = "hLambda_JetpT_R%s_#beta%s" % (jetR, beta)
+          h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
+                        self.n_lambda_bins, 0, 1)
+          h.GetXaxis().SetTitle('p_{T, jet}')
+          h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+          setattr(self, name, h)
+          
+          # Lambda vs pT plots to estimate the binning that will be needed -- with soft drop
+          name = "hLambda_JetpT_R%s_#beta%s_SD" % (jetR, beta)
+          h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
+                        self.n_lambda_bins, 0, 1)
+          h.GetXaxis().SetTitle('p_{T, jet}')
+          h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+          setattr(self, name, h)
+          
         '''
         # Retrieve histogram binnings
         n_pt_bins_det = getattr(self, 'n_pt_bins_det_B{}'.format(beta))
@@ -253,9 +257,11 @@ class analysis_rg_data(analysis_base.analysis_base):
     jet_sd = sd.result(jet)
     lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
 
-    if pTmin:  # will be None if not a valid bin
-      getattr(self,"hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).Fill(l)
-      getattr(self,"hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).Fill(lsd)
+    if pTmin:  # pTmin will be None if not a valid bin
+      getattr(self, "hLambda_pT%i-%i_R%s_#beta%s" % (pTmin, pTmax, jetR, beta)).Fill(l)
+      getattr(self, "hLambda_pT%i-%i_R%s_#beta%s_SD" % (pTmin, pTmax, jetR, beta)).Fill(lsd)
+      getattr(self, "hLambda_JetpT_R%s_#beta%s" % (jetR, beta)).Fill(jet.pt(), l)
+      getattr(self, "hLambda_JetpT_R%s_#beta%s_SD" % (jetR, beta)).Fill(jet.pt(), lsd)
 
     '''
     getattr(self, 'hJetPt_R{}'.format(jetR)).Fill(jet_pt)
@@ -327,5 +333,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = analysis_rg_data(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis = process_ang_data(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
   analysis.process_ang_data()
