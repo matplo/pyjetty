@@ -94,7 +94,6 @@ def main():
 		if _data_parts is None:
 			print('[i] end of data')
 			break
-		continue
 		if cs:
 			cs_parts = cs.process_event(_data_parts)
 			rho = cs.bge_rho.rho()
