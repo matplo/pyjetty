@@ -213,12 +213,14 @@ def matched_pt(j0, j1):
 # 					sd_info_signal_jet.dR, sd_info_j.dR, sd_info_j.dR - sd_info_signal_jet.dR,
 # 					sd_info_signal_jet.z, sd_info_j.z, sd_info_j.z - sd_info_signal_jet.z)
 
-def fill_tree(signal_jet, emb_jet, tw, sd, rho, iev=None):
+def fill_tree(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None):
 	if matched_pt(emb_jet, signal_jet) <= 0.5:
 		return None
 
 	if iev:
 		tw.fill_branch('ev_id', iev)
+	if weight:
+		tw.fill_branch('weight', weight)
 
 	sd_signal_jet = sd.result(signal_jet)
 	sd_info_signal_jet = fjcontrib.get_SD_jet_info(sd_signal_jet)
@@ -329,8 +331,8 @@ def main():
 		# jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
 	else:
 		args.py_biaspow = 4
-		args.py_biasref = 20
-		jet_selector = fj.SelectorPtMin(10.0) & fj.SelectorPtMax(150.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
+		args.py_biasref = 10
+		jet_selector = fj.SelectorPtMin(5) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
 		# jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
 
 	if args.ignore_mycfg:
@@ -375,6 +377,7 @@ def main():
 		effi_PbPb = AliceChargedParticleEfficiency(csystem='PbPb')
 		print(effi_PbPb)
 
+	### EVENT LOOP STARTS HERE
 	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
@@ -404,7 +407,7 @@ def main():
 			else:
 				ja.analyze_event(full_event)
 				rho = ja.rho
-			tmp = [fill_tree(sjet, ej, tw, sd, rho, iev) for ej in ja.jets]
+			tmp = [fill_tree(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in ja.jets]
 
 	pythia.stat()
 	outf.Write()
