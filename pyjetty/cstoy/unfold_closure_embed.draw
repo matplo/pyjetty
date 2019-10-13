@@ -1,0 +1,75 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title method: bayes
+#legend pos=ur
+#logy 1
+#normalize self
+#scalebwidth 1
+#x p_{T} (GeV/c)
+#y 1/N_{jet} dN/dp_{T} (GeV/c)^{-1}
+#miny 5e-5
+#maxy 1e-2
+bayes_unfold_closure_embed.root 		:trueA :p: title=Response Truth
+bayes_unfold_closure_embed.root 		:true :hist EX0 -k: title=Test Truth
+bayes_unfold_closure_embed.root 		:measA :p  : title=Response Measured
+bayes_unfold_closure_embed.root 		:meas :hist -k: title=Test Measured
+bayes_unfold_closure_embed.root 		:response :p  : title=Unfolded
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title method: svd
+#legend pos=ur
+#logy 1
+#normalize self
+#scalebwidth 1
+#x p_{T} (GeV/c)
+#y 1/N_{jet} dN/dp_{T} (GeV/c)^{-1}
+#miny 5e-5
+#maxy 1e-2
+svd_unfold_closure_embed.root 		:trueA :p: title=Response Truth
+svd_unfold_closure_embed.root 		:true :hist EX0 -k: title=Test Truth
+svd_unfold_closure_embed.root 		:measA :p  : title=Response Measured
+svd_unfold_closure_embed.root 		:meas :hist -k: title=Test Measured
+svd_unfold_closure_embed.root 		:response :p  : title=Unfolded
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title method: tunfold
+#legend pos=ur
+#logy 1
+#normalize self
+#scalebwidth 1
+#x p_{T} (GeV/c)
+#y 1/N_{jet} dN/dp_{T} (GeV/c)^{-1}
+#miny 5e-5
+#maxy 1e-2
+tunfold_unfold_closure_embed.root 		:trueA :p: title=Response Truth
+tunfold_unfold_closure_embed.root 		:true :hist EX0 -k: title=Test Truth
+tunfold_unfold_closure_embed.root 		:measA :p  : title=Response Measured
+tunfold_unfold_closure_embed.root 		:meas :hist -k: title=Test Measured
+tunfold_unfold_closure_embed.root 		:response :p  : title=Unfolded
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title method: ids
+#legend pos=ur
+#logy 1
+#normalize self
+#scalebwidth 1
+#x p_{T} (GeV/c)
+#y 1/N_{jet} dN/dp_{T} (GeV/c)^{-1}
+#miny 5e-5
+#maxy 1e-2
+ids_unfold_closure_embed.root 		:trueA :p: title=Response Truth
+ids_unfold_closure_embed.root 		:true :hist EX0 -k: title=Test Truth
+ids_unfold_closure_embed.root 		:measA :p  : title=Response Measured
+ids_unfold_closure_embed.root 		:meas :hist -k: title=Test Measured
+ids_unfold_closure_embed.root 		:response :p  : title=Unfolded
