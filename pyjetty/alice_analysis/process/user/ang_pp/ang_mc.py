@@ -32,7 +32,7 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io, process_utils, process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helper import deltaR, lambda_beta_kappa
+from pyjetty.alice_analysis.process.user.ang_pp.helper import deltaR, lambda_beta_kappa, pT_bin
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -179,6 +179,24 @@ class process_ang_mc(process_base.process_base):
       setattr(self, name, h)
 
       for beta in self.beta_list:
+
+        for i, pTmin in list(enumerate(self.pTbins))[0:-1]:
+
+          # Angularities, \lambda_{\beta}^{\kappa}
+          pTmax = self.pTbins[i+1]
+          name = "hLambda_pT%i-%i_R%s_#beta%s_mcdet" % (pTmin, pTmax, jetR, beta)
+          h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          setattr(self, name, h)
+
+          # Angularities with soft drop
+          name = "hLambda_pT%i-%i_R%s_#beta%s_mcdet_SD" % (pTmin, pTmax, jetR, beta)
+          h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          setattr(self, name, h)
+
         '''
         name = 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
@@ -186,6 +204,7 @@ class process_ang_mc(process_base.process_base):
         h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
         setattr(self, name, h)
         '''
+
         # Create THn of response
         dim = 4;
         title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
@@ -375,8 +394,14 @@ class process_ang_mc(process_base.process_base):
     jet_pt_truth_ungroomed = jet_truth.pt()
 
     # just use kappa = 1 for now
-    lambda_det = lambda_beta_kappa(jet_det, sd, jetR)
-    lambda_truth = lambda_beta_kappa(jet_truth, sd, jetR)
+    l_det = lambda_beta_kappa(jet_det, jetR, beta, 1)
+    l_tru = lambda_beta_kappa(jet_truth, jetR, beta, 1)
+
+    # soft drop jet
+    jet_sd_det = sd.result(jet_det)
+    jet_sd_tru = sd.result(jet_truth)
+    lsd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
+    lsd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
 
     '''
     JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
