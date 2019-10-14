@@ -21,11 +21,11 @@ from array import *
 import ROOT
 
 # Base class
-#from pyjetty.alice_analysis.analysis.base import base
-import base
+from pyjetty.alice_analysis.analysis.base import common_base
+#import base
 
 ################################################################
-class analysis_utils(base.base):
+class analysis_utils(common_base.common_base):
   
   #---------------------------------------------------------------
   # Constructor
