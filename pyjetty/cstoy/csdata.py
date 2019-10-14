@@ -39,11 +39,14 @@ def main():
 	parser.add_argument('--zcut', default=0.1, type=float)
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--benchmark', help='benchmark pthat setting - 80 GeV', default=False, action='store_true')
+	parser.add_argument('--jetptcut', help='remove jets below the cut', default=-100, type=float)
 	parser.add_argument('--nev', help='number of events to run', default=1, type=int)
 	args = parser.parse_args()
 
 	if args.output == 'output.root':
 		args.output = 'output_data_alpha_{}_dRmax_{}_SDzcut_{}.root'.format(args.alpha, args.dRmax, args.zcut)
+		if args.jetptcut > -100:
+			args.output = 'output_data_alpha_{}_dRmax_{}_SDzcut_{}_jpt_{}.root'.format(args.alpha, args.dRmax, args.zcut, args.jetptcut)
 
 	if os.path.isfile(args.output):
 		if not args.overwrite:
@@ -101,7 +104,7 @@ def main():
 		else:
 			ja.analyze_event(_data_parts)
 			rho = ja.rho
-		tmp = [fill_tree_data(j, tw, sd, rho, iev, 1.) for j in ja.jets]
+		tmp = [fill_tree_data(j, tw, sd, rho, iev, 1.) for j in ja.jets if j.pt() > args.jetptcut]
 
 	outf.Write()
 	outf.Close()
