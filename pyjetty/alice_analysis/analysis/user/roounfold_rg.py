@@ -12,13 +12,12 @@ import yaml
 # Analysis utilities
 #sys.path.append('/mnt/pyjetty')
 #print(sys.path)
-#from pyjetty.alice_analysis.analysis.base import analysis_utils
-#from pyjetty.alice_analysis.analysis.base import analysis_base
-import analysis_utils
-import analysis_base
+from pyjetty.alice_analysis.analysis.base import analysis_utils
+from pyjetty.alice_analysis.analysis.base import analysis_base
 
 # Load the RooUnfold library
-ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnfold.so")
+#ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnfold.so")
+ROOT.gSystem.Load('/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib')
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -89,7 +88,13 @@ class roounfold_rg(analysis_base.analysis_base):
         setattr(self, name_thn, thn)
         if rebin_response:
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
-          self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
+          
+          tree_file_name = '/Users/jamesmulligan/alidock/theta_g/rganalysis_embed_PbPb/output_alpha_0_dRmax_0.25_SDzcut_0.2_emb.root'
+
+          
+          self.utils.construct_response_from_ntuple(response_file_name, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
+          
+          #self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
         
         # Also re-bin the data histogram
         hData = self.fData.Get(name_data)
@@ -1119,5 +1124,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = roounfold_rg(input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat,  rebin_response=False, power_law_offset=0.)
+  analysis = roounfold_rg(input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat,  rebin_response=True, power_law_offset=0.)
   analysis.roounfold_rg()
