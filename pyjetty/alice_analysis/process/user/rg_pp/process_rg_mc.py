@@ -33,6 +33,8 @@ import fjext
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import process_base
+from pyjetty.mputils import treewriter
+from pyjetty.mputils import CEventSubtractor
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -90,7 +92,7 @@ class process_rg_mc(process_base.process_base):
     # ------------------------------------------------------------------------
 
     # Initialize histograms
-    self.initializeHistograms()
+    self.initialize_output_objects()
     
     # Create constituent subtractor, if configured
     if self.do_constituent_subtraction:
@@ -104,7 +106,7 @@ class process_rg_mc(process_base.process_base):
     
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.saveHistograms(self)
+    process_base.process_base.save_output_objects(self)
     
     print('--- {} seconds ---'.format(time.time() - start_time))
   
@@ -132,7 +134,7 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
-  def initializeHistograms(self):
+  def initialize_output_objects(self):
     
     self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
     self.hNevents.Fill(1, self.nEvents_det)
@@ -141,59 +143,15 @@ class process_rg_mc(process_base.process_base):
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
 
     for jetR in self.jetR_list:
-      
-      name = 'hJetPt_Truth_R{}'.format(jetR)
-      h = ROOT.TH1F(name, name, 300, 0, 300)
-      setattr(self, name, h)
-
-      name = 'hJES_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
-      setattr(self, name, h)
-      
-      name = 'hDeltaR_All_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-      setattr(self, name, h)
-      
-      name = 'hZ_Truth_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-      setattr(self, name, h)
-      
-      name = 'hZ_Det_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-      setattr(self, name, h)
-
-      name = 'hResponse_JetPt_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 300, 0, 300)
-      h.GetXaxis().SetTitle('p_{T,det}')
-      h.GetYaxis().SetTitle('p_{T,truth}')
-      setattr(self, name, h)
 
       for beta in self.beta_list:
-        
-        name = 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-        h.GetXaxis().SetTitle('p_{T,truth}')
-        h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
-        setattr(self, name, h)
-        
-        # Create THn of response
-        dim = 4;
-        title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-        nbins = [100, 60, 130, 26]
-        min = [0., 0., 0., 0.]
-        max = [100., 300., 1.3, 1.3]
-        
-        name = 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)
-        nbins = (nbins)
-        xmin = (min)
-        xmax = (max)
-        nbins_array = array('i', nbins)
-        xmin_array = array('d', xmin)
-        xmax_array = array('d', xmax)
-        h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-        for i in range(0, dim):
-          h.GetAxis(i).SetTitle(title[i])
-        setattr(self, name, h)
+
+        # Initialize tree to write out event variables
+        tree_name = 't_R{}_B{}'.format(jetR, beta)
+        t = ROOT.TTree(tree_name, tree_name)
+        tree_writer_name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+        tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
+        setattr(self, tree_writer_name, tree_writer)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -268,14 +226,18 @@ class process_rg_mc(process_base.process_base):
     jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
 
     jetR = jet_def.R()
-
+    
+    # Get tree writer
+    name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+    tree_writer = getattr(self, name)
+    
     # Fill truth-level jet histograms (before matching)
     for jet_truth in jets_truth_selected:
-      self.fillTruthJetHistograms(jet_truth, jetR)
+      self.fill_truth_before_matching(tree_writer, jet_truth, jetR)
     
     # Fill det-level jet histograms (before matching)
     for jet_det in jets_det_selected:
-      self.fillDetJetHistograms(jet_det, jetR)
+      self.fill_det_before_matching(tree_writer, jet_det, jetR)
 
     # Set number of jet matches for each jet in user_index (to ensure unique matches)
     self.setNJetMatches(jets_det_selected, jets_truth_selected_matched, jetR)
@@ -297,15 +259,18 @@ class process_rg_mc(process_base.process_base):
         
         # Check that jets match geometrically
         deltaR = jet_det.delta_R(jet_truth)
-        getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), deltaR)
-        
+        tree_writer.fill_branch('deltaR', deltaR)
+
         if deltaR < self.jet_matching_distance*jetR:
 
           # Check that match is unique
           if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
 
-            self.fillResponseHistograms(jet_det, jet_truth, sd, jetR, beta)
+            self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR)
 
+    # Fill the tree
+    tree_writer.fill_tree()
+      
   #---------------------------------------------------------------
   # Loop through jets and store number of matching candidates in user_index
   # (In principle could also store matching candidate in user_info)
@@ -330,27 +295,24 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Fill truth jet histograms
   #---------------------------------------------------------------
-  def fillTruthJetHistograms(self, jet, jetR):
+  def fill_truth_before_matching(self, tree_writer, jet, jetR):
 
-    getattr(self, 'hJetPt_Truth_R{}'.format(jetR)).Fill(jet.pt())
-  
-    for constituent in jet.constituents():
-      z = constituent.pt() / jet.pt()
-      getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
+    jet_pt = jet.pt()
+    tree_writer.fill_branch('jet_pt_truth', jet_pt)
+    [tree_writer.fill_branch('z_truth', constituent.pt() / jet_pt) for constituent in jet.constituents()]
 
   #---------------------------------------------------------------
   # Fill det jet histograms
   #---------------------------------------------------------------
-  def fillDetJetHistograms(self, jet, jetR):
+  def fill_det_before_matching(self, tree_writer, jet, jetR):
     
-    for constituent in jet.constituents():
-      z = constituent.pt() / jet.pt()
-      getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet.pt(), z)
+    jet_pt = jet.pt()
+    [tree_writer.fill_branch('z_det', constituent.pt() / jet_pt) for constituent in jet.constituents()]
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fillResponseHistograms(self, jet_det, jet_truth, sd, jetR, beta):
+  def fill_response(self, tree_writer, jet_det, jet_truth, sd, jetR):
     
     jet_pt_det_ungroomed = jet_det.pt()
     jet_pt_truth_ungroomed = jet_truth.pt()
@@ -359,16 +321,14 @@ class process_rg_mc(process_base.process_base):
     theta_g_truth = self.theta_g(jet_truth, sd, jetR)
     
     JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
-    getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
-    
     theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
-    getattr(self, 'hThetaGResidual_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
-
-    getattr(self, 'hResponse_JetPt_R{}'.format(jetR)).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
     
-    x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth])
-    x_array = array('d', x)
-    getattr(self, 'hResponse_JetPt_ThetaG_R{}_B{}'.format(jetR, beta)).Fill(x_array)
+    tree_writer.fill_branch('jet_pt_det_ungroomed', jet_pt_det_ungroomed)
+    tree_writer.fill_branch('jet_pt_truth_ungroomed', jet_pt_truth_ungroomed)
+    tree_writer.fill_branch('theta_g_det', theta_g_det)
+    tree_writer.fill_branch('theta_g_truth', theta_g_truth)
+    tree_writer.fill_branch('JES', JES)
+    tree_writer.fill_branch('theta_g_resolution', theta_g_resolution)
 
   #---------------------------------------------------------------
   # Compute theta_g

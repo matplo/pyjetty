@@ -20,10 +20,10 @@ import fastjet as fj
 import fjext
 
 # Base class
-from pyjetty.alice_analysis.process.base import base
+from pyjetty.alice_analysis.process.base import common_base
 
 ################################################################
-class process_io(base.base):
+class process_io(common_base.common_base):
   
   #---------------------------------------------------------------
   # Constructor

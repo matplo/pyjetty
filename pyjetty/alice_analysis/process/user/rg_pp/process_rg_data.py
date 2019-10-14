@@ -33,6 +33,7 @@ import fjext
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import process_base
+from pyjetty.mputils import treewriter
 from pyjetty.mputils import CEventSubtractor
 
 # Prevent ROOT from stealing focus when plotting
@@ -65,7 +66,7 @@ class process_rg_data(process_base.process_base):
     
     # Initialize configuration and histograms
     self.initialize_config()
-    self.initializeHistograms()
+    self.initialize_output_objects()
     
     # Create constituent subtractor, if configured
     if self.do_constituent_subtraction:
@@ -79,7 +80,7 @@ class process_rg_data(process_base.process_base):
 
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.saveHistograms(self)
+    process_base.process_base.save_output_objects(self)
 
     print('--- {} seconds ---'.format(time.time() - self.start_time))
 
@@ -104,7 +105,7 @@ class process_rg_data(process_base.process_base):
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
-  def initializeHistograms(self):
+  def initialize_output_objects(self):
     
     self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
     self.hNevents.Fill(1, self.nEvents)
@@ -113,42 +114,15 @@ class process_rg_data(process_base.process_base):
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
 
     for jetR in self.jetR_list:
-    
-      name = 'hJetPt_R{}'.format(jetR)
-      h = ROOT.TH1F(name, name, 300, 0, 300)
-      h.GetXaxis().SetTitle('p_{T,ch jet}')
-      h.GetYaxis().SetTitle('dN/dp_{T}')
-      setattr(self, name, h)
-      
-      name = 'hM_JetPt_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
-      h.GetXaxis().SetTitle('p_{T,ch jet}')
-      h.GetYaxis().SetTitle('m_{ch jet}')
-      setattr(self, name, h)
-      
-      name = 'hZ_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-      setattr(self, name, h)
       
       for beta in self.beta_list:
 
-        name = 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('#theta_{g,ch}')
-        setattr(self, name, h)
-
-        name = 'hZg_JetPt_R{}_B{}'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('z_{g,ch}')
-        setattr(self, name, h)
-
-        name = 'hMg_JetPt_R{}_B{}'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('m_{g,ch jet}')
-        setattr(self, name, h)
+        # Initialize tree to write out event variables
+        tree_name = 't_R{}_B{}'.format(jetR, beta)
+        t = ROOT.TTree(tree_name, tree_name)        
+        tree_writer_name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+        tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
+        setattr(self, tree_writer_name, tree_writer)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -212,42 +186,31 @@ class process_rg_data(process_base.process_base):
       if not self.utils.is_det_jet_accepted(jet):
         continue
       
-      # Fill histograms
-      self.fillJetHistograms(jet, jetR)
-      
-      # Perform SoftDrop grooming and fill histograms
+      # Perform SoftDrop grooming and fill tree
       jet_sd = sd.result(jet)
-      self.fillSoftDropHistograms(jet_sd, jet, jetR, beta)
+      self.fill_tree(jet, jet_sd, jetR, beta)
 
   #---------------------------------------------------------------
-  # Fill jet histograms
+  # Fill tree
   #---------------------------------------------------------------
-  def fillJetHistograms(self, jet, jetR):
-    
-    jet_pt = jet.pt()
-    
-    getattr(self, 'hJetPt_R{}'.format(jetR)).Fill(jet_pt)
-    getattr(self, 'hM_JetPt_R{}'.format(jetR)).Fill(jet_pt, jet.m())
+  def fill_tree(self, jet, jet_sd, jetR, beta):
   
-    for constituent in jet.constituents():
-      z = constituent.pt() / jet_pt
-      getattr(self, 'hZ_R{}'.format(jetR)).Fill(jet_pt, z)
-
-  #---------------------------------------------------------------
-  # Fill soft drop histograms
-  #---------------------------------------------------------------
-  def fillSoftDropHistograms(self, jet_sd, jet, jetR, beta):
+    name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+    tree_writer = getattr(self, name)
+  
+    # Jet variables
+    jet_pt = jet.pt()
+    tree_writer.fill_branch('jet_pt', jet_pt)
+    tree_writer.fill_branch('jet_m', jet.m())
+    [tree_writer.fill_branch('z', constituent.pt() / jet_pt) for constituent in jet.constituents()]
     
-    jet_pt_ungroomed = jet.pt()
-    
+    # SD jet variables
     sd_info = fjcontrib.get_SD_jet_info(jet_sd)
-    theta_g = sd_info.dR / jetR
-    zg = sd_info.z
-    mg = jet_sd.m()
-    
-    getattr(self, 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, theta_g)
-    getattr(self, 'hZg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, zg)
-    getattr(self, 'hMg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, mg)
+    tree_writer.fill_branch('theta_g', sd_info.dR / jetR)
+    tree_writer.fill_branch('zg',sd_info.z)
+    tree_writer.fill_branch('mg', jet_sd.m())
+  
+    tree_writer.fill_tree()
 
   #---------------------------------------------------------------
   # Fill track histograms.
