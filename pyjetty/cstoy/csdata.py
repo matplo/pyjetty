@@ -92,11 +92,9 @@ def main():
 	tw = RTreeWriter(tree=t)
 
 	# need to change this for data to drive...
-	for iev in tqdm.tqdm(range(args.nev)):
-		_data_parts = data.load_event()
-		if _data_parts is None:
-			print('[i] end of data')
-			break
+	iev = 0
+	while data.load_event():
+		_data_parts = data.particles
 		if cs:
 			cs_parts = cs.process_event(_data_parts)
 			rho = cs.bge_rho.rho()
@@ -105,7 +103,10 @@ def main():
 			ja.analyze_event(_data_parts)
 			rho = ja.rho
 		tmp = [fill_tree_data(j, tw, sd, rho, iev, 1.) for j in ja.jets if j.pt() > args.jetptcut]
-
+		if iev > args.nev:
+			break
+		if iev % 1000:
+			print('[i] processing event', iev)
 	outf.Write()
 	outf.Close()
 	print('[i] written', outf.GetName())

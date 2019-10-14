@@ -69,6 +69,12 @@ def fill_tree_data(jet, tw, sd, rho, iev=None, weight=None):
 	if weight:
 		tw.fill_branch('weight', weight)
 
+	good_jet = 0.0
+	if len(jet.constituents()) > 0:
+		if fj.sorted_by_pt(jet.constituents())[0].pt() < 100.:
+			good_jet = 1.0
+	tw.fill_branch('good', good_jet)
+
 	sd_jet = sd.result(jet)
 	sd_info_jet = fjcontrib.get_SD_jet_info(sd_jet)
 
