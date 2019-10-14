@@ -18,13 +18,13 @@ import ROOT
 import yaml
 
 # Analysis utilities
-#from pyjetty.alice_analysis.analysis.base import base
-#from pyjetty.alice_analysis.analysis.base import analysis_utils
-import base
-import analysis_utils
+from pyjetty.alice_analysis.process.base import common_base
+from pyjetty.alice_analysis.analysis.base import analysis_utils
+#import base
+#import analysis_utils
 
 ################################################################
-class analysis_base(base.base):
+class analysis_base(common_base.common_base):
 
   #---------------------------------------------------------------
   # Constructor

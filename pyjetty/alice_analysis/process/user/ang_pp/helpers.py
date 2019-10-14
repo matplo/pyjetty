@@ -17,3 +17,11 @@ def deltaR(pjet1, pjet2):
 def lambda_beta_kappa(jet, jetR, beta, kappa):
   return sum( [ (constit.pt() / jet.pt())**kappa * (deltaR(jet, constit) / jetR)**beta 
                 for constit in jet.constituents() ] )
+
+# Helper function for finding the correct jet pT bin
+def pT_bin(self, jet_pT, pTbins):
+  for i, pTmin in list(enumerate(pTbins))[0:-1]:
+    pTmax = pTbins[i+1]
+    if pTmin <= jet_pT < pTmax:
+      return (pTmin, pTmax)
+  return (None, None)
