@@ -18,11 +18,12 @@ import ROOT
 import yaml
 
 # Analysis utilities
-from pyjetty.alice_analysis.process.base import base
+from pyjetty.alice_analysis.process.base import common_base
 from pyjetty.alice_analysis.process.base import process_utils
+from pyjetty.mputils import treewriter
 
 ################################################################
-class process_base(base.base):
+class process_base(common_base.common_base):
 
   #---------------------------------------------------------------
   # Constructor
@@ -74,14 +75,22 @@ class process_base(base.base):
   #---------------------------------------------------------------
   # Save all histograms
   #---------------------------------------------------------------
-  def saveHistograms(self):
+  def save_output_objects(self):
     
     outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
     fout = ROOT.TFile(outputfilename, 'recreate')
     fout.cd()
     for attr in dir(self):
+      
       obj = getattr(self, attr)
-      types = (ROOT.TH1, ROOT.THnBase)
+      
+      # If tree writer object, get the tree it contains
+      if isinstance(obj, treewriter.RTreeWriter):
+        obj = obj.tree
+      
+      # Write all ROOT histograms and trees to file
+      types = (ROOT.TH1, ROOT.THnBase, ROOT.TTree)
       if isinstance(obj, types):
         obj.Write()
+  
     fout.Close()
