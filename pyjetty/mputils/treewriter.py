@@ -56,10 +56,13 @@ class RTreeWriter(MPBase):
 			else:
 				self.fill_branch(bname, {'pt' : value.pt(), 'phi' : value.phi(), 'eta' : value.eta()})
 
-	def fill_tree(self):
-		self.tree.Fill()
+	def clear(self):
 		for k in self.branch_containers:
 			self.branch_containers[k].clear()
+
+	def fill_tree(self):
+		self.tree.Fill()
+		self.clear()
 
 	def write_and_close(self):
 		print('[i] writing {}'.format(self.fout.GetName()))

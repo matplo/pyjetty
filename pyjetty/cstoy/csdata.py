@@ -15,6 +15,7 @@ import copy
 import random
 import uproot
 import pandas as pd
+import time
 
 from pyjetty.mputils import logbins
 from pyjetty.mputils import MPBase
@@ -40,7 +41,7 @@ def main():
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--benchmark', help='benchmark pthat setting - 80 GeV', default=False, action='store_true')
 	parser.add_argument('--jetptcut', help='remove jets below the cut', default=-100, type=float)
-	parser.add_argument('--nev', help='number of events to run', default=1, type=int)
+	parser.add_argument('--nev', help='number of events to run', default=0, type=int)
 	args = parser.parse_args()
 
 	if args.output == 'output.root':
@@ -83,17 +84,16 @@ def main():
 		print(cs)
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
-	if args.nev < 1:
-		args.nev = 1
-
 	outf = ROOT.TFile(args.output, 'recreate')
 	outf.cd()
 	t = ROOT.TTree('t', 't')
 	tw = RTreeWriter(tree=t)
 
 	# need to change this for data to drive...
+	start_t = time.time()
 	iev = 0
 	while data.load_event():
+		iev = iev + 1
 		_data_parts = data.particles
 		if cs:
 			cs_parts = cs.process_event(_data_parts)
@@ -103,10 +103,14 @@ def main():
 			ja.analyze_event(_data_parts)
 			rho = ja.rho
 		tmp = [fill_tree_data(j, tw, sd, rho, iev, 1.) for j in ja.jets if j.pt() > args.jetptcut]
-		if iev > args.nev:
-			break
-		if iev % 1000:
-			print('[i] processing event', iev)
+		if iev % 1000 == 0:
+			delta_t = time.time()-start_t
+			print('[i] processing event', iev, ' - ev/sec = ', iev/delta_t, 'elapsed = ', delta_t)
+		if args.nev > 0:
+			if iev > args.nev:
+				break
+
+	print('[i] processed events', iev, ' - ev/sec = ', iev/delta_t, 'elapsed = ', delta_t)
 	outf.Write()
 	outf.Close()
 	print('[i] written', outf.GetName())

@@ -107,6 +107,7 @@ class DataIO(MPBase):
 		print('[i] opening data file', afile)
 		self.file_io = DataFileIO(file_input=afile)
 		print('    number of events', self.current_file_number_of_events())
+		print('    files to go', len(self.list_of_files))
 
 	def current_file_number_of_events(self):
 		nev = 0

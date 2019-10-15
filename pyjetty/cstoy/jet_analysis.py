@@ -64,6 +64,7 @@ def matched_pt(j0, j1):
 
 
 def fill_tree_data(jet, tw, sd, rho, iev=None, weight=None):
+	tw.clear()
 	if iev:
 		tw.fill_branch('ev_id', iev)
 	if weight:
@@ -104,6 +105,7 @@ def fill_tree_data(jet, tw, sd, rho, iev=None, weight=None):
 
 
 def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None):
+	tw.clear()
 	if matched_pt(emb_jet, signal_jet) <= 0.5:
 		return None
 
