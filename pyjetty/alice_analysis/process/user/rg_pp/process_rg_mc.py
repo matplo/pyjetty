@@ -122,6 +122,9 @@ class process_rg_mc(process_base.process_base):
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     
+    # Write tree output (default is to write only histograms)
+    self.write_tree_output = False
+    
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
     
@@ -158,6 +161,12 @@ class process_rg_mc(process_base.process_base):
       name = 'hZ_Det_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
+      
+      if not self.write_tree_output:
+      
+        name = 'hJetPt_Truth_R{}'.format(jetR)
+        h = ROOT.TH1F(name, name, 300, 0, 300)
+        setattr(self, name, h)
 
       for sd_setting in self.sd_settings:
         
@@ -170,13 +179,61 @@ class process_rg_mc(process_base.process_base):
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
         setattr(self, name, h)
+        
+        name = 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
+        setattr(self, name, h)
 
-        # Initialize tree to write out event variables
-        tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-        t = ROOT.TTree(tree_name, tree_name)
-        tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-        tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
-        setattr(self, tree_writer_name, tree_writer)
+        if  self.write_tree_output:
+
+          # Initialize tree to write out event variables
+          tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+          t = ROOT.TTree(tree_name, tree_name)
+          tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+          tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
+          setattr(self, tree_writer_name, tree_writer)
+            
+        else:
+          
+          # Create THn of response for theta_g
+          dim = 4;
+          title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
+          nbins = [100, 60, 130, 26]
+          min = [0., 0., 0., 0.]
+          max = [100., 300., 1.3, 1.3]
+
+          name = 'hResponse_JetPt_ThetaG_R{}_{}'.format(jetR, sd_label)
+          nbins = (nbins)
+          xmin = (min)
+          xmax = (max)
+          nbins_array = array('i', nbins)
+          xmin_array = array('d', xmin)
+          xmax_array = array('d', xmax)
+          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+          for i in range(0, dim):
+            h.GetAxis(i).SetTitle(title[i])
+            setattr(self, name, h)
+              
+          # Create THn of response for z_g
+          dim = 4;
+          title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
+          nbins = [100, 60, 50, 10]
+          min = [0., 0., 0., 0.]
+          max = [100., 300., 0.5, 0.5]
+
+          name = 'hResponse_JetPt_zg_R{}_{}'.format(jetR, sd_label)
+          nbins = (nbins)
+          xmin = (min)
+          xmax = (max)
+          nbins_array = array('i', nbins)
+          xmin_array = array('d', xmin)
+          xmax_array = array('d', xmax)
+          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+          for i in range(0, dim):
+            h.GetAxis(i).SetTitle(title[i])
+            setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -256,8 +313,10 @@ class process_rg_mc(process_base.process_base):
     jetR = jet_def.R()
     
     # Get tree writer
-    name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-    tree_writer = getattr(self, name)
+    tree_writer = None
+    if self.write_tree_output:
+      name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+      tree_writer = getattr(self, name)
     
     # Fill truth-level jet histograms (before matching)
     for jet_truth in jets_truth_selected:
@@ -265,7 +324,7 @@ class process_rg_mc(process_base.process_base):
     
     # Fill det-level jet histograms (before matching)
     for jet_det in jets_det_selected:
-      self.fill_det_before_matching(tree_writer, jet_det, jetR)
+      self.fill_det_before_matching(jet_det, jetR)
 
     # Set number of jet matches for each jet in user_index (to ensure unique matches)
     self.setNJetMatches(jets_det_selected, jets_truth_selected_matched, jetR)
@@ -297,7 +356,8 @@ class process_rg_mc(process_base.process_base):
             self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR, sd_label)
 
     # Fill the tree
-    tree_writer.fill_tree()
+    if self.write_tree_output:
+      tree_writer.fill_tree()
       
   #---------------------------------------------------------------
   # Loop through jets and store number of matching candidates in user_index
@@ -329,13 +389,16 @@ class process_rg_mc(process_base.process_base):
     for constituent in jet.constituents():
       z = constituent.pt() / jet.pt()
       getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
-      
-    tree_writer.fill_branch('jet_pt_truth', jet_pt)
+    
+    if self.write_tree_output:
+      tree_writer.fill_branch('jet_pt_truth', jet_pt)
+    else:
+      getattr(self, 'hJetPt_Truth_R{}'.format(jetR)).Fill(jet.pt())
 
   #---------------------------------------------------------------
   # Fill det jet histograms
   #---------------------------------------------------------------
-  def fill_det_before_matching(self, tree_writer, jet, jetR):
+  def fill_det_before_matching(self, jet, jetR):
     
     jet_pt = jet.pt()
     for constituent in jet.constituents():
@@ -357,19 +420,31 @@ class process_rg_mc(process_base.process_base):
     zg_det = self.zg(jet_det, sd)
     zg_truth = self.zg(jet_truth, sd)
     
-    tree_writer.fill_branch('jet_pt_det_ungroomed', jet_pt_det_ungroomed)
-    tree_writer.fill_branch('jet_pt_truth_ungroomed', jet_pt_truth_ungroomed)
-    tree_writer.fill_branch('theta_g_det', theta_g_det)
-    tree_writer.fill_branch('theta_g_truth', theta_g_truth)
-    tree_writer.fill_branch('zg_det', zg_det)
-    tree_writer.fill_branch('zg_truth', zg_truth)
-  
+    if self.write_tree_output:
+      tree_writer.fill_branch('jet_pt_det_ungroomed', jet_pt_det_ungroomed)
+      tree_writer.fill_branch('jet_pt_truth_ungroomed', jet_pt_truth_ungroomed)
+      tree_writer.fill_branch('theta_g_det', theta_g_det)
+      tree_writer.fill_branch('theta_g_truth', theta_g_truth)
+      tree_writer.fill_branch('zg_det', zg_det)
+      tree_writer.fill_branch('zg_truth', zg_truth)
+    else:
+      x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth])
+      x_array = array('d', x)
+      getattr(self, 'hResponse_JetPt_ThetaG_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
+
+      x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth])
+      x_array = array('d', x)
+      getattr(self, 'hResponse_JetPt_zg_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
+
     # Fill response histograms
     JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
     getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
   
     theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
     getattr(self, 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
+      
+    zg_resolution = (zg_det - zg_truth) / zg_truth
+    getattr(self, 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
 
   #---------------------------------------------------------------
   # Compute theta_g
