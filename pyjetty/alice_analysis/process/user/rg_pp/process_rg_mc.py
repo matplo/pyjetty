@@ -143,6 +143,18 @@ class process_rg_mc(process_base.process_base):
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
 
     for jetR in self.jetR_list:
+      
+      name = 'hDeltaR_All_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+      setattr(self, name, h)
+      
+      name = 'hZ_Truth_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+      setattr(self, name, h)
+      
+      name = 'hZ_Det_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+      setattr(self, name, h)
 
       for beta in self.beta_list:
 
@@ -259,7 +271,7 @@ class process_rg_mc(process_base.process_base):
         
         # Check that jets match geometrically
         deltaR = jet_det.delta_R(jet_truth)
-        tree_writer.fill_branch('deltaR', deltaR)
+        getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), deltaR)
 
         if deltaR < self.jet_matching_distance*jetR:
 
@@ -296,10 +308,13 @@ class process_rg_mc(process_base.process_base):
   # Fill truth jet histograms
   #---------------------------------------------------------------
   def fill_truth_before_matching(self, tree_writer, jet, jetR):
-
+    
     jet_pt = jet.pt()
+    for constituent in jet.constituents():
+      z = constituent.pt() / jet.pt()
+      getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
+      
     tree_writer.fill_branch('jet_pt_truth', jet_pt)
-    [tree_writer.fill_branch('z_truth', constituent.pt() / jet_pt) for constituent in jet.constituents()]
 
   #---------------------------------------------------------------
   # Fill det jet histograms
@@ -307,7 +322,9 @@ class process_rg_mc(process_base.process_base):
   def fill_det_before_matching(self, tree_writer, jet, jetR):
     
     jet_pt = jet.pt()
-    [tree_writer.fill_branch('z_det', constituent.pt() / jet_pt) for constituent in jet.constituents()]
+    for constituent in jet.constituents():
+      z = constituent.pt() / jet_pt
+      getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet_pt, z)
 
   #---------------------------------------------------------------
   # Fill response histograms

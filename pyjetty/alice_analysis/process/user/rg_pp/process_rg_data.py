@@ -115,11 +115,15 @@ class process_rg_data(process_base.process_base):
 
     for jetR in self.jetR_list:
       
+      name = 'hZ_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+      setattr(self, name, h)
+      
       for beta in self.beta_list:
 
         # Initialize tree to write out event variables
         tree_name = 't_R{}_B{}'.format(jetR, beta)
-        t = ROOT.TTree(tree_name, tree_name)        
+        t = ROOT.TTree(tree_name, tree_name)
         tree_writer_name = 'tree_writer_R{}_B{}'.format(jetR, beta)
         tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
         setattr(self, tree_writer_name, tree_writer)
@@ -189,7 +193,21 @@ class process_rg_data(process_base.process_base):
       # Perform SoftDrop grooming and fill tree
       jet_sd = sd.result(jet)
       self.fill_tree(jet, jet_sd, jetR, beta)
+       
+      # Fill histograms
+      self.fill_histograms(jet, jetR)
 
+  #---------------------------------------------------------------
+  # Fill histograms
+  #---------------------------------------------------------------
+  def fill_histograms(self, jet, jetR):
+    
+    jet_pt = jet.pt()
+    hZ = getattr(self, 'hZ_R{}'.format(jetR))
+    for constituent in jet.constituents():
+      z = constituent.pt() / jet_pt
+      hZ.Fill(jet_pt, z)
+          
   #---------------------------------------------------------------
   # Fill tree
   #---------------------------------------------------------------
@@ -202,7 +220,6 @@ class process_rg_data(process_base.process_base):
     jet_pt = jet.pt()
     tree_writer.fill_branch('jet_pt', jet_pt)
     tree_writer.fill_branch('jet_m', jet.m())
-    [tree_writer.fill_branch('z', constituent.pt() / jet_pt) for constituent in jet.constituents()]
     
     # SD jet variables
     sd_info = fjcontrib.get_SD_jet_info(jet_sd)
