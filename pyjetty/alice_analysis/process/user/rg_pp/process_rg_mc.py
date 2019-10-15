@@ -143,6 +143,10 @@ class process_rg_mc(process_base.process_base):
 
     for jetR in self.jetR_list:
       
+      name = 'hJES_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+      setattr(self, name, h)
+      
       name = 'hDeltaR_All_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
       setattr(self, name, h)
@@ -160,6 +164,12 @@ class process_rg_mc(process_base.process_base):
         zcut = sd_setting[0]
         beta = sd_setting[1]
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+        
+        name = 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
+        setattr(self, name, h)
 
         # Initialize tree to write out event variables
         tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
@@ -190,7 +200,7 @@ class process_rg_mc(process_base.process_base):
         # Set jet definition and a jet selector
         jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
         jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-        jet_selector_truth_matched = fj.SelectorPtMin(5.0)
+        jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9)
         print('jet definition is:', jet_def)
         print('jet selector for det-level is:', jet_selector_det,'\n')
         print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
@@ -284,7 +294,7 @@ class process_rg_mc(process_base.process_base):
           # Check that match is unique
           if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
 
-            self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR)
+            self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR, sd_label)
 
     # Fill the tree
     tree_writer.fill_tree()
@@ -335,23 +345,31 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_response(self, tree_writer, jet_det, jet_truth, sd, jetR):
+  def fill_response(self, tree_writer, jet_det, jet_truth, sd, jetR, sd_label):
     
+    # Fill tree
     jet_pt_det_ungroomed = jet_det.pt()
     jet_pt_truth_ungroomed = jet_truth.pt()
     
     theta_g_det = self.theta_g(jet_det, sd, jetR)
     theta_g_truth = self.theta_g(jet_truth, sd, jetR)
     
-    JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
-    theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
+    zg_det = self.zg(jet_det, sd)
+    zg_truth = self.zg(jet_truth, sd)
     
     tree_writer.fill_branch('jet_pt_det_ungroomed', jet_pt_det_ungroomed)
     tree_writer.fill_branch('jet_pt_truth_ungroomed', jet_pt_truth_ungroomed)
     tree_writer.fill_branch('theta_g_det', theta_g_det)
     tree_writer.fill_branch('theta_g_truth', theta_g_truth)
-    tree_writer.fill_branch('JES', JES)
-    tree_writer.fill_branch('theta_g_resolution', theta_g_resolution)
+    tree_writer.fill_branch('zg_det', zg_det)
+    tree_writer.fill_branch('zg_truth', zg_truth)
+  
+    # Fill response histograms
+    JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
+    getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
+  
+    theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
+    getattr(self, 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
 
   #---------------------------------------------------------------
   # Compute theta_g
@@ -362,6 +380,16 @@ class process_rg_mc(process_base.process_base):
     sd_info = fjcontrib.get_SD_jet_info(jet_sd)
     theta_g = sd_info.dR / jetR
     return theta_g
+
+  #---------------------------------------------------------------
+  # Compute z_g
+  #---------------------------------------------------------------
+  def zg(self, jet, sd):
+    
+    jet_sd = sd.result(jet)
+    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
+    zg = sd_info.z
+    return zg
 
 ##################################################################
 if __name__ == '__main__':
