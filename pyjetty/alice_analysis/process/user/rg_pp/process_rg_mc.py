@@ -125,11 +125,10 @@ class process_rg_mc(process_base.process_base):
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
     
-    # config['beta'] is a dictionary of dictionaries, where each dict is for a value of beta
-    beta_dict = config['beta']
-    
-    # Retrieve list of beta values
-    self.beta_list = list(beta_dict.keys())
+    # Retrieve list of SD grooming settings
+    sd_config_dict = config['SoftDrop']
+    sd_config_list = list(sd_config_dict.keys())
+    self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -156,12 +155,16 @@ class process_rg_mc(process_base.process_base):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
 
-      for beta in self.beta_list:
+      for sd_setting in self.sd_settings:
+        
+        zcut = sd_setting[0]
+        beta = sd_setting[1]
+        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
 
         # Initialize tree to write out event variables
-        tree_name = 't_R{}_B{}'.format(jetR, beta)
+        tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
         t = ROOT.TTree(tree_name, tree_name)
-        tree_writer_name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+        tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
         tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
         setattr(self, tree_writer_name, tree_writer)
 
@@ -178,7 +181,11 @@ class process_rg_mc(process_base.process_base):
     
     for jetR in self.jetR_list:
       
-      for beta in self.beta_list:
+      for sd_setting in self.sd_settings:
+        
+        zcut = sd_setting[0]
+        beta = sd_setting[1]
+        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
       
         # Set jet definition and a jet selector
         jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
@@ -189,13 +196,12 @@ class process_rg_mc(process_base.process_base):
         print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
         
         # Define SoftDrop settings
-        zcut = 0.1
         sd = fjcontrib.SoftDrop(beta, zcut, jetR)
         print('SoftDrop groomer is: {}'.format(sd.description()));
         
         # Then can use list comprehension to iterate over the groupby and do jet-finding
         # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-        result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+        result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, sd_label) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
 
   #---------------------------------------------------------------
   # Fill track histograms.
@@ -214,7 +220,7 @@ class process_rg_mc(process_base.process_base):
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, beta):
+  def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, sd_label):
 
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -240,7 +246,7 @@ class process_rg_mc(process_base.process_base):
     jetR = jet_def.R()
     
     # Get tree writer
-    name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+    name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
     tree_writer = getattr(self, name)
     
     # Fill truth-level jet histograms (before matching)

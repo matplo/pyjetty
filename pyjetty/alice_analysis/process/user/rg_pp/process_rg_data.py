@@ -96,11 +96,10 @@ class process_rg_data(process_base.process_base):
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     
-    # config['beta'] is a dictionary of dictionaries, where each dict is for a value of beta
-    beta_dict = config['beta']
-    
-    # Retrieve list of beta values
-    self.beta_list = list(beta_dict.keys())
+    # Retrieve list of SD grooming settings
+    sd_config_dict = config['SoftDrop']
+    sd_config_list = list(sd_config_dict.keys())
+    self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
   
   #---------------------------------------------------------------
   # Initialize histograms
@@ -119,12 +118,16 @@ class process_rg_data(process_base.process_base):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
       
-      for beta in self.beta_list:
+      for sd_setting in self.sd_settings:
+        
+        zcut = sd_setting[0]
+        beta = sd_setting[1]
+        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
 
         # Initialize tree to write out event variables
-        tree_name = 't_R{}_B{}'.format(jetR, beta)
+        tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
         t = ROOT.TTree(tree_name, tree_name)
-        tree_writer_name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+        tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
         tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
         setattr(self, tree_writer_name, tree_writer)
 
@@ -145,8 +148,12 @@ class process_rg_data(process_base.process_base):
     
     for jetR in self.jetR_list:
       
-      for beta in self.beta_list:
+      for sd_setting in self.sd_settings:
         
+        zcut = sd_setting[0]
+        beta = sd_setting[1]
+        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+
         print('--- {} seconds ---'.format(time.time() - self.start_time))
 
         # Set jet definition and a jet selector
@@ -156,18 +163,17 @@ class process_rg_data(process_base.process_base):
         print('jet selector is:', jet_selector,'\n')
         
         # Define SoftDrop settings
-        zcut = 0.1
         sd = fjcontrib.SoftDrop(beta, zcut, jetR)
         print('SoftDrop groomer is: {}'.format(sd.description()));
 
         # Use list comprehension to do jet-finding and fill histograms
-        result = [self.analyzeJets(fj_particles, jet_def, jet_selector, sd, beta) for fj_particles in self.df_fjparticles]
+        result = [self.analyzeJets(fj_particles, jet_def, jet_selector, sd, sd_label) for fj_particles in self.df_fjparticles]
         
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles, jet_def, jet_selector, sd, beta):
+  def analyzeJets(self, fj_particles, jet_def, jet_selector, sd, sd_label):
     
     # Perform constituent subtraction
     if self.do_constituent_subtraction:
@@ -192,7 +198,7 @@ class process_rg_data(process_base.process_base):
       
       # Perform SoftDrop grooming and fill tree
       jet_sd = sd.result(jet)
-      self.fill_tree(jet, jet_sd, jetR, beta)
+      self.fill_tree(jet, jet_sd, jetR, sd_label)
        
       # Fill histograms
       self.fill_histograms(jet, jetR)
@@ -211,9 +217,9 @@ class process_rg_data(process_base.process_base):
   #---------------------------------------------------------------
   # Fill tree
   #---------------------------------------------------------------
-  def fill_tree(self, jet, jet_sd, jetR, beta):
+  def fill_tree(self, jet, jet_sd, jetR, sd_label):
   
-    name = 'tree_writer_R{}_B{}'.format(jetR, beta)
+    name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
     tree_writer = getattr(self, name)
   
     # Jet variables

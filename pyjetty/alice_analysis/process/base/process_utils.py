@@ -62,3 +62,11 @@ class process_utils(common_base.common_base):
         accept_jet = False
 
     return accept_jet
+
+  #---------------------------------------------------------------
+  # Remove periods from a label
+  #---------------------------------------------------------------
+  def remove_periods(self, text):
+    
+    string = str(text)
+    return string.replace('.', '')
