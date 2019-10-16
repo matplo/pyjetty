@@ -73,7 +73,7 @@ class process_ang_data(process_base.process_base):
 
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.saveHistograms(self)
+    process_base.process_base.save_output_objects(self)
 
     print('--- {} seconds ---'.format(time.time() - start_time))
 
