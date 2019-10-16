@@ -52,7 +52,7 @@ class process_utils(common_base.common_base):
   #---------------------------------------------------------------
   def is_truth_jet_accepted(self, jet_truth):
     
-    return is_det_jet_accepted(self, jet_det)
+    return is_det_jet_accepted(self, jet_truth)
 
   #---------------------------------------------------------------
   # Remove periods from a label
