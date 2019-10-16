@@ -104,7 +104,7 @@ class process_ang_data(process_base.process_base):
     self.hNevents.Fill(1, self.nEvents)
     
     for jetR in self.jetR_list:
-      '''
+
       name = 'hJetPt_R{}'.format(jetR)
       h = ROOT.TH1F(name, name, 300, 0, 300)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
@@ -116,7 +116,7 @@ class process_ang_data(process_base.process_base):
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('m_{ch jet}')
       setattr(self, name, h)
-      '''
+
       
       for beta in self.beta_list:
 
@@ -124,31 +124,29 @@ class process_ang_data(process_base.process_base):
 
           # Angularities, \lambda_{\beta}^{\kappa}
           pTmax = self.pTbins[i+1]
-          name = "hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)
+          name = ("hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).replace('.', '')
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
           # Angularities with soft drop
-          name = "hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)
+          name = ("hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
         # Lambda vs pT plots to estimate the binning that will be needed
-        name = "hLambda_JetpT_R%s_B%s" % (jetR, beta)
-        h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
-                      self.n_lambda_bins, 0, 1)
+        name = ("hLambda_JetpT_R%s_B%s" % (jetR, beta)).replace('.', '')
+        h = ROOT.TH2F(name, name, 300, 0, 300, self.n_lambda_bins, 0, 1)
         h.GetXaxis().SetTitle('p_{T, jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
 
         # Lambda vs pT plots to estimate the binning that will be needed -- with soft drop
-        name = "hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)
-        h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
-                      self.n_lambda_bins, 0, 1)
+        name = ("hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).replace('.', '')
+        h = ROOT.TH2F(name, name, 300, 0, 300, self.n_lambda_bins, 0, 1)
         h.GetXaxis().SetTitle('p_{T, jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
@@ -247,27 +245,25 @@ class process_ang_data(process_base.process_base):
   #---------------------------------------------------------------
   def fillJetHistograms(self, jet, jetR, beta, sd):
 
-    #jet_pt = jet.pt()
+    jet_pt = jet.pt()
 
     # just use kappa = 1 for now
     l = lambda_beta_kappa(jet, jetR, beta, 1)
-    (pTmin, pTmax) = pT_bin(jet.pt(), self.pTbins)
-    if pTmin:  # pTmin will be None if not a valid bin
-      getattr(self, "hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).Fill(l)
-      getattr(self, "hLambda_JetpT_R%s_B%s" % (jetR, beta)).Fill(jet.pt(), l)
+    (pTmin, pTmax) = pT_bin(jet_pt, self.pTbins)
+    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
+      getattr(self, ("hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l)
+      getattr(self, ("hLambda_JetpT_R%s_B%s" % (jetR, beta)).replace('.', '')).Fill(jet_pt, l)
 
     # jet with softdrop
     jet_sd = sd.result(jet)
     lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
     (pTmin, pTmax) = pT_bin(jet_sd.pt(), self.pTbins)
-    if pTmin:  # pTmin will be None if not a valid bin
-      getattr(self, "hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).Fill(lsd)
-      getattr(self, "hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).Fill(jet_sd.pt(), lsd)
+    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
+      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(lsd)
+      getattr(self, ("hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).replace('.', '')).Fill(jet_sd.pt(), lsd)
 
-    '''
     getattr(self, 'hJetPt_R{}'.format(jetR)).Fill(jet_pt)
     getattr(self, 'hM_JetPt_R{}'.format(jetR)).Fill(jet_pt, jet.m())
-    '''
 
   '''
   #---------------------------------------------------------------

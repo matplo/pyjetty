@@ -24,4 +24,4 @@ def pT_bin(jet_pT, pTbins):
     pTmax = pTbins[i+1]
     if pTmin <= jet_pT < pTmax:
       return (pTmin, pTmax)
-  return (None, None)
+  return (-1, -1)

@@ -172,7 +172,7 @@ class process_ang_mc(process_base.process_base):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
       '''
-      name = 'hResponse_JetpT_R%s' % jetR
+      name = ('hResponse_JetpT_R%s' % jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 300, 0, 300, 300, 0, 300)
       h.GetXaxis().SetTitle('p_{T,det}')
       h.GetYaxis().SetTitle('p_{T,truth}')
@@ -184,14 +184,14 @@ class process_ang_mc(process_base.process_base):
 
           # Angularities, \lambda_{\beta}^{\kappa}
           pTmax = self.pTbins[i+1]
-          name = "hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)
+          name = ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).replace('.', '')
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
           # Angularities with soft drop
-          name = "hLambda_pT%i-%i_R%s_B%s_mcdet_SD" % (pTmin, pTmax, jetR, beta)
+          name = ("hLambda_pT%i-%i_R%s_B%s_mcdet_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
@@ -212,7 +212,7 @@ class process_ang_mc(process_base.process_base):
         min = [0., 0., 0., 0.]
         max = [100., 300., 1.0, 1.0]
         
-        name = 'hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)
+        name = ('hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).replace('.', '')
         nbins = (nbins)
         xmin = (min)
         xmax = (max)
@@ -396,8 +396,8 @@ class process_ang_mc(process_base.process_base):
     # just use kappa = 1 for now
     l_det = lambda_beta_kappa(jet_det, jetR, beta, 1)
     (pTmin, pTmax) = pT_bin(jet_det.pt(), self.pTbins)
-    if pTmin:  # pTmin will be None if not a valid bin
-      getattr(self, "hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).Fill(l_det)
+    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
+      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l_det)
     l_tru = lambda_beta_kappa(jet_truth, jetR, beta, 1)
 
 
@@ -405,8 +405,8 @@ class process_ang_mc(process_base.process_base):
     jet_sd_det = sd.result(jet_det)
     lsd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
     (pTmin, pTmax) = pT_bin(jet_sd_det.pt(), self.pTbins)
-    if pTmin:  # pTmin will be None if not a valid bin
-      getattr(self, "hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).Fill(lsd_det)
+    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
+      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(lsd_det)
     jet_sd_tru = sd.result(jet_truth)
     lsd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
 
@@ -419,11 +419,11 @@ class process_ang_mc(process_base.process_base):
                                                                            theta_g_resolution)
     '''
 
-    getattr(self, 'hResponse_JetpT_R%s' % jetR).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
+    getattr(self, ('hResponse_JetpT_R%s' % jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
 
     x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, lambda_det, lambda_truth])
     x_array = array('d', x)
-    getattr(self, 'hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).Fill(x_array)
+    getattr(self, ('hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).replace('.', '')).Fill(x_array)
 
   '''
   #---------------------------------------------------------------

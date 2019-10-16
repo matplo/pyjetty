@@ -30,5 +30,5 @@ OUTPUT_PREFIX="AnalysisResults/$SLURM_ARRAY_JOB_ID"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun ang_LHC17pq.sh $FILE $OUTPUT_PREFIX
+  srun ang_LHC17pq.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done
