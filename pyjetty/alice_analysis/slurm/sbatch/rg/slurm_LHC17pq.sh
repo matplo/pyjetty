@@ -26,7 +26,6 @@ fi
 echo "START=$START"
 echo "STOP=$STOP"
 
-OUTPUT_PREFIX="AnalysisResults/$SLURM_ARRAY_JOB_ID"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)

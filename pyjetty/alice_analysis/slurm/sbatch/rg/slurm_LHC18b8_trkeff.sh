@@ -26,9 +26,8 @@ fi
 echo "START=$START"
 echo "STOP=$STOP"
 
-OUTPUT_PREFIX="AnalysisResults/$SLURM_ARRAY_JOB_ID"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun process_rg_LHC18b8.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+  srun process_rg_LHC18b8_trkeff.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done
