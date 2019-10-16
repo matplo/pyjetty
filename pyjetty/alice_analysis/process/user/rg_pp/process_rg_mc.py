@@ -263,8 +263,12 @@ class process_rg_mc(process_base.process_base):
         print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
         
         # Define SoftDrop settings
+        # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
         sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-        print('SoftDrop groomer is: {}'.format(sd.description()));
+        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+        reclusterer = fjcontrib.Recluster(jet_def_recluster)
+        sd.set_reclustering(True, reclusterer)
+        print('SoftDrop groomer is: {}'.format(sd.description()))
         
         # Then can use list comprehension to iterate over the groupby and do jet-finding
         # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms

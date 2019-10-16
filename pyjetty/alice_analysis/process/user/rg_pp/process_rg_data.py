@@ -182,8 +182,12 @@ class process_rg_data(process_base.process_base):
         print('jet selector is:', jet_selector,'\n')
         
         # Define SoftDrop settings
+        # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
         sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-        print('SoftDrop groomer is: {}'.format(sd.description()));
+        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+        reclusterer = fjcontrib.Recluster(jet_def_recluster)
+        sd.set_reclustering(True, reclusterer)
+        print('SoftDrop groomer is: {}'.format(sd.description()))
 
         # Use list comprehension to do jet-finding and fill histograms
         result = [self.analyzeJets(fj_particles, jet_def, jet_selector, sd, sd_label) for fj_particles in self.df_fjparticles]
