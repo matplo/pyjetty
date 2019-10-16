@@ -35,14 +35,14 @@ OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 #echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
-module use /software/users/ezra/heppy/modules
+module use /home/ezra/heppy/modules
 module load heppy/main_python
-module use /software/users/ezra/pyjetty/modules
+module use /home/ezra/pyjetty/modules
 module load pyjetty/main_python
 module list
 
 # Run python script via pipenv
-cd /software/users/ezra/pyjetty/pyjetty/alice_analysis
+cd /home/ezra/pyjetty/pyjetty/alice_analysis
 pipenv run python process/user/ang_pp/ang_mc.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder

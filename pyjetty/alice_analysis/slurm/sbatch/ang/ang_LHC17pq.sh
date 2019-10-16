@@ -27,7 +27,7 @@ else
 fi
 
 # Define output path from relevant sub-path of input file
-OUTPUT_PREFIX="AnalysisResults/$JOB_ID"
+OUTPUT_PREFIX="AnalysisResults/ang/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-8)
 #echo $OUTPUT_SUFFIX
@@ -35,14 +35,14 @@ OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 #echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
-module use /software/users/ezra/heppy/modules
+module use /home/ezra/heppy/modules
 module load heppy/main_python
-module use /software/users/ezra/pyjetty/modules
+module use /home/ezra/pyjetty/modules
 module load pyjetty/main_python
 module list
 
 # Run python script via pipenv
-cd /software/users/ezra/pyjetty/pyjetty/alice_analysis
+cd /home/ezra/pyjetty/pyjetty/alice_analysis
 pipenv run python process/user/ang_pp/ang_data.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
