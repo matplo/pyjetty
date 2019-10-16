@@ -52,14 +52,7 @@ class process_utils(common_base.common_base):
   #---------------------------------------------------------------
   def is_truth_jet_accepted(self, jet_truth):
     
-    accept_jet = True
-    
-    for track in jet_truth.constituents():
-      
-      if track.pt() > 100.:
-        accept_jet = False
-
-    return accept_jet
+    return is_det_jet_accepted(self, jet_det)
 
   #---------------------------------------------------------------
   # Remove periods from a label
