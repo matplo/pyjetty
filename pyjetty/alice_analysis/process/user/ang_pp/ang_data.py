@@ -32,7 +32,7 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io, process_utils, process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helper import deltaR, lambda_beta_kappa, pT_bin
+from pyjetty.alice_analysis.process.user.ang_pp.helpers import deltaR, lambda_beta_kappa, pT_bin
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -99,10 +99,10 @@ class process_ang_data(process_base.process_base):
   # Initialize histograms
   #---------------------------------------------------------------
   def initializeHistograms(self):
-    '''
+    
     self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
     self.hNevents.Fill(1, self.nEvents)
-    '''
+    
     for jetR in self.jetR_list:
       '''
       name = 'hJetPt_R{}'.format(jetR)
@@ -124,21 +124,21 @@ class process_ang_data(process_base.process_base):
 
           # Angularities, \lambda_{\beta}^{\kappa}
           pTmax = self.pTbins[i+1]
-          name = "hLambda_pT%i-%i_R%s_#beta%s" % (pTmin, pTmax, jetR, beta)
+          name = "hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
           # Angularities with soft drop
-          name = "hLambda_pT%i-%i_R%s_#beta%s_SD" % (pTmin, pTmax, jetR, beta)
+          name = "hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
         # Lambda vs pT plots to estimate the binning that will be needed
-        name = "hLambda_JetpT_R%s_#beta%s" % (jetR, beta)
+        name = "hLambda_JetpT_R%s_B%s" % (jetR, beta)
         h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
                       self.n_lambda_bins, 0, 1)
         h.GetXaxis().SetTitle('p_{T, jet}')
@@ -146,7 +146,7 @@ class process_ang_data(process_base.process_base):
         setattr(self, name, h)
 
         # Lambda vs pT plots to estimate the binning that will be needed -- with soft drop
-        name = "hLambda_JetpT_R%s_#beta%s_SD" % (jetR, beta)
+        name = "hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)
         h = ROOT.TH2F(name, name, len(self.pTbins) - 1, self.pTbins[0], self.pTbins[-1],
                       self.n_lambda_bins, 0, 1)
         h.GetXaxis().SetTitle('p_{T, jet}')
@@ -251,17 +251,18 @@ class process_ang_data(process_base.process_base):
 
     # just use kappa = 1 for now
     l = lambda_beta_kappa(jet, jetR, beta, 1)
-    (pTmin, pTmax) = pT_bin(jet.pt())
+    (pTmin, pTmax) = pT_bin(jet.pt(), self.pTbins)
+    if pTmin:  # pTmin will be None if not a valid bin
+      getattr(self, "hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).Fill(l)
+      getattr(self, "hLambda_JetpT_R%s_B%s" % (jetR, beta)).Fill(jet.pt(), l)
 
     # jet with softdrop
     jet_sd = sd.result(jet)
     lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
-
+    (pTmin, pTmax) = pT_bin(jet_sd.pt(), self.pTbins)
     if pTmin:  # pTmin will be None if not a valid bin
-      getattr(self, "hLambda_pT%i-%i_R%s_#beta%s" % (pTmin, pTmax, jetR, beta)).Fill(l)
-      getattr(self, "hLambda_pT%i-%i_R%s_#beta%s_SD" % (pTmin, pTmax, jetR, beta)).Fill(lsd)
-      getattr(self, "hLambda_JetpT_R%s_#beta%s" % (jetR, beta)).Fill(jet.pt(), l)
-      getattr(self, "hLambda_JetpT_R%s_#beta%s_SD" % (jetR, beta)).Fill(jet.pt(), lsd)
+      getattr(self, "hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).Fill(lsd)
+      getattr(self, "hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).Fill(jet_sd.pt(), lsd)
 
     '''
     getattr(self, 'hJetPt_R{}'.format(jetR)).Fill(jet_pt)
