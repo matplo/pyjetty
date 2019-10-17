@@ -216,8 +216,11 @@ def generate():
 			parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
 		else:
 			parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal])
-		if len(parts) < 1:
-			continue
+
+		event_output.clear()
+		jet_output.clear()
+		hjet_output.clear()
+
 		jet_parts = jet_particle_selector(parts)
 
 		ev_w = pythia.info.sigmaGen()
@@ -239,6 +242,9 @@ def generate():
 		hmV0M.Fill(v0det.V0_mult)
 		hmV0A.Fill(v0det.V0A_mult)
 		hmV0C.Fill(v0det.V0C_mult)
+
+		if len(parts) < 1:
+			continue
 
 		hjet.analyze_event(jet_parts)
 		if hjet.trigger_particle:
