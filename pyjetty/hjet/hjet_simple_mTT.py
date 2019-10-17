@@ -134,16 +134,27 @@ class HJet(MPBase):
 # trigger_ranges = [ [0, 1e3], [6, 7] , [12, 22], [20, 30] ],
 # jet_Rs = [0.2, 0.4, 0.6]
 
+class HJetSet(object):
+	def __init__(self, hjet, hjet_output):
+		self.hjet = hjet
+		self.hjet_output = hjet_output
+
+	def analyze_event(self, jet_parts):
+		self.hjet.analyze_event(jet_parts)
+		if self.hjet.trigger_particle:
+			return True
+		return False
+
 def generate():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
 	parser.add_argument('-d', '--output-dir', help='output directory name - use with default file name', default='.', type=str)
 	parser.add_argument('-o', '--output', help='output file name', default='', type=str)	
 	parser.add_argument('--overwrite', default=False, action='store_true')
-	parser.add_argument('--t-min', help='trigger pt min', default=6., type=float)
-	parser.add_argument('--t-max', help='trigger pt max', default=7., type=float)
 	parser.add_argument('--jet-R', help='jet finder R', default=0.4, type=float)
 	parser.add_argument('--charged', default=False, action='store_true')
 	parser.add_argument('--runid', default=0, type=int)
+	parser.add_argument('--tranges', default='6-7', help='hadron trigger ranges min-max,min1-max1,...', type=str)
+	parser.add_argument('--noInel', default=False, action='store_true')
 	pyconf.add_standard_pythia_args(parser)
 	args = parser.parse_args()	
 
@@ -154,9 +165,11 @@ def generate():
 		rs = '0{}'.format(int(args.jet_R*10))
 		if args.jet_R >= 1:
 			rs = '{}'.format(int(args.jet_R))
-		args.output = '{}/h_jet_R{}_t{}_{}'.format(args.output_dir, rs, args.t_min, args.t_max)
+		args.output = '{}/h_jet_R{}'.format(args.output_dir, rs)
 		if args.charged:
-			args.output = '{}/h_jet_ch_R{}_t{}_{}'.format(args.output_dir, rs, int(args.t_min), int(args.t_max))
+			args.output = '{}/h_jet_ch_R{}'.format(args.output_dir, rs)
+		if args.tranges:
+			args.output += '_tranges_{}'.format(args.tranges.replace(',', "_"))
 		if args.py_pthatmin > 0:
 			args.output += '_pthatmin{}'.format(int(args.py_pthatmin))
 		if args.py_noMPI:
@@ -170,6 +183,11 @@ def generate():
 		if args.runid > 0:
 			args.output += '_runid_{}'.format(args.runid)
 			args.py_seed = 1000 + args.runid
+		if args.noInel:
+			pass
+		else:
+			mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
+			args.output += '_noInel'
 		args.output += '.root'
 
 	if os.path.exists(args.output):
@@ -181,7 +199,6 @@ def generate():
 	fj.ClusterSequence.print_banner()
 	print()
 
-	mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
 	#and in the code i do not allow decay of the following particles:
 	mycfg.append("310:mayDecay  = off") # //K0s
 	mycfg.append("3122:mayDecay = off") # //labda0
@@ -198,8 +215,21 @@ def generate():
 	if args.nev < 1:
 		args.nev = 1
 
+	tpairs = []
+	st = args.tranges.split(',')
+	try:
+		for _s in st:
+			t0 = float(_s.split('-')[0])
+			t1 = float(_s.split('-')[1])
+			tpairs.append([t0,t1])
+	except:
+		print('[e] something is not quite right with trigger ranges... stop here.')
+
 	jet_particle_eta_max = 0.9
 	jet_particle_selector = fj.SelectorAbsEtaMax(jet_particle_eta_max)
+
+	v0det = V0Detector()
+	j_ana = JetAnalysis(jet_R=args.jet_R, particle_eta_max=jet_particle_eta_max)
 
 	fout = r.TFile(args.output, 'RECREATE')
 	fout.cd()
@@ -208,11 +238,14 @@ def generate():
 	hmV0C = r.TH1F('hmV0C', 'hmV0C', 1000, 0, 1000)
 	event_output = RTreeWriter(tree_name='evT', fout=fout)
 	jet_output = RTreeWriter(tree_name='jetT', fout=fout)
-	hjet_output = RTreeWriter(tree_name='hjetT', fout=fout)
 
-	v0det = V0Detector()
-	j_ana = JetAnalysis(jet_R=args.jet_R, particle_eta_max=jet_particle_eta_max)
-	hjet = HJet(trigger_range=[args.t_min, args.t_max])
+	hjet_sets = []
+	for t in tpairs:
+		hjet_output = RTreeWriter(tree_name='hjetT_{}_{}'.format(int(t[0]), int(t[1])), fout=fout)
+		hjet = HJet(trigger_range=[t[0], t[1]])
+		print(hjet)
+		hjset = HJetSet(hjet, hjet_output)
+		hjet_sets.append(hjset)
 
 	for ev_id in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
@@ -224,7 +257,7 @@ def generate():
 
 		event_output.clear()
 		jet_output.clear()
-		hjet_output.clear()
+		_tmp = [s.hjet_output.clear() for s in hjet_sets]
 
 		jet_parts = jet_particle_selector(parts)
 
@@ -251,8 +284,7 @@ def generate():
 		if len(parts) < 1:
 			continue
 
-		hjet.analyze_event(jet_parts)
-		if hjet.trigger_particle:
+		if True in [s.analyze_event(jet_parts) for s in hjet_sets]:
 			j_ana.analyze_event(jet_parts)
 			jet_output.fill_branch('ev_id', ev_id)
 			jet_output.fill_branch('weight', ev_w)
@@ -263,16 +295,18 @@ def generate():
 			j_ana.fill_branches(jet_output)
 			jet_output.fill_tree()
 
-			hjet_output.fill_branch('ev_id', ev_id)
-			hjet_output.fill_branch('weight', ev_w)
-			hjet_output.fill_branch('code', ev_code)
-			hjet_output.fill_branch('pthard', pthard)
-			hjet_output.fill_branch('mTot', mTot)
-			hjet_output.fill_branch('mCB', mCB)
-			hjet.fill_branches(hjet_output, j_ana.jets)
-			v0det.fill_branches(hjet_output)
-			j_ana.fill_branches(hjet_output)
-		hjet_output.fill_tree()
+			for s in hjet_sets:
+				if s.hjet.trigger_particle:
+					s.hjet_output.fill_branch('ev_id', ev_id)
+					s.hjet_output.fill_branch('weight', ev_w)
+					s.hjet_output.fill_branch('code', ev_code)
+					s.hjet_output.fill_branch('pthard', pthard)
+					s.hjet_output.fill_branch('mTot', mTot)
+					s.hjet_output.fill_branch('mCB', mCB)
+					s.hjet.fill_branches(s.hjet_output, j_ana.jets)
+					v0det.fill_branches(s.hjet_output)
+					j_ana.fill_branches(s.hjet_output)
+					s.hjet_output.fill_tree()
 
 	pythia.stat()
 
