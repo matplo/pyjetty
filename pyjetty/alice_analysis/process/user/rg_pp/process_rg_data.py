@@ -96,6 +96,9 @@ class process_rg_data(process_base.process_base):
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     
+    # Write tree output (default is to write only histograms)
+    self.write_tree_output = False
+    
     # Retrieve list of SD grooming settings
     sd_config_dict = config['SoftDrop']
     sd_config_list = list(sd_config_dict.keys())
@@ -123,13 +126,29 @@ class process_rg_data(process_base.process_base):
         zcut = sd_setting[0]
         beta = sd_setting[1]
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+        
+        if self.write_tree_output:
 
-        # Initialize tree to write out event variables
-        tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-        t = ROOT.TTree(tree_name, tree_name)
-        tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-        tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
-        setattr(self, tree_writer_name, tree_writer)
+          # Initialize tree to write out event variables
+          tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+          t = ROOT.TTree(tree_name, tree_name)
+          tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+          tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
+          setattr(self, tree_writer_name, tree_writer)
+
+        else:
+          
+          name = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle('#theta_{g,ch}')
+          setattr(self, name, h)
+          
+          name = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle('z_{g,ch}')
+          setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -163,8 +182,12 @@ class process_rg_data(process_base.process_base):
         print('jet selector is:', jet_selector,'\n')
         
         # Define SoftDrop settings
+        # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
         sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-        print('SoftDrop groomer is: {}'.format(sd.description()));
+        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+        reclusterer = fjcontrib.Recluster(jet_def_recluster)
+        sd.set_reclustering(True, reclusterer)
+        print('SoftDrop groomer is: {}'.format(sd.description()))
 
         # Use list comprehension to do jet-finding and fill histograms
         result = [self.analyzeJets(fj_particles, jet_def, jet_selector, sd, sd_label) for fj_particles in self.df_fjparticles]
@@ -196,23 +219,41 @@ class process_rg_data(process_base.process_base):
       if not self.utils.is_det_jet_accepted(jet):
         continue
       
-      # Perform SoftDrop grooming and fill tree
+      # Perform SoftDrop grooming
       jet_sd = sd.result(jet)
-      self.fill_tree(jet, jet_sd, jetR, sd_label)
-       
-      # Fill histograms
-      self.fill_histograms(jet, jetR)
+      
+      # Fill tree or histograms (as requested)
+      if self.write_tree_output:
+        self.fill_tree(jet, jet_sd, jetR, sd_label)
+      else:
+        self.fill_jet_histograms(jet, jetR)
+        self.fill_softdrop_histograms(jet_sd, jet, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
-  def fill_histograms(self, jet, jetR):
+  def fill_jet_histograms(self, jet, jetR):
     
     jet_pt = jet.pt()
     hZ = getattr(self, 'hZ_R{}'.format(jetR))
     for constituent in jet.constituents():
       z = constituent.pt() / jet_pt
       hZ.Fill(jet_pt, z)
+
+  #---------------------------------------------------------------
+  # Fill soft drop histograms
+  #---------------------------------------------------------------
+  def fill_softdrop_histograms(self, jet_sd, jet, jetR, sd_label):
+    
+    jet_pt_ungroomed = jet.pt()
+
+    # SD jet variables
+    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
+    theta_g = sd_info.dR / jetR
+    zg = sd_info.z
+
+    getattr(self, 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
+    getattr(self, 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
           
   #---------------------------------------------------------------
   # Fill tree
@@ -234,6 +275,12 @@ class process_rg_data(process_base.process_base):
     tree_writer.fill_branch('mg', jet_sd.m())
   
     tree_writer.fill_tree()
+  
+    # Fill histograms
+    hZ = getattr(self, 'hZ_R{}'.format(jetR))
+    for constituent in jet.constituents():
+      z = constituent.pt() / jet_pt
+      hZ.Fill(jet_pt, z)
 
   #---------------------------------------------------------------
   # Fill track histograms.

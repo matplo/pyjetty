@@ -39,29 +39,20 @@ class process_utils(common_base.common_base):
   # Check if det-jet passes acceptance criteria
   #---------------------------------------------------------------
   def is_det_jet_accepted(self, jet_det):
-    
-    accept_jet = True
 
     for track in jet_det.constituents():
 
       if track.pt() > 100.:
-        accept_jet = False
+        return False
 
-    return accept_jet
+    return True
 
   #---------------------------------------------------------------
   # Check if truth-jet passes acceptance criteria
   #---------------------------------------------------------------
   def is_truth_jet_accepted(self, jet_truth):
     
-    accept_jet = True
-    
-    for track in jet_truth.constituents():
-      
-      if track.pt() > 100.:
-        accept_jet = False
-
-    return accept_jet
+    return is_det_jet_accepted(self, jet_truth)
 
   #---------------------------------------------------------------
   # Remove periods from a label

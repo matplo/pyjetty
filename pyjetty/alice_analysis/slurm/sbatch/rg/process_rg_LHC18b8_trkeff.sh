@@ -4,10 +4,10 @@
 # process the input file and write an output ROOT file.
 # The main use is to give this script to a slurm script.
 
-# Take three command line arguments -- (1) input file path, (2) job ID, (3) task ID
+# Take two command line arguments -- (1) input file path, (2) output dir prefix
 if [ "$1" != "" ]; then
   INPUT_FILE=$1
-  echo "Input file: $INPUT_FILE"
+  #echo "Input file: $INPUT_FILE"
 else
   echo "Wrong command line arguments"
 fi
@@ -27,23 +27,23 @@ else
 fi
 
 # Define output path from relevant sub-path of input file
-OUTPUT_PREFIX="AnalysisResults/ang/$JOB_ID"
-# Note: depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-8)
+OUTPUT_PREFIX="AnalysisResults/$JOB_ID"
+# Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
 #echo $OUTPUT_SUFFIX
-OUTPUT_DIR="/rstorage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
+OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 #echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
-module use /home/ezra/heppy/modules
+module use /software/users/james/heppy/modules
 module load heppy/main_python
-module use /home/ezra/pyjetty/modules
+module use /software/users/james/pyjetty/modules
 module load pyjetty/main_python
 module list
 
 # Run python script via pipenv
-cd /home/ezra/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/ang_pp/ang_data.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+cd /software/users/james/pyjetty/pyjetty/alice_analysis
+pipenv run python process/user/rg_pp/process_rg_mc.py -c config/rg_config_trkeff.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
-mv /rstorage/u/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/u/alice/AnalysisResults/ang/${JOB_ID}
+mv /storage/u/alice/AnalysisResults/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/${JOB_ID}

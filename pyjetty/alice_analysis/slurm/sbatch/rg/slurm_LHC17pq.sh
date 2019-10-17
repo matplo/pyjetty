@@ -7,7 +7,7 @@
 #SBATCH --array=1-100
 #SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/u/alice/LHC18b8/146/files.txt'
+FILE_PATHS='/rstorage/u/alice/LHC17pq/145/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
@@ -26,9 +26,8 @@ fi
 echo "START=$START"
 echo "STOP=$STOP"
 
-OUTPUT_PREFIX="AnalysisResults/$SLURM_ARRAY_JOB_ID"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun process_rg_LHC18b8.sh $FILE $OUTPUT_PREFIX
+  srun process_rg_LHC17pq.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done
