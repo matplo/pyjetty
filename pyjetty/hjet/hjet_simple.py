@@ -176,6 +176,17 @@ def generate():
 
 	# mycfg = ['PhaseSpace:pThatMin = 6']
 	mycfg = []
+	mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
+	#and in the code i do not allow decay of the following particles:
+	mycfg.append("310:mayDecay  = off") # //K0s
+	mycfg.append("3122:mayDecay = off") # //labda0
+	mycfg.append("3112:mayDecay = off") # //sigma-
+	mycfg.append("3212:mayDecay = off") # //sigma0
+	mycfg.append("3222:mayDecay = off") # //sigma+
+	mycfg.append("3312:mayDecay = off") # //xi-
+	mycfg.append("3322:mayDecay = off") # //xi+
+	mycfg.append("3334:mayDecay = off") # //omega-
+	print('[i] additional settings', mycfg)	
 	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
 	if not pythia:
 		return
@@ -229,18 +240,18 @@ def generate():
 		hmV0A.Fill(v0det.V0A_mult)
 		hmV0C.Fill(v0det.V0C_mult)
 
-		j_ana.analyze_event(jet_parts)
-		jet_output.fill_branch('ev_id', ev_id)
-		jet_output.fill_branch('weight', ev_w)
-		jet_output.fill_branch('code', ev_code)
-		jet_output.fill_branch('pthard', pthard)
-		jet_output.fill_branch('mTot', mTot)
-		jet_output.fill_branch('mCB', mCB)
-		j_ana.fill_branches(jet_output)
-		jet_output.fill_tree()
-
 		hjet.analyze_event(jet_parts)
 		if hjet.trigger_particle:
+			j_ana.analyze_event(jet_parts)
+			jet_output.fill_branch('ev_id', ev_id)
+			jet_output.fill_branch('weight', ev_w)
+			jet_output.fill_branch('code', ev_code)
+			jet_output.fill_branch('pthard', pthard)
+			jet_output.fill_branch('mTot', mTot)
+			jet_output.fill_branch('mCB', mCB)
+			j_ana.fill_branches(jet_output)
+			jet_output.fill_tree()
+
 			hjet_output.fill_branch('ev_id', ev_id)
 			hjet_output.fill_branch('weight', ev_w)
 			hjet_output.fill_branch('code', ev_code)
