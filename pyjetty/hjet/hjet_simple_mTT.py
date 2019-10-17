@@ -154,7 +154,7 @@ def generate():
 	parser.add_argument('--charged', default=False, action='store_true')
 	parser.add_argument('--runid', default=0, type=int)
 	parser.add_argument('--tranges', default='6-7', help='hadron trigger ranges min-max,min1-max1,...', type=str)
-	parser.add_argument('--noInel', default=False, action='store_true')
+	parser.add_argument('--inel', default=False, action='store_true')
 	pyconf.add_standard_pythia_args(parser)
 	args = parser.parse_args()	
 
@@ -183,11 +183,14 @@ def generate():
 		if args.runid > 0:
 			args.output += '_runid_{}'.format(args.runid)
 			args.py_seed = 1000 + args.runid
-		if args.noInel:
-			pass
-		else:
+		if args.inel:
+			args.output += '_inel'
+			args.py_pthatmin = 0.0
 			mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
-			args.output += '_noInel'
+			mycfg.append("HardQCD:all = off") # Andreas' recommendation
+		else:
+			args.output += '_hard'
+			mycfg.append("HardQCD:all = on") # Andreas' recommendation
 		args.output += '.root'
 
 	if os.path.exists(args.output):
@@ -250,6 +253,7 @@ def generate():
 	for ev_id in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
 			continue
+
 		if args.charged:
 			parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
 		else:
@@ -261,7 +265,8 @@ def generate():
 
 		jet_parts = jet_particle_selector(parts)
 
-		ev_w = pythia.info.sigmaGen()
+		ev_s = pythia.info.sigmaGen()
+		ev_w = pythia.info.weight()
 		ev_code = pythia.info.code()
 		pthard = pythia.info.pTHat()
 		mTot = len(parts)
@@ -270,6 +275,7 @@ def generate():
 		v0det.analyze_event(parts)
 		event_output.fill_branch('ev_id', ev_id)	
 		event_output.fill_branch('weight', ev_w)
+		event_output.fill_branch('sigma', ev_s)
 		event_output.fill_branch('code', ev_code)
 		event_output.fill_branch('pthard', pthard)
 		event_output.fill_branch('mTot', mTot)
@@ -288,6 +294,7 @@ def generate():
 			j_ana.analyze_event(jet_parts)
 			jet_output.fill_branch('ev_id', ev_id)
 			jet_output.fill_branch('weight', ev_w)
+			jet_output.fill_branch('sigma', ev_s)
 			jet_output.fill_branch('code', ev_code)
 			jet_output.fill_branch('pthard', pthard)
 			jet_output.fill_branch('mTot', mTot)
@@ -299,6 +306,7 @@ def generate():
 				if s.hjet.trigger_particle:
 					s.hjet_output.fill_branch('ev_id', ev_id)
 					s.hjet_output.fill_branch('weight', ev_w)
+					s.hjet_output.fill_branch('sigma', ev_s)
 					s.hjet_output.fill_branch('code', ev_code)
 					s.hjet_output.fill_branch('pthard', pthard)
 					s.hjet_output.fill_branch('mTot', mTot)
