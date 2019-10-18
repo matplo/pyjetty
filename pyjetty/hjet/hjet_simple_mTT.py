@@ -170,8 +170,6 @@ def generate():
 			args.output = '{}/h_jet_ch_R{}'.format(args.output_dir, rs)
 		if args.tranges:
 			args.output += '_tranges_{}'.format(args.tranges.replace(',', "_"))
-		if args.py_pthatmin > 0:
-			args.output += '_pthatmin{}'.format(int(args.py_pthatmin))
 		if args.py_noMPI:
 			args.output += '_noMPI'
 		if args.py_noISR:
@@ -183,14 +181,19 @@ def generate():
 		if args.runid > 0:
 			args.output += '_runid_{}'.format(args.runid)
 			args.py_seed = 1000 + args.runid
-		if args.inel:
-			args.output += '_inel'
-			args.py_pthatmin = 0.0
-			mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
-			mycfg.append("HardQCD:all = off") # Andreas' recommendation
+		if args.py_pthatmin > 0:
+			args.output += '_pthatmin_{}'.format(args.py_pthatmin)
+			mycfg.append("HardQCD:all = on")
+			mycfg.append("SoftQCD:all = off")
 		else:
-			args.output += '_hard'
-			mycfg.append("HardQCD:all = on") # Andreas' recommendation
+			if args.inel:
+				args.output += '_inel'
+				args.py_pthatmin = 0.0
+				mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
+				mycfg.append("HardQCD:all = off") # Andreas' recommendation
+			else:
+				args.output += '_hard'
+				mycfg.append("HardQCD:all = on") # Andreas' recommendation
 		args.output += '.root'
 
 	if os.path.exists(args.output):
