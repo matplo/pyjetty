@@ -26,10 +26,11 @@ if [ "x${run}" == "xrun" ]; then
 	[ -z ${njobs} ] && njobs=1
 	set -x
 	runs=$(seq 1 ${njobs})
-	parallel ${dryrun} --joblog hjet_simple_hTT_hard.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-biasref 20 --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
-	parallel ${dryrun} --joblog hjet_simple_hTT_hard.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-biasref 6 --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
-	parallel ${dryrun} --joblog hjet_simple_hTT_inel.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --inel --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
-	parallel ${dryrun} --joblog hjet_simple_hTT_pthat.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-pthatmin 6. --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	nev=100000
+	parallel ${dryrun} --joblog hjet_simple_hTT_hard.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-biasref 20 --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	parallel ${dryrun} --joblog hjet_simple_hTT_hard.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-biasref 6 --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	parallel ${dryrun} --joblog hjet_simple_hTT_inel.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --inel --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	parallel ${dryrun} --joblog hjet_simple_hTT_pthat.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-pthatmin 6. --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} ::: ${runs}
 	set +x
 fi
 
