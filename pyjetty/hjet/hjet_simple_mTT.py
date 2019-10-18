@@ -172,7 +172,7 @@ def generate():
 			args.output = '{}/h_jet_ch_R{}'.format(args.output_dir, rs)
 		if args.tranges:
 			args.output += '_tranges_{}'.format(args.tranges.replace(',', "_"))
-		if args.runid > 0:
+		if args.runid >= 0:
 			args.output += '_runid_{}'.format(args.runid)
 			args.py_seed = 1000 + args.runid
 		if args.py_noMPI:
