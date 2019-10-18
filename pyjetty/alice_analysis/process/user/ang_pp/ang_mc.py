@@ -159,11 +159,11 @@ class process_ang_mc(process_base.process_base):
       name = 'hJES_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
       setattr(self, name, h)
-      
-      name = 'hDeltaR_All_R{}'.format(jetR)
+      '''
+      name = 'hDeltaR_All_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
       setattr(self, name, h)
-      
+      '''
       name = 'hZ_Truth_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
@@ -208,9 +208,9 @@ class process_ang_mc(process_base.process_base):
         # Create THn of response
         dim = 4;
         title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-        nbins = [100, 60, 100, 25]
+        nbins = [120, 60, 100, 25]
         min = [0., 0., 0., 0.]
-        max = [100., 300., 1.0, 1.0]
+        max = [120., 300., 1.0, 1.0]
         
         name = ('hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).replace('.', '')
         nbins = (nbins)
@@ -333,7 +333,7 @@ class process_ang_mc(process_base.process_base):
         
         # Check that jets match geometrically
         delta_R = jet_det.delta_R(jet_truth)
-        getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), delta_R)
+        getattr(self, 'hDeltaR_All_R%s' % str(jetR).replace('.', '')).Fill(jet_det.pt(), delta_R)
         
         if delta_R < self.jet_matching_distance * jetR:
 
@@ -400,15 +400,16 @@ class process_ang_mc(process_base.process_base):
       getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l_det)
     l_tru = lambda_beta_kappa(jet_truth, jetR, beta, 1)
 
-
     # soft drop jet
     jet_sd_det = sd.result(jet_det)
-    lsd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
+    jet_sd_tru = sd.result(jet_truth)
+
+    # lambda for soft drop jet
+    l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
     (pTmin, pTmax) = pT_bin(jet_sd_det.pt(), self.pTbins)
     if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
-      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(lsd_det)
-    jet_sd_tru = sd.result(jet_truth)
-    lsd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
+      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l_sd_det)
+    #l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
 
     '''
     JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
@@ -421,7 +422,7 @@ class process_ang_mc(process_base.process_base):
 
     getattr(self, ('hResponse_JetpT_R%s' % jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
 
-    x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, lambda_det, lambda_truth])
+    x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, l_det, l_tru])
     x_array = array('d', x)
     getattr(self, ('hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).replace('.', '')).Fill(x_array)
 
