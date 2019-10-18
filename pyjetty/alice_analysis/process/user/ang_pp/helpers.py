@@ -19,9 +19,9 @@ def lambda_beta_kappa(jet, jetR, beta, kappa):
                 for constit in jet.constituents() ] )
 
 # Helper function for finding the correct jet pT bin
-def pT_bin(self, jet_pT, pTbins):
+def pT_bin(jet_pT, pTbins):
   for i, pTmin in list(enumerate(pTbins))[0:-1]:
     pTmax = pTbins[i+1]
     if pTmin <= jet_pT < pTmax:
       return (pTmin, pTmax)
-  return (None, None)
+  return (-1, -1)

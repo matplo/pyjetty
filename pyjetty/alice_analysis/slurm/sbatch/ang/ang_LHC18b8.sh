@@ -13,13 +13,21 @@ else
 fi
 
 if [ "$2" != "" ]; then
-  OUTPUT_PREFIX=$2
-  echo "Output dir prefix: $OUTPUT_PREFIX"
+  JOB_ID=$2
+  echo "Job ID: $JOB_ID"
 else 
   echo "Wrong command line arguments"
 fi
 
+if [ "$3" != "" ]; then
+  TASK_ID=$3
+  echo "Task ID: $TASK_ID"
+else
+  echo "Wrong command line arguments"
+fi
+
 # Define output path from relevant sub-path of input file
+OUTPUT_PREFIX="AnalysisResults/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
 #echo $OUTPUT_SUFFIX
@@ -27,12 +35,15 @@ OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 #echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
-module use /software/users/ezra/heppy/modules
+module use /home/ezra/heppy/modules
 module load heppy/main_python
-module use /software/users/ezra/pyjetty/modules
+module use /home/ezra/pyjetty/modules
 module load pyjetty/main_python
 module list
 
 # Run python script via pipenv
-cd /software/users/ezra/pyjetty/pyjetty/alice_analysis
+cd /home/ezra/pyjetty/pyjetty/alice_analysis
 pipenv run python process/user/ang_pp/ang_mc.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+
+# Move stdout to appropriate folder
+mv /storage/u/alice/AnalysisResults/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/${JOB_ID}

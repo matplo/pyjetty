@@ -1,0 +1,60 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+##normalize self
+#logy 1
+#xrange 0, 250
+#y d#sigma/dV0M (mb)
+#x V0M (=V0AM + V0CM)
+#scalebwidth 1
+/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_inel.root 		:h_mV0uw :p +m50 : title=inel,,scale=78.1/20000.
+#/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_inel.root 		:h_mV0w :p +m50 : title=inel 1/w,,scale=1
+#/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_inel.root 		:h_mV0uw :hist  : title=inel n/w,,scale=1
+/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_hard.root 		:h_mV0uw :p +m50 : title=hard w/ #hat{p_{T}} bias (r=6 & p=4),,scale=16.89/34780.000
+/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_pthatmin6.root 		:h_mV0uw :p +m50 +a50 : title=hard w/ #hat{p_{T}} > 6,,scale=40.31/20000.
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title inel
+#legend 0.52,0.671,0.787,0.871, alpha=75
+##normalize self
+##scalebwidth 1
+#force_legend 1
+/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_inel.root 		:h_mV0uwpthard :colz +xprof[+k2 +p20 p] +yprof[+k2 +p24 p -0] noleg: title=#hat{p_{T}} vs. V0M +xprof[<#hat{p_{T}}>] +yprof[<V0M>]
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title hard w/ #hat{p_{T}} bias (r=6 & p=4)
+#legend 0.52,0.671,0.787,0.871, alpha=75
+##normalize self
+##scalebwidth 1
+#force_legend 1
+/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_hard.root 		:h_mV0uwpthard :colz +xprof[+k2 +p20 p] +yprof[+k2 +p24 p] noleg: title=#hat{p_{T}} vs. V0M +xprof[<#hat{p_{T}}>] +yprof[<V0M>]
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title hard w/ #hat{p_{T}} > 6
+#legend 0.52,0.671,0.787,0.871, alpha=75
+##normalize self
+##scalebwidth 1
+#force_legend 1
+/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_pthatmin6.root 		:h_mV0uwpthard :colz +xprof[+k2 +p20 p] +yprof[+k2 +p24 p -0] noleg: title=#hat{p_{T}} vs. V0M +xprof[<#hat{p_{T}}>] +yprof[<V0M>]
+
+##-----------------------
+##figure
+##geom 500x500
+##date
+##title: smart group
+##legend pos=ul alpha=0
+#/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_hard.root 		:h_t67_dphi :p  : title=TT 6-7
+#/Users/ploskon/devel/pyjetty/pyjetty/hjet/hjet_hard.root 		:h_t2030_dphi :p  : title=TT 20-30
+
