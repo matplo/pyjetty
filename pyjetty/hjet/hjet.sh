@@ -16,17 +16,20 @@ runs=$(seq 1 8)
 #parallel --joblog hjet_simple_hTT.log --keep-order --tag ./hjet_simple_mTT.py --noInel --charged --py-pthatmin {2} --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs} ::: ${pthats}
 
 run=${1}
-dryrun=""
-[ "x${2}" == "xdry" ] && dryrun="--dry-run"
 overw=""
 [ "x${2}" == "xoverwrite" ] && overw="--overwrite"
 if [ "x${run}" == "xrun" ]; then
-	runs=$(seq 1 2)
-	parallel ${dryrun} --joblog hjet_simple_hTT.log --keep-order --tag ./hjet_simple_mTT.py ${overw} --py-biasref 6 --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
-	runs=$(seq 1 2)
-	parallel ${dryrun} --joblog hjet_simple_hTT.log --keep-order --tag ./hjet_simple_mTT.py ${overw} --inel --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
-	runs=$(seq 1 2)
-	parallel ${dryrun} --joblog hjet_simple_hTT.log --keep-order --tag ./hjet_simple_mTT.py ${overw} --py-pthatmin 6. --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	njobs=${2}
+	dryrun=""
+	[ "x${2}" == "xdry" ] && dryrun="--dry-run" && njobs=${3}
+	[ "x${3}" == "xdry" ] && dryrun="--dry-run"
+	[ -z ${njobs} ] && njobs=1
+	set -x
+	runs=$(seq 1 ${njobs})
+	parallel ${dryrun} --joblog hjet_simple_hTT_hard.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-biasref 6 --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	parallel ${dryrun} --joblog hjet_simple_hTT_inel.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --inel --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	parallel ${dryrun} --joblog hjet_simple_hTT_pthat.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --py-pthatmin 6. --charged --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs}
+	set +x
 fi
 
 if [ "x${run}" == "xtdraw" ]; then
