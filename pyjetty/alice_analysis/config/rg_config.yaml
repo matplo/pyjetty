@@ -1,6 +1,10 @@
 # Analysis parameters
 debug_level: 0
+write_tree_output: False
+
 jetR: [0.4]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.0
 
 # SoftDrop (zcut, beta) configurations and final binnings (note: binnings only used during analysis)
 SoftDrop:
@@ -9,22 +13,29 @@ SoftDrop:
     beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
+    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     rg_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
+    zg_bins_truth: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    zg_bins_det: [0.1, 0.125, 0.15, 0.175, 0.2, 0.225, 0.25, 0.275, 0.3, 0.325, 0.35, 0.375, 0.4, 0.425, 0.45, 0.475, 0.5]
   config2:
     zcut: 0.1
     beta: 1
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
+    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     rg_bins_det: [0., 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
+    zg_bins_truth: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    zg_bins_det: [0.1, 0.125, 0.15, 0.175, 0.2, 0.225, 0.25, 0.275, 0.3, 0.325, 0.35, 0.375, 0.4, 0.425, 0.45, 0.475, 0.5]
   config3:
     zcut: 0.1
     beta: 2
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
+    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     rg_bins_det: [0., 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
+    zg_bins_truth: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    zg_bins_det: [0.1, 0.125, 0.15, 0.175, 0.2, 0.225, 0.25, 0.275, 0.3, 0.325, 0.35, 0.375, 0.4, 0.425, 0.45, 0.475, 0.5]
+force_rebin: False
 
 #constituent_subtractor:
 #  max_distance: 0.25
@@ -34,9 +45,6 @@ SoftDrop:
 #  max_pt_correct: 100
 #  ghost_area: 0.01
 
-jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
-reject_tracks_fraction: 0.0
-
 ###############################################################################
 
 # Unfolding parameters
@@ -44,20 +52,20 @@ reg_param: 5
 
 # Plotting parameters
 file_format: '.pdf'
-output_dir: '/home/alidock/theta_g/roounfold_rg_output_FINAL'
+output_dir: '/Users/jamesmulligan/alidock/theta_g/roounfold_rg_output_test'
 
-do_unfolding: False
+do_unfolding: True
 do_systematics: True
 do_plot_final_result: True
 
 # Paths to processing output, to be used for unfolding
-main_data: '/home/alidock/theta_g/AnalysisResults/LHC17pq/19626/AnalysisResultsFinal.root'
-main_response: '/home/alidock/theta_g/AnalysisResults/LHC18b8/19526/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC18b8/24309/AnalysisResultsFinal.root'
 
-trkeff_data: '/home/alidock/theta_g/AnalysisResults/LHC17pq/19626/AnalysisResultsFinal.root'
-trkeff_response: '/home/alidock/theta_g/AnalysisResults/LHC18b8_trkeff/19642/AnalysisResultsFinal.root'
+trkeff_data: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC18b8_trkeff/24509/AnalysisResultsFinal.root'
 
 # Theory comparisons
-pythia_20: '/home/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR___MPI_charged_output.root'
-pythia_40: '/home/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin40.0_hadrON____ISR___MPI_charged_output.root'
-pythia_60: '/home/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin60.0_hadrON____ISR___MPI_charged_output.root'
+pythia_20: '/Users/jamesmulligan/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR___MPI_charged_output.root'
+pythia_40: '/Users/jamesmulligan/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin40.0_hadrON____ISR___MPI_charged_output.root'
+pythia_60: '/Users/jamesmulligan/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin60.0_hadrON____ISR___MPI_charged_output.root'

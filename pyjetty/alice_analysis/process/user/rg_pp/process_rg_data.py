@@ -97,7 +97,7 @@ class process_rg_data(process_base.process_base):
       config = yaml.safe_load(stream)
     
     # Write tree output (default is to write only histograms)
-    self.write_tree_output = False
+    self.write_tree_output = config['write_tree_output']
     
     # Retrieve list of SD grooming settings
     sd_config_dict = config['SoftDrop']

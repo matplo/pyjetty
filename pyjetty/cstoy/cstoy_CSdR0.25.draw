@@ -11,8 +11,8 @@
 #logy 1
 # output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged_hout.root 		:h_dpt :p  : title=#delta p_{T} w/ #rho x A_{j}
 output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged_hout.root 		:h_dptcs :p  : title=#delta p_{T} w/ event CS
-output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged_hout.root 		:h_dptcs :p serror rect -k -l : title=#delta p_{T} w/ event CS
-output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged_hout.root 		:h_dptcs :hist graph  : title=#delta p_{T} w/ event CS
+#output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged_hout.root 		:h_dptcs :p serror rect -k -l : title=#delta p_{T} w/ event CS
+#output_alpha_0_dRmax_0.25_SDzcut_0.1_seed_merged_hout.root 		:h_dptcs :hist graph  : title=#delta p_{T} w/ event CS
 #-----------------------
 #figure
 #geom 500x500
