@@ -356,6 +356,8 @@ class analysis_utils(common_base.common_base):
     c = ROOT.TCanvas("c","c: hist",600,450)
     c.cd()
     ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.15)
+    ROOT.gPad.SetRightMargin(0.15)
     if setLogy:
       c.SetLogy()
     if setLogz:
@@ -367,7 +369,7 @@ class analysis_utils(common_base.common_base):
       textFit = ROOT.TLatex()
       textFit.SetTextSize(0.04)
       textFit.SetNDC()
-      textFit.DrawLatex(0.6,0.8,text)
+      textFit.DrawLatex(0.3,0.8,text)
     
     c.SaveAs(outputFilename)
     c.Close()

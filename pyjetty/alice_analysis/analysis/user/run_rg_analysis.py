@@ -494,7 +494,7 @@ class run_rg_analysis(common_base.common_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '  #z_{cut} = ' + str(zcut) + '  #beta = ' + str(beta) + '   | #eta_{jet}| < 0.5'
+    text = 'R = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.73, text)
 
@@ -506,16 +506,22 @@ class run_rg_analysis(common_base.common_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
+    text = '#it{z}_{cut} = ' + str(zcut) + '  #beta = ' + str(beta)
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.57, 0.59, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
     text_latex.SetTextSize(0.04)
     text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-    text_latex.DrawLatex(0.57, 0.59, text)
+    text_latex.DrawLatex(0.57, 0.52, text)
     
     if plot_pythia:
       text_latex = ROOT.TLatex()
       text_latex.SetNDC()
       text_latex.SetTextSize(0.04)
       text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
-      text_latex.DrawLatex(0.57, 0.59, text)
+      text_latex.DrawLatex(0.57, 0.52, text)
 
     myLegend = ROOT.TLegend(0.25,0.7,0.5,0.85)
     self.utils.setup_legend(myLegend,0.035)

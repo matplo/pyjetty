@@ -233,7 +233,7 @@ class roounfold_rg(analysis_base.analysis_base):
     # Unfold spectrum
     if hData_PerBin and hMC_Det and hMC_Truth:
       
-      self.unfoldJetSpectrum(jetR, sd_label)
+      self.unfoldJetSpectrum(jetR, sd_label, zcut, beta)
 
   #################################################################################################
   # Compute SD tagging rate, based on MC correction
@@ -315,7 +315,7 @@ class roounfold_rg(analysis_base.analysis_base):
   #################################################################################################
   # Unfold jet spectrum
   #################################################################################################
-  def unfoldJetSpectrum(self, jetR, sd_label):
+  def unfoldJetSpectrum(self, jetR, sd_label, zcut, beta):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -368,9 +368,9 @@ class roounfold_rg(analysis_base.analysis_base):
     fResult.Close()
     print('Done unfolding')
       
-    self.plot_unfolded_rg(jetR, sd_label)
+    self.plot_unfolded_rg(jetR, sd_label, zcut, beta)
 
-    self.plot_unfolded_pt(jetR, sd_label)
+    self.plot_unfolded_pt(jetR, sd_label, zcut, beta)
 
     #--------------------------------------------------------------
     
@@ -385,10 +385,10 @@ class roounfold_rg(analysis_base.analysis_base):
     for i in range(1, self.reg_param_final + 3):
       
       # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
-      self.plot_refolding_test(i, jetR, sd_label)
+      self.plot_refolding_test(i, jetR, sd_label, zcut, beta)
 
       # Unfold the smeared det-level result with response, and compare to truth-level MC.
-      self.plot_closure_test(i, jetR, sd_label)
+      self.plot_closure_test(i, jetR, sd_label, zcut, beta)
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
@@ -414,7 +414,7 @@ class roounfold_rg(analysis_base.analysis_base):
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
   #################################################################################################
-  def plot_unfolded_rg(self, jetR, sd_label):
+  def plot_unfolded_rg(self, jetR, sd_label, zcut, beta):
     
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
@@ -423,12 +423,12 @@ class roounfold_rg(analysis_base.analysis_base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.plot_rg(jetR, sd_label, min_pt_truth, max_pt_truth)
+      self.plot_rg(jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth)
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
   #################################################################################################
-  def plot_rg(self, jetR, sd_label, min_pt_truth, max_pt_truth):
+  def plot_rg(self, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -453,7 +453,7 @@ class roounfold_rg(analysis_base.analysis_base):
     myBlankHisto.SetXTitle('#theta_{g}')
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}')
-    myBlankHisto.SetMaximum(3)
+    myBlankHisto.SetMaximum(4)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
     
@@ -513,12 +513,12 @@ class roounfold_rg(analysis_base.analysis_base):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
-    text_latex.DrawLatex(0.45, 0.85, text)
+    text_latex.DrawLatex(0.25, 0.85, text)
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   ' + str(sd_label)
-    text_latex.DrawLatex(0.45, 0.75, text)
+    text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
+    text_latex.DrawLatex(0.25, 0.75, text)
     
     outputFilename = os.path.join(self.output_dir, 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
@@ -527,7 +527,7 @@ class roounfold_rg(analysis_base.analysis_base):
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
   #################################################################################################
-  def plot_unfolded_pt(self, jetR, sd_label):
+  def plot_unfolded_pt(self, jetR, sd_label, zcut, beta):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -609,8 +609,8 @@ class roounfold_rg(analysis_base.analysis_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   ' + str(sd_label)
-    text_latex.DrawLatex(0.45, 0.75, text)
+    text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
+    text_latex.DrawLatex(0.25, 0.75, text)
 
     outputFilename = os.path.join(self.output_dir, 'hUnfoldedPt_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
     c.SaveAs(outputFilename)
@@ -816,7 +816,7 @@ class roounfold_rg(analysis_base.analysis_base):
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_refolding_test(self, i, jetR, sd_label):
+  def plot_refolding_test(self, i, jetR, sd_label, zcut, beta):
     
     # In principle should use two statistically independent response matrices
     
@@ -835,12 +835,12 @@ class roounfold_rg(analysis_base.analysis_base):
       min_pt_det = det_pt_bin_array[bin]
       max_pt_det = det_pt_bin_array[bin+1]
       
-      self.plot_refolded_slice(hFoldedTruth, i, jetR, sd_label, min_pt_det, max_pt_det, output_dir_refolding)
+      self.plot_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, min_pt_det, max_pt_det, output_dir_refolding):
+  def plot_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding):
     
     hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
     hFolded_rg = hFoldedTruth.ProjectionY()
@@ -857,12 +857,12 @@ class roounfold_rg(analysis_base.analysis_base):
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
     outputFilename = os.path.join(output_dir_refolding, 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_det), int(max_pt_det), i, self.file_format))
-    self.plot_rg_ratio(hFolded_rg, hData_rg, None, yAxisTitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, sd_label, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_rg_ratio(hFolded_rg, hData_rg, None, yAxisTitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Closure test
   #################################################################################################
-  def plot_closure_test(self, i, jetR, sd_label):
+  def plot_closure_test(self, i, jetR, sd_label, zcut, beta):
     
     output_dir_closure = os.path.join(self.output_dir, 'ClosureTest')
     if not os.path.isdir(output_dir_closure):
@@ -882,12 +882,12 @@ class roounfold_rg(analysis_base.analysis_base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.plot_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, min_pt_truth, max_pt_truth, output_dir_closure)
+      self.plot_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, min_pt_truth, max_pt_truth, output_dir_closure):
+  def plot_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure):
     
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_rg = hUnfolded.ProjectionY()
@@ -903,7 +903,7 @@ class roounfold_rg(analysis_base.analysis_base):
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
     outputFilename = os.path.join(output_dir_closure, 'hClosure_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), i, self.file_format))
-    self.plot_rg_ratio(hUnfolded_rg, hMCTruth_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, sd_label, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_rg_ratio(hUnfolded_rg, hMCTruth_rg, None, yAxisTitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Get errors from measured spectrum, stored as dictionary {bin:error}
@@ -979,7 +979,7 @@ class roounfold_rg(analysis_base.analysis_base):
   #################################################################################################
   # Plot spectra and ratio of h (and h3, if supplied) to h2
   #################################################################################################
-  def plot_rg_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, sd_label, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
+  def plot_rg_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, sd_label, zcut, beta, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -988,7 +988,7 @@ class roounfold_rg(analysis_base.analysis_base):
     c.cd()
     pad1 = ROOT.TPad("pad1", "pad1", 0, 0.3, 1, 1.0)
     pad1.SetBottomMargin(0)
-    pad1.SetLeftMargin(0.15)
+    pad1.SetLeftMargin(0.2)
     pad1.SetRightMargin(0.05)
     pad1.SetTopMargin(0.05)
     pad1.Draw()
@@ -1026,7 +1026,7 @@ class roounfold_rg(analysis_base.analysis_base):
     pad2 = ROOT.TPad("pad2", "pad2", 0, 0.05, 1, 0.3)
     pad2.SetTopMargin(0)
     pad2.SetBottomMargin(0.35)
-    pad2.SetLeftMargin(0.15)
+    pad2.SetLeftMargin(0.2)
     pad2.SetRightMargin(0.05)
     pad2.Draw()
     pad2.cd()
@@ -1092,8 +1092,13 @@ class roounfold_rg(analysis_base.analysis_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   ' + str(sd_label)
+    text = 'R = ' + str(jetR)
     text_latex.DrawLatex(0.25, 0.75, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
+    text_latex.DrawLatex(0.25, 0.65, text)
 
     c.SaveAs(outputFilename)
     c.Close()
