@@ -123,8 +123,8 @@ class process_rg_mc(process_base.process_base):
       config = yaml.safe_load(stream)
     
     # Write tree output (default is to write only histograms)
-    self.write_tree_output = False
-    
+    self.write_tree_output = config['write_tree_output']
+
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
     

@@ -58,71 +58,6 @@ class roounfold_rg(analysis_base.analysis_base):
     print(self)
   
   #---------------------------------------------------------------
-  # Get responses, either from file or manually rebin
-  #---------------------------------------------------------------
-  def get_responses(self, rebin_response=False):
-    
-    response_file_name = os.path.join(self.output_dir, 'response.root')
-    if rebin_response:
-      f = ROOT.TFile(response_file_name, 'RECREATE')
-      f.Close()
-    
-    # Rebin response matrix, and create RooUnfoldResponse object
-    # THn response matrix is: (pt-det, pt-true, theta_g-det, theta_g-true)
-    for jetR in self.jetR_list:
-      for sd_setting in self.sd_settings:
-
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-
-        name_thn = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
-        name_thn_rebinned = 'hResponse_JetPt_ThetaG_R{}_{}_rebinned'.format(jetR, sd_label)
-        name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, sd_label)
-        name_data = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
-
-        # Retrieve desired binnings
-        n_pt_bins_det = getattr(self, 'n_pt_bins_det_{}'.format(sd_label))
-        det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(sd_label))
-        n_rg_bins_det = getattr(self, 'n_rg_bins_det_{}'.format(sd_label))
-        det_rg_bin_array = getattr(self, 'det_rg_bin_array_{}'.format(sd_label))
-        n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
-        truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
-        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
-        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
-        
-        # Rebin if requested, and write to file
-        thn = self.fResponse.Get(name_thn)
-        thn.SetName(name_thn)
-        setattr(self, name_thn, thn)
-        if rebin_response:
-          # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
-          
-          #tree_file_name = '/Users/jamesmulligan/alidock/theta_g/rganalysis_embed_PbPb/output_alpha_0_dRmax_0.25_SDzcut_0.2_emb.root'
-
-          
-          #self.utils.construct_response_from_ntuple(response_file_name, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
-          
-          self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
-        
-        # Also re-bin the data histogram
-        hData = self.fData.Get(name_data)
-        h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array)
-        name = '{}_{}'.format(name_data, 'rebinned')
-        setattr(self, name, h)
-        
-        # Retrieve responses from file
-        f = ROOT.TFile(response_file_name, 'READ')
-        thn_rebinned = f.Get(name_thn_rebinned)
-        #thn_rebinned.SetDirectory(0)
-        roounfold_response = f.Get(name_roounfold)
-        roounfold_response.UseOverflow(False)
-
-        setattr(self, name_thn_rebinned, thn_rebinned)
-        setattr(self, name_roounfold, roounfold_response)
-        f.Close()
-
-  #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
   def roounfold_rg(self):
@@ -147,6 +82,9 @@ class roounfold_rg(analysis_base.analysis_base):
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
+      
+      # Write tree output (default is to write only histograms)
+      self.write_tree_output = config['write_tree_output']
       
       # Retrieve list of SD grooming settings
       sd_config_dict = config['SoftDrop']
@@ -195,6 +133,72 @@ class roounfold_rg(analysis_base.analysis_base):
       self.max_pt_reported = 80
       self.regularizationParamName = 'n_iter'
       self.errorType = ROOT.RooUnfold.kCovToy
+
+  #---------------------------------------------------------------
+  # Get responses, either from file or manually rebin
+  #---------------------------------------------------------------
+  def get_responses(self, rebin_response=False):
+    
+    response_file_name = os.path.join(self.output_dir, 'response.root')
+    if rebin_response:
+      f = ROOT.TFile(response_file_name, 'RECREATE')
+      f.Close()
+        
+    # Rebin response matrix, and create RooUnfoldResponse object
+    # THn response matrix is: (pt-det, pt-true, theta_g-det, theta_g-true)
+    for jetR in self.jetR_list:
+      for sd_setting in self.sd_settings:
+        
+        zcut = sd_setting[0]
+        beta = sd_setting[1]
+        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+        
+        name_thn = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
+        name_thn_rebinned = 'hResponse_JetPt_ThetaG_R{}_{}_rebinned'.format(jetR, sd_label)
+        name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, sd_label)
+        name_data = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
+        
+        # Retrieve desired binnings
+        n_pt_bins_det = getattr(self, 'n_pt_bins_det_{}'.format(sd_label))
+        det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(sd_label))
+        n_rg_bins_det = getattr(self, 'n_rg_bins_det_{}'.format(sd_label))
+        det_rg_bin_array = getattr(self, 'det_rg_bin_array_{}'.format(sd_label))
+        n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
+        truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
+        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
+        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+        
+        # Rebin if requested, and write to file
+        thn = self.fResponse.Get(name_thn)
+        thn.SetName(name_thn)
+        setattr(self, name_thn, thn)
+        if rebin_response:
+          # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
+          
+          if self.write_tree_output:
+            tree_file_name = '/Users/jamesmulligan/alidock/theta_g/rganalysis_embed_PbPb/output_alpha_0_dRmax_0.25_SDzcut_0.2_emb.root'
+            
+            self.utils.construct_response_from_ntuple(response_file_name, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
+
+          else:
+            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, self.power_law_offset)
+          
+        # Also re-bin the data histogram
+        hData = self.fData.Get(name_data)
+        h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array)
+        name = '{}_{}'.format(name_data, 'rebinned')
+        setattr(self, name, h)
+
+        # Retrieve responses from file
+        f = ROOT.TFile(response_file_name, 'READ')
+        thn_rebinned = f.Get(name_thn_rebinned)
+        #thn_rebinned.SetDirectory(0)
+        roounfold_response = f.Get(name_roounfold)
+        roounfold_response.UseOverflow(False)
+
+        setattr(self, name_thn_rebinned, thn_rebinned)
+        setattr(self, name_roounfold, roounfold_response)
+        f.Close()
 
   ###################################################################################################
   # Unfold jet spectrum from a single output list
