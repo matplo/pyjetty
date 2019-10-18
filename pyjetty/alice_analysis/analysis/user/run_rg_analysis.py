@@ -50,9 +50,6 @@ class run_rg_analysis(common_base.common_base):
     
     self.force_rebin_response=config['force_rebin']
     
-    # Write tree output (default is to write only histograms)
-    self.write_tree_output = False
-    
     # Retrieve list of SD grooming settings
     self.jetR_list = config['jetR']
     sd_config_dict = config['SoftDrop']

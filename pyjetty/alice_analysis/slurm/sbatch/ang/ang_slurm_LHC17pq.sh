@@ -6,7 +6,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --array=1-100
 #SBATCH --mail-user=elesser@berkeley.edu --mail-type=ALL
-#SBATCH --output=/rstorage/u/alice/AnalysisResults/ang/slurm-%A_%a.out
+#SBATCH --output=/storage/u/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 FILE_PATHS='/rstorage/u/alice/LHC17pq/145/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
@@ -29,5 +29,5 @@ echo "STOP=$STOP"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun ang_LHC17pq.sh $FILE $((SLURM_ARRAY_JOB_ID)) $((SLURM_ARRAY_TASK_ID + 1))
+  srun ang_LHC17pq.sh $FILE $((SLURM_ARRAY_JOB_ID + 1)) $((SLURM_ARRAY_TASK_ID + 1))
 done

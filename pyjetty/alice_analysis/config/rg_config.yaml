@@ -1,6 +1,10 @@
 # Analysis parameters
 debug_level: 0
+write_tree_output: False
+
 jetR: [0.4]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.0
 
 # SoftDrop (zcut, beta) configurations and final binnings (note: binnings only used during analysis)
 SoftDrop:
@@ -41,9 +45,6 @@ force_rebin: False
 #  max_pt_correct: 100
 #  ghost_area: 0.01
 
-jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
-reject_tracks_fraction: 0.0
-
 ###############################################################################
 
 # Unfolding parameters
@@ -53,7 +54,7 @@ reg_param: 5
 file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/alidock/theta_g/roounfold_rg_output_test'
 
-do_unfolding: False
+do_unfolding: True
 do_systematics: True
 do_plot_final_result: True
 

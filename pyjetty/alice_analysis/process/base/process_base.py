@@ -39,7 +39,7 @@ class process_base(common_base.common_base):
     if not self.output_dir.endswith("/"):
       self.output_dir = self.output_dir + "/"
     if not os.path.exists(self.output_dir):
-      os.makedirs(self.output_dir)
+      os.makedirs(self.output_dir, 775)
 
     # Initialize utils class
     self.utils = process_utils.process_utils()
