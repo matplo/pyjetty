@@ -187,14 +187,18 @@ def generate():
 			args.output += '_pthatmin_{}'.format(args.py_pthatmin)
 		if args.inel:
 			args.output += '_inel'
-			mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
-			mycfg.append("HardQCD:all = off") # Andreas' recommendation
-		print (args)
-		if args.hard or ((args.py_minbias==False) and (args.inel==False)):
-			args.output += '_biasref_{}'.format(args.py_biasref)
-			args.output += '_hard'
-			mycfg.append("HardQCD:all = on") # Andreas' recommendation
+			mycfg.append("SoftQCD:inelastic = on") 
+			mycfg.append("HardQCD:all = off") 
+		else:
+			if args.hard:
+				args.output += '_biasref_{}'.format(args.py_biasref)
+				args.output += '_hard'
+				mycfg.append("HardQCD:all = on") 
+			else:
+				mycfg.append("HardQCD:all = on") 				
+				args.output += '_hard'
 		args.output += '.root'
+	print (args)
 
 	if os.path.exists(args.output):
 		if not args.overwrite:
