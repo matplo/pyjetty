@@ -154,7 +154,9 @@ def generate():
 	parser.add_argument('--charged', default=False, action='store_true')
 	parser.add_argument('--runid', default=0, type=int)
 	parser.add_argument('--tranges', default='6-7', help='hadron trigger ranges min-max,min1-max1,...', type=str)
-	parser.add_argument('--inel', default=False, action='store_true')
+	group = parser.add_mutually_exclusive_group()
+	group.add_argument('--inel', default=False, action='store_true')
+	group.add_argument('--hard', default=False, action='store_true')
 	pyconf.add_standard_pythia_args(parser)
 	args = parser.parse_args()	
 
@@ -170,6 +172,9 @@ def generate():
 			args.output = '{}/h_jet_ch_R{}'.format(args.output_dir, rs)
 		if args.tranges:
 			args.output += '_tranges_{}'.format(args.tranges.replace(',', "_"))
+		if args.runid > 0:
+			args.output += '_runid_{}'.format(args.runid)
+			args.py_seed = 1000 + args.runid
 		if args.py_noMPI:
 			args.output += '_noMPI'
 		if args.py_noISR:
@@ -178,28 +183,28 @@ def generate():
 			args.output += '_noHadr'
 		if args.py_minbias > 0:
 			args.output += '_minbias'
-		if args.runid > 0:
-			args.output += '_runid_{}'.format(args.runid)
-			args.py_seed = 1000 + args.runid
 		if args.py_pthatmin > 0:
 			args.output += '_pthatmin_{}'.format(args.py_pthatmin)
 			mycfg.append("HardQCD:all = on")
 			mycfg.append("SoftQCD:all = off")
-		else:
-			if args.inel:
-				args.output += '_inel'
-				args.py_pthatmin = 0.0
-				mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
-				mycfg.append("HardQCD:all = off") # Andreas' recommendation
-			else:
-				args.output += '_hard'
-				mycfg.append("HardQCD:all = on") # Andreas' recommendation
+		if args.inel:
+			args.output += '_inel'
+			args.py_pthatmin = 0.0
+			mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
+			mycfg.append("HardQCD:all = off") # Andreas' recommendation
+		print (args)
+		if args.hard or ((args.py_minbias==False) and (args.py_pthatmin <= 0) and (args.inel==False)):
+			args.output += '_biasref_{}'.format(args.py_biasref)
+			args.output += '_hard'
+			mycfg.append("HardQCD:all = on") # Andreas' recommendation
 		args.output += '.root'
 
 	if os.path.exists(args.output):
 		if not args.overwrite:
 			print('[w] output file', args.output, 'exists - skipping.')
 			return
+
+	print('[i] output file', args.output)
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()
