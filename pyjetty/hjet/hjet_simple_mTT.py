@@ -185,15 +185,12 @@ def generate():
 			args.output += '_minbias'
 		if args.py_pthatmin > 0:
 			args.output += '_pthatmin_{}'.format(args.py_pthatmin)
-			mycfg.append("HardQCD:all = on")
-			mycfg.append("SoftQCD:all = off")
 		if args.inel:
 			args.output += '_inel'
-			args.py_pthatmin = 0.0
 			mycfg.append("SoftQCD:inelastic = on") # Andreas' recommendation
 			mycfg.append("HardQCD:all = off") # Andreas' recommendation
 		print (args)
-		if args.hard or ((args.py_minbias==False) and (args.py_pthatmin <= 0) and (args.inel==False)):
+		if args.hard or ((args.py_minbias==False) and (args.inel==False)):
 			args.output += '_biasref_{}'.format(args.py_biasref)
 			args.output += '_hard'
 			mycfg.append("HardQCD:all = on") # Andreas' recommendation
