@@ -36,5 +36,5 @@ if [ "x${run}" == "xtdraw" ]; then
 	tdraw_cfg.py tdraw_hjet.cfg --clean
 	hadd -f hjet_hard.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_hard_houtput.root
 	hadd -f hjet_inel.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_inel_houtput.root
-	hadd -f hjet_pthatmin6.root h_jet_ch_R04_tranges_6-7_20-30_pthatmin6_runid_*_houtput.root
+	hadd -f hjet_pthatmin6.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_6.0_houtput.root
 fi
