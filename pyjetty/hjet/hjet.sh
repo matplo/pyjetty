@@ -15,6 +15,8 @@ runs=$(seq 1 8)
 #pthats="4 11 21 36 56 84 117 156 200 249 1000"
 #parallel --joblog hjet_simple_hTT.log --keep-order --tag ./hjet_simple_mTT.py --noInel --charged --py-pthatmin {2} --nev 10000 --tranges 6-7,20-30 --runid {1} ::: ${runs} ::: ${pthats}
 
+pthats="4 11 21 36 56 84 117 156 200 249 1000"
+
 run=${1}
 overw=""
 [ "x${2}" == "xoverwrite" ] && overw="--overwrite"
@@ -26,9 +28,9 @@ if [ "x${run}" == "xrun" ]; then
 	[ -z ${njobs} ] && njobs=1
 	set -x
 	runs=$(seq 1 ${njobs})
-	pthats="4 11 21 36 56 84 117 156 200 249 1000"
-	nev=100000
+	nev=10000
 	parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --inel --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} --py-pthatmin {2} ::: ${runs} ::: ${pthats}
+	parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} --py-pthatmin {2} ::: ${runs} ::: ${pthats}
 	nev=100000
 	parallel ${dryrun} --joblog hjet_simple_hTT_hard.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --hard --py-biasref 20 --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} ::: ${runs}
 	parallel ${dryrun} --joblog hjet_simple_hTT_hard.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --hard --py-biasref 6 --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} ::: ${runs}
@@ -42,4 +44,8 @@ if [ "x${run}" == "xtdraw" ]; then
 	hadd -f hjet_hard.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_hard_houtput.root
 	hadd -f hjet_inel.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_inel_houtput.root
 	hadd -f hjet_pthatmin6.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_6.0_houtput.root
+	for pth in ${pthats}
+	do
+		hadd -f hjet_pthatmin_${pth}_inel.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_${pth}.0_inel.root
+	done
 fi
