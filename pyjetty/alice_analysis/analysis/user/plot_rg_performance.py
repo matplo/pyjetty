@@ -129,23 +129,37 @@ class plot_rg_performance(common_base.common_base):
 
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
-    hRM = self.fMC.Get(name)
+    hRM_theta = self.fMC.Get(name)
+    
+    # (pt-det, pt-truth, theta_g-det, theta_g-truth)
+    name = 'hResponse_JetPt_zg_R{}_{}Scaled'.format(jetR, sd_label)
+    hRM_zg = self.fMC.Get(name)
     
     if self.fData:
       name = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
       hThetaG_JetPt = self.fData.Get(name)
       hThetaG_JetPt.Sumw2()
+    
+      name = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
+      hZg_JetPt = self.fData.Get(name)
+      hZg_JetPt.Sumw2()
     else:
       hThetaG_JetPt = None
+      hZg_JetPt = None
 
-    self.plot2D_statistics(hThetaG_JetPt.Clone(), jetR, sd_label)
+    self.plot2D_theta_statistics(hThetaG_JetPt.Clone(), jetR, sd_label)
+    self.plot2D_zg_statistics(hZg_JetPt.Clone(), jetR, sd_label)
 
-    self.plotRgProjection(hRM, hThetaG_JetPt, jetR, sd_label, zcut, beta, 20, 40)
-    self.plotRgProjection(hRM, hThetaG_JetPt, jetR, sd_label, zcut, beta, 40, 60)
-    self.plotRgProjection(hRM, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 20, 40)
+    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 40, 60)
+    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+
+    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 20, 40)
+    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 40, 60)
+    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 60, 80)
 
   #---------------------------------------------------------------
-  def plot2D_statistics(self, hThetaG_JetPt, jetR, sd_label):
+  def plot2D_theta_statistics(self, hThetaG_JetPt, jetR, sd_label):
 
     c = ROOT.TCanvas("c","c: hist",600,450)
     c.cd()
@@ -158,9 +172,27 @@ class plot_rg_performance(common_base.common_base):
     hThetaG_JetPt.RebinY(5)
     hThetaG_JetPt.Draw('text colz')
 
-    output_filename = os.path.join(self.output_dir, 'h2D_statistics_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+    output_filename = os.path.join(self.output_dir, 'h2D_theta_statistics_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
     c.SaveAs(output_filename)
     c.Close()
+  
+  #---------------------------------------------------------------
+  def plot2D_zg_statistics(self, hZg_JetPt, jetR, sd_label):
+    
+    czg = ROOT.TCanvas("czg","czg: hist",600,450)
+    czg.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    
+    hZg_JetPt.SetMarkerSize(0.5)
+    hZg_JetPt.GetYaxis().SetRangeUser(0, 0.5)
+    hZg_JetPt.GetXaxis().SetRangeUser(0, 100)
+    hZg_JetPt.RebinX(5)
+    hZg_JetPt.RebinY(5)
+    hZg_JetPt.Draw('text colz')
+    
+    output_filename = os.path.join(self.output_dir, 'h2D_zg_statistics_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+    czg.SaveAs(output_filename)
+    czg.Close()
 
   #---------------------------------------------------------------
   def plotRgProjection(self, hRM, hThetaG_JetPt, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det):
@@ -256,6 +288,100 @@ class plot_rg_performance(common_base.common_base):
     c.SaveAs(output_filename)
     c.Close()
 
+  #---------------------------------------------------------------
+  def plotZgProjection(self, hRM, hZg_JetPt, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det):
+  
+    rebin_val_det = 5
+    rebin_val_truth = 1
+    
+    # Get histogram of theta_g in data, for given pt-det cut
+    if hZg_JetPt:
+      hZg_JetPt.GetXaxis().SetRange(min_pt_det, max_pt_det)
+      hZg_data = hZg_JetPt.ProjectionY()
+      hZg_data.GetYaxis().SetTitle('#frac{dN}{dz_{g}}')
+      hZg_data.SetMarkerStyle(21)
+      hZg_data.SetMarkerSize(1)
+      self.utils.scale_by_integral(hZg_data)
+      hZg_data.Rebin(rebin_val_det)
+  
+    # Get histograms of theta_g in MC, for a given pt-det cut
+    hRM.GetAxis(0).SetRange(min_pt_det, max_pt_det)
+    
+    hZg_det = hRM.Projection(2)
+    hZg_det.SetName('hZg_det')
+    hZg_det.SetLineColor(2)
+    hZg_det.SetLineWidth(2)
+    self.utils.scale_by_integral(hZg_det)
+    hZg_det.Rebin(rebin_val_det)
+    
+    hZg_truth = hRM.Projection(3)
+    hZg_truth.SetName('hZg_truth')
+    hZg_truth.GetYaxis().SetTitle('#frac{dN}{dz_{g}}')
+    hZg_truth.SetLineColor(4)
+    hZg_truth.SetLineWidth(2)
+    self.utils.scale_by_integral(hZg_truth)
+    hZg_truth.Rebin(rebin_val_truth)
+    
+    # Draw histogram
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    hZg_truth.GetXaxis().SetRangeUser(0., 1.)
+    hZg_truth.GetYaxis().SetTitleOffset(1.5)
+    hZg_truth.SetMaximum(1.6*hZg_truth.GetMaximum())
+    hZg_truth.SetMinimum(0.)
+    
+    #if hZg_JetPt:
+    #hZg_data.Draw('E P')
+    hZg_truth.Draw('hist E same')
+    hZg_det.Draw('hist E same')
+    
+    leg = ROOT.TLegend(0.65,0.75,0.85,0.85, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    #if hZg_JetPt:
+    #leg.AddEntry(hZg_data, "data", "P")
+    leg.AddEntry(hZg_det, "MC det", "L")
+    leg.AddEntry(hZg_truth, "MC truth", "L")
+    leg.Draw("same")
+    
+    text = 'ALICE Simulation'
+    textFit = ROOT.TLatex()
+    textFit.SetNDC()
+    textFit.DrawLatex(0.3,0.85,text)
+    
+    text = 'R = {}'.format(jetR)
+    textFit = ROOT.TLatex()
+    textFit.SetTextSize(0.04)
+    textFit.SetNDC()
+    textFit.DrawLatex(0.3,0.8,text)
+    
+    text = '#it{z}_{cut} = ' + str(zcut) + '    #beta = ' + str(beta)
+    textFit = ROOT.TLatex()
+    textFit.SetTextSize(0.04)
+    textFit.SetNDC()
+    textFit.DrawLatex(0.3,0.75,text)
+    
+    text = 'p_{T, ch jet}^{det} = ' + '{}-{} GeV/c'.format(min_pt_det, max_pt_det)
+    textFit = ROOT.TLatex()
+    textFit.SetTextSize(0.035)
+    textFit.SetNDC()
+    textFit.DrawLatex(0.3,0.7,text)
+    
+    output_filename = os.path.join(self.output_dir, 'hZg_MC_R{}_{}_{}-{}.pdf'.format(self.utils.remove_periods(jetR), sd_label, min_pt_det, max_pt_det))
+    c.SaveAs(output_filename)
+    c.Close()
+  
   #---------------------------------------------------------------
   def plotDeltaR(self, jetR):
 
