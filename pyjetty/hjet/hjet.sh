@@ -28,7 +28,7 @@ if [ "x${run}" == "xrun" ]; then
 	[ -z ${njobs} ] && njobs=1
 	set -x
 	runs=$(seq 1 ${njobs})
-	nev=10000
+	nev=100000
 	parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --inel --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} --py-pthatmin {2} ::: ${runs} ::: ${pthats}
 	parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag ${PYJETTYDIR}/pyjetty/hjet/hjet_simple_mTT.py ${overw} --charged --nev ${nev} --tranges 6-7,20-30 --runid {1} --py-pthatmin {2} ::: ${runs} ::: ${pthats}
 	nev=100000
