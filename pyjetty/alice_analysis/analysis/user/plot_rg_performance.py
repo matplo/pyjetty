@@ -118,9 +118,11 @@ class plot_rg_performance(common_base.common_base):
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
         
         self.plotJER(jetR, sd_label)
+        self.plot_theta_resolution(jetR, sd_label)
+        self.plot_theta_residual(jetR, sd_label)
+        self.plot_zg_residual(jetR, sd_label)
         self.plotJetRecoEfficiency(jetR, sd_label)
         self.plotRg(jetR, sd_label, zcut, beta)
-
 
   #---------------------------------------------------------------
   def plotRg(self, jetR, sd_label, zcut, beta):
@@ -150,6 +152,7 @@ class plot_rg_performance(common_base.common_base):
     ROOT.gPad.SetLeftMargin(0.15)
     
     hThetaG_JetPt.SetMarkerSize(0.5)
+    hThetaG_JetPt.GetYaxis().SetRangeUser(0, 1.)
     hThetaG_JetPt.GetXaxis().SetRangeUser(0, 100)
     hThetaG_JetPt.RebinX(5)
     hThetaG_JetPt.RebinY(5)
@@ -322,6 +325,168 @@ class plot_rg_performance(common_base.common_base):
     histJER.SetMarkerStyle(21)
     histJER.SetMarkerColor(2)
     self.utils.plot_hist(histJER, outputFilename, "hist P")
+
+  #---------------------------------------------------------------
+  def plot_theta_resolution(self, jetR, sd_label):
+    
+    # (pt-det, pt-truth, theta_g-det, theta_g-truth)
+    name = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
+    hRM_4d = self.fMC.Get(name)
+    hRM = hRM_4d.GetAxis(1).SetRangeUser(40, 60)
+    hRM = hRM_4d.Projection(3,2)
+    hRM.SetName('hResponse_JetPt_ThetaG_R{}_{}_Proj_theta'.format(jetR, sd_label))
+    
+    # For each pT^gen, compute the standard deviation of the pT^det distribution
+    
+    # Get the pT^gen profile, with errors as standard deviation of pT^det distribution
+    histThetaGenProf = hRM.ProfileY("histThetaGenProff", 1, -1, "s")
+    
+    # Create histo to be used to fill JER values
+    nBins = 20
+    histThetaResolution = ROOT.TH1D('histThetaResolution_R{}_{}'.format(jetR, sd_label), 'histThetaResolution_R{}_{}'.format(jetR, sd_label), nBins, 0., 1.) # same binning for pT^gen as in task
+    
+    # Loop through the bins, and fill the JER
+    for bin in range(0,nBins+1):
+      sigma = histThetaGenProf.GetBinError(bin)
+      theta_gen = histThetaGenProf.GetXaxis().GetBinCenter(bin)
+      resolution = sigma/theta_gen
+      histThetaResolution.SetBinContent(bin, resolution)
+    
+      histThetaResolution.GetYaxis().SetTitle("#frac{#sigma(#theta_{g}^{gen})}{#theta_{g}^{gen}}")
+      histThetaResolution.GetXaxis().SetTitle("#theta_{g}^{gen}")
+      histThetaResolution.GetYaxis().SetRangeUser(-0.01, 1.)
+      histThetaResolution.GetXaxis().SetRangeUser(5., 100.)
+      outputFilename = os.path.join(self.output_dir, 'histThetaResolution_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+      histThetaResolution.SetMarkerStyle(21)
+      histThetaResolution.SetMarkerColor(2)
+      self.utils.plot_hist(histThetaResolution, outputFilename, "hist P")
+
+  #---------------------------------------------------------------
+  def plot_theta_residual(self, jetR, sd_label):
+
+    name = 'hThetaGResidual_JetPt_R{}_{}Scaled'.format(jetR, sd_label)
+    
+    c_theta_residual = ROOT.TCanvas("cJES","cJES: hist",600,450)
+    c_theta_residual.cd()
+    c_theta_residual.SetBottomMargin(0.17)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+    
+    hThetaResidual1 = self.get_residual_proj(name, 'hThetaResidual1', 20, 40)
+    hThetaResidual2 = self.get_residual_proj(name, 'hThetaResidual2', 40, 60)
+    hThetaResidual3 = self.get_residual_proj(name, 'hThetaResidual3', 60, 80)
+    
+    hThetaResidual1.SetMarkerStyle(20)
+    hThetaResidual2.SetMarkerStyle(21)
+    hThetaResidual3.SetMarkerStyle(22)
+    hThetaResidual1.SetMarkerColor(ColorArray[0])
+    hThetaResidual2.SetMarkerColor(ColorArray[1])
+    hThetaResidual3.SetMarkerColor(ColorArray[2])
+    hThetaResidual1.SetLineColor(ColorArray[0])
+    hThetaResidual2.SetLineColor(ColorArray[1])
+    hThetaResidual3.SetLineColor(ColorArray[2])
+    
+    hThetaResidual1.GetXaxis().SetTitleOffset(1.6);
+    hThetaResidual1.GetYaxis().SetTitle("Probability density")
+    
+    hThetaResidual1.GetYaxis().SetRangeUser(0, 20.)
+    hThetaResidual1.DrawCopy("P E")
+    hThetaResidual2.DrawCopy("P E same")
+    hThetaResidual3.DrawCopy("P E same")
+    
+    leg = ROOT.TLegend(0.55,0.55,0.88,0.85, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    leg.AddEntry(hThetaResidual1, "#it{p}_{T}^{gen} = 20-40 GeV", "P")
+    leg.AddEntry(hThetaResidual2, "#it{p}_{T}^{gen} = 40-60 GeV", "P")
+    leg.AddEntry(hThetaResidual3, "#it{p}_{T}^{gen} = 60-80 GeV", "P")
+    leg.Draw("same")
+    
+    outputFilename = os.path.join(self.output_dir, 'histThetaResidual_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+    c_theta_residual.SaveAs(outputFilename)
+    c_theta_residual.Close()
+
+  #---------------------------------------------------------------
+  # Get JES shift distribution for a fixed pT-gen
+  def get_residual_proj(self, name, label, minPt, maxPt):
+    
+    h_residual_pt = self.fMC.Get(name)
+    h_residual_pt.SetName('{}_{}'.format(h_residual_pt.GetName(), label))
+    
+    h_residual_pt.GetXaxis().SetRangeUser(minPt, maxPt)
+    h_residual_pt.GetYaxis().SetRangeUser(-0.5, 0.5)
+    h = h_residual_pt.ProjectionY()
+    
+    integral = h.Integral()
+    if integral > 0:
+      h.Scale(1./integral, 'width')
+    
+    return h
+  
+  #---------------------------------------------------------------
+  def plot_zg_residual(self, jetR, sd_label):
+    
+    name = 'hZgResidual_JetPt_R{}_{}Scaled'.format(jetR, sd_label)
+    
+    c_zg_residual = ROOT.TCanvas("cJES","cJES: hist",600,450)
+    c_zg_residual.cd()
+    c_zg_residual.SetBottomMargin(0.17)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+    
+    hZgResidual1 = self.get_residual_proj(name, 'hZgResidual1', 20, 40)
+    hZgResidual2 = self.get_residual_proj(name, 'hZgResidual2', 40, 60)
+    hZgResidual3 = self.get_residual_proj(name, 'hZgResidual3', 60, 80)
+    
+    hZgResidual1.SetMarkerStyle(20)
+    hZgResidual2.SetMarkerStyle(21)
+    hZgResidual3.SetMarkerStyle(22)
+    hZgResidual1.SetMarkerColor(ColorArray[0])
+    hZgResidual2.SetMarkerColor(ColorArray[1])
+    hZgResidual3.SetMarkerColor(ColorArray[2])
+    hZgResidual1.SetLineColor(ColorArray[0])
+    hZgResidual2.SetLineColor(ColorArray[1])
+    hZgResidual3.SetLineColor(ColorArray[2])
+    
+    hZgResidual1.GetXaxis().SetTitleOffset(1.6);
+    hZgResidual1.GetYaxis().SetTitle("Probability density")
+    
+    hZgResidual1.GetYaxis().SetRangeUser(0, 20.)
+    hZgResidual1.DrawCopy("P E")
+    hZgResidual2.DrawCopy("P E same")
+    hZgResidual3.DrawCopy("P E same")
+    
+    leg = ROOT.TLegend(0.55,0.55,0.88,0.85, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    leg.AddEntry(hZgResidual1, "#it{p}_{T}^{gen} = 20-40 GeV", "P")
+    leg.AddEntry(hZgResidual2, "#it{p}_{T}^{gen} = 40-60 GeV", "P")
+    leg.AddEntry(hZgResidual3, "#it{p}_{T}^{gen} = 60-80 GeV", "P")
+    leg.Draw("same")
+    
+    outputFilename = os.path.join(self.output_dir, 'histZgResidual_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+    c_zg_residual.SaveAs(outputFilename)
+    c_zg_residual.Close()
 
   #---------------------------------------------------------------
   def plotJES(self, jetR):
