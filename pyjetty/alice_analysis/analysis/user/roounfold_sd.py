@@ -462,21 +462,23 @@ class roounfold_sd(analysis_base.analysis_base):
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
 
-    for bin in range(1, n_pt_bins_truth-1):
+    for bin in range(1, n_pt_bins_truth-3):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
       self.plot_observable(jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth)
+      self.plot_observable(jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, option = 'ratio')
+      self.plot_observable(jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, option = 'uncertainties')
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
   #################################################################################################
-  def plot_observable(self, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
+  def plot_observable(self, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, option = ''):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
     
-    name = 'cResult_R{}_{}_{}-{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'cResult{}_R{}_{}_{}-{}'.format(option, jetR, sd_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
     
@@ -498,6 +500,14 @@ class roounfold_sd(analysis_base.analysis_base):
     myBlankHisto.SetYTitle(self.ytitle)
     myBlankHisto.SetMaximum(4)
     myBlankHisto.SetMinimum(0.)
+    if option == 'ratio':
+      myBlankHisto.SetMaximum(1.2)
+      myBlankHisto.SetMinimum(0.9)
+      myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter}-1)}')
+    if option == 'uncertainties':
+      myBlankHisto.SetMaximum(40)
+      myBlankHisto.SetMinimum(0.)
+      myBlankHisto.SetYTitle('statistical uncertainty (%)')
     myBlankHisto.Draw("E")
     
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
@@ -505,14 +515,17 @@ class roounfold_sd(analysis_base.analysis_base):
     
     for i in range(1, self.reg_param_final + 3):
       
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, sd_label, i)
-      h2D = getattr(self, name)
-      h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-      h = h2D.ProjectionY()
+      h = self.get_unfolded_result(jetR, sd_label, i, min_pt_truth, max_pt_truth, option)
       
-      # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
-      n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
-      h.Scale(1./n_jets_inclusive, 'width')
+      if option == 'ratio':
+        if i > 1:
+          h_previous = self.get_unfolded_result(jetR, sd_label, i-1, min_pt_truth, max_pt_truth, option)
+          h.Divide(h_previous)
+        else:
+          continue
+    
+      if option == 'uncertainties':
+        h = self.get_unfolded_result_uncertainties(jetR, sd_label, i, min_pt_truth, max_pt_truth, option)
       
       if i == 1:
         h.SetMarkerSize(1.5)
@@ -545,13 +558,27 @@ class roounfold_sd(analysis_base.analysis_base):
       h.SetLineStyle(1)
       h.SetLineWidth(2)
       h.SetLineColor(600-6+i)
-      
-      h.DrawCopy('PE X0 same')
+
+      # Doesn't work for some reason...
+      #shift = 0.5*h.GetBinWidth(1)
+      #h.GetXaxis().SetLimits(truth_bin_array[0]+shift,truth_bin_array[-1]+shift)
+
+      if option == 'ratio':
+        h.DrawCopy('P hist X0 same')
+      else:
+        h.DrawCopy('PE X0 same')
       
       label = '{} = {}'.format(self.regularizationParamName, i)
       leg.AddEntry(h, label, 'Pe')
 
     leg.Draw()
+    
+    if option == 'ratio':
+      line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
+      line.SetLineColor(920+2)
+      line.SetLineStyle(2)
+      line.SetLineWidth(4)
+      line.Draw()
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -563,9 +590,41 @@ class roounfold_sd(analysis_base.analysis_base):
     text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
     text_latex.DrawLatex(0.25, 0.75, text)
     
-    outputFilename = os.path.join(self.output_dir, 'hUnfolded_{}_R{}_{}_{}-{}{}'.format(self.observable, self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+    outputFilename = os.path.join(self.output_dir, 'hUnfolded{}_{}_R{}_{}_{}-{}{}'.format(option, self.observable, self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
+
+  #################################################################################################
+  # Get unfolded result in 1D, for fixed slice of pt
+  #################################################################################################
+  def get_unfolded_result(self, jetR, sd_label, i, min_pt_truth, max_pt_truth, option):
+
+    name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, sd_label, i)
+    h2D = getattr(self, name)
+    h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    h = h2D.ProjectionY()
+    h.SetName('{}_{}'.format(h.GetName(), option))
+    
+    # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
+    n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
+    h.Scale(1./n_jets_inclusive, 'width')
+    
+    return h
+  
+  #################################################################################################
+  # Get unfolded result uncertainties in 1D, for fixed slice of pt
+  #################################################################################################
+  def get_unfolded_result_uncertainties(self, jetR, sd_label, i, min_pt_truth, max_pt_truth, option):
+  
+    h = self.get_unfolded_result(jetR, sd_label, i, min_pt_truth, max_pt_truth, option)
+  
+    for bin in range(1, h.GetNbinsX()+1):
+      content = h.GetBinContent(bin)
+      uncertainty = h.GetBinError(bin)
+      h.SetBinContent(bin, uncertainty/content * 100)
+      h.SetBinError(bin, 0)
+
+    return h
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)

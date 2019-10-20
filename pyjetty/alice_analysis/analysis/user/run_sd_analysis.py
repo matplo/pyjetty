@@ -118,7 +118,7 @@ class run_sd_analysis(common_base.common_base):
 
     # Set which systematics should be performed
     self.systematics_list = [self.kMain, self.kPrior1, self.kTrackEff]
-      
+    
     # Load paths to processing output, to be unfolded
     self.main_data = config['main_data']
     self.main_response = config['main_response']
@@ -269,22 +269,24 @@ class run_sd_analysis(common_base.common_base):
     setattr(self, name, hRegParam2)
     
     # Get trkeff result
-    output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
-    path_trkeff = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
-    fTrkEff = ROOT.TFile(path_trkeff, 'READ')
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
-    hTrkEff = fTrkEff.Get(name)
-    hTrkEff.SetDirectory(0)
-    setattr(self, '{}_trkeff'.format(name), hTrkEff)
+    if self.kTrackEff in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
+      path_trkeff = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      fTrkEff = ROOT.TFile(path_trkeff, 'READ')
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
+      hTrkEff = fTrkEff.Get(name)
+      hTrkEff.SetDirectory(0)
+      setattr(self, '{}_trkeff'.format(name), hTrkEff)
     
     # Get prior result
-    output_dir = getattr(self, 'output_dir_prior_{}'.format(observable))
-    path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
-    fPrior1 = ROOT.TFile(path_prior1, 'READ')
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
-    hPrior1 = fPrior1.Get(name)
-    hPrior1.SetDirectory(0)
-    setattr(self, '{}_prior1'.format(name), hPrior1)
+    if self.kPrior1 in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_prior_{}'.format(observable))
+      path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      fPrior1 = ROOT.TFile(path_prior1, 'READ')
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
+      hPrior1 = fPrior1.Get(name)
+      hPrior1.SetDirectory(0)
+      setattr(self, '{}_prior1'.format(name), hPrior1)
     
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
@@ -341,14 +343,16 @@ class run_sd_analysis(common_base.common_base):
     hRegParam2 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
-    name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, sd_label, self.reg_param_final)
-    name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hTrkEff = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    if self.kTrackEff in self.systematics_list:
+      name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, sd_label, self.reg_param_final)
+      name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hTrkEff = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior1
-    name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, sd_label, self.reg_param_final)
-    name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hPrior1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    if self.kPrior1 in self.systematics_list:
+      name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, sd_label, self.reg_param_final)
+      name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hPrior1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     #------------------------------------
     # Compute systematics
@@ -378,16 +382,18 @@ class run_sd_analysis(common_base.common_base):
     self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
     # Prior
-    name = 'hSystematic_{}_Prior1_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hSystematic_Prior1 = hMain.Clone()
-    hSystematic_Prior1.SetName(name)
-    hSystematic_Prior1.Divide(hPrior1)
-    self.change_to_per(hSystematic_Prior1)
-    setattr(self, name, hSystematic_Prior1)
-    
-    output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-    self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
+    hSystematic_Prior1 = None
+    if self.kPrior1 in self.systematics_list:
+      name = 'hSystematic_{}_Prior1_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hSystematic_Prior1 = hMain.Clone()
+      hSystematic_Prior1.SetName(name)
+      hSystematic_Prior1.Divide(hPrior1)
+      self.change_to_per(hSystematic_Prior1)
+      setattr(self, name, hSystematic_Prior1)
+      
+      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
     
     # Add shape uncertainties in quadrature
     hSystematic_Shape = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1)
@@ -400,26 +406,30 @@ class run_sd_analysis(common_base.common_base):
     setattr(self, name, hResult_shape)
     
     # Trk eff
-    name = 'hSystematic_{}_TrkEff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hSystematic_TrkEff = hMain.Clone()
-    hSystematic_TrkEff.SetName(name)
-    hSystematic_TrkEff.Divide(hTrkEff)
-    self.change_to_per(hSystematic_TrkEff)
-    setattr(self, name, hSystematic_TrkEff)
+    if self.kTrackEff in self.systematics_list:
+      name = 'hSystematic_{}_TrkEff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hSystematic_TrkEff = hMain.Clone()
+      hSystematic_TrkEff.SetName(name)
+      hSystematic_TrkEff.Divide(hTrkEff)
+      self.change_to_per(hSystematic_TrkEff)
+      setattr(self, name, hSystematic_TrkEff)
+      
+      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
     
-    output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-    self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
-  
-    name = 'hResult_{}_trkeff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hResult_trkeff = hMain.Clone()
-    hResult_trkeff.SetName(name)
-    hResult_trkeff.SetDirectory(0)
-    self.AttachErrToHist(hResult_trkeff, hSystematic_TrkEff)
-    setattr(self, name, hResult_trkeff)
+      name = 'hResult_{}_trkeff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hResult_trkeff = hMain.Clone()
+      hResult_trkeff.SetName(name)
+      hResult_trkeff.SetDirectory(0)
+      self.AttachErrToHist(hResult_trkeff, hSystematic_TrkEff)
+      setattr(self, name, hResult_trkeff)
 
   #----------------------------------------------------------------------
   def add_in_quadrature(self, h1, h2):
+  
+    if not h2:
+      return h1
   
     h_new = h1.Clone()
     h_new.SetName('{}_new'.format(h1.GetName()))
@@ -530,12 +540,14 @@ class run_sd_analysis(common_base.common_base):
     h_shape.SetFillStyle(1001)
     h_shape.Draw('E2 same')
     
-    h_corr = getattr(self, 'hResult_{}_trkeff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
-    h_corr.SetFillStyle(0)
-    h_corr.SetLineColor(color)
-    h_corr.SetMarkerColorAlpha(color, 0)
-    h_corr.SetLineWidth(1)
-    h_corr.Draw('E2 same')
+    h_corr = None
+    if self.kTrackEff in self.systematics_list:
+      h_corr = getattr(self, 'hResult_{}_trkeff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+      h_corr.SetFillStyle(0)
+      h_corr.SetLineColor(color)
+      h_corr.SetMarkerColorAlpha(color, 0)
+      h_corr.SetLineWidth(1)
+      h_corr.Draw('E2 same')
   
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
