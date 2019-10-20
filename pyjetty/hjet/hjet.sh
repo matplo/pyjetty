@@ -41,11 +41,27 @@ fi
 
 if [ "x${run}" == "xtdraw" ]; then
 	tdraw_cfg.py tdraw_hjet.cfg --clean
-	hadd -f hjet_hard.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_hard_houtput.root
-	hadd -f hjet_inel.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_inel_houtput.root
-	hadd -f hjet_pthatmin6.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_6.0_houtput.root
+fi
+
+if [ "x${run}" == "xhadd" ]; then
+	_slist=$(ls h_jet_ch_R04_tranges_6-7_20-30_runid_*_hard_houtput.root)
+	if [ ! -z "${_slist}" ]; then
+		hadd -f hjet_hard.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_hard_houtput.root
+	fi
+	_slist=$(ls h_jet_ch_R04_tranges_6-7_20-30_runid_*_inel_houtput.root)
+	if [ ! -z "${_slist}" ]; then
+		hadd -f hjet_inel.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_inel_houtput.root
+	fi
+	_slist=$(ls h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_6.0_houtput.root)
+	if [ ! -z "${_slist}" ]; then
+		hadd -f hjet_pthatmin6.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_6.0_houtput.root
+	fi
 	for pth in ${pthats}
 	do
-		hadd -f hjet_pthatmin_${pth}_inel.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_${pth}.0_inel.root
+		# hadd -f hjet_pthatmin_${pth}_inel.root h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_${pth}.0_inel.root
+		_slist=$(ls h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_${pth}.0_hard_houtput.root)
+		if [ ! -z "${_slist}" ]; then
+			hadd -f hjet_pthatmin_${pth}_hard.root ${_slist}
+		fi
 	done
 fi

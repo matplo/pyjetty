@@ -17,7 +17,7 @@ import pythiafjext
 import pythiaext
 
 import ROOT
-import treewriter
+from pyjetty.mputils import RTreeWriter
 
 def main():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
@@ -27,6 +27,7 @@ def main():
 	parser.add_argument('--dry', default=False, action='store_true')
 	parser.add_argument('--overwrite', default=False, action='store_true')
 	parser.add_argument('--charged', default=False, action='store_true')
+	parser.add_argument('--runid', default=0, type=int)
 	args = parser.parse_args()
 
 	if args.output is None:
@@ -36,12 +37,12 @@ def main():
 			if hlevel == 'on': 
 				hlevel = 'on_'
 		isrlevel = '__ISR'
-		if args.noISR:
+		if args.py_noISR:
 			isrlevel = 'noISR'
 		mpilevel = '__MPI'
-		if args.noMPI:
+		if args.py_noMPI:
 			mpilevel = 'noMPI'
-		args.output = "pythia_rg_jetR{}_pthatmin{}_hadr{}_{}_{}.root".format(args.jetR, args.pthatmin, hlevel.upper(), isrlevel, mpilevel)
+		args.output = "pythia_rg_jetR{}_pthatmin{}_runid{}_hadr{}_{}_{}.root".format(args.jetR, args.py_pthatmin, args.runid, hlevel.upper(), isrlevel, mpilevel)
 		if args.charged:
 			args.output = args.output.replace('.root', '_charged.root')
 	print('[i] output goes to:', args.output)
@@ -77,8 +78,8 @@ def main():
 		args.nev = 1
 
 	fout = ROOT.TFile(args.output, 'recreate')
-	jet_output = treewriter.RTreeWriter(tree_name='tjet', fout=fout)
-	event_output = treewriter.RTreeWriter(tree_name='tev', fout=fout)
+	jet_output = RTreeWriter(tree_name='tjet', fout=fout)
+	event_output = RTreeWriter(tree_name='tev', fout=fout)
 
 	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
@@ -91,14 +92,27 @@ def main():
 
 		jets = jet_selector(jet_def(parts))
 
+		ev_s = pythia.info.sigmaGen()
+		ev_s_err = pythia.info.sigmaErr()
+		ev_w = pythia.info.weight()
+		ev_code = pythia.info.code()
+		pthard = pythia.info.pTHat()
+
 		event_output.fill_branch('ev_id', iev)
-		event_output.fill_branch('sigma', pythia.info.sigmaGen())
-		event_output.fill_branch('sigma_err', pythia.info.sigmaErr())
+		event_output.fill_branch('sigma', ev_s)
+		event_output.fill_branch('sigmaErr', ev_s_err)
+		event_output.fill_branch('weight', ev_w)
+		event_output.fill_branch('code', ev_code)
+		event_output.fill_branch('pthard', pthard)
 		event_output.fill_tree()
 
 		for i,j in enumerate(jets):
 			jet_output.fill_branch('ev_id', iev)
-			jet_output.fill_branch('sigma', pythia.info.sigmaGen())
+			jet_output.fill_branch('sigma', ev_s)
+			jet_output.fill_branch('sigmaErr', ev_s_err)
+			jet_output.fill_branch('weight', ev_w)
+			jet_output.fill_branch('code', ev_code)
+			jet_output.fill_branch('pthard', pthard)
 			jet_output.fill_branch('jet', j)
 			for isd, sd in enumerate(sds):
 				j_sd = sd.result(j)
