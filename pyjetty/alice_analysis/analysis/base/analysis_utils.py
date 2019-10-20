@@ -279,6 +279,28 @@ class analysis_utils(common_base.common_base):
       print('Integral is 0, check for problem')
 
   #---------------------------------------------------------------
+  # Get regularization parameter
+  #---------------------------------------------------------------
+  def get_reg_param(self, sd_settings, sd_config_list, sd_config_dict, sd_label, observable, jetR):
+    
+    for i, sd_setting in enumerate(sd_settings):
+      
+      zcut = sd_setting[0]
+      beta = sd_setting[1]
+      label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
+      if label == sd_label:
+        
+        config_name = sd_config_list[i]
+        
+        reg_param = sd_config_dict[config_name]['reg_param'][observable][jetR]
+        #print('reg_param for {} {} jetR={}: {}'.format(sd_label, observable, jetR, reg_param))
+          
+        return reg_param
+      
+      else:
+        continue
+
+  #---------------------------------------------------------------
   # Remove periods from a label
   #---------------------------------------------------------------
   def remove_periods(self, text):

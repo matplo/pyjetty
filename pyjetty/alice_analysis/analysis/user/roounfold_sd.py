@@ -89,9 +89,9 @@ class roounfold_sd(analysis_base.analysis_base):
       
       # Retrieve list of SD grooming settings
       self.jetR_list = config['jetR']
-      sd_config_dict = config['SoftDrop']
-      sd_config_list = list(sd_config_dict.keys())
-      self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
+      self.sd_config_dict = config['SoftDrop']
+      self.sd_config_list = list(self.sd_config_dict.keys())
+      self.sd_settings = [[self.sd_config_dict[name]['zcut'], self.sd_config_dict[name]['beta']] for name in self.sd_config_list]
       
       if self.observable == 'theta_g':
         self.xtitle = '#theta_{g}'
@@ -106,10 +106,10 @@ class roounfold_sd(analysis_base.analysis_base):
         zcut = sd_setting[0]
         beta = sd_setting[1]
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        config_name = sd_config_list[i]
+        config_name = self.sd_config_list[i]
         
-        pt_bins_det = (sd_config_dict[config_name]['pt_bins_det'])
-        pt_bins_truth = (sd_config_dict[config_name]['pt_bins_truth'])
+        pt_bins_det = (self.sd_config_dict[config_name]['pt_bins_det'])
+        pt_bins_truth = (self.sd_config_dict[config_name]['pt_bins_truth'])
         n_pt_bins_det = len(pt_bins_det) - 1
         setattr(self, 'n_pt_bins_det_{}'.format(sd_label), n_pt_bins_det)
         n_pt_bins_truth = len(pt_bins_truth) - 1
@@ -120,8 +120,8 @@ class roounfold_sd(analysis_base.analysis_base):
         setattr(self, 'truth_pt_bin_array_{}'.format(sd_label), truth_pt_bin_array)
           
         if self.observable == 'theta_g':
-          rg_bins_det = (sd_config_dict[config_name]['rg_bins_det'])
-          rg_bins_truth = (sd_config_dict[config_name]['rg_bins_truth'])
+          rg_bins_det = (self.sd_config_dict[config_name]['rg_bins_det'])
+          rg_bins_truth = (self.sd_config_dict[config_name]['rg_bins_truth'])
           n_rg_bins_det = len(rg_bins_det) - 1
           setattr(self, 'n_bins_det_{}'.format(sd_label), n_rg_bins_det)
           n_rg_bins_truth = len(rg_bins_truth) - 1
@@ -131,8 +131,8 @@ class roounfold_sd(analysis_base.analysis_base):
           truth_rg_bin_array = array('d',rg_bins_truth)
           setattr(self, 'truth_bin_array_{}'.format(sd_label), truth_rg_bin_array)
         if self.observable == 'zg':
-          zg_bins_det = (sd_config_dict[config_name]['zg_bins_det'])
-          zg_bins_truth = (sd_config_dict[config_name]['zg_bins_truth'])
+          zg_bins_det = (self.sd_config_dict[config_name]['zg_bins_det'])
+          zg_bins_truth = (self.sd_config_dict[config_name]['zg_bins_truth'])
           n_zg_bins_det = len(zg_bins_det) - 1
           setattr(self, 'n_bins_det_{}'.format(sd_label), n_zg_bins_det)
           n_zg_bins_truth = len(zg_bins_truth) - 1
@@ -161,7 +161,6 @@ class roounfold_sd(analysis_base.analysis_base):
           setattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, sd_label), name_data_rebinned)
           setattr(self, 'name_roounfold_R{}_{}'.format(jetR, sd_label), name_roounfold)
             
-      self.reg_param_final = config['reg_param']
       self.min_pt_reported = 20
       self.max_pt_reported = 80
       self.regularizationParamName = 'n_iter'
@@ -379,7 +378,9 @@ class roounfold_sd(analysis_base.analysis_base):
     fResult_name = getattr(self, 'fResult_name_R{}_{}'.format(jetR, sd_label))
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
     
-    for i in range(1, self.reg_param_final + 3):
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, self.observable, jetR)
+    
+    for i in range(1, reg_param_final + 3):
       
       # Set up the Bayesian unfolding object
       unfoldBayes = ROOT.RooUnfoldBayes(response, hData, i)
@@ -425,7 +426,7 @@ class roounfold_sd(analysis_base.analysis_base):
     self.smearSpectrum(hMC_Det, measuredErrors)
 
     # Loop over values of regularization parameter to do unfolding checks
-    for i in range(1, self.reg_param_final + 3):
+    for i in range(1, reg_param_final + 3):
       
       # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
       self.plot_refolding_test(i, jetR, sd_label, zcut, beta)
@@ -512,8 +513,10 @@ class roounfold_sd(analysis_base.analysis_base):
     
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
+
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, self.observable, jetR)
     
-    for i in range(1, self.reg_param_final + 3):
+    for i in range(1, reg_param_final + 3):
       
       h = self.get_unfolded_result(jetR, sd_label, i, min_pt_truth, max_pt_truth, option)
       
@@ -661,7 +664,9 @@ class roounfold_sd(analysis_base.analysis_base):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
     
-    for i in range(1, self.reg_param_final + 3):
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, self.observable, jetR)
+    
+    for i in range(1, reg_param_final + 3):
       
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, sd_label, i)
       h2D = getattr(self, name)

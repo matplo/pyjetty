@@ -56,9 +56,9 @@ class run_sd_analysis(common_base.common_base):
     
     # Retrieve list of SD grooming settings
     self.jetR_list = config['jetR']
-    sd_config_dict = config['SoftDrop']
-    sd_config_list = list(sd_config_dict.keys())
-    self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
+    self.sd_config_dict = config['SoftDrop']
+    self.sd_config_list = list(self.sd_config_dict.keys())
+    self.sd_settings = [[self.sd_config_dict[name]['zcut'], self.sd_config_dict[name]['beta']] for name in self.sd_config_list]
     
     for observable in self.observables:
     
@@ -77,9 +77,9 @@ class run_sd_analysis(common_base.common_base):
       zcut = sd_setting[0]
       beta = sd_setting[1]
       sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-      config_name = sd_config_list[i]
+      config_name = self.sd_config_list[i]
       
-      pt_bins_truth = (sd_config_dict[config_name]['pt_bins_truth'])
+      pt_bins_truth = (self.sd_config_dict[config_name]['pt_bins_truth'])
       
       n_pt_bins_truth = len(pt_bins_truth) - 1
       setattr(self, 'n_pt_bins_truth_{}'.format(sd_label), n_pt_bins_truth)
@@ -89,7 +89,7 @@ class run_sd_analysis(common_base.common_base):
 
       if 'theta_g' in self.observables:
       
-        rg_bins_truth = (sd_config_dict[config_name]['rg_bins_truth'])
+        rg_bins_truth = (self.sd_config_dict[config_name]['rg_bins_truth'])
       
         n_rg_bins_truth = len(rg_bins_truth) - 1
         setattr(self, 'n_rg_bins_truth_{}'.format(sd_label), n_rg_bins_truth)
@@ -99,7 +99,7 @@ class run_sd_analysis(common_base.common_base):
       
       if 'zg' in self.observables:
         
-        zg_bins_truth = (sd_config_dict[config_name]['zg_bins_truth'])
+        zg_bins_truth = (self.sd_config_dict[config_name]['zg_bins_truth'])
 
         n_zg_bins_truth = len(zg_bins_truth) - 1
         setattr(self, 'n_zg_bins_truth_{}'.format(sd_label), n_zg_bins_truth)
@@ -107,7 +107,6 @@ class run_sd_analysis(common_base.common_base):
         truth_zg_bin_array = array('d',zg_bins_truth)
         setattr(self, 'truth_zg_bin_array_{}'.format(sd_label), truth_zg_bin_array)
     
-    self.reg_param_final = config['reg_param']
     self.min_pt_reported = 20
     self.max_pt_reported = 80
     self.regularizationParamName = 'n_iter'
@@ -245,7 +244,9 @@ class run_sd_analysis(common_base.common_base):
     path_main = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
     fMain = ROOT.TFile(path_main, 'READ')
     
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, observable, jetR)
+
+    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
     hMain = fMain.Get(name)
     hMain.SetDirectory(0)
     setattr(self, name, hMain)
@@ -257,13 +258,13 @@ class run_sd_analysis(common_base.common_base):
     setattr(self, name, hTaggingFractions)
 
     # Regularization parameter +2
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final+2)
+    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final+2)
     hRegParam1 = fMain.Get(name)
     hRegParam1.SetDirectory(0)
     setattr(self, name, hRegParam1)
     
     # Regularization parameter -2
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final-2)
+    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final-2)
     hRegParam2 = fMain.Get(name)
     hRegParam2.SetDirectory(0)
     setattr(self, name, hRegParam2)
@@ -273,7 +274,7 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
       path_trkeff = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fTrkEff = ROOT.TFile(path_trkeff, 'READ')
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
       hTrkEff = fTrkEff.Get(name)
       hTrkEff.SetDirectory(0)
       setattr(self, '{}_trkeff'.format(name), hTrkEff)
@@ -283,7 +284,7 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_prior_{}'.format(observable))
       path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fPrior1 = ROOT.TFile(path_prior1, 'READ')
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
       hPrior1 = fPrior1.Get(name)
       hPrior1.SetDirectory(0)
       setattr(self, '{}_prior1'.format(name), hPrior1)
@@ -327,30 +328,32 @@ class run_sd_analysis(common_base.common_base):
     # Get 1D histograms
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin (cross-check this)
     
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, observable, jetR)
+    
     # Get main histogram
-    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final)
+    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
     name1D = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
     hMain = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get reg param +2
-    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final+2)
+    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final+2)
     name1D = 'hRegParam1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
     hRegParam1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get reg param -2
-    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, self.reg_param_final-2)
+    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final-2)
     name1D = 'hRegParam2_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
     hRegParam2 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
     if self.kTrackEff in self.systematics_list:
-      name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, sd_label, self.reg_param_final)
+      name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, sd_label, reg_param_final)
       name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hTrkEff = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior1
     if self.kPrior1 in self.systematics_list:
-      name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, sd_label, self.reg_param_final)
+      name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, sd_label, reg_param_final)
       name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hPrior1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
