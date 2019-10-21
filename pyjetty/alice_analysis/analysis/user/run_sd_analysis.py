@@ -113,10 +113,10 @@ class run_sd_analysis(common_base.common_base):
 
     # List of possible systematic variations
     # Regularization parameter is automatically included
-    self.kMain, self.kUnfoldingRange1, self.kUnfoldingRange2, self.kPrior1, self.kPrior2, self.kTruncation, self.kTrackEff = range(0, 7)
+    self.kMain, self.kUnfoldingRange1, self.kUnfoldingRange2, self.kPrior1, self.kPrior2, self.kTruncation, self.kBinning, self.kTrackEff = range(0, 8)
 
     # Set which systematics should be performed
-    self.systematics_list = [self.kMain, self.kPrior1, self.kTruncation, self.kTrackEff]
+    self.systematics_list = [self.kMain, self.kPrior1, self.kTruncation, self.kBinning, self.kTrackEff]
     
     # Load paths to processing output, to be unfolded
     self.main_data = config['main_data']
@@ -168,6 +168,12 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, 'output_dir_truncation_{}'.format(observable), output_dir_truncation)
       if not os.path.isdir(output_dir_truncation):
         os.makedirs(output_dir_truncation)
+    
+    if self.kBinning in self.systematics_list:
+      output_dir_binning = os.path.join(output_dir, 'binning')
+      setattr(self, 'output_dir_binning_{}'.format(observable), output_dir_binning)
+      if not os.path.isdir(output_dir_binning):
+        os.makedirs(output_dir_binning)
 
     if self.do_systematics:
       output_dir_systematics = os.path.join(output_dir, 'systematics')
@@ -230,6 +236,12 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
       analysis_truncation = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
       analysis_truncation.roounfold_sd()
+        
+    # Binning variation
+    if self.kBinning in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
+      analysis_binning = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
+      analysis_binning.roounfold_sd()
 
   #----------------------------------------------------------------------
   def check_rebin_response(self, output_dir):
@@ -312,6 +324,16 @@ class run_sd_analysis(common_base.common_base):
       hTruncation.SetDirectory(0)
       setattr(self, '{}_truncation'.format(name), hTruncation)
     
+    # Get binning result
+    if self.kBinning in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
+      path_binning = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      fBinning = ROOT.TFile(path_binning, 'READ')
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      hBinning = fBinning.Get(name)
+      hBinning.SetDirectory(0)
+      setattr(self, '{}_binning'.format(name), hBinning)
+    
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
@@ -386,6 +408,12 @@ class run_sd_analysis(common_base.common_base):
       name1D = 'hTruncation_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hTruncation = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
+    # Get binning
+    if self.kBinning in self.systematics_list:
+      name2D = 'hUnfolded_{}_R{}_{}_{}_binning'.format(observable, jetR, sd_label, reg_param_final)
+      name1D = 'hBinning_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hBinning = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    
     #------------------------------------
     # Compute systematics
 
@@ -440,6 +468,20 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
       self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
+    
+    # Binning
+    hSystematic_Binning = None
+    if self.kBinning in self.systematics_list:
+      name = 'hSystematic_{}_Binning_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hSystematic_Binning = hMain.Clone()
+      hSystematic_Binning.SetName(name)
+      hSystematic_Binning.Divide(hTruncation)
+      self.change_to_per(hSystematic_Binning)
+      setattr(self, name, hSystematic_Binning)
+      
+      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
     
     # Add shape uncertainties in quadrature
     hSystematic_Shape = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1)

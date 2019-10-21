@@ -31,7 +31,7 @@ class roounfold_sd(analysis_base.analysis_base):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, power_law_offset=0., **kwargs):
+  def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, power_law_offset=0., **kwargs):
     
     super(roounfold_sd, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, rebin_response, power_law_offset, **kwargs)
     
@@ -39,6 +39,7 @@ class roounfold_sd(analysis_base.analysis_base):
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
     self.observable = observable
     self.truncation = truncation
+    self.binning = binning
     
     self.initialize_config()
   
@@ -109,10 +110,9 @@ class roounfold_sd(analysis_base.analysis_base):
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
         config_name = self.sd_config_list[i]
         
+        pt_det_bins_name = 'pt_bins_det'
         if self.truncation:
-          pt_det_bins_name = 'pt_bins_det_sys_truncation'
-        else:
-          pt_det_bins_name = 'pt_bins_det'
+          pt_det_bins_name += '_sys_truncation'
         pt_bins_det = (self.sd_config_dict[config_name][pt_det_bins_name])
         pt_bins_truth = (self.sd_config_dict[config_name]['pt_bins_truth'])
         n_pt_bins_det = len(pt_bins_det) - 1
@@ -125,7 +125,10 @@ class roounfold_sd(analysis_base.analysis_base):
         setattr(self, 'truth_pt_bin_array_{}'.format(sd_label), truth_pt_bin_array)
           
         if self.observable == 'theta_g':
-          rg_bins_det = (self.sd_config_dict[config_name]['rg_bins_det'])
+          det_bins_name = 'rg_bins_det'
+          if self.binning:
+            det_bins_name += '_sys_binning'
+          rg_bins_det = (self.sd_config_dict[config_name][det_bins_name])
           rg_bins_truth = (self.sd_config_dict[config_name]['rg_bins_truth'])
           n_rg_bins_det = len(rg_bins_det) - 1
           setattr(self, 'n_bins_det_{}'.format(sd_label), n_rg_bins_det)
@@ -136,7 +139,10 @@ class roounfold_sd(analysis_base.analysis_base):
           truth_rg_bin_array = array('d',rg_bins_truth)
           setattr(self, 'truth_bin_array_{}'.format(sd_label), truth_rg_bin_array)
         if self.observable == 'zg':
-          zg_bins_det = (self.sd_config_dict[config_name]['zg_bins_det'])
+          det_bins_name = 'zg_bins_det'
+          if self.binning:
+            det_bins_name += '_sys_binning'
+          zg_bins_det = (self.sd_config_dict[config_name][det_bins_name])
           zg_bins_truth = (self.sd_config_dict[config_name]['zg_bins_truth'])
           n_zg_bins_det = len(zg_bins_det) - 1
           setattr(self, 'n_bins_det_{}'.format(sd_label), n_zg_bins_det)
@@ -1344,5 +1350,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = roounfold_sd(observable=args.observable, input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat, rebin_response=True, truncation=False, power_law_offset=0.)
+  analysis = roounfold_sd(observable=args.observable, input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat, rebin_response=True, truncation=False, binning=False, power_law_offset=0.)
   analysis.roounfold_sd()
