@@ -113,10 +113,10 @@ class run_sd_analysis(common_base.common_base):
 
     # List of possible systematic variations
     # Regularization parameter is automatically included
-    self.kMain, self.kUnfoldingRange1, self.kUnfoldingRange2, self.kPrior1, self.kPrior2, self.kTrackEff = range(0, 6)
+    self.kMain, self.kUnfoldingRange1, self.kUnfoldingRange2, self.kPrior1, self.kPrior2, self.kTruncation, self.kTrackEff = range(0, 7)
 
     # Set which systematics should be performed
-    self.systematics_list = [self.kMain, self.kPrior1, self.kTrackEff]
+    self.systematics_list = [self.kMain, self.kPrior1, self.kTruncation, self.kTrackEff]
     
     # Load paths to processing output, to be unfolded
     self.main_data = config['main_data']
@@ -162,6 +162,12 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, 'output_dir_prior_{}'.format(observable), output_dir_prior)
       if not os.path.isdir(output_dir_prior):
         os.makedirs(output_dir_prior)
+    
+    if self.kTruncation in self.systematics_list:
+      output_dir_truncation = os.path.join(output_dir, 'truncation')
+      setattr(self, 'output_dir_truncation_{}'.format(observable), output_dir_truncation)
+      if not os.path.isdir(output_dir_truncation):
+        os.makedirs(output_dir_truncation)
 
     if self.do_systematics:
       output_dir_systematics = os.path.join(output_dir, 'systematics')
@@ -218,6 +224,12 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_prior_{}'.format(observable))
       analysis_prior = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
       analysis_prior.roounfold_sd()
+
+    # Truncation variation
+    if self.kTruncation in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
+      analysis_truncation = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
+      analysis_truncation.roounfold_sd()
 
   #----------------------------------------------------------------------
   def check_rebin_response(self, output_dir):
@@ -290,6 +302,16 @@ class run_sd_analysis(common_base.common_base):
       hPrior1.SetDirectory(0)
       setattr(self, '{}_prior1'.format(name), hPrior1)
     
+    # Get truncation result
+    if self.kTruncation in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
+      path_truncation = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      fTruncation = ROOT.TFile(path_truncation, 'READ')
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      hTruncation = fTruncation.Get(name)
+      hTruncation.SetDirectory(0)
+      setattr(self, '{}_truncation'.format(name), hTruncation)
+    
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
@@ -358,6 +380,12 @@ class run_sd_analysis(common_base.common_base):
       name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hPrior1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
+    # Get truncation
+    if self.kTruncation in self.systematics_list:
+      name2D = 'hUnfolded_{}_R{}_{}_{}_truncation'.format(observable, jetR, sd_label, reg_param_final)
+      name1D = 'hTruncation_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hTruncation = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    
     #------------------------------------
     # Compute systematics
 
@@ -398,6 +426,20 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
       self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
+
+    # Truncation
+    hSystematic_Truncation = None
+    if self.kTruncation in self.systematics_list:
+      name = 'hSystematic_{}_Truncation_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hSystematic_Truncation = hMain.Clone()
+      hSystematic_Truncation.SetName(name)
+      hSystematic_Truncation.Divide(hTruncation)
+      self.change_to_per(hSystematic_Truncation)
+      setattr(self, name, hSystematic_Truncation)
+      
+      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
     
     # Add shape uncertainties in quadrature
     hSystematic_Shape = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1)
