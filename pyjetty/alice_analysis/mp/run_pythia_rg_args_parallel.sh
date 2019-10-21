@@ -21,7 +21,8 @@ if [ "x${run}" == "xrun" ]; then
 	runs=$(seq 1 ${njobs})
 	nev=25000
 	cmnd="${PYJETTYDIR}/pyjetty/alice_analysis/mp/pythia_rg.py --nev ${nev} --jetR ${jetR} --py-ecm 5020 --charged --RreclusterR0"
-	parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag "${cmnd} --runid {1} 	                 --py-pthatmin {2}" ::: ${runs} ::: ${pthats}
+	# parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag "${cmnd} --runid {1} 	                 --py-pthatmin {2}" ::: ${runs} ::: ${pthats}
+	parallel ${dryrun} --joblog pthat_weighted.log --keep-order --tag "${cmnd} --runid {1} --py-biasref 20" ::: ${runs} 
 	#parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag "${cmnd} --runid {1} ${had}               --py-pthatmin {2}" ::: ${runs} ::: ${pthats}
 	#parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag "${cmnd} --runid {1} ${had} ${mpi}        --py-pthatmin {2}" ::: ${runs} ::: ${pthats}
 	#parallel ${dryrun} --joblog hjet_simple_hTT_softQCD.log --keep-order --tag "${cmnd} --runid {1} ${had}        ${isr} --py-pthatmin {2}" ::: ${runs} ::: ${pthats}
