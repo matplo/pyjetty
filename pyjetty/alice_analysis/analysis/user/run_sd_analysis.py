@@ -192,7 +192,10 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, 'output_dir_final_{}'.format(observable), output_dir_final)
       if not os.path.isdir(output_dir_final):
         os.makedirs(output_dir_final)
-      
+
+      final_result_root_file = os.path.join(output_dir_final, 'fFinalResults.root')
+      fFinalResults = ROOT.TFile(final_result_root_file, 'RECREATE')
+
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
@@ -372,6 +375,7 @@ class run_sd_analysis(common_base.common_base):
     h2D = getattr(self, name2D)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     h = h2D.ProjectionY() # Better to use ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) ?
+    h.SetName(name1D)
     h.SetDirectory(0)
     
     name = 'hTaggingFractions_R{}_{}'.format(jetR, sd_label)
@@ -725,6 +729,14 @@ class run_sd_analysis(common_base.common_base):
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
+
+    # Write result to ROOT file
+    if not plot_pythia:
+      final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+      fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+      h.Write()
+      print('writing {}: {}'.format(observable, h.GetName()))
+      fFinalResults.Close()
 
   #----------------------------------------------------------------------
   def change_to_per(self, h):
