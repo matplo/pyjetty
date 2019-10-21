@@ -228,6 +228,7 @@ class run_sd_analysis(common_base.common_base):
       rebin_response = False
       if self.force_rebin_response:
         print('Response {} exists -- force re-create...'.format(response_path))
+        rebin_response = True
       else:
         print('Response {} exists -- don\'t re-create.'.format(response_path))
     else:

@@ -248,6 +248,11 @@ class roounfold_sd(analysis_base.analysis_base):
     outputFilename = os.path.join(self.output_dir, 'hData_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
     self.utils.plot_hist(hData_PerBin, outputFilename, 'colz', False, True)
     
+    hDataProj = hData_PerBin.ProjectionY()
+    hDataProj.SetName('{}_{}'.format(hDataProj.GetName(), 'proj'))
+    outputFilename = os.path.join(self.output_dir, 'hData_proj_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
+    self.utils.plot_hist(hDataProj, outputFilename)
+    
     # Plot various slices of the response matrix (from the THn)
     self.plot_RM_slices(jetR, sd_label)
     
@@ -928,12 +933,10 @@ class roounfold_sd(analysis_base.analysis_base):
     return hResponseMatrix
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Apply RM to unfolded result, and check that I obtain measured spectrum
   #################################################################################################
   def plot_refolding_test(self, i, jetR, sd_label, zcut, beta):
-    
-    # In principle should use two statistically independent response matrices
-    
+        
     output_dir_refolding = os.path.join(self.output_dir, 'Refolding')
     if not os.path.isdir(output_dir_refolding):
       os.makedirs(output_dir_refolding)
@@ -945,16 +948,18 @@ class roounfold_sd(analysis_base.analysis_base):
     
     n_pt_bins_det = getattr(self, 'n_pt_bins_det_{}'.format(sd_label))
     det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(sd_label))
-    for bin in range(1, n_pt_bins_det):
+    for bin in range(2, n_pt_bins_det):
       min_pt_det = det_pt_bin_array[bin]
       max_pt_det = det_pt_bin_array[bin+1]
       
-      self.plot_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding)
+      self.plot_sd_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding)
+
+    self.plot_pt_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, det_pt_bin_array[2], det_pt_bin_array[-1], output_dir_refolding)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding):
+  def plot_sd_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding):
     
     hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
     hFolded_obs = hFoldedTruth.ProjectionY()
@@ -972,6 +977,28 @@ class roounfold_sd(analysis_base.analysis_base):
     ratioYAxisTitle = 'Folded truth / Measured'
     outputFilename = os.path.join(output_dir_refolding, 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_det), int(max_pt_det), i, self.file_format))
     self.plot_sd_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+
+  #################################################################################################
+  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  #################################################################################################
+  def plot_pt_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding):
+    
+    hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
+    hFolded_pt = hFoldedTruth.ProjectionX()
+    hFolded_pt.SetName('hFolded_pt_R{}_{}_{}_{}-{}'.format(jetR, sd_label, i, min_pt_det, max_pt_det))
+    
+    name_data_rebinned = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, sd_label))
+    hData_PerBin = getattr(self, name_data_rebinned)
+    hData_PerBin.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
+    hData_pt = hData_PerBin.ProjectionX()
+    hData_pt.SetName('hData_pt_R{}_{}_{}_{}-{}'.format(jetR, sd_label, i, min_pt_det, max_pt_det))
+    
+    legendTitle = ''
+    h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
+    h2LegendLabel = 'Measured pp'
+    ratioYAxisTitle = 'Folded truth / Measured'
+    outputFilename = os.path.join(output_dir_refolding, 'hFoldedTruth_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, i, self.file_format))
+    self.plot_sd_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Closure test
@@ -992,16 +1019,19 @@ class roounfold_sd(analysis_base.analysis_base):
 
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
-    for bin in range(1, n_pt_bins_truth-1):
+    for bin in range(1, n_pt_bins_truth-3):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.plot_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure)
+      self.plot_sd_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure)
+
+    # Closure test for pt dimension
+    self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta, truth_pt_bin_array[1], truth_pt_bin_array[-4], output_dir_closure)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure):
+  def plot_sd_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure):
     
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_obs = hUnfolded.ProjectionY()
@@ -1019,6 +1049,26 @@ class roounfold_sd(analysis_base.analysis_base):
     self.plot_sd_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
+  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  #################################################################################################
+  def plot_pt_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure):
+  
+    hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hUnfolded_pt = hUnfolded.ProjectionX()
+    hUnfolded_pt.SetName('hUnfolded_pt_R{}_{}_{}'.format(jetR, sd_label, i))
+    
+    hMC_Truth.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hMCTruth_pt = hMC_Truth.ProjectionX()
+    hMCTruth_pt.SetName('hMCTruth_pt_R{}_{}_{}_'.format(jetR, sd_label, i))
+    
+    legendTitle = ''
+    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
+    h2LegendLabel = 'MC-truth'
+    ratioYAxisTitle = 'Unfolded MC det / Truth'
+    outputFilename = os.path.join(output_dir_closure, 'hClosure_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, i, self.file_format))
+    self.plot_sd_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+
+  #################################################################################################
   # Get errors from measured spectrum, stored as dictionary {bin:error}
   #################################################################################################
   def getMeasuredErrors(self, h):
@@ -1033,7 +1083,7 @@ class roounfold_sd(analysis_base.analysis_base):
           dictErrors[global_bin] = error/content
         #print('Bin ({},{}) with content {} has error {}'.format(binx, biny, content, error/content))
         else:
-          print('    Error: check your historgram ranges - something might be wrong')
+          print('    Error: check your histogram ranges - something might be wrong')
           print('    Bin {}, content {}, error {}'.format(global_bin, content, error))
           dictErrors[global_bin] = 0
     return dictErrors
@@ -1106,6 +1156,8 @@ class roounfold_sd(analysis_base.analysis_base):
     pad1.SetLeftMargin(0.2)
     pad1.SetRightMargin(0.05)
     pad1.SetTopMargin(0.05)
+    if '_pt_' in outputFilename:
+      pad1.SetLogy()
     pad1.Draw()
     pad1.cd()
     
@@ -1114,9 +1166,23 @@ class roounfold_sd(analysis_base.analysis_base):
     h.SetLineStyle(1)
     
     h.Scale(1./h.Integral(), scalingOptions)
-    h.GetYaxis().SetTitle(yAxisTitle)
+    if '_pt_' in outputFilename:
+      h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{p}_{T}}')
+    else:
+      h.GetYaxis().SetTitle(yAxisTitle)
+    
     h.GetYaxis().SetTitleSize(0.06)
-    h.GetYaxis().SetRangeUser(0., 3.)
+    if self.observable == 'theta_g':
+      if '_pt_' in outputFilename:
+        h.GetYaxis().SetRangeUser(1e-4, 10.)
+      else:
+        h.GetYaxis().SetRangeUser(0., 3.)
+
+    if self.observable == 'zg':
+      if '_pt_' in outputFilename:
+        h.GetYaxis().SetRangeUser(1e-4, 10.)
+      else:
+        h.GetYaxis().SetRangeUser(0., 8.)
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
     xAxisTitle = self.xtitle
@@ -1157,7 +1223,10 @@ class roounfold_sd(analysis_base.analysis_base):
     hRatio.GetXaxis().SetTitleOffset(4.)
     hRatio.GetXaxis().SetLabelFont(43)
     hRatio.GetXaxis().SetLabelSize(20)
-    hRatio.GetXaxis().SetTitle(xAxisTitle)
+    if '_pt_' in outputFilename:
+      hRatio.GetXaxis().SetTitle('#it{p}_{T,jet}')
+    else:
+      hRatio.GetXaxis().SetTitle(xAxisTitle)
     
     hRatio.GetYaxis().SetTitle(ratioYAxisTitle)
     hRatio.GetYaxis().SetTitleSize(20)
@@ -1188,7 +1257,7 @@ class roounfold_sd(analysis_base.analysis_base):
     
     pad1.cd()
     
-    leg2 = ROOT.TLegend(0.55,0.7,0.88,0.93,legendTitle)
+    leg2 = ROOT.TLegend(0.55,0.7,0.8,0.93,legendTitle)
     leg2.SetFillColor(10)
     leg2.SetBorderSize(0)
     leg2.SetFillStyle(0)
@@ -1200,10 +1269,11 @@ class roounfold_sd(analysis_base.analysis_base):
       leg2.AddEntry(h2, h2LegendLabel, "l")
     leg2.Draw("same")
 
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = str(min_pt_det) + ' < #it{p}_{T,ch jet} < ' + str(max_pt_det)
-    text_latex.DrawLatex(0.25, 0.85, text)
+    if not '_pt_' in outputFilename:
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text = str(min_pt_det) + ' < #it{p}_{T,ch jet} < ' + str(max_pt_det)
+      text_latex.DrawLatex(0.25, 0.85, text)
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
