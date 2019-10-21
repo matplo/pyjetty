@@ -28,6 +28,7 @@ def main():
 	parser.add_argument('--overwrite', default=False, action='store_true')
 	parser.add_argument('--charged', default=False, action='store_true')
 	parser.add_argument('--runid', default=0, type=int)
+	parser.add_argument('--RreclusterR0', default=True, help="use the same R for soft drop as R for jet finding - default is TRUE", action='store_true')
 	args = parser.parse_args()
 
 	if args.output is None:
@@ -62,11 +63,24 @@ def main():
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 	jet_selector = fj.SelectorPtMin(20) & fj.SelectorAbsEtaMax(0.9 - jet_R0)
 	print(jet_def)
+	sd_jet_def_recluster = None
+	sd_reclusterer = None
+	if args.RreclusterR0:
+		sd_jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jet_R0)
+		sd_reclusterer = fjcontrib.Recluster(sd_jet_def_recluster)
+		print('[i] SD reclusterer', sd_reclusterer.description())
 	sd0 = fjcontrib.SoftDrop(0, 0.1, jet_R0)
+	if sd_reclusterer:
+		sd0.set_reclustering(True, sd_reclusterer)	
 	sd1 = fjcontrib.SoftDrop(1, 0.1, jet_R0)
+	if sd_reclusterer:
+		sd1.set_reclustering(True, sd_reclusterer)	
 	sd2 = fjcontrib.SoftDrop(2, 0.1, jet_R0)
-	print(sd0)
-	print(sd2)
+	if sd_reclusterer:
+		sd2.set_reclustering(True, sd_reclusterer)	
+	print(sd0.description())
+	print(sd1.description())
+	print(sd2.description())
 	sds = []
 	sds.append(sd0)
 	sds.append(sd1)
