@@ -517,23 +517,13 @@ class run_sd_analysis(common_base.common_base):
       name = 'hSystematic_{}_Binning_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hSystematic_Binning = hMain.Clone()
       hSystematic_Binning.SetName(name)
-      hSystematic_Binning.Divide(hTruncation)
+      hSystematic_Binning.Divide(hBinning)
       self.change_to_per(hSystematic_Binning)
       setattr(self, name, hSystematic_Binning)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
       self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
-    
-    # Add shape uncertainties in quadrature
-    hSystematic_Shape = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1)
-    
-    name = 'hResult_{}_shape_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hResult_shape = hMain.Clone()
-    hResult_shape.SetName(name)
-    hResult_shape.SetDirectory(0)
-    self.AttachErrToHist(hResult_shape, hSystematic_Shape)
-    setattr(self, name, hResult_shape)
     
     # Trk eff
     if self.kTrackEff in self.systematics_list:
@@ -547,19 +537,22 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
       self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
-    
-      name = 'hResult_{}_trkeff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-      hResult_trkeff = hMain.Clone()
-      hResult_trkeff.SetName(name)
-      hResult_trkeff.SetDirectory(0)
-      self.AttachErrToHist(hResult_trkeff, hSystematic_TrkEff)
-      setattr(self, name, hResult_trkeff)
 
+    # Add uncertainties in quadrature
+    hSystematic_Total = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff)
+    output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+    outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
+
+    name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+    hResult_sys = hMain.Clone()
+    hResult_sys.SetName(name)
+    hResult_sys.SetDirectory(0)
+    self.AttachErrToHist(hResult_sys, hSystematic_Total)
+    setattr(self, name, hResult_sys)
+        
   #----------------------------------------------------------------------
-  def add_in_quadrature(self, h1, h2):
-  
-    if not h2:
-      return h1
+  def add_in_quadrature(self, h1, h2, h3, h4, h5, h6):
   
     h_new = h1.Clone()
     h_new.SetName('{}_new'.format(h1.GetName()))
@@ -567,9 +560,14 @@ class run_sd_analysis(common_base.common_base):
     for i in range(1, h_new.GetNbinsX()+1):
       value1 = h1.GetBinContent(i)
       value2 = h2.GetBinContent(i)
-      new_value = math.sqrt(value1*value1 + value2*value2)
-      
-    h_new.SetBinContent(i, new_value)
+      value3 = h3.GetBinContent(i)
+      value4 = h4.GetBinContent(i)
+      value5 = h5.GetBinContent(i)
+      value6 = h6.GetBinContent(i)
+
+      new_value = math.sqrt(value1*value1 + value2*value2  + value3*value3  + value4*value4  + value5*value5  + value6*value6)
+    
+      h_new.SetBinContent(i, new_value)
     
     return h_new
   
@@ -663,21 +661,12 @@ class run_sd_analysis(common_base.common_base):
     h.SetLineColor(color)
     h.DrawCopy('PE X0 same')
     
-    h_shape = getattr(self, 'hResult_{}_shape_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
-    h_shape.SetLineColor(0)
-    h_shape.SetFillColor(color)
-    h_shape.SetFillColorAlpha(color, 0.3)
-    h_shape.SetFillStyle(1001)
-    h_shape.Draw('E2 same')
-    
-    h_corr = None
-    if self.kTrackEff in self.systematics_list:
-      h_corr = getattr(self, 'hResult_{}_trkeff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
-      h_corr.SetFillStyle(0)
-      h_corr.SetLineColor(color)
-      h_corr.SetMarkerColorAlpha(color, 0)
-      h_corr.SetLineWidth(1)
-      h_corr.Draw('E2 same')
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+    h_sys.SetLineColor(0)
+    h_sys.SetFillColor(color)
+    h_sys.SetFillColorAlpha(color, 0.3)
+    h_sys.SetFillStyle(1001)
+    h_sys.Draw('E2 same')
   
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -724,8 +713,7 @@ class run_sd_analysis(common_base.common_base):
     myLegend = ROOT.TLegend(0.25,0.7,0.5,0.85)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
-    myLegend.AddEntry(h_corr, 'Correlated uncertainty', 'f')
-    myLegend.AddEntry(h_shape, 'Shape uncertainty', 'f')
+    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia and observable == 'theta_g':
       myLegend.AddEntry(hPythia, 'PYTHIA', 'pe')
     myLegend.Draw()
