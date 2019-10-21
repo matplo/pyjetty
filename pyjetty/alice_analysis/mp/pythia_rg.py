@@ -28,7 +28,7 @@ def main():
 	parser.add_argument('--overwrite', default=False, action='store_true')
 	parser.add_argument('--charged', default=False, action='store_true')
 	parser.add_argument('--runid', default=0, type=int)
-	parser.add_argument('--RreclusterR0', default=True, help="use the same R for soft drop as R for jet finding - default is TRUE", action='store_true')
+	parser.add_argument('--RreclusterR0', default=False, help="use the same R for soft drop as R for jet finding - default is False", action='store_true')
 	args = parser.parse_args()
 
 	if args.output is None:
