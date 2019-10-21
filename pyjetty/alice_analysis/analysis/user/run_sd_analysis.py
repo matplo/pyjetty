@@ -116,7 +116,7 @@ class run_sd_analysis(common_base.common_base):
     self.kMain, self.kUnfoldingRange1, self.kUnfoldingRange2, self.kPrior1, self.kPrior2, self.kTruncation, self.kBinning, self.kTrackEff = range(0, 8)
 
     # Set which systematics should be performed
-    self.systematics_list = [self.kMain, self.kPrior1, self.kTruncation, self.kBinning, self.kTrackEff]
+    self.systematics_list = [self.kMain, self.kPrior1, self.kPrior2, self.kTruncation, self.kBinning, self.kTrackEff]
     
     # Load paths to processing output, to be unfolded
     self.main_data = config['main_data']
@@ -158,10 +158,16 @@ class run_sd_analysis(common_base.common_base):
         os.makedirs(output_dir_trkeff)
       
     if self.kPrior1 in self.systematics_list:
-      output_dir_prior = os.path.join(output_dir, 'prior')
-      setattr(self, 'output_dir_prior_{}'.format(observable), output_dir_prior)
-      if not os.path.isdir(output_dir_prior):
-        os.makedirs(output_dir_prior)
+      output_dir_prior1 = os.path.join(output_dir, 'prior1')
+      setattr(self, 'output_dir_prior1_{}'.format(observable), output_dir_prior1)
+      if not os.path.isdir(output_dir_prior1):
+        os.makedirs(output_dir_prior1)
+    
+    if self.kPrior2 in self.systematics_list:
+      output_dir_prior2 = os.path.join(output_dir, 'prior2')
+      setattr(self, 'output_dir_prior2_{}'.format(observable), output_dir_prior2)
+      if not os.path.isdir(output_dir_prior2):
+        os.makedirs(output_dir_prior2)
     
     if self.kTruncation in self.systematics_list:
       output_dir_truncation = os.path.join(output_dir, 'truncation')
@@ -225,11 +231,17 @@ class run_sd_analysis(common_base.common_base):
       analysis_trkeff = roounfold_sd.roounfold_sd(observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
       analysis_trkeff.roounfold_sd()
 
-    # Prior variation
+    # Prior variation 1
     if self.kPrior1 in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior_{}'.format(observable))
-      analysis_prior = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
-      analysis_prior.roounfold_sd()
+      output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
+      analysis_prior1 = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
+      analysis_prior1.roounfold_sd()
+    
+    # Prior variation 2
+    if self.kPrior2 in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
+      analysis_prior2 = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
+      analysis_prior2.roounfold_sd()
 
     # Truncation variation
     if self.kTruncation in self.systematics_list:
@@ -306,13 +318,23 @@ class run_sd_analysis(common_base.common_base):
     
     # Get prior result
     if self.kPrior1 in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior_{}'.format(observable))
+      output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
       path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fPrior1 = ROOT.TFile(path_prior1, 'READ')
       name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
       hPrior1 = fPrior1.Get(name)
       hPrior1.SetDirectory(0)
       setattr(self, '{}_prior1'.format(name), hPrior1)
+    
+    # Get prior result
+    if self.kPrior2 in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
+      path_prior2 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      fPrior2 = ROOT.TFile(path_prior2, 'READ')
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      hPrior2 = fPrior2.Get(name)
+      hPrior2.SetDirectory(0)
+      setattr(self, '{}_prior2'.format(name), hPrior2)
     
     # Get truncation result
     if self.kTruncation in self.systematics_list:
@@ -402,6 +424,12 @@ class run_sd_analysis(common_base.common_base):
       name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hPrior1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
+    # Get prior2
+    if self.kPrior2 in self.systematics_list:
+      name2D = 'hUnfolded_{}_R{}_{}_{}_prior2'.format(observable, jetR, sd_label, reg_param_final)
+      name1D = 'hPrior2_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hPrior2 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    
     # Get truncation
     if self.kTruncation in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_truncation'.format(observable, jetR, sd_label, reg_param_final)
@@ -441,7 +469,7 @@ class run_sd_analysis(common_base.common_base):
     outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
     self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
-    # Prior
+    # Prior 1
     hSystematic_Prior1 = None
     if self.kPrior1 in self.systematics_list:
       name = 'hSystematic_{}_Prior1_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
@@ -454,6 +482,20 @@ class run_sd_analysis(common_base.common_base):
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
       self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
+
+    # Prior 2
+    hSystematic_Prior2 = None
+    if self.kPrior2 in self.systematics_list:
+      name = 'hSystematic_{}_Prior2_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      hSystematic_Prior2 = hMain.Clone()
+      hSystematic_Prior2.SetName(name)
+      hSystematic_Prior2.Divide(hPrior2)
+      self.change_to_per(hSystematic_Prior2)
+      setattr(self, name, hSystematic_Prior2)
+      
+      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      self.utils.plot_hist(hSystematic_Prior2, outputFilename, 'P E')
 
     # Truncation
     hSystematic_Truncation = None
