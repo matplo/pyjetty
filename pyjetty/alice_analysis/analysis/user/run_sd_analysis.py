@@ -735,7 +735,6 @@ class run_sd_analysis(common_base.common_base):
       final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
       fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
       h.Write()
-      print('writing {}: {}'.format(observable, h.GetName()))
       fFinalResults.Close()
 
   #----------------------------------------------------------------------
