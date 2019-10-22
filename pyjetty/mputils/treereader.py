@@ -1,5 +1,4 @@
 import ROOT
-import fastjet as fj
 from pyjetty.mputils import MPBase
 
 
