@@ -705,7 +705,7 @@ class run_sd_analysis(common_base.common_base):
 
   #----------------------------------------------------------------------
   def plot_observable(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=False):
-  
+    
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
@@ -722,11 +722,11 @@ class run_sd_analysis(common_base.common_base):
     if observable == 'theta_g':
       n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
       truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
-      ymax = 4.
+      ymax = 5.
     if observable == 'zg':
       n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
       truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
-      ymax = 10.
+      ymax = 12.
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_rg_bins_truth, truth_rg_bin_array)
     myBlankHisto.SetNdivisions(505)
     xtitle = getattr(self, 'xtitle_{}'.format(observable))
@@ -738,30 +738,41 @@ class run_sd_analysis(common_base.common_base):
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
-    if plot_pythia and observable == 'theta_g':
-      if math.fabs(min_pt_truth - 20) < 1e-3:
-        fPythia_name = self.pythia_20
-        hname = 'theta_g_beta{}_pt20'.format(beta)
-      if math.fabs(min_pt_truth - 40) < 1e-3:
-        fPythia_name = self.pythia_40
-        hname = 'theta_g_beta{}_pt40'.format(beta)
-      if math.fabs(min_pt_truth - 60) < 1e-3:
-        fPythia_name = self.pythia_60
-        hname = 'theta_g_beta{}_pt60'.format(beta)
-      
-      fPythia = ROOT.TFile(fPythia_name, 'READ')
-      hPythia = fPythia.Get(hname)
-      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-      n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_rg_bin_array[0]), hPythia.GetNbinsX())
-      fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
-      hPythia.Scale(1./n_jets_inclusive, 'width')
-      hPythia.SetFillStyle(0)
-      hPythia.SetMarkerSize(1.5)
-      hPythia.SetMarkerStyle(23)
-      hPythia.SetMarkerColor(1)
-      hPythia.SetLineColor(1)
-      hPythia.SetLineWidth(1)
-      hPythia.Draw('E2 same')
+    if plot_pythia:
+    
+      plot_pythia_from_response = False
+      plot_pythia_from_mateusz = True
+      if plot_pythia_from_response:
+        hPythia = self.get_pythia_from_response(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+        n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_rg_bin_array[0]), hPythia.GetNbinsX())
+        fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
+        hPythia.Scale(1./n_jets_inclusive, 'width')
+        hPythia.SetFillStyle(0)
+        hPythia.SetMarkerSize(1.5)
+        hPythia.SetMarkerStyle(23)
+        hPythia.SetMarkerColor(1)
+        hPythia.SetLineColor(1)
+        hPythia.SetLineWidth(1)
+        hPythia.Draw('E2 same')
+    
+      if plot_pythia_from_mateusz:
+        fPythia_name = '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+        fPythia = ROOT.TFile(fPythia_name, 'READ')
+        hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
+        hPythia2 = fPythia.Get(hname)
+
+        n_jets_inclusive2 = hPythia2.Integral(0, hPythia2.GetNbinsX()+1)
+        n_jets_tagged2 = hPythia2.Integral(hPythia2.FindBin(truth_rg_bin_array[0]), hPythia2.GetNbinsX())
+        fraction_tagged_pythia =  n_jets_tagged2/n_jets_inclusive2
+        hPythia2.Scale(1./n_jets_inclusive2, 'width')
+        hPythia2.SetFillStyle(0)
+        hPythia2.SetMarkerSize(1.5)
+        hPythia2.SetMarkerStyle(23)
+        hPythia2.SetMarkerColor(2)
+        hPythia2.SetLineColor(2)
+        hPythia2.SetLineWidth(1)
+        hPythia2.Draw('E2 same')
     
     name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
     h = getattr(self, name)
@@ -817,7 +828,7 @@ class run_sd_analysis(common_base.common_base):
     text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
     text_latex.DrawLatex(0.57, 0.52, text)
     
-    if plot_pythia and observable == 'theta_g':
+    if plot_pythia:
       text_latex = ROOT.TLatex()
       text_latex.SetNDC()
       text_latex.SetTextSize(0.04)
@@ -828,12 +839,15 @@ class run_sd_analysis(common_base.common_base):
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
-    if plot_pythia and observable == 'theta_g':
-      myLegend.AddEntry(hPythia, 'PYTHIA', 'pe')
+    if plot_pythia:
+      if plot_pythia_from_response:
+        myLegend.AddEntry(hPythia, 'PYTHIA Monash2013', 'pe')
+      if plot_pythia_from_mateusz:
+        myLegend.AddEntry(hPythia2, 'PYTHIA Monash2013', 'pe')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
-    if plot_pythia and observable == 'theta_g':
+    if plot_pythia:
       name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
     output_dir = getattr(self, 'output_dir_final_{}'.format(observable))
     outputFilename = os.path.join(output_dir, name)
@@ -846,6 +860,28 @@ class run_sd_analysis(common_base.common_base):
       fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
       h.Write()
       fFinalResults.Close()
+
+
+  #----------------------------------------------------------------------
+  def get_pythia_from_response(self, observable, jetR, sd_label, min_pt_truth, max_pt_truth):
+  
+    output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
+    file = os.path.join(output_dir, 'response.root')
+    f = ROOT.TFile(file, 'READ')
+
+    if observable == 'theta_g':
+      thn_name = 'hResponse_JetPt_ThetaG_R{}_{}_rebinned'.format(jetR, sd_label)
+    if observable == 'zg':
+      thn_name = 'hResponse_JetPt_zg_R{}_{}_rebinned'.format(jetR, sd_label)
+    
+    thn = f.Get(thn_name)
+    thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+
+    h = thn.Projection(3)
+    h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+    h.SetDirectory(0)
+
+    return h
 
   #----------------------------------------------------------------------
   def change_to_per(self, h):
