@@ -46,6 +46,7 @@ def main():
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--embed', help='run embedding from a file list', default='', type=str)
 	parser.add_argument('--SDsignal', help='embed only SD signal prongs', default=False, action='store_true')
+	parser.add_argument('--SDsignal-single', help='embed only SD signal - only leading prong!', default=False, action='store_true')
 	parser.add_argument('--efficiency', help='apply charged particle efficiency', default=False, action='store_true')
 	parser.add_argument('--benchmark', help='benchmark pthat setting - 80 GeV', default=False, action='store_true')
 	parser.add_argument('--csjet', help='constituent subtration jet-by-jet', default=False, action='store_true')
@@ -158,7 +159,7 @@ def main():
 
 
 		for sjet in signal_jets:
-			if args.SDsignal:
+			if args.SDsignal or args.SDsignal_single:
 				sd_sjet = sd.result(sjet)
 				pe1 = fj.PseudoJet()
 				pe2 = fj.PseudoJet()
@@ -167,10 +168,14 @@ def main():
 					jparts = fj.vectorPJ()
 					pe1.set_user_index(0)
 					pe2.set_user_index(1)
-					if pe1.pt() > pe2.pt():
-						jparts.push_back(pe1)
+					if args.SDsignal_single:
+						if pe1.pt() > pe2.pt():
+							jparts.push_back(pe1)
+						else:
+							jparts.push_back(pe2)
 					else:
-						jparts.push_back(pe2)
+						jparts.push_back(pe1)
+						jparts.push_back(pe2)						
 					sjets = fj.sorted_by_pt(jet_selector(jet_def(jparts)))
 					if len(sjets) == 1:
 						sjet = sjets[0]
