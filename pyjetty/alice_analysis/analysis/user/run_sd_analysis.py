@@ -186,6 +186,9 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, 'output_dir_systematics_{}'.format(observable), output_dir_systematics)
       if not os.path.isdir(output_dir_systematics):
         os.makedirs(output_dir_systematics)
+    
+      sys_root_filename = os.path.join(output_dir_systematics, 'fSystematics.root')
+      fSystematics = ROOT.TFile(sys_root_filename, 'RECREATE')
       
     if self.do_plot_final_result:
       output_dir_final = os.path.join(output_dir, 'final_results')
@@ -214,7 +217,7 @@ class run_sd_analysis(common_base.common_base):
           sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
 
           if self.do_systematics:
-            self.compute_systematics(observable, jetR, sd_label)
+            self.compute_systematics(observable, jetR, sd_label, zcut, beta)
 
           if self.do_plot_final_result:
             self.plot_final_result(observable, jetR, sd_label, zcut, beta)
@@ -276,7 +279,7 @@ class run_sd_analysis(common_base.common_base):
     return rebin_response
 
   #----------------------------------------------------------------------
-  def compute_systematics(self, observable, jetR, sd_label):
+  def compute_systematics(self, observable, jetR, sd_label, zcut, beta):
     print('Compute systematics for {}: R = {}, {} ...'.format(observable, jetR, sd_label))
 
     # Get main result
@@ -367,7 +370,7 @@ class run_sd_analysis(common_base.common_base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.compute_sd_observable_systematic(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      self.compute_sd_observable_systematic(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
   def get_sd_observable_distribution(self, jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth):
@@ -393,7 +396,7 @@ class run_sd_analysis(common_base.common_base):
     return h
 
   #----------------------------------------------------------------------
-  def compute_sd_observable_systematic(self, observable, jetR, sd_label, min_pt_truth, max_pt_truth):
+  def compute_sd_observable_systematic(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
     
     #------------------------------------
     # Get 1D histograms
@@ -471,7 +474,7 @@ class run_sd_analysis(common_base.common_base):
     
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
     outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-    self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
+    #self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
     # Prior 1
     hSystematic_Prior1 = None
@@ -485,7 +488,7 @@ class run_sd_analysis(common_base.common_base):
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-      self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
+      #self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
 
     # Prior 2
     hSystematic_Prior2 = None
@@ -499,7 +502,7 @@ class run_sd_analysis(common_base.common_base):
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-      self.utils.plot_hist(hSystematic_Prior2, outputFilename, 'P E')
+      #self.utils.plot_hist(hSystematic_Prior2, outputFilename, 'P E')
 
     # Truncation
     hSystematic_Truncation = None
@@ -513,7 +516,7 @@ class run_sd_analysis(common_base.common_base):
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-      self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
+      #self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
     
     # Binning
     hSystematic_Binning = None
@@ -527,7 +530,7 @@ class run_sd_analysis(common_base.common_base):
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-      self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
+      #self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
     
     # Trk eff
     if self.kTrackEff in self.systematics_list:
@@ -540,13 +543,13 @@ class run_sd_analysis(common_base.common_base):
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
       outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-      self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
+      #self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
 
     # Add uncertainties in quadrature
     hSystematic_Total = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff)
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
     outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
-    self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
+    #self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
     name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
     hResult_sys = hMain.Clone()
@@ -554,7 +557,114 @@ class run_sd_analysis(common_base.common_base):
     hResult_sys.SetDirectory(0)
     self.AttachErrToHist(hResult_sys, hSystematic_Total)
     setattr(self, name, hResult_sys)
-        
+      
+    # Plot systematic uncertainties
+    h_list = [hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff]
+    self.plot_systematic_uncertainties(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, h_list, hSystematic_Total)
+      
+  #----------------------------------------------------------------------
+  def plot_systematic_uncertainties(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, h_list, h_total):
+  
+    self.utils.set_plotting_options()
+    ROOT.gROOT.ForceStyle()
+    
+    name = 'cSys_R{}_{}_{}-{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth)
+    c = ROOT.TCanvas(name, name, 600, 450)
+    c.Draw()
+    
+    c.cd()
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    if observable == 'theta_g':
+      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
+      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+    if observable == 'zg':
+      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
+      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
+    myBlankHisto.SetNdivisions(505)
+    xtitle = getattr(self, 'xtitle_{}'.format(observable))
+    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.SetYTitle('Systematic uncertainty (%)')
+    myBlankHisto.SetMaximum(1.5*h_total.GetMaximum())
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.Draw("E")
+    
+    leg = ROOT.TLegend(0.67,0.65,0.8,0.92)
+    self.utils.setup_legend(leg,0.04)
+
+    for i, h in enumerate(h_list):
+      if i == 0:
+        h.SetMarkerStyle(20)
+        label = 'Reg. param'
+      if i == 1:
+        h.SetMarkerStyle(21)
+        label = 'Prior1'
+      if i == 2:
+        h.SetMarkerStyle(22)
+        label = 'Prior2'
+      if i == 3:
+        h.SetMarkerStyle(23)
+        label = 'Truncation'
+      if i == 4:
+        h.SetMarkerStyle(33)
+        label = 'Binning'
+      if i == 5:
+        h.SetMarkerStyle(34)
+        label = 'Tracking efficiency'
+      
+      h.SetMarkerSize(1.5)
+      h.SetMarkerColor(600-5+i)
+      h.SetLineStyle(1)
+      h.SetLineWidth(2)
+      h.SetLineColor(600-5+i)
+
+      h.DrawCopy('P X0 same')
+
+      leg.AddEntry(h, label, 'Pe')
+
+    h_total.SetLineStyle(1)
+    h_total.SetLineColor(1)
+    h_total.SetLineWidth(2)
+    h_total.DrawCopy('same hist')
+    leg.AddEntry(h_total, 'Total', 'l')
+
+    leg.Draw()
+
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'R = ' + str(jetR)
+    text_latex.DrawLatex(0.25, 0.85, text)
+
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.78, text)
+
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
+    text_latex.DrawLatex(0.25, 0.71, text)
+
+    output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    c.SaveAs(outputFilename)
+    c.Close()
+
+    sys_root_filename = os.path.join(output_dir, 'fSystematics.root')
+    fSystematics = ROOT.TFile(sys_root_filename, 'UPDATE')
+    h_total.Write()
+    fSystematics.Close()
+      
   #----------------------------------------------------------------------
   def add_in_quadrature(self, h1, h2, h3, h4, h5, h6):
   
