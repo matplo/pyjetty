@@ -24,7 +24,7 @@ from pyjetty.mputils import RTreeWriter
 
 from alice_efficiency import AliceChargedParticleEfficiency
 from data_io import DataBackgroundIO
-from jet_analysis import fill_tree_matched, JetAnalysis, JetAnalysisWithRho, JetAnalysisPerJet
+from jet_analysis import fill_tree_matched, fill_tree_data, JetAnalysis, JetAnalysisWithRho, JetAnalysisPerJet
 
 from heppy.pythiautils import configuration as pyconf
 import pythia8
@@ -62,6 +62,8 @@ def main():
 			args.output = args.output.replace('.root', '_effi.root')
 		if args.SDsignal:
 			args.output = args.output.replace('.root', '_SDsignal.root')
+		if args.SDsignal_single:
+			args.output = args.output.replace('.root', '_SDsignal_single.root')
 		if args.csjet:
 			args.output = args.output.replace('.root', '_csjet.root')
 
@@ -134,6 +136,8 @@ def main():
 	outf.cd()
 	t = ROOT.TTree('t', 't')
 	tw = RTreeWriter(tree=t)
+	te = ROOT.TTree('te', 'te')
+	twe = RTreeWriter(tree=te)
 
 	# effi_pp = AliceChargedParticleEfficiency(csystem='pp')
 	effi_PbPb = None
@@ -197,7 +201,8 @@ def main():
 				cs_parts = cs.process_event(full_event)
 				rho = cs.bge_rho.rho()
 				jarho.analyze_event(cs_parts)							
-				tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in jarho.jets]
+				tmp = [fill_tree_data(ej, twe, sd, rho, iev, pythia.info.weight(), pythia.info.sigmaGen()) for ej in jarho.jets]
+				tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.weight(), pythia.info.sigmaGen()) for ej in jarho.jets]
 			else:
 				jarho.analyze_event(full_event)
 				rho = jarho.rho
@@ -221,9 +226,11 @@ def main():
 					# 	_sd_j = sd.result(_j)
 					# https://phab.hepforge.org/source/fastjetsvn/browse/contrib/contribs/RecursiveTools/trunk/Recluster.cc L 270
 					# tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in subtr_jets_wcs]
-					tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in japerjet.jets]
+					tmp = [fill_tree_data(ej, twe, sd, rho, iev, pythia.info.weight(), pythia.info.sigmaGen()) for ej in japerjet.jets]
+					tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.weight(), pythia.info.sigmaGen()) for ej in japerjet.jets]
 				else:
-					tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in jarho.jets]
+					tmp = [fill_tree_data(ej, twe, sd, rho, iev, pythia.info.weight(), pythia.info.sigmaGen()) for ej in jarho.jets]
+					tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.weight(), pythia.info.sigmaGen()) for ej in jarho.jets]
 	pythia.stat()
 	outf.Write()
 	outf.Close()

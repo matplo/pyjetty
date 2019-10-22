@@ -91,12 +91,14 @@ def matched_pt(j0, j1):
 	return pt_sum / j1.pt()
 
 
-def fill_tree_data(jet, tw, sd, rho, iev=None, weight=None):
+def fill_tree_data(jet, tw, sd, rho, iev=None, weight=None, sigma=None):
 	tw.clear()
 	if iev:
 		tw.fill_branch('ev_id', iev)
 	if weight:
 		tw.fill_branch('weight', weight)
+	if sigma:
+		tw.fill_branch('sigma', sigma)
 
 	good_jet = 0.0
 	if len(jet.constituents()) > 0:
@@ -132,7 +134,7 @@ def fill_tree_data(jet, tw, sd, rho, iev=None, weight=None):
 	return jet
 
 
-def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None):
+def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None, sigma=None):
 	tw.clear()
 	if matched_pt(emb_jet, signal_jet) <= 0.5:
 		return None
@@ -141,6 +143,8 @@ def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None):
 		tw.fill_branch('ev_id', iev)
 	if weight:
 		tw.fill_branch('weight', weight)
+	if sigma:
+		tw.fill_branch('sigma', sigma)
 
 	sd_signal_jet = sd.result(signal_jet)
 	sd_info_signal_jet = fjcontrib.get_SD_jet_info(sd_signal_jet)
