@@ -30,7 +30,7 @@ class BoltzmannEvent(MPBase):
 		if multiplicity:
 			self.multiplicity = multiplicity
 		self.particles.clear()
-		for n in range(0, self.multiplicity):
+		for n in range(0, int(self.multiplicity)):
 			_pt  = self.funbg.GetRandom(0, self.max_pt)
 			_eta = self.ROOT_random.Rndm() * self.max_eta * 2. - self.max_eta;
 			_phi = self.ROOT_random.Rndm() * ROOT.TMath.Pi() * 2. - ROOT.TMath.Pi();

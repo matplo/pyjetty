@@ -3,16 +3,11 @@ import fastjet as fj
 import fjcontrib
 import fjext
 
+
 class JetAnalysis(MPBase):
 	def __init__(self, **kwargs):
 		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, particles=None)
 		super(JetAnalysis, self).__init__(**kwargs)
-
-		self.bg_rho_range = fj.SelectorAbsEtaMax(self.particle_eta_max)
-		self.bg_jet_def = fj.JetDefinition(fj.kt_algorithm, self.jet_R)
-		self.bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
-		self.bg_estimator = fj.JetMedianBackgroundEstimator(self.bg_rho_range, self.bg_jet_def, self.bg_area_def)
-		self.rho = 0
 
 		self.jet_eta_max = self.particle_eta_max - self.jet_R * 1.05
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
@@ -21,6 +16,39 @@ class JetAnalysis(MPBase):
 
 		if self.particles:
 			self.analyze_event(self.particles)
+
+	def analyze_event(self, parts):
+		if len(parts) < 1:
+			self.cs = None
+			self.jets = []
+		else:
+			self.cs = fj.ClusterSequenceArea(parts, self.jet_def, self.jet_area_def)
+			self.jets = fj.sorted_by_pt(self.jet_selector(self.cs.inclusive_jets()))
+
+
+class JetAnalysisPerJet(MPBase):
+	def __init__(self, **kwargs):
+		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, input_jets=None)
+		super(JetAnalysisPerJet, self).__init__(**kwargs)
+		self.jets = []
+		self.jas = []
+		for _j in self.input_jets:
+			if len(_j.constituents()):
+				_ja = JetAnalysis(jet_R=self.jet_R, jet_algorithm=self.jet_algorithm, particle_eta_max=self.particle_eta_max, particles=_j.constituents())
+				self.jets.extend(_ja.jets)
+				self.jas.append(_ja)
+
+class JetAnalysisWithRho(JetAnalysis):
+	def __init__(self, **kwargs):
+		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, particles=None)
+
+		self.bg_rho_range = fj.SelectorAbsEtaMax(self.particle_eta_max)
+		self.bg_jet_def = fj.JetDefinition(fj.kt_algorithm, self.jet_R)
+		self.bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		self.bg_estimator = fj.JetMedianBackgroundEstimator(self.bg_rho_range, self.bg_jet_def, self.bg_area_def)
+		self.rho = 0
+
+		super(JetAnalysisWithRho, self).__init__(**kwargs)
 
 	def analyze_event(self, parts):
 		if len(parts) < 1:
@@ -125,6 +153,7 @@ def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None):
 	tw.fill_branch('sd_j', sd_signal_jet)
 	tw.fill_branch('sd_j_z', sd_info_signal_jet.z)
 	tw.fill_branch('sd_j_dR', sd_info_signal_jet.dR)
+	tw.fill_branch('j_nc', len(signal_jet.constituents()))
 
 	tw.fill_branch('ej', emb_jet)
 	tw.fill_branch('ej_ptc', emb_jet.pt() - emb_jet.area() * rho)

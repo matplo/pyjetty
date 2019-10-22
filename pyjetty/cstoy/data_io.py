@@ -2,6 +2,7 @@ from pyjetty.mputils import MPBase
 import random
 import uproot
 import pandas as pd
+import fastjet as fj
 import fjext
 
 
@@ -116,7 +117,7 @@ class DataIO(MPBase):
 				nev = len(self.file_io.df_events)
 		return nev
 
-	def load_event(self):
+	def load_event(self, offset = 0):
 		self.particles = None
 		if self.file_io is None:
 			self.open_file()
@@ -128,10 +129,14 @@ class DataIO(MPBase):
 			self.file_io = None
 			return self.load_event()
 		event = self.file_io.df_events[self.current_event_in_file]
-		_tmp = [p.set_user_index(10000+ip) for ip,p in enumerate(event.particles)]
+		# print ('reset indexes')
+		# _tmp = [p.set_user_index(0) for ip,p in enumerate(event.particles)]
 		# print('loaded event:', self.current_event_in_file)
 		self.current_event_in_file = self.current_event_in_file + 1
-		self.particles = event.particles
+		self.particles = fj.vectorPJ()
+		for ip,p in enumerate(event.particles):
+			p.set_user_index(offset + ip)
+			self.particles.push_back(p)
 		return self.particles
 
 

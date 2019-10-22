@@ -52,7 +52,7 @@ class CEventSubtractor(MPBase):
 
 		# subtractor.set_use_nearby_hard(0.2,2);  // In this example, if there is a hard proxy within deltaR distance of 0.2, then the CS distance is multiplied by factor of 2, i.e. such particle is less favoured in the subtraction procedure. If you uncomment this line, then also uncomment line 106.
 		
-		self.subtractor.initialize();
+		self.subtractor.initialize()
 
 		# print(self)
 		# print(self.subtractor.description())
@@ -60,7 +60,42 @@ class CEventSubtractor(MPBase):
 	def process_event(self, full_event):
 		self.bge_rho.set_particles(full_event);
 		# the correction of the whole event with ConstituentSubtractor
-		self.corrected_event = self.subtractor.subtract_event(full_event, self.max_eta);
+		# self.corrected_event = self.subtractor.subtract_event(full_event, self.max_eta)
+		self.corrected_event = self.subtractor.subtract_event(full_event)
 		# if you want to use the information about hard proxies, use this version:
 		#  vector<PseudoJet> corrected_event=subtractor.subtract_event(full_event,hard_event_charged);  // here all charged hard particles are used for hard proxies. In real experiment, this corresponds to charged tracks from primary vertex. Optionally, one can add among the hard proxies also high pt calorimeter clusters after some basic pileup correction.
 		return self.corrected_event
+
+	def set_event_particles(self, full_event):
+		self.bge_rho.set_particles(full_event);
+
+	def process_jet(self, jet):
+		self.corrected_jet = self.subtractor.result(jet)
+		return self.corrected_jet
+
+class CSubtractorJetByJet(MPBase):
+	def __init__(self, **kwargs):
+		# set the default values
+		self.configure_from_args(	max_eta=4, 
+									bge_rho_grid_size=0.2)
+
+		super(CSubtractorJetByJet, self).__init__(**kwargs)
+
+		# background estimator
+		self.bge_rho = fj.GridMedianBackgroundEstimator(self.max_eta, self.bge_rho_grid_size)
+		self.subtractor = fjcontrib.ConstituentSubtractor(self.bge_rho) 
+
+	def set_event_particles(self, full_event):
+		self.bge_rho.set_particles(full_event);
+
+	def process_jet(self, jet):
+		self.corrected_jet = self.subtractor.result(jet)
+		return self.corrected_jet
+
+	def process_jets(self, jets):
+		self.corrected_jets = []
+		for j in jets:
+			corrected_jet = self.subtractor.result(j)
+			if corrected_jet.has_constituents():
+				self.corrected_jets.append(corrected_jet)
+		return self.corrected_jets

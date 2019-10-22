@@ -19,12 +19,12 @@ import pandas as pd
 from pyjetty.mputils import logbins
 from pyjetty.mputils import MPBase
 from pyjetty.mputils import BoltzmannEvent
-from pyjetty.mputils import CEventSubtractor
+from pyjetty.mputils import CEventSubtractor, CSubtractorJetByJet
 from pyjetty.mputils import RTreeWriter
 
 from alice_efficiency import AliceChargedParticleEfficiency
 from data_io import DataBackgroundIO
-from jet_analysis import fill_tree_matched, JetAnalysis
+from jet_analysis import fill_tree_matched, JetAnalysis, JetAnalysisWithRho, JetAnalysisPerJet
 
 from heppy.pythiautils import configuration as pyconf
 import pythia8
@@ -45,8 +45,10 @@ def main():
 	parser.add_argument('--zcut', default=0.1, type=float)
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--embed', help='run embedding from a file list', default='', type=str)
+	parser.add_argument('--SDsignal', help='embed only SD signal prongs', default=False, action='store_true')
 	parser.add_argument('--efficiency', help='apply charged particle efficiency', default=False, action='store_true')
 	parser.add_argument('--benchmark', help='benchmark pthat setting - 80 GeV', default=False, action='store_true')
+	parser.add_argument('--csjet', help='constituent subtration jet-by-jet', default=False, action='store_true')
 	args = parser.parse_args()
 
 	if args.output == 'output.root':
@@ -57,6 +59,10 @@ def main():
 			args.output = args.output.replace('.root', '_emb.root')
 		if args.efficiency:
 			args.output = args.output.replace('.root', '_effi.root')
+		if args.SDsignal:
+			args.output = args.output.replace('.root', '_SDsignal.root')
+		if args.csjet:
+			args.output = args.output.replace('.root', '_csjet.root')
 
 	if os.path.isfile(args.output):
 		if not args.overwrite:
@@ -84,7 +90,7 @@ def main():
 	else:
 		args.py_biaspow = 4
 		args.py_biasref = 10
-		jet_selector = fj.SelectorPtMin(5) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
+		jet_selector = fj.SelectorPtMin(20) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
 		# jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * jet_R0)
 
 	if args.ignore_mycfg:
@@ -97,6 +103,7 @@ def main():
 	sd_zcut = args.zcut
 	sd = fjcontrib.SoftDrop(0, sd_zcut, jet_R0)
 
+	jarho = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 	ja = JetAnalysis(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 
 	be = None
@@ -112,6 +119,10 @@ def main():
 	if args.dRmax > 0:
 		cs = CEventSubtractor(alpha=args.alpha, max_distance=args.dRmax, max_eta=max_eta, bge_rho_grid_size=0.25, max_pt_correct=100)
 		print(cs)
+	csjet = None
+	if args.csjet:
+		csjet = CSubtractorJetByJet(max_eta=max_eta, bge_rho_grid_size=0.25)
+		print(csjet)
 
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
@@ -145,22 +156,69 @@ def main():
 		if len(signal_jets) < 1:
 			continue
 
+
 		for sjet in signal_jets:
+			if args.SDsignal:
+				sd_sjet = sd.result(sjet)
+				pe1 = fj.PseudoJet()
+				pe2 = fj.PseudoJet()
+				has_parents = sd_sjet.has_parents(pe1, pe2)
+				if has_parents:
+					jparts = fj.vectorPJ()
+					pe1.set_user_index(0)
+					pe2.set_user_index(1)
+					if pe1.pt() > pe2.pt():
+						jparts.push_back(pe1)
+					else:
+						jparts.push_back(pe2)
+					sjets = fj.sorted_by_pt(jet_selector(jet_def(jparts)))
+					if len(sjets) == 1:
+						sjet = sjets[0]
+					else:
+						continue
+				else:
+					continue
 			if embd:
-				bg_parts = embd.load_event()
+				bg_parts = embd.load_event(offset=10000)
+				# for p in bg_parts:
+				# 	print(p.user_index())
 			else:
 				bg_parts = be.generate(offset=10000)
+				# for p in bg_parts:
+				# 	print(p.user_index())
 			full_event = bg_parts
 			tmp = [full_event.push_back(psj) for psj in sjet.constituents()]
 			if cs:
 				cs_parts = cs.process_event(full_event)
 				rho = cs.bge_rho.rho()
-				ja.analyze_event(cs_parts)
+				jarho.analyze_event(cs_parts)							
+				tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in jarho.jets]
 			else:
-				ja.analyze_event(full_event)
-				rho = ja.rho
-			tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in ja.jets]
-
+				jarho.analyze_event(full_event)
+				rho = jarho.rho
+				if csjet:
+					#_csjet = fjcontrib.ConstituentSubtractor(jarho.bg_estimator)
+					# subtr_jets = [_csjet.result(ej) for ej in jarho.jets]
+					csjet.set_event_particles(full_event)
+					#subtr_jets = [csjet.process_jet(ej) for ej in jarho.jets]
+					#print ('jbyj cs', len(subtr_jets), 'from', len(jarho.jets))
+					#subtr_jets_wconstits = [_j for _j in subtr_jets if _j.has_constituents()]
+					#for _j in subtr_jets_wconstits:
+					#	print(len(_j.constituents()))
+					subtr_jets_wconstits = csjet.process_jets(jarho.jets)
+					japerjet = JetAnalysisPerJet(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta, input_jets=subtr_jets_wconstits)
+					# for _j in japerjet.jets:
+					# 	for _c in _j.constituents():
+					# 		if _c.user_index() >= 0:
+					# 			print('user index kept?', _c.user_index())
+					# 		# else:
+					# 		# 	print('user index kept?', _c.user_index(), _c.pt())
+					# 	_sd_j = sd.result(_j)
+					# https://phab.hepforge.org/source/fastjetsvn/browse/contrib/contribs/RecursiveTools/trunk/Recluster.cc L 270
+					# tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in subtr_jets_wcs]
+					tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in japerjet.jets]
+				else:
+					tmp = [fill_tree_matched(sjet, ej, tw, sd, rho, iev, pythia.info.sigmaGen()) for ej in jarho.jets]
 	pythia.stat()
 	outf.Write()
 	outf.Close()
