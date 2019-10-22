@@ -811,8 +811,8 @@ class roounfold_sd(analysis_base.analysis_base):
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('#varepsilon_{kin}')
-    myBlankHisto.SetMaximum(2)
-    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.SetMaximum(1.2)
+    myBlankHisto.SetMinimum(0.8)
     myBlankHisto.Draw("E")
     
     leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
@@ -868,6 +868,12 @@ class roounfold_sd(analysis_base.analysis_base):
     text_latex.SetNDC()
     text = 'z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
     text_latex.DrawLatex(0.3, 0.75, text)
+    
+    line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.SetLineWidth(4)
+    line.Draw()
 
     outputFilename = os.path.join(self.output_dir, 'hKinematicEfficiency_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
     c.SaveAs(outputFilename)
