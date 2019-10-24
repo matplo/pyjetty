@@ -1,5 +1,13 @@
 import numpy as np
 import array
+import fnmatch
+import os
+
+def find_files(rootdir='.', pattern='*'):
+    return [os.path.join(rootdir, filename)
+            for rootdir, dirnames, filenames in os.walk(rootdir)
+            for filename in filenames
+            if fnmatch.fnmatch(filename, pattern)]
 
 def logbins(xmin, xmax, nbins):
 	if xmin <= 0:
