@@ -221,6 +221,8 @@ class run_sd_analysis(common_base.common_base):
 
           if self.do_plot_final_result:
             self.plot_final_result(observable, jetR, sd_label, zcut, beta)
+
+        self.plot_final_result_overlay(observable, jetR)
       
   #----------------------------------------------------------------------
   def perform_unfolding(self, observable):
@@ -704,6 +706,157 @@ class run_sd_analysis(common_base.common_base):
       self.plot_observable(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=True)
 
   #----------------------------------------------------------------------
+  def plot_final_result_overlay(self, observable, jetR):
+  
+    # Plot overlay of different beta, for fixed pt bin
+    self.plot_observable_overlay_beta(observable, jetR, 20., 40., plot_pythia=True)
+    self.plot_observable_overlay_beta(observable, jetR, 40., 60., plot_pythia=True)
+    self.plot_observable_overlay_beta(observable, jetR, 60., 80., plot_pythia=True)
+
+  #----------------------------------------------------------------------
+  def plot_observable_overlay_beta(self, observable, jetR, min_pt_truth, max_pt_truth, plot_pythia=False):
+    
+    name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
+    c = ROOT.TCanvas(name, name, 600, 450)
+    c.Draw()
+    
+    c.cd()
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    if observable == 'theta_g':
+      xmin = 0.
+      xmax = 1.
+      ymax = 4.
+    if observable == 'zg':
+      xmin = 0.
+      xmax = 0.5
+      ymax = 12.
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
+    myBlankHisto.SetNdivisions(505)
+    xtitle = getattr(self, 'xtitle_{}'.format(observable))
+    ytitle = getattr(self, 'ytitle_{}'.format(observable))
+    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.SetYTitle(ytitle)
+    myBlankHisto.SetMaximum(ymax)
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.Draw("E")
+    
+    #    myLegend = ROOT.TLegend(0.25,0.65,0.5,0.85)
+    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
+    self.utils.setup_legend(myLegend,0.035)
+      
+    # Retrieve histogram binnings for each SD setting
+    for i, sd_setting in enumerate(self.sd_settings):
+      
+      zcut = sd_setting[0]
+      beta = sd_setting[1]
+      sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+      
+      if observable == 'theta_g':
+        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
+        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+      if observable == 'zg':
+        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
+        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+      
+      if i == 0:
+        marker = 20
+        marker_pythia = marker+4
+        color = 600-6
+      if i == 1:
+        marker = 21
+        marker_pythia = marker+4
+        color = 632-4
+      if i == 2:
+        marker = 33
+        marker_pythia = 27
+        color = 416-2
+
+      if plot_pythia:
+        
+        fPythia_name = '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+        fPythia = ROOT.TFile(fPythia_name, 'READ')
+        hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
+        hPythia2 = fPythia.Get(hname)
+        hPythia2.SetDirectory(0)
+        
+        n_jets_inclusive2 = hPythia2.Integral(0, hPythia2.GetNbinsX()+1)
+        n_jets_tagged2 = hPythia2.Integral(hPythia2.FindBin(truth_rg_bin_array[0]), hPythia2.GetNbinsX())
+        fraction_tagged_pythia =  n_jets_tagged2/n_jets_inclusive2
+        hPythia2.Scale(1./n_jets_inclusive2, 'width')
+        hPythia2.SetMarkerSize(0)
+        hPythia2.SetMarkerStyle(0)
+        hPythia2.SetMarkerColor(color)
+        hPythia2.SetFillColor(color)
+        hPythia2.SetLineWidth(1)
+        hPythia2.Draw('E3 same')
+
+      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+      h_sys.SetLineColor(0)
+      h_sys.SetFillColor(color)
+      h_sys.SetFillColorAlpha(color, 0.3)
+      h_sys.SetFillStyle(1001)
+      h_sys.SetLineWidth(0)
+      h_sys.DrawCopy('E2 same')
+    
+      name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+      h = getattr(self, name)
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(marker)
+      h.SetMarkerColor(color)
+      h.SetLineStyle(1)
+      h.SetLineWidth(2)
+      h.SetLineColor(color)
+      h.DrawCopy('PE X0 same')
+        
+      myLegend.AddEntry(h, 'ALICE pp #beta={}'.format(beta), 'pe')
+        
+    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+    if plot_pythia:
+      myLegend.AddEntry(hPythia2, 'PYTHIA8 Monash2013', 'l')
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE Preliminary'
+    text_latex.DrawLatex(0.25, 0.87, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.8, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'R = ' + str(jetR) + '  |#eta_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.73, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.66, text)
+    
+    myLegend.Draw()
+
+    name = 'h_{}_R{}_{}-{}{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
+    if plot_pythia:
+      name = 'h_{}_R{}_{}-{}_Pythia{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
+    output_dir = getattr(self, 'output_dir_final_{}'.format(observable))
+    outputFilename = os.path.join(output_dir, name)
+    c.SaveAs(outputFilename)
+    c.Close()
+
+  #----------------------------------------------------------------------
   def plot_observable(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=False):
     
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth)
@@ -750,9 +903,9 @@ class run_sd_analysis(common_base.common_base):
         hPythia.Scale(1./n_jets_inclusive, 'width')
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
-        hPythia.SetMarkerStyle(23)
-        hPythia.SetMarkerColor(1)
-        hPythia.SetLineColor(1)
+        hPythia.SetMarkerStyle(21)
+        hPythia.SetMarkerColor(2)
+        hPythia.SetLineColor(2)
         hPythia.SetLineWidth(1)
         hPythia.Draw('E2 same')
     
@@ -768,16 +921,24 @@ class run_sd_analysis(common_base.common_base):
         hPythia2.Scale(1./n_jets_inclusive2, 'width')
         hPythia2.SetFillStyle(0)
         hPythia2.SetMarkerSize(1.5)
-        hPythia2.SetMarkerStyle(23)
-        hPythia2.SetMarkerColor(2)
-        hPythia2.SetLineColor(2)
+        hPythia2.SetMarkerStyle(21)
+        hPythia2.SetMarkerColor(1)
+        hPythia2.SetLineColor(1)
         hPythia2.SetLineWidth(1)
         hPythia2.Draw('E2 same')
     
-    name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    h = getattr(self, name)
-    fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     color = 600-6
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+    h_sys.SetLineColor(0)
+    h_sys.SetFillColor(color)
+    h_sys.SetFillColorAlpha(color, 0.3)
+    h_sys.SetFillStyle(1001)
+    h_sys.SetLineWidth(0)
+    h_sys.DrawCopy('E2 same')
+    
+    name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+    fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+    h = getattr(self, name)
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -785,13 +946,6 @@ class run_sd_analysis(common_base.common_base):
     h.SetLineWidth(2)
     h.SetLineColor(color)
     h.DrawCopy('PE X0 same')
-    
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
-    h_sys.SetLineColor(0)
-    h_sys.SetFillColor(color)
-    h_sys.SetFillColorAlpha(color, 0.3)
-    h_sys.SetFillStyle(1001)
-    h_sys.Draw('E2 same')
   
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
