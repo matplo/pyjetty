@@ -791,12 +791,18 @@ class run_sd_analysis(common_base.common_base):
         n_jets_tagged2 = hPythia2.Integral(hPythia2.FindBin(truth_rg_bin_array[0]), hPythia2.GetNbinsX())
         fraction_tagged_pythia =  n_jets_tagged2/n_jets_inclusive2
         hPythia2.Scale(1./n_jets_inclusive2, 'width')
-        hPythia2.SetMarkerSize(0)
-        hPythia2.SetMarkerStyle(0)
-        hPythia2.SetMarkerColor(color)
-        hPythia2.SetFillColor(color)
-        hPythia2.SetLineWidth(1)
-        hPythia2.Draw('E3 same')
+        
+        plot_errors = False
+        if plot_errors:
+          hPythia2.SetMarkerSize(0)
+          hPythia2.SetMarkerStyle(0)
+          hPythia2.SetMarkerColor(color)
+          hPythia2.SetFillColor(color)
+          hPythia2.DrawCopy('E3 same')
+        else:
+          hPythia2.SetLineColor(color)
+          hPythia2.SetLineWidth(1)
+          hPythia2.DrawCopy('L hist same')
 
       h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
