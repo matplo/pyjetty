@@ -40,7 +40,7 @@ class HJetHistogramsEvent(HJetHistogramsBase):
 		super(HJetHistogramsEvent, self).__init__(**kwargs)
 
 	def init_output(self):
-		self.foutname = self.outnamebase.replace('.root', '') + '_event_pthat_{}.root'.format(self.pthat)
+		self.foutname = self.outnamebase.replace('.root', '') + '_hout_event_pthat_{}.root'.format(self.pthat)
 		self.fout = ROOT.TFile(self.foutname, 'recreate')
 		# print('[i] opened a new file', self.foutname)
 		self.fout.cd()
@@ -78,7 +78,7 @@ class HJetHistograms(HJetHistogramsBase):
 		super(HJetHistograms, self).__init__(**kwargs)
 
 	def init_output(self):
-		self.foutname = self.outnamebase.replace('.root', '') + '{}_pthat_{}.root'.format(self.tree_names[self.itt], self.pthat)
+		self.foutname = self.outnamebase.replace('.root', '') + '_hout_{}_pthat_{}.root'.format(self.tree_names[self.itt], self.pthat)
 		self.fout = ROOT.TFile(self.foutname, 'recreate')
 		# print('[i] opened a new file', self.foutname)
 		self.fout.cd()
@@ -199,53 +199,56 @@ class HJetHistogramsContainer(MPBase):
 
 
 def main(args):
-	hjcontainer = HJetHistogramsContainer(outnamebase=args.output)
-	hjcontainer_event = HJetHistogramsContainer(outnamebase=args.output, event_wise=True)
-	file_list = find_files(args.input_dir, 'h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_*.0_hard.root')
+	if args.input_file:
+		hjcontainer = HJetHistogramsContainer(outnamebase=args.input_file)
+		hjcontainer_event = HJetHistogramsContainer(outnamebase=args.input_file, event_wise=True)
+		file_list = [args.input_file]
+	else:
+		hjcontainer = HJetHistogramsContainer(outnamebase=args.output)
+		hjcontainer_event = HJetHistogramsContainer(outnamebase=args.output, event_wise=True)
+		file_list = find_files(args.input_dir, 'h_jet_ch_R04_tranges_6-7_20-30_runid_*_pthatmin_*.0_hard.root')
 	print("[i] number of files found", len(file_list))
-	RTreeReader.print_errors()
 	tree_names = ['hjetT_6_7', 'hjetT_20_30', 'evT']
+	if args.tree_name not in tree_names:
+		print('[e] uknown tree', args.tree_name)
+		return
+	itt = tree_names.index(args.tree_name)
+	print ('[i] tree', args.tree_name, 'index=', itt)
 	for ifile in tqdm.tqdm(range(len(file_list))):
 		pthat = float(file_list[ifile].split('pthatmin_')[1].split('_hard')[0])
 		# print(file_list[ifile], pthat)
-		for itt in tqdm.tqdm(range(len(tree_names))):
-			tr = None
-			container = None
-			if tree_names[itt] == 'evT':
-				tr = RTreeReader(	tree_name=tree_names[itt], 
-									branches = ['pthard', 'sigma', 'mV0'],
-									file_name=file_list[ifile])
-				container = hjcontainer_event
-			else:
-				tr = RTreeReader(	tree_name=tree_names[itt], 
-									branches = ['t_pt', 'jet_pt', 'jet_a', 'pthard', 't_dphi', 'sigma', 'mV0'],
-									file_name=file_list[ifile])
-				container = hjcontainer
-			nev = tr.tree.GetEntries()
-			if args.nev_per_file > 0:
-				if args.nev_per_file < nev:
-					nev = args.nev_per_file
-			for iev in tqdm.tqdm(range(nev)):
-				tr.tree.GetEntry(iev)
-				container.fill_event(tr, itt, pthat)
-			tr.close()
+		tr = None
+		container = None
+		if args.tree_name == 'evT':
+			tr = RTreeReader(	tree_name=args.tree_name, 
+								branches = ['pthard', 'sigma', 'mV0'],
+								file_name=file_list[ifile])
+			container = hjcontainer_event
+		else:
+			tr = RTreeReader(	tree_name=args.tree_name, 
+								branches = ['t_pt', 'jet_pt', 'jet_a', 'pthard', 't_dphi', 'sigma', 'mV0'],
+								file_name=file_list[ifile])
+			container = hjcontainer
+		nev = tr.tree.GetEntries()
+		if args.nev_per_file > 0:
+			if args.nev_per_file < nev:
+				nev = args.nev_per_file
+		for iev in tqdm.tqdm(range(nev)):
+			tr.tree.GetEntry(iev)
+			container.fill_event(tr, itt, pthat)
+		tr.close()
 	print()
 	print()
-	RTreeReader.print_errors()
 
+	RTreeReader.print_errors()
 	hjcontainer.write()
 	hjcontainer_event.write()
 
-	# for i in range(tr.tree.GetEntries()):
-	# 	tr.tree.GetEntry(i)
-	# 	# print (tr.j_pt.size(), tr.ej_pt.size())
-	# 	for ie in range(tr.j_pt.size()):
-	# 		# print(tr.j_pt[ie])
-	# 		pass
-
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='analyze hjet events', prog=os.path.basename(__file__))
+	parser.add_argument('-f', '--input-file', help='input directory name - use with default file name', default='.', type=str)
 	parser.add_argument('-d', '--input-dir', help='input directory name - use with default file name', default='.', type=str)
+	parser.add_argument('-t', '--tree-name', help='tree to analyze : hjetT_6_7, hjetT_20_30, evT', default='?', type=str)
 	parser.add_argument('-o', '--output', help='output file name', default='hjet_histograms.root', type=str)
 	parser.add_argument('--nev-per-file', help='n events from a file', default=-1, type=int)
 	args = parser.parse_args()	
