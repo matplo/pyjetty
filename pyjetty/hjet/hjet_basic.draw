@@ -1,0 +1,42 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title <f>
+#legend pos=ur
+#logy 1
+#xrange 0,300
+# <f> 		:h_mV0 :p  : title=mV0 w/ (1) * (1./weight * sigma)
+# <f> 		:h_mV0w :p  : title=mV0 w/ (1) * (1./weight)
+<f> 		:h_mV0uw :p  : title=mV0
+<f> 		:h_t67_mV0 :p  : title=TT 6-7
+<f> 		:h_t2030_mV0 :p  : title=TT 20-30
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title <f>
+#legend pos=ur
+<f> 		:h_mV0uwpthard :colz +xprof[+k2 +p20 p] +yprof[+k2 +p24 p -0] noleg: title=#hat{p_{T}} vs. V0M +xprof[<#hat{p_{T}}>] +yprof[<V0M>]
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title <f>
+#legend pos=ur
+#x p_{T}
+#y counts
+#logy 1
+<f> 		:h_t67_pt :p  : title=TT 6-7
+<f> 		:h_t2030_pt :p  : title=TT 20-30
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title <f>
+#legend pos=ul title=p_{T}^{jet} > 5 GeV/c
+#logy 1
+<f> 		:h_t67_dphi :p  : title=TT 6-7
+<f> 		:h_t2030_dphi :p  : title=TT 20-30
+

@@ -1,0 +1,103 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 1
+#y mean or counts
+#xrange 0,300
+bref_<bref>.root 		:h_ev_sigma :p  : title=< #sigma > (mb)
+bref_<bref>.root 		:h_ev_mV0 :p  : title=mV0
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ll
+#logy 1
+#x mV0/<mV0>
+bref_<bref>.root 		:h_ev_mV0relat :p  : title=mV0/30.
+bref_<bref>.root 		:h_t_6_7_mV0relat :p  : title=TT 6-7 mV0/30.
+bref_<bref>.root 		:h_t_20_30_mV0relat :p  : title=TT 20-30 mV0/30.
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ll
+#logy 1
+#xrange 0,300
+bref_<bref>.root 		:h_ev_mV0 :p  : title=mV0
+bref_<bref>.root 		:h_t_6_7_mV0 :p  : title=TT 6-7
+bref_<bref>.root 		:h_t_20_30_mV0 :p  : title=TT 20-30
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 1
+#y counts
+bref_<bref>.root 		:h_t_6_7_jetpt :p  : title=TT 6-7
+bref_<bref>.root 		:h_t_20_30_jetpt :p  : title=TT 20-30
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=lr
+#logy 1
+#y counts
+bref_<bref>.root 		:h_t_6_7_Tpt :p  : title=6-7
+bref_<bref>.root 		:h_t_6_7_Tpt_HM :p  : title=6-7 HM
+bref_<bref>.root 		:h_t_20_30_Tpt :p  : title=20-30
+bref_<bref>.root 		:h_t_20_30_Tpt_HM :p  : title=20-30 HM
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=p_{T}^{jet} > 0
+#x #Delta #varphi (rad)
+#y probability/#Delta#varphi
+#logy 1
+#normalize self
+bref_<bref>.root 		:h_t_6_7_dphi :p  : title=TT 6-7
+bref_<bref>.root 		:h_t_20_30_dphi :p  : title=TT 20-30
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title TT 6-7
+#legend pos=ur title=MB (lines) and HM (points)
+#normalize self
+#maxy 0.6
+#xrange PI/2, PI
+#y probability/#Delta#varphi
+bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_10_15 :hist  : title=p_{T}^{jet} 10-15
+bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_10_15_HM :p -k +l1 noleg  : title=p_{T}^{jet} 10-15 HM
+#bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_15_20 :hist  : title=p_{T}^{jet} 15-20
+#bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_15_20_HM :p -k +l1 noleg  : title=p_{T}^{jet} 15-20 HM
+#bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_20_30 :hist  : title=p_{T}^{jet} 20-30
+#bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_20_30_HM :p -k +l1 noleg  : title=p_{T}^{jet} 20-30 HM
+bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_40_60 :hist  : title=p_{T}^{jet} 40-60
+bref_<bref>.root 		:h_t_6_7_dphi_jet_pt_40_60_HM :p -k +l1 noleg  : title=p_{T}^{jet} 40-60 HM
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title TT 20-30
+#legend pos=ul title=MB (lines) and HM (points)
+#normalize self
+#maxy 0.6
+#xrange PI/2, PI
+#y probability/#Delta#varphi
+bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_10_15 :hist  : title=p_{T}^{jet} 10-15
+bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_10_15_HM :p -k +l1 noleg  : title=p_{T}^{jet} 10-15 HM
+#bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_15_20 :hist  : title=p_{T}^{jet} 15-20
+#bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_15_20_HM :p -k +l1 noleg  : title=p_{T}^{jet} 15-20 HM
+#bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_20_30 :hist  : title=p_{T}^{jet} 20-30
+#bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_20_30_HM :p -k +l1 noleg  : title=p_{T}^{jet} 20-30 HM
+bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_40_60 :hist  : title=p_{T}^{jet} 40-60
+bref_<bref>.root 		:h_t_20_30_dphi_jet_pt_40_60_HM :p -k +l1 noleg  : title=p_{T}^{jet} 40-60 HM
