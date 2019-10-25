@@ -709,25 +709,40 @@ class run_sd_analysis(common_base.common_base):
   def plot_final_result_overlay(self, observable, jetR):
   
     # Plot overlay of different beta, for fixed pt bin
-    self.plot_observable_overlay_beta(observable, jetR, 20., 40., plot_pythia=True)
-    self.plot_observable_overlay_beta(observable, jetR, 40., 60., plot_pythia=True)
-    self.plot_observable_overlay_beta(observable, jetR, 60., 80., plot_pythia=True)
+    if observable == 'theta_g':
+      ymin_ratio = 0.
+      ymax_ratio = 2.8
+    if observable == 'zg':
+      ymin_ratio = 0.3
+      ymax_ratio = 1.6
+    
+    self.plot_observable_overlay_beta(observable, jetR, 20., 40., plot_pythia=True, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(observable, jetR, 40., 60., plot_pythia=True, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(observable, jetR, 60., 80., plot_pythia=True, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
 
   #----------------------------------------------------------------------
-  def plot_observable_overlay_beta(self, observable, jetR, min_pt_truth, max_pt_truth, plot_pythia=False):
+  def plot_observable_overlay_beta(self, observable, jetR, min_pt_truth, max_pt_truth, plot_pythia=False, plot_ratio=False, ymin_ratio=0., ymax_ratio=2.):
     
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
-    c = ROOT.TCanvas(name, name, 600, 450)
+    if plot_ratio:
+      c = ROOT.TCanvas(name, name, 600, 650)
+    else:
+      c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
     
     c.cd()
-    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-    myPad.SetLeftMargin(0.2)
-    myPad.SetTopMargin(0.07)
-    myPad.SetRightMargin(0.04)
-    myPad.SetBottomMargin(0.13)
-    myPad.Draw()
-    myPad.cd()
+    if plot_ratio:
+      pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
+    else:
+      pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    pad1.SetLeftMargin(0.2)
+    pad1.SetTopMargin(0.07)
+    pad1.SetRightMargin(0.04)
+    pad1.SetBottomMargin(0.13)
+    if plot_ratio:
+      pad1.SetBottomMargin(0.)
+    pad1.Draw()
+    pad1.cd()
     
     if observable == 'theta_g':
       xmin = 0.
@@ -736,7 +751,7 @@ class run_sd_analysis(common_base.common_base):
     if observable == 'zg':
       xmin = 0.
       xmax = 0.5
-      ymax = 12.
+      ymax = 11.
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
     xtitle = getattr(self, 'xtitle_{}'.format(observable))
@@ -746,9 +761,48 @@ class run_sd_analysis(common_base.common_base):
     myBlankHisto.SetYTitle(ytitle)
     myBlankHisto.SetMaximum(ymax)
     myBlankHisto.SetMinimum(0.)
+    if plot_ratio:
+      myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
+      myBlankHisto.GetYaxis().SetTitleSize(0.065)
+      myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+      myBlankHisto.GetYaxis().SetLabelSize(0.06)
     myBlankHisto.Draw("E")
+
+    # Plot ratio
+    if plot_ratio:
+      
+      c.cd()
+      pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
+      pad2.SetTopMargin(0)
+      pad2.SetBottomMargin(0.4)
+      pad2.SetLeftMargin(0.2)
+      pad2.SetRightMargin(0.04)
+      pad2.Draw()
+      pad2.cd()
+      
+      myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
+      myBlankHisto2.SetYTitle("#frac{Data}{PYTHIA}")
+      myBlankHisto2.SetXTitle(xtitle)
+      myBlankHisto2.GetXaxis().SetTitleSize(30)
+      myBlankHisto2.GetXaxis().SetTitleFont(43)
+      myBlankHisto2.GetXaxis().SetTitleOffset(4.)
+      myBlankHisto2.GetXaxis().SetLabelFont(43)
+      myBlankHisto2.GetXaxis().SetLabelSize(25)
+      myBlankHisto2.GetYaxis().SetTitleSize(20)
+      myBlankHisto2.GetYaxis().SetTitleFont(43)
+      myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
+      myBlankHisto2.GetYaxis().SetLabelFont(43)
+      myBlankHisto2.GetYaxis().SetLabelSize(25)
+      myBlankHisto2.GetYaxis().SetNdivisions(505)
+      myBlankHisto2.GetYaxis().SetRangeUser(ymin_ratio, ymax_ratio)
+      myBlankHisto2.Draw()
     
-    #    myLegend = ROOT.TLegend(0.25,0.65,0.5,0.85)
+      line = ROOT.TLine(0,1,xmax,1)
+      line.SetLineColor(920+2)
+      line.SetLineStyle(2)
+      line.Draw()
+
+    pad1.cd()
     myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
     self.utils.setup_legend(myLegend,0.035)
       
@@ -779,30 +833,32 @@ class run_sd_analysis(common_base.common_base):
         marker_pythia = 27
         color = 416-2
 
+      pad1.cd()
       if plot_pythia:
         
         fPythia_name = '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
         fPythia = ROOT.TFile(fPythia_name, 'READ')
         hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
-        hPythia2 = fPythia.Get(hname)
-        hPythia2.SetDirectory(0)
+        hPythia = fPythia.Get(hname)
+        hPythia.SetDirectory(0)
         
-        n_jets_inclusive2 = hPythia2.Integral(0, hPythia2.GetNbinsX()+1)
-        n_jets_tagged2 = hPythia2.Integral(hPythia2.FindBin(truth_rg_bin_array[0]), hPythia2.GetNbinsX())
-        fraction_tagged_pythia =  n_jets_tagged2/n_jets_inclusive2
-        hPythia2.Scale(1./n_jets_inclusive2, 'width')
+        n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_rg_bin_array[0]), hPythia.GetNbinsX())
+        fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
+        hPythia.Scale(1./n_jets_inclusive, 'width')
         
         plot_errors = False
         if plot_errors:
-          hPythia2.SetMarkerSize(0)
-          hPythia2.SetMarkerStyle(0)
-          hPythia2.SetMarkerColor(color)
-          hPythia2.SetFillColor(color)
-          hPythia2.DrawCopy('E3 same')
+          hPythia.SetMarkerSize(0)
+          hPythia.SetMarkerStyle(0)
+          hPythia.SetMarkerColor(color)
+          hPythia.SetFillColor(color)
+          hPythia.DrawCopy('E3 same')
         else:
-          hPythia2.SetLineColor(color)
-          hPythia2.SetLineWidth(1)
-          hPythia2.DrawCopy('L hist same')
+          hPythia.SetLineColor(color)
+          hPythia.SetLineColorAlpha(color, 0.5)
+          hPythia.SetLineWidth(4)
+          hPythia.DrawCopy('L hist same')
 
       h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
@@ -824,10 +880,35 @@ class run_sd_analysis(common_base.common_base):
       h.DrawCopy('PE X0 same')
         
       myLegend.AddEntry(h, 'ALICE pp #beta={}'.format(beta), 'pe')
+
+      if plot_ratio:
+        pad2.cd()
         
+        hRatioSys = h_sys.Clone()
+        hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
+        hRatioSys.Divide(hPythia)
+        hRatioSys.SetLineColor(0)
+        hRatioSys.SetFillColor(color)
+        hRatioSys.SetFillColorAlpha(color, 0.3)
+        hRatioSys.SetFillStyle(1001)
+        hRatioSys.SetLineWidth(0)
+        hRatioSys.DrawCopy('E2 same')
+
+        hRatioStat = h.Clone()
+        hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
+        hRatioStat.Divide(hPythia)
+        hRatioStat.SetMarkerSize(1.5)
+        hRatioStat.SetMarkerStyle(marker)
+        hRatioStat.SetMarkerColor(color)
+        hRatioStat.SetLineStyle(1)
+        hRatioStat.SetLineWidth(2)
+        hRatioStat.SetLineColor(color)
+        hRatioStat.DrawCopy('PE X0 same')
+        
+    pad1.cd()
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
-      myLegend.AddEntry(hPythia2, 'PYTHIA8 Monash2013', 'l')
+      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -838,19 +919,25 @@ class run_sd_analysis(common_base.common_base):
     text_latex.SetNDC()
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.8, text)
+    text_latex.DrawLatex(0.25, 0.81, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.75, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = 'R = ' + str(jetR) + '  |#eta_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.73, text)
+    text_latex.DrawLatex(0.25, 0.69, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.66, text)
+    text_latex.DrawLatex(0.25, 0.63, text)
     
     myLegend.Draw()
 
