@@ -10,17 +10,17 @@ import tqdm
 import argparse
 import os
 
-from heppy.pythiautils import configuration as pyconf
-import pythia8
-import pythiafjext
-import pythiaext
-
 import ROOT as r
 import array
 import random
 
 from pyjetty.mputils import MPBase
 from pyjetty.mputils import RTreeWriter
+
+from heppy.pythiautils import configuration as pyconf
+import pythia8
+import pythiafjext
+import pythiaext
 
 def logbins(xmin, xmax, nbins):
 		lspace = np.logspace(np.log10(xmin), np.log10(xmax), nbins+1)
