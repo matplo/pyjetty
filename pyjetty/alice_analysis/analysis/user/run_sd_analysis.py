@@ -801,7 +801,8 @@ class run_sd_analysis(common_base.common_base):
           hPythia2.DrawCopy('E3 same')
         else:
           hPythia2.SetLineColor(color)
-          hPythia2.SetLineWidth(1)
+          hPythia2.SetLineColorAlpha(color, 0.5)
+          hPythia2.SetLineWidth(4)
           hPythia2.DrawCopy('L hist same')
 
       h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
@@ -838,19 +839,25 @@ class run_sd_analysis(common_base.common_base):
     text_latex.SetNDC()
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.8, text)
+    text_latex.DrawLatex(0.25, 0.81, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'Charged jets    anti-#it{k}_{T}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.75, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = 'R = ' + str(jetR) + '  |#eta_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.73, text)
+    text_latex.DrawLatex(0.25, 0.69, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.66, text)
+    text_latex.DrawLatex(0.25, 0.63, text)
     
     myLegend.Draw()
 
