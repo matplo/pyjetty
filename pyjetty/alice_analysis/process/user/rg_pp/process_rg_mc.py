@@ -174,16 +174,28 @@ class process_rg_mc(process_base.process_base):
         beta = sd_setting[1]
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
         
-        name = 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+        name = 'hThetaG_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
         setattr(self, name, h)
         
-        name = 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+        name = 'hZg_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
+        setattr(self, name, h)
+        
+        name = 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+        h = ROOT.TH2F(name, name, 300, 0, 300, int(3*jetR*100), -3*jetR, 3*jetR)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('#theta_{g,det}-#theta_{g,truth}')
+        setattr(self, name, h)
+        
+        name = 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 100, -0.5, 0.5)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('z_{g,det}-z_{g,truth}')
         setattr(self, name, h)
 
         if  self.write_tree_output:
@@ -477,9 +489,15 @@ class process_rg_mc(process_base.process_base):
 
     # Fill response histograms
     theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
+    getattr(self, 'hThetaG_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
+    
+    theta_g_resolution = theta_g_det - theta_g_truth
     getattr(self, 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
       
     zg_resolution = (zg_det - zg_truth) / zg_truth
+    getattr(self, 'hZg_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
+
+    zg_resolution = zg_det - zg_truth
     getattr(self, 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
 
   #---------------------------------------------------------------
