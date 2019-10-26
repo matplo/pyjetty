@@ -248,31 +248,17 @@ class process_rg_mc(process_base.process_base):
     
     for jetR in self.jetR_list:
       
-      for sd_setting in self.sd_settings:
-        
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+      # Set jet definition and a jet selector
+      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+      jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9)
+      print('jet definition is:', jet_def)
+      print('jet selector for det-level is:', jet_selector_det,'\n')
+      print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
       
-        # Set jet definition and a jet selector
-        jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-        jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-        jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9)
-        print('jet definition is:', jet_def)
-        print('jet selector for det-level is:', jet_selector_det,'\n')
-        print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
-        
-        # Define SoftDrop settings
-        # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
-        sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-        reclusterer = fjcontrib.Recluster(jet_def_recluster)
-        sd.set_reclustering(True, reclusterer)
-        print('SoftDrop groomer is: {}'.format(sd.description()))
-        
-        # Then can use list comprehension to iterate over the groupby and do jet-finding
-        # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-        result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, sd_label) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+      # Then can use list comprehension to iterate over the groupby and do jet-finding
+      # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
+      result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
 
   #---------------------------------------------------------------
   # Fill track histograms.
@@ -286,12 +272,13 @@ class process_rg_mc(process_base.process_base):
     
     for track in fj_particles_det:
       self.hTrackEtaPhi.Fill(track.eta(), track.phi())
+      self.hTrackPt.Fill(track.pt())
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched, sd, sd_label):
+  def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched):
 
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -316,59 +303,48 @@ class process_rg_mc(process_base.process_base):
 
     jetR = jet_def.R()
     
-    # Get tree writer
-    tree_writer = None
-    if self.write_tree_output:
-      name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-      tree_writer = getattr(self, name)
-    
-    # Fill truth-level jet histograms (before matching)
-    for jet_truth in jets_truth_selected:
-      self.fill_truth_before_matching(tree_writer, jet_truth, jetR)
-    
     # Fill det-level jet histograms (before matching)
     for jet_det in jets_det_selected:
+      
+      # Check additional acceptance criteria
+      # skip event if not satisfied -- since first jet in event is highest pt
+      if not self.utils.is_det_jet_accepted(jet_det):
+        self.hNevents.Fill(0)
+        return
+      
       self.fill_det_before_matching(jet_det, jetR)
-
+  
+    # Fill truth-level jet histograms (before matching)
+    for jet_truth in jets_truth_selected:
+      self.fill_truth_before_matching(jet_truth, jetR)
+  
     # Set number of jet matches for each jet in user_index (to ensure unique matches)
     self.setNJetMatches(jets_det_selected, jets_truth_selected_matched, jetR)
     
+    # Loop through jets and fill matching histograms
+    result = [[self.fill_matching_histograms(jet_truth, jet_det, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+    
     # Loop through jets and fill response if both det and truth jets are unique match
-    for jet_det in jets_det_selected:
-      for jet_truth in jets_truth_selected_matched:
-        
-        # Check additional acceptance criteria
-        # skip event if not satisfied -- since first jet in event is highest pt
-        if not self.utils.is_det_jet_accepted(jet_det):
-          self.hNevents.Fill(0)
-          return
-        
-        if self.debug_level > 0:
-          print('deltaR: {}'.format(jet_det.delta_R(jet_truth)))
-          print('jet_det matches: {}'.format(jet_det.user_index()))
-          print('jet_truth matches: {}'.format(jet_truth.user_index()))
-        
-        # Check that jets match geometrically
-        deltaR = jet_det.delta_R(jet_truth)
-        getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), deltaR)
-
-        if deltaR < self.jet_matching_distance*jetR:
-
-          # Check that match is unique
-          if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
-
-            self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR, sd_label)
-
-    # Fill the tree
-    if self.write_tree_output:
-      tree_writer.fill_tree()
+    for sd_setting in self.sd_settings:
       
+      # Get tree writer
+      tree_writer = None
+      if self.write_tree_output:
+        name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+        tree_writer = getattr(self, name)
+
+      result = [[self.fill_jet_matches(sd_setting, jet_truth, jet_det, jetR, tree_writer) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+
+      # Fill the tree
+      if self.write_tree_output:
+        tree_writer.fill_tree()
+
   #---------------------------------------------------------------
   # Loop through jets and store number of matching candidates in user_index
   # (In principle could also store matching candidate in user_info)
   #---------------------------------------------------------------
   def setNJetMatches(self, jets_det_selected, jets_truth_selected, jetR):
-
+    
     # Reset user_index to 0
     for jet_det in jets_det_selected:
       jet_det.set_user_index(0)
@@ -376,28 +352,30 @@ class process_rg_mc(process_base.process_base):
       jet_truth.set_user_index(0)
     
     # Loop through jets and store number of matching candidates in user_index
-    for jet_det in jets_det_selected:
-      for jet_truth in jets_truth_selected:
+    result = [[self.set_matches(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected] for jet_det in jets_det_selected]
+  
+  #---------------------------------------------------------------
+  # Loop through jets and store number of matching candidates in user_index
+  # (In principle could also store matching candidate in user_info)
+  #---------------------------------------------------------------
+  def set_matches(self, jet_det, jet_truth, jetR):
         
-        if jet_det.delta_R(jet_truth) < self.jet_matching_distance*jetR:
+    if jet_det.delta_R(jet_truth) < self.jet_matching_distance*jetR:
           
-          jet_det.set_user_index(jet_det.user_index() + 1)
-          jet_truth.set_user_index(jet_truth.user_index() + 1)
+      jet_det.set_user_index(jet_det.user_index() + 1)
+      jet_truth.set_user_index(jet_truth.user_index() + 1)
 
   #---------------------------------------------------------------
   # Fill truth jet histograms
   #---------------------------------------------------------------
-  def fill_truth_before_matching(self, tree_writer, jet, jetR):
+  def fill_truth_before_matching(self, jet, jetR):
     
     jet_pt = jet.pt()
     for constituent in jet.constituents():
       z = constituent.pt() / jet.pt()
       getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
-    
-    if self.write_tree_output:
-      tree_writer.fill_branch('jet_pt_truth', jet_pt)
-    else:
-      getattr(self, 'hJetPt_Truth_R{}'.format(jetR)).Fill(jet.pt())
+      
+    getattr(self, 'hJetPt_Truth_R{}'.format(jetR)).Fill(jet.pt())
 
   #---------------------------------------------------------------
   # Fill det jet histograms
@@ -408,6 +386,63 @@ class process_rg_mc(process_base.process_base):
     for constituent in jet.constituents():
       z = constituent.pt() / jet_pt
       getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet_pt, z)
+
+  #---------------------------------------------------------------
+  # Loop through jets and fill matching histos
+  #---------------------------------------------------------------
+  def fill_matching_histograms(self, jet_truth, jet_det, jetR):
+      
+    if self.debug_level > 0:
+      print('deltaR: {}'.format(jet_det.delta_R(jet_truth)))
+      print('jet_det matches: {}'.format(jet_det.user_index()))
+      print('jet_truth matches: {}'.format(jet_truth.user_index()))
+
+    # Check that jets match geometrically
+    deltaR = jet_det.delta_R(jet_truth)
+    getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), deltaR)
+    
+    # If match if successful, fill histograms
+    if deltaR < self.jet_matching_distance*jetR:
+  
+      # Check that match is unique
+      if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
+        
+        jet_pt_det_ungroomed = jet_det.pt()
+        jet_pt_truth_ungroomed = jet_truth.pt()
+        JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
+        getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
+
+  #---------------------------------------------------------------
+  # Loop through jets and fill response if both det and truth jets are unique match
+  #---------------------------------------------------------------
+  def fill_jet_matches(self, sd_setting, jet_truth, jet_det, jetR, tree_writer):
+      
+    zcut = sd_setting[0]
+    beta = sd_setting[1]
+    sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+    
+    # Define SoftDrop settings
+    # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
+    sd = fjcontrib.SoftDrop(beta, zcut, jetR)
+    jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+    reclusterer = fjcontrib.Recluster(jet_def_recluster)
+    sd.set_reclustering(True, reclusterer)
+    if self.debug_level > 2:
+      print('SoftDrop groomer is: {}'.format(sd.description()))
+
+    # Check additional acceptance criteria
+    # skip event if not satisfied -- since first jet in event is highest pt
+    if not self.utils.is_det_jet_accepted(jet_det):
+      return
+
+    # Check that jets match geometrically
+    deltaR = jet_det.delta_R(jet_truth)
+    if deltaR < self.jet_matching_distance*jetR:
+
+      # Check that match is unique
+      if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
+        
+        self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill response histograms
@@ -441,9 +476,6 @@ class process_rg_mc(process_base.process_base):
       getattr(self, 'hResponse_JetPt_zg_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
 
     # Fill response histograms
-    JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
-    getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
-  
     theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
     getattr(self, 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
       

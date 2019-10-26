@@ -167,16 +167,16 @@ class process_rg_data(process_base.process_base):
     
     for jetR in self.jetR_list:
 
-        print('--- {} seconds ---'.format(time.time() - self.start_time))
+      print('--- {} seconds ---'.format(time.time() - self.start_time))
 
-        # Set jet definition and a jet selector
-        jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-        jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-        print('jet definition is:', jet_def)
-        print('jet selector is:', jet_selector,'\n')
-        
-        # Use list comprehension to do jet-finding and fill histograms
-        result = [self.analyzeJets(fj_particles, jet_def, jet_selector) for fj_particles in self.df_fjparticles]
+      # Set jet definition and a jet selector
+      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      print('jet definition is:', jet_def)
+      print('jet selector is:', jet_selector,'\n')
+      
+      # Use list comprehension to do jet-finding and fill histograms
+      result = [self.analyzeJets(fj_particles, jet_def, jet_selector) for fj_particles in self.df_fjparticles]
         
   #---------------------------------------------------------------
   # Analyze jets of a given event.
