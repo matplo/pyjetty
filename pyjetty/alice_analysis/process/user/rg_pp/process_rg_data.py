@@ -166,37 +166,23 @@ class process_rg_data(process_base.process_base):
     print()
     
     for jetR in self.jetR_list:
+
+      print('--- {} seconds ---'.format(time.time() - self.start_time))
+
+      # Set jet definition and a jet selector
+      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      print('jet definition is:', jet_def)
+      print('jet selector is:', jet_selector,'\n')
       
-      for sd_setting in self.sd_settings:
-        
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-
-        print('--- {} seconds ---'.format(time.time() - self.start_time))
-
-        # Set jet definition and a jet selector
-        jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-        jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-        print('jet definition is:', jet_def)
-        print('jet selector is:', jet_selector,'\n')
-        
-        # Define SoftDrop settings
-        # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
-        sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-        reclusterer = fjcontrib.Recluster(jet_def_recluster)
-        sd.set_reclustering(True, reclusterer)
-        print('SoftDrop groomer is: {}'.format(sd.description()))
-
-        # Use list comprehension to do jet-finding and fill histograms
-        result = [self.analyzeJets(fj_particles, jet_def, jet_selector, sd, sd_label) for fj_particles in self.df_fjparticles]
+      # Use list comprehension to do jet-finding and fill histograms
+      result = [self.analyzeJets(fj_particles, jet_def, jet_selector) for fj_particles in self.df_fjparticles]
         
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles, jet_def, jet_selector, sd, sd_label):
+  def analyzeJets(self, fj_particles, jet_def, jet_selector):
     
     # Perform constituent subtraction
     if self.do_constituent_subtraction:
@@ -208,26 +194,62 @@ class process_rg_data(process_base.process_base):
     jets = fj.sorted_by_pt(cs.inclusive_jets())
     jets_selected = jet_selector(jets)
 
-    # Loop through jets
+    # Loop through jets and fill non-SD histograms
     jetR = jet_def.R()
-    for jet in jets_selected:
+    result = [self.analyze_accepted_jets(jet, jetR) for jet in jets_selected]
+          
+    # Loop through SD settings and fill SD histograms
+    result = [[self.analyze_softdrop_jet(sd_setting, jet, jetR) for sd_setting in self.sd_settings] for jet in jets_selected]
+
+  #---------------------------------------------------------------
+  # Fill histograms
+  #---------------------------------------------------------------
+  def analyze_accepted_jets(self, jet, jetR):
+    
+    if self.debug_level > 1:
+      print('jet: {} with pt={}'.format(jet, jet.pt()))
+    
+    # Check additional acceptance criteria
+    if not self.utils.is_det_jet_accepted(jet):
+      return
+    
+    if not self.write_tree_output:
+      self.fill_jet_histograms(jet, jetR)
       
-      if self.debug_level > 1:
-        print('jet: {} with pt={}'.format(jet, jet.pt()))
-      
-      # Check additional acceptance criteria
-      if not self.utils.is_det_jet_accepted(jet):
-        continue
-      
-      # Perform SoftDrop grooming
-      jet_sd = sd.result(jet)
-      
-      # Fill tree or histograms (as requested)
-      if self.write_tree_output:
-        self.fill_tree(jet, jet_sd, jetR, sd_label)
-      else:
-        self.fill_jet_histograms(jet, jetR)
-        self.fill_softdrop_histograms(jet_sd, jet, jetR, sd_label)
+  #---------------------------------------------------------------
+  # Fill histograms
+  #---------------------------------------------------------------
+  def analyze_softdrop_jet(self, sd_setting, jet, jetR):
+    
+    zcut = sd_setting[0]
+    beta = sd_setting[1]
+    sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+    
+    sd = fjcontrib.SoftDrop(beta, zcut, jetR)
+    jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+    reclusterer = fjcontrib.Recluster(jet_def_recluster)
+    sd.set_reclustering(True, reclusterer)
+    setattr(self, 'sd_R{}_{}'.format(jetR, sd_label), sd)
+    if self.debug_level > 2:
+      print('SoftDrop groomer is: {}'.format(sd.description()))
+
+    #sd = getattr(self, 'sd_R{}_{}'.format(jetR, sd_label))
+    
+    if self.debug_level > 1:
+      print('SD -- jet: {} with pt={}'.format(jet, jet.pt()))
+  
+    # Check additional acceptance criteria
+    if not self.utils.is_det_jet_accepted(jet):
+      return
+
+    # Perform SoftDrop grooming
+    jet_sd = sd.result(jet)
+    
+    # Fill tree or histograms (as requested)
+    if self.write_tree_output:
+      self.fill_tree(jet, jet_sd, jetR, sd_label)
+    else:
+      self.fill_softdrop_histograms(jet_sd, jet, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill histograms
@@ -245,6 +267,9 @@ class process_rg_data(process_base.process_base):
   #---------------------------------------------------------------
   def fill_softdrop_histograms(self, jet_sd, jet, jetR, sd_label):
     
+    if self.debug_level > 1:
+      print('Filling SD histograms...')
+    
     jet_pt_ungroomed = jet.pt()
 
     # SD jet variables
@@ -254,6 +279,9 @@ class process_rg_data(process_base.process_base):
 
     getattr(self, 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
     getattr(self, 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
+
+    if self.debug_level > 1:
+      print('Done.')
           
   #---------------------------------------------------------------
   # Fill tree
@@ -275,12 +303,6 @@ class process_rg_data(process_base.process_base):
     tree_writer.fill_branch('mg', jet_sd.m())
   
     tree_writer.fill_tree()
-  
-    # Fill histograms
-    hZ = getattr(self, 'hZ_R{}'.format(jetR))
-    for constituent in jet.constituents():
-      z = constituent.pt() / jet_pt
-      hZ.Fill(jet_pt, z)
 
   #---------------------------------------------------------------
   # Fill track histograms.
