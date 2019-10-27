@@ -77,10 +77,10 @@ class DataFileIO(MPBase):
 		return True
 
 
-#random order of files; files do not repeat
+#random order of files; files do not repeat; load_event - single event return
 class DataIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_list='PbPb_file_list.txt')	
+		self.configure_from_args(file_list='PbPb_file_list.txt', random_file_order=True)
 		super(DataIO, self).__init__(**kwargs)
 		self.current_event_in_file = 0
 		self.file_io = None
@@ -100,7 +100,10 @@ class DataIO(MPBase):
 		self.file_io = None
 		self.current_event_in_file = 0
 		if len(self.list_of_files) > 0:
-			afile = random.choice(self.list_of_files)
+			if random_file_order:
+				afile = random.choice(self.list_of_files)
+			else:
+				afile = self.list_of_files[0]
 			self.list_of_files.remove(afile)
 		else:
 			print('[w] no more files to open.')
