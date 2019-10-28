@@ -5,6 +5,7 @@
 #pragma link off all functions;
 
 #pragma link C++ class RUtil::Test+;
+#pragma link C++ class RUtil::ParticleGrid+;
 
 // #pragma link off all class;
 // #pragma link off all function;
