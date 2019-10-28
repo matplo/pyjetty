@@ -100,7 +100,7 @@ class DataIO(MPBase):
 		self.file_io = None
 		self.current_event_in_file = 0
 		if len(self.list_of_files) > 0:
-			if random_file_order:
+			if self.random_file_order:
 				afile = random.choice(self.list_of_files)
 			else:
 				afile = self.list_of_files[0]

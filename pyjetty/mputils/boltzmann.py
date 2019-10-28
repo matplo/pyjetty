@@ -23,6 +23,11 @@ class BoltzmannEvent(MPBase):
 		self.nEvent = 0
 		# print (self)
 
+	def write(self):
+		self.histogram_phi.Write()
+		self.histogram_pt.Write()
+		self.histogram_eta.Write()
+
 	def _boltzmann(self, pt):
 		return 2. / self.mean_pt * pt * math.exp(-(2. / self.mean_pt) * pt);
 
