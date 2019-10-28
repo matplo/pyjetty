@@ -70,6 +70,7 @@ def main(agrs):
 	grfj = GridFastJet(grid_size=0.01, jet_R=args.jet_R, jet_algorithm=fj.antikt_algorithm, particle_eta_max=args.max_eta)
 	print(grfj)
 
+	pythia = None
 	if args.pythia:
 		mycfg = []
 		pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)

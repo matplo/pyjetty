@@ -17,10 +17,42 @@ def logbins(xmin, xmax, nbins):
 	return arr
 
 
+# think about thread safe implementation
+# use unique file names... for example?
+class UniqueString(object):
+	locked_strings = []
+	def __init__(self, base=None):
+		self.base = base
+
+	def _unique(base=None):
+		i = 0
+		retstring = base
+		if retstring is None:
+			retstring = 'UniqueString_0'
+		else:
+			retstring = '{}_{}'.format(str(base), i)
+		while retstring in UniqueString.locked_strings:
+			retstring = '{}_{}'.format(retstring.split('_')[0], i)
+			i = i + 1
+		UniqueString.locked_strings.append(retstring)
+		return retstring
+
+	def str(self, base=None):
+		if base:
+			self.base = base
+		return UniqueString._unique(self.base)
+
+	def str(base=None):
+		return UniqueString._unique(base)
+
+
 class MPBase(object):
 	def __init__(self, **kwargs):
+		self.configure_from_args(name=None)
 		for key, value in kwargs.items():
 			self.__setattr__(key, value)
+		if self.name is None:
+			self.name = UniqueString.str(type(self))
 
 	def configure_from_args(self, **kwargs):
 		for key, value in kwargs.items():
@@ -62,31 +94,3 @@ class Type(object):
 		return (tuple == type(x))
 	def is_dict(x):
 		return (dict == type(x))
-
-# think about thread safe implementation
-# use unique file names... for example?
-class UniqueString(object):
-	locked_strings = []
-	def __init__(self, base=None):
-		self.base = base
-
-	def _unique(base=None):
-		i = 0
-		retstring = base
-		if retstring is None:
-			retstring = 'UniqueString_0'
-		else:
-			retstring = '{}_{}'.format(str(base), i)
-		while retstring in UniqueString.locked_strings:
-			retstring = '{}_{}'.format(retstring.split('_')[0], i)
-			i = i + 1
-		UniqueString.locked_strings.append(retstring)
-		return retstring
-
-	def str(self, base=None):
-		if base:
-			self.base = base
-		return UniqueString._unique(self.base)
-
-	def str(base=None):
-		return UniqueString._unique(base)
