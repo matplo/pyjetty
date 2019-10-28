@@ -33,13 +33,15 @@ class roounfold_sd(analysis_base.analysis_base):
   #---------------------------------------------------------------
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, power_law_offset=0., **kwargs):
     
-    super(roounfold_sd, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, rebin_response, power_law_offset, **kwargs)
+    super(roounfold_sd, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
     
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
     self.observable = observable
+    self.rebin_response = rebin_response
     self.truncation = truncation
     self.binning = binning
+    self.power_law_offset = power_law_offset
     
     self.initialize_config()
   

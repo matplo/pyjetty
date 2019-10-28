@@ -29,15 +29,13 @@ class analysis_base(common_base.common_base):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, power_law_offset=0., **kwargs):
+  def __init__(self, input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', **kwargs):
     super(analysis_base, self).__init__(**kwargs)
     self.input_file_data = input_file_data
     self.input_file_response = input_file_response
     self.config_file = config_file
     self.output_dir = output_dir
     self.file_format = file_format
-    self.rebin_response = rebin_response
-    self.power_law_offset = power_law_offset
     
     # Create output dir
     if not self.output_dir.endswith("/"):
