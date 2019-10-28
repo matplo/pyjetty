@@ -2,8 +2,7 @@ import ROOT
 import fastjet as fj
 import numpy as np
 import array
-from pyjetty.mputils import MPBase
-from pyjetty.mputils import logbins
+from pyjetty.mputils import MPBase, UniqueString, logbins
 
 class BoltzmannEvent(MPBase):
 	def __init__(self, **kwargs):
@@ -48,3 +47,43 @@ class BoltzmannEvent(MPBase):
 			self.histogram_phi.Fill(_phi)
 		self.nEvent = self.nEvent + 1
 		return self.particles
+
+
+class BoltzmannSubtractor(MPBase):
+	def __init__(self, **kwargs):
+		self.configure_from_args(max_pt_subtract=1000)
+		super(BoltzmannSubtractor, self).__init__(**kwargs)
+		fname = UniqueString.str("BoltzmannSubtractor_function")
+		self.funbg = ROOT.TF1(fname, "[1] * 2. / [0] * x * TMath::Exp(-(2. / [0]) * x)", 0, self.max_pt_subtract, 2)
+		self.funbg.SetParameter(0, 0.7)
+		self.funbg.SetParameter(1, 1)
+		npx = int(self.max_pt_subtract/0.1)
+		if npx < 100:
+			npx = 100
+		self.funbg.SetNpx(npx)
+		hname = UniqueString.str("BoltzmannSubtractor_histogram")
+		self.h = ROOT.TH1F(hname, hname, 2*npx, -self.max_pt_subtract, self.max_pt_subtract)
+		self.h.SetDirectory(0)
+
+	def do_subtraction(self, parts):
+		self.sparts = []
+		for p in parts:
+			if p.pt() > self.max_pt_subtract:
+				self.sparts.append(p)
+				continue
+			else:
+				fraction = self.funbg.Eval(p.pt()) * self.total_pt
+				if p.pt() - fraction > 0:
+					newp = fj.PseudoJet()
+					newp.reset_PtYPhiM(p.pt() - fraction, p.rap(), p.phi(), p.m())
+					self.sparts.append(newp)
+
+	def subtracted_particles(self, parts):
+		self.h.Reset()
+		_parts_pt = [p.pt() for p in parts if p.pt() < self.max_pt_subtract]
+		self.total_pt = sum(_parts_pt)
+		_tmp = [self.h.Fill(pt) for pt in _parts_pt]
+		self.h.Scale(1./len(_parts_pt))
+		self.h.Fit(self.funbg, "RMNQ0")
+		self.do_subtraction(parts)
+		return self.sparts
