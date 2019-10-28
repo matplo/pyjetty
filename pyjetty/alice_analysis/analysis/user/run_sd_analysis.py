@@ -475,7 +475,7 @@ class run_sd_analysis(common_base.common_base):
     setattr(self, name, hSystematic_RegParam)
     
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
     # Prior 1
@@ -489,7 +489,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Prior1)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
 
     # Prior 2
@@ -503,7 +503,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Prior2)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior2, outputFilename, 'P E')
 
     # Truncation
@@ -517,7 +517,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Truncation)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
     
     # Binning
@@ -531,7 +531,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Binning)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
     
     # Trk eff
@@ -544,13 +544,13 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_TrkEff)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
 
     # Add uncertainties in quadrature
     hSystematic_Total = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff)
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
     name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
@@ -658,7 +658,7 @@ class run_sd_analysis(common_base.common_base):
     text_latex.DrawLatex(0.25, 0.71, text)
 
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 

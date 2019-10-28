@@ -453,27 +453,6 @@ class roounfold_sd(analysis_base.analysis_base):
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
   #################################################################################################
-  def plotRegParamSystematic(self):
-    
-    #Plot the spectra comparing only k=+1 and k-1 to the main result
-    xRangeMin = min_pt_reported
-    xRangeMax = max_pt_reported
-    yAxisTitle = "#frac{d#sigma}{dp_{T}} [mb (GeV/c)^{-1}]"
-    ratioYAxisTitle = "Ratio to k={}".format(reg_param)
-    outputFilename = os.path.join(output_dir, "hJetSpectraUnfoldedRatio" + file_format)
-    legendTitle = "{} Unfolding".format(type)
-    hLegendLabel = "k = {}".format(reg_param-1)
-    h2LegendLabel = "k = {}".format(reg_param)
-    h3LegendLabel = "k = {}".format(reg_param+1)
-    if hLowerkResult and hMainResult and hHigherkResult:
-      # To get sensible error bars, assume main result has no errors
-      for bin in range(1, hMainResult.GetNbinsX() + 1):
-        hMainResult.SetBinError(bin, 0)
-      plotSpectra(hLowerkResult, hMainResult, hHigherkResult, 1., xRangeMin, xRangeMax, yAxisTitle, ratioYAxisTitle, outputFilename, "", legendTitle, hLegendLabel, h2LegendLabel, h3LegendLabel)
-
-  #################################################################################################
-  # Plot various slices of the response matrix (from the THn)
-  #################################################################################################
   def plot_unfolded_observable(self, jetR, sd_label, zcut, beta):
     
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
@@ -916,7 +895,7 @@ class roounfold_sd(analysis_base.analysis_base):
     hResponse4D.GetAxis(3).SetRangeUser(truth_bin_array[0], truth_bin_array[-1])
 
     hResponse_Obs = hResponse4D.Projection(3,2)
-    hResponse_Obs.SetName('hResponse_Obs_R{}_{}_{}_{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth))
+    hResponse_Obs.SetName('hResponse_Obs_R{}_{}_{}_{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth)))
     
     hResponse_Obs_Normalized = self.normalizeResponseMatrix(hResponse_Obs)
     
