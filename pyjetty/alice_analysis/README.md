@@ -11,7 +11,7 @@ The framework has two stages:
 
 The processing machinery is contained in:
   - `process/base`: Contains several shared common classes
-      - the root base class: `base.py`
+      - the root base class: `common_base.py`
       - the processing base class: `process_base.py`
       - an IO class: `process_io.py`
       - a process utility class: `process_utils.py`
@@ -29,7 +29,7 @@ processing and post-processing codes.
 
 The directory `analysis` contains the post-processing machinery:
   - `analysis/base`: Contains several shared common classes
-       - the root base class: `base.py`
+       - the root base class: `common_base.py`
       - the analysis base class: `analysis_base.py`
       - an analysis utility class: `analysis_utils.py`
   - `analysis/user`: Contains user analysis classes, which should derive

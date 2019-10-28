@@ -75,8 +75,6 @@ SoftDrop:
       theta_g:
         0.4: 5
 
-force_rebin: False
-
 #constituent_subtractor:
 #  max_distance: 0.25
 #  alpha: 0
@@ -86,14 +84,25 @@ force_rebin: False
 #  ghost_area: 0.01
 
 ###############################################################################
+# Analysis parameters
 
-# Plotting parameters
 file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/alidock/theta_g/roounfold_rg_output_24309'
 
 do_unfolding: True
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
+
+# List of which systematics to perform
+# Options: [kMain, kTrackEff, kPrior1, kPrior2, kTruncation, kBinning]
+systematics_list:
+  - kMain
+  - kTrackEff
+  - kPrior1
+  - kPrior2
+  - kTruncation
+  - kBinning
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
@@ -103,6 +112,3 @@ trkeff_data: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC17pq/22958
 trkeff_response: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC18b8_trkeff/24509/AnalysisResultsFinal.root'
 
 # Theory comparisons
-pythia_20: '/Users/jamesmulligan/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin20.0_hadrON____ISR___MPI_charged_output.root'
-pythia_40: '/Users/jamesmulligan/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin40.0_hadrON____ISR___MPI_charged_output.root'
-pythia_60: '/Users/jamesmulligan/alidock/theta_g/Pythia/pythia_rg_jetR0.4_pthatmin60.0_hadrON____ISR___MPI_charged_output.root'

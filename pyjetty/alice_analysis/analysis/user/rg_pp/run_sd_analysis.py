@@ -51,7 +51,6 @@ class run_sd_analysis(common_base.common_base):
     self.do_unfolding = config['do_unfolding']
     self.do_systematics = config['do_systematics']
     self.do_plot_final_result = config['do_plot_final_result']
-    
     self.force_rebin_response=config['force_rebin']
     
     # Retrieve list of SD grooming settings
@@ -106,23 +105,15 @@ class run_sd_analysis(common_base.common_base):
         
         truth_zg_bin_array = array('d',zg_bins_truth)
         setattr(self, 'truth_zg_bin_array_{}'.format(sd_label), truth_zg_bin_array)
-    
-    self.min_pt_reported = 20
-    self.max_pt_reported = 80
-    self.regularizationParamName = 'n_iter'
 
-    # List of possible systematic variations
-    # Regularization parameter is automatically included
-    self.kMain, self.kUnfoldingRange1, self.kUnfoldingRange2, self.kPrior1, self.kPrior2, self.kTruncation, self.kBinning, self.kTrackEff = range(0, 8)
-
-    # Set which systematics should be performed
-    self.systematics_list = [self.kMain, self.kPrior1, self.kPrior2, self.kTruncation, self.kBinning, self.kTrackEff]
+    # List of systematic variations to perform
+    self.systematics_list = config['systematics_list']
     
     # Load paths to processing output, to be unfolded
     self.main_data = config['main_data']
     self.main_response = config['main_response']
     
-    if self.kTrackEff in self.systematics_list:
+    if 'kTrackEff' in self.systematics_list:
       self.trkeff_data = config['trkeff_data']
       self.trkeff_response = config['trkeff_response']
           
@@ -132,13 +123,8 @@ class run_sd_analysis(common_base.common_base):
     for observable in self.observables:
       self.create_output_dirs(observable)
 
-    # Path to pythia results
-    self.pythia_20 = config['pythia_20']
-    self.pythia_40 = config['pythia_40']
-    self.pythia_60 = config['pythia_60']
-
   #---------------------------------------------------------------
-  # Main processing function
+  # Create a set of output directories for a given observable
   #---------------------------------------------------------------
   def create_output_dirs(self, observable):
     
@@ -146,58 +132,40 @@ class run_sd_analysis(common_base.common_base):
     if not os.path.exists(output_dir):
       os.makedirs(output_dir)
 
-    output_dir_main = os.path.join(output_dir, 'main')
-    setattr(self, 'output_dir_main_{}'.format(observable), output_dir_main)
-    if not os.path.isdir(output_dir_main):
-      os.makedirs(output_dir_main)
-
-    if self.kTrackEff in self.systematics_list:
-      output_dir_trkeff = os.path.join(output_dir, 'trkeff')
-      setattr(self, 'output_dir_trkeff_{}'.format(observable), output_dir_trkeff)
-      if not os.path.isdir(output_dir_trkeff):
-        os.makedirs(output_dir_trkeff)
+    self.create_output_subdir(observable, output_dir, 'main')
       
-    if self.kPrior1 in self.systematics_list:
-      output_dir_prior1 = os.path.join(output_dir, 'prior1')
-      setattr(self, 'output_dir_prior1_{}'.format(observable), output_dir_prior1)
-      if not os.path.isdir(output_dir_prior1):
-        os.makedirs(output_dir_prior1)
-    
-    if self.kPrior2 in self.systematics_list:
-      output_dir_prior2 = os.path.join(output_dir, 'prior2')
-      setattr(self, 'output_dir_prior2_{}'.format(observable), output_dir_prior2)
-      if not os.path.isdir(output_dir_prior2):
-        os.makedirs(output_dir_prior2)
-    
-    if self.kTruncation in self.systematics_list:
-      output_dir_truncation = os.path.join(output_dir, 'truncation')
-      setattr(self, 'output_dir_truncation_{}'.format(observable), output_dir_truncation)
-      if not os.path.isdir(output_dir_truncation):
-        os.makedirs(output_dir_truncation)
-    
-    if self.kBinning in self.systematics_list:
-      output_dir_binning = os.path.join(output_dir, 'binning')
-      setattr(self, 'output_dir_binning_{}'.format(observable), output_dir_binning)
-      if not os.path.isdir(output_dir_binning):
-        os.makedirs(output_dir_binning)
+    if 'kTrackEff' in self.systematics_list:
+      self.create_output_subdir(observable, output_dir, 'trkeff')
+    if 'kPrior1' in self.systematics_list:
+      self.create_output_subdir(observable, output_dir, 'prior1')
+    if 'kPrior2' in self.systematics_list:
+      self.create_output_subdir(observable, output_dir, 'prior2')
+    if 'kTruncation' in self.systematics_list:
+      self.create_output_subdir(observable, output_dir, 'truncation')
+    if 'kBinning' in self.systematics_list:
+      self.create_output_subdir(observable, output_dir, 'binning')
 
     if self.do_systematics:
-      output_dir_systematics = os.path.join(output_dir, 'systematics')
-      setattr(self, 'output_dir_systematics_{}'.format(observable), output_dir_systematics)
-      if not os.path.isdir(output_dir_systematics):
-        os.makedirs(output_dir_systematics)
-    
+      output_dir_systematics = self.create_output_subdir(observable, output_dir, 'systematics')
       sys_root_filename = os.path.join(output_dir_systematics, 'fSystematics.root')
       fSystematics = ROOT.TFile(sys_root_filename, 'RECREATE')
-      
+  
     if self.do_plot_final_result:
-      output_dir_final = os.path.join(output_dir, 'final_results')
-      setattr(self, 'output_dir_final_{}'.format(observable), output_dir_final)
-      if not os.path.isdir(output_dir_final):
-        os.makedirs(output_dir_final)
-
+      output_dir_final = self.create_output_subdir(observable, output_dir, 'final_results')
       final_result_root_file = os.path.join(output_dir_final, 'fFinalResults.root')
       fFinalResults = ROOT.TFile(final_result_root_file, 'RECREATE')
+
+  #---------------------------------------------------------------
+  # Create a single output subdirectory
+  #---------------------------------------------------------------
+  def create_output_subdir(self, observable, output_dir, name):
+    
+    output_subdir = os.path.join(output_dir, name)
+    setattr(self, 'output_dir_{}_{}'.format(name, observable), output_subdir)
+    if not os.path.isdir(output_subdir):
+      os.makedirs(output_subdir)
+
+    return output_subdir
 
   #---------------------------------------------------------------
   # Main processing function
@@ -234,31 +202,31 @@ class run_sd_analysis(common_base.common_base):
     analysis_main.roounfold_sd()
 
     # Tracking efficiency variation
-    if self.kTrackEff in self.systematics_list:
+    if 'kTrackEff' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
       analysis_trkeff = roounfold_sd.roounfold_sd(observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
       analysis_trkeff.roounfold_sd()
 
     # Prior variation 1
-    if self.kPrior1 in self.systematics_list:
+    if 'kPrior1' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
       analysis_prior1 = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
       analysis_prior1.roounfold_sd()
     
     # Prior variation 2
-    if self.kPrior2 in self.systematics_list:
+    if 'kPrior2' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
       analysis_prior2 = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
       analysis_prior2.roounfold_sd()
 
     # Truncation variation
-    if self.kTruncation in self.systematics_list:
+    if 'kTruncation' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
       analysis_truncation = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
       analysis_truncation.roounfold_sd()
         
     # Binning variation
-    if self.kBinning in self.systematics_list:
+    if 'kBinning' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
       analysis_binning = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
       analysis_binning.roounfold_sd()
@@ -315,7 +283,7 @@ class run_sd_analysis(common_base.common_base):
     setattr(self, name, hRegParam2)
     
     # Get trkeff result
-    if self.kTrackEff in self.systematics_list:
+    if 'kTrackEff' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
       path_trkeff = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fTrkEff = ROOT.TFile(path_trkeff, 'READ')
@@ -325,7 +293,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, '{}_trkeff'.format(name), hTrkEff)
     
     # Get prior result
-    if self.kPrior1 in self.systematics_list:
+    if 'kPrior1' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
       path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fPrior1 = ROOT.TFile(path_prior1, 'READ')
@@ -335,7 +303,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, '{}_prior1'.format(name), hPrior1)
     
     # Get prior result
-    if self.kPrior2 in self.systematics_list:
+    if 'kPrior2' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
       path_prior2 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fPrior2 = ROOT.TFile(path_prior2, 'READ')
@@ -345,7 +313,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, '{}_prior2'.format(name), hPrior2)
     
     # Get truncation result
-    if self.kTruncation in self.systematics_list:
+    if 'kTruncation' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
       path_truncation = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fTruncation = ROOT.TFile(path_truncation, 'READ')
@@ -355,7 +323,7 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, '{}_truncation'.format(name), hTruncation)
     
     # Get binning result
-    if self.kBinning in self.systematics_list:
+    if 'kBinning' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
       path_binning = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
       fBinning = ROOT.TFile(path_binning, 'READ')
@@ -422,31 +390,31 @@ class run_sd_analysis(common_base.common_base):
     hRegParam2 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
-    if self.kTrackEff in self.systematics_list:
+    if 'kTrackEff' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, sd_label, reg_param_final)
       name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hTrkEff = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior1
-    if self.kPrior1 in self.systematics_list:
+    if 'kPrior1' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, sd_label, reg_param_final)
       name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hPrior1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior2
-    if self.kPrior2 in self.systematics_list:
+    if 'kPrior2' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_prior2'.format(observable, jetR, sd_label, reg_param_final)
       name1D = 'hPrior2_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hPrior2 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get truncation
-    if self.kTruncation in self.systematics_list:
+    if 'kTruncation' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_truncation'.format(observable, jetR, sd_label, reg_param_final)
       name1D = 'hTruncation_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hTruncation = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get binning
-    if self.kBinning in self.systematics_list:
+    if 'kBinning' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_binning'.format(observable, jetR, sd_label, reg_param_final)
       name1D = 'hBinning_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hBinning = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
@@ -475,12 +443,12 @@ class run_sd_analysis(common_base.common_base):
     setattr(self, name, hSystematic_RegParam)
     
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
     # Prior 1
     hSystematic_Prior1 = None
-    if self.kPrior1 in self.systematics_list:
+    if 'kPrior1' in self.systematics_list:
       name = 'hSystematic_{}_Prior1_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hSystematic_Prior1 = hMain.Clone()
       hSystematic_Prior1.SetName(name)
@@ -489,12 +457,12 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Prior1)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
 
     # Prior 2
     hSystematic_Prior2 = None
-    if self.kPrior2 in self.systematics_list:
+    if 'kPrior2' in self.systematics_list:
       name = 'hSystematic_{}_Prior2_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hSystematic_Prior2 = hMain.Clone()
       hSystematic_Prior2.SetName(name)
@@ -503,12 +471,12 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Prior2)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior2, outputFilename, 'P E')
 
     # Truncation
     hSystematic_Truncation = None
-    if self.kTruncation in self.systematics_list:
+    if 'kTruncation' in self.systematics_list:
       name = 'hSystematic_{}_Truncation_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hSystematic_Truncation = hMain.Clone()
       hSystematic_Truncation.SetName(name)
@@ -517,12 +485,12 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Truncation)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
     
     # Binning
     hSystematic_Binning = None
-    if self.kBinning in self.systematics_list:
+    if 'kBinning' in self.systematics_list:
       name = 'hSystematic_{}_Binning_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hSystematic_Binning = hMain.Clone()
       hSystematic_Binning.SetName(name)
@@ -531,11 +499,11 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Binning)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
     
     # Trk eff
-    if self.kTrackEff in self.systematics_list:
+    if 'kTrackEff' in self.systematics_list:
       name = 'hSystematic_{}_TrkEff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
       hSystematic_TrkEff = hMain.Clone()
       hSystematic_TrkEff.SetName(name)
@@ -544,13 +512,13 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_TrkEff)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
 
     # Add uncertainties in quadrature
     hSystematic_Total = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff)
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
     name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
@@ -658,7 +626,7 @@ class run_sd_analysis(common_base.common_base):
     text_latex.DrawLatex(0.25, 0.71, text)
 
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, min_pt_truth, max_pt_truth, self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
@@ -944,7 +912,7 @@ class run_sd_analysis(common_base.common_base):
     name = 'h_{}_R{}_{}-{}{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
       name = 'h_{}_R{}_{}-{}_Pythia{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
@@ -1096,7 +1064,7 @@ class run_sd_analysis(common_base.common_base):
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
       name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
