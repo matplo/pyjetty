@@ -35,16 +35,16 @@ class analysis_utils(common_base.common_base):
     super(analysis_utils, self).__init__(**kwargs)
 
   #---------------------------------------------------------------
-  # Rebin 2D (pt, theta) histogram according to specified binnings
+  # Rebin 2D (pt, my_observable) histogram according to specified binnings
   #---------------------------------------------------------------
-  def rebin_data(self, hData, name_data, n_pt_bins, pt_bin_array, n_rg_bins, rg_bin_array):
+  def rebin_data(self, hData, name_data, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array):
     
     # Create empty TH2 with appropriate binning
     name = '{}_{}'.format(name_data, 'rebinned')
-    h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_rg_bins, rg_bin_array)
+    h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
     h.Sumw2()
     
-    # Loop over all bins (including under/over-flow -- needed for SD tagging rate), and fill rebinned histogram
+    # Loop over all bins (including under/over-flow -- needed e.g. for SD tagging rate), and fill rebinned histogram
     for bin_x in range(0, hData.GetNbinsX() + 2):
       for bin_y in range(0, hData.GetNbinsY() + 2):
         x = hData.GetXaxis().GetBinCenter(bin_x)
@@ -56,7 +56,7 @@ class analysis_utils(common_base.common_base):
     return h
 
   #---------------------------------------------------------------
-  # Rebin THn according to specified binnings, saving both a rebinned
+  # Rebin 4D THn response according to specified binnings, saving both a rebinned
   # THn and a RooUnfoldResponse object, and write to file
   #---------------------------------------------------------------
   def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, observable, power_law_offset=0.):
@@ -271,6 +271,43 @@ class analysis_utils(common_base.common_base):
 
     return h
 
+  #----------------------------------------------------------------------
+  # Check if re-binned response file exists -- create it if not (or if forced)
+  #----------------------------------------------------------------------
+  def check_rebin_response(self, output_dir, force_rebin_response):
+    
+    rebin_response = True
+    response_path = os.path.join(output_dir, 'response.root')
+    if os.path.exists(response_path):
+      rebin_response = False
+      if force_rebin_response:
+        print('Response {} exists -- force re-create...'.format(response_path))
+        rebin_response = True
+      else:
+        print('Response {} exists -- don\'t re-create.'.format(response_path))
+    else:
+      print('Response {} doesn\'t exist -- create it...'.format(response_path))
+    
+    return rebin_response
+
+  #----------------------------------------------------------------------
+  # Add two histograms in quadrature
+  #----------------------------------------------------------------------
+  def add_in_quadrature(self, h1, h2):
+
+    h_new = h1.Clone()
+    h_new.SetName('{}_new'.format(h1.GetName()))
+
+    for i in range(1, h_new.GetNbinsX()+1):
+      value1 = h1.GetBinContent(i)
+      value2 = h2.GetBinContent(i)
+      
+      new_value = math.sqrt(value1*value1 + value2*value2)
+      
+      h_new.SetBinContent(i, new_value)
+    
+    return h_new
+  
   #---------------------------------------------------------------
   # Normalize a histogram by its integral
   #---------------------------------------------------------------
