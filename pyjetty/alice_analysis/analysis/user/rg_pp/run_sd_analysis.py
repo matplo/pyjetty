@@ -62,8 +62,8 @@ class run_sd_analysis(common_base.common_base):
     for observable in self.observables:
     
       if observable == 'theta_g':
-        xtitle = '#theta_{g}'
-        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+        xtitle = '#it{#theta}_{g}'
+        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{#theta}_{g}}'
       if observable == 'zg':
         xtitle = '#it{z}_{g}'
         ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
@@ -897,7 +897,7 @@ class run_sd_analysis(common_base.common_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '  |#eta_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
+    text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.69, text)
     
