@@ -42,7 +42,10 @@ class analysis_utils(common_base.common_base):
     # Create empty TH2 with appropriate binning
     name = '{}_{}'.format(name_data, 'rebinned')
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
-    h.Sumw2()
+    if h.GetSumw2() is 0:
+      print('sumw2 not set')
+    else:
+      print('sumw2 set')
     
     # Loop over all bins (including under/over-flow -- needed e.g. for SD tagging rate), and fill rebinned histogram
     for bin_x in range(0, hData.GetNbinsX() + 2):
@@ -52,7 +55,15 @@ class analysis_utils(common_base.common_base):
         
         content = hData.GetBinContent(bin_x, bin_y)
         h.Fill(x, y, content)
-
+          
+    for bin in range(0, h.GetNcells()+1):
+      content = h.GetBinContent(bin)
+      old_uncertainty = h.GetBinError(bin)
+      new_uncertainty = math.sqrt(content)
+      h.SetBinError(bin, new_uncertainty)
+    
+    if h.GetSumw2() is 0:
+      h.Sumw2()
     return h
 
   #---------------------------------------------------------------
