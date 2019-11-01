@@ -1,0 +1,148 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title SD #beta=0 z_{cut}>0.1 p_{T, ch}^{jet}: 80-120 GeV/c tx_size=0.04 
+#legend pos=ur title=pp(Pythia8 x effi.) in 10% central PbPb
+#normalize index=1
+#xrange 0, 5.5
+#x t_{g}
+#y 1/N_{jet} dN/dt_{g}
+#maxy 0.6
+#miny 0
+#line 2,0,2,0.6,9,9
+
+tform_histograms.root 		:h_tfAA_pt80 :p EX0 : title=t_{f} AA scale
+
+tform_histograms.root 		:h_tfAA_pt80_m12 :hist -k +f1001 +a25  : title=t_{f} AA scale, matched prongs
+
+tform_histograms.root 		:h_tf_pt80 :p EX0 : title=t_{f} pp scale
+
+tform_histograms.root 		:h_tf_pt80_m12 :hist -k +f1001 +a25  : title=t_{f} pp scale, matched prongs
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title SD #beta=0 z_{cut}>0.1 p_{T, ch}^{jet}: 80-120 GeV/c tx_size=0.04 
+#legend pos=ur title=pp scale
+#normalize index=1
+#xrange 0.1, 0.5
+#x z_{g}
+#y 1/N_{jet} dN/dz_{g}
+#miny 0
+#maxy 9
+tform_histograms.root 		:h_zg_pt80pp :p EX0 : title=z_{g} 
+tform_histograms.root 		:h_zg_pt80pp_m12 :hist +f1001 -k +a25 : title=z_{g}, matched prongs
+
+tform_histograms.root 		:h_zg_pt80pp_tflt2 :p EX0 : title=t_{g} < 2
+tform_histograms.root 		:h_zg_pt80pp_tflt2_m12 :hist +f1001 -k +a25 : title=t_{g} < 2, matched prongs
+tform_histograms.root 		:h_zg_pt80pp_tfgt2 :p EX0 +p25: title=t_{g} > 2
+tform_histograms.root 		:h_zg_pt80pp_tfgt2_m12 :hist +f1001 -k +a25 : title=t_{g} > 2, matched prongs
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title SD #beta=0 z_{cut}>0.1 p_{T, ch}^{jet}: 80-120 GeV/c tx_size=0.04 
+#legend pos=ur title= AA scale
+#normalize index=1
+#xrange 0.1, 0.5
+#x z_{g}
+#y 1/N_{jet} dN/dz_{g}
+#miny 0
+#maxy 9
+tform_histograms.root 		:h_zg_pt80AA :p EX0 : title=z_{g}
+tform_histograms.root 		:h_zg_pt80AA_m12 :hist +f1001 -k +a25 : title=z_{g}, matched prongs
+
+tform_histograms.root 		:h_zg_pt80AA_tflt2 :p EX0 : title=t_{g} < 2
+tform_histograms.root 		:h_zg_pt80AA_tflt2_m12 :hist +f1001 -k +a25 : title=t_{g} < 2, matched prongs
+tform_histograms.root 		:h_zg_pt80AA_tfgt2 :p EX0 +p25: title=t_{g} > 2
+tform_histograms.root 		:h_zg_pt80AA_tfgt2_m12 :hist +f1001 -k +a25 : title=t_{g} > 2, matched prongs
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title SD #beta=0 z_{cut}>0.1 p_{T, ch}^{jet}: 80-120 GeV/c tx_size=0.04 
+#legend pos=ur title=prong matching not required
+#normalize index=1
+#xrange 0.1, 0.5
+#x z_{g}
+#y 1/N_{jet} dN/dz_{g}
+#miny 0
+#maxy 9
+
+tform_histograms.root 		:h_zg_pt80AA :p EX0 : title=z_{g}, AA scale
+tform_histograms.root 		:h_zg_pt80pp :hist +f1001 -k +a25 : title=z_{g}, pp scale
+
+tform_histograms.root 		:h_zg_pt80AA_tflt2 :p EX0 : title=t_{g} < 2, AA scale
+tform_histograms.root 		:h_zg_pt80pp_tflt2 :hist +f1001 -k +a25 : title=t_{g} < 2, pp scale
+
+tform_histograms.root 		:h_zg_pt80AA_tfgt2 :p EX0 +p25: title=t_{g} > 2, AA scale
+tform_histograms.root 		:h_zg_pt80pp_tfgt2_m12 :hist +f1001 -k +a25 : title=t_{g} > 2, pp scale
+
+#-----------------------
+#-----------------------
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title SD #beta=0 z_{cut}>0.1 p_{T, ch}^{jet}: 80-120 GeV/c tx_size=0.04 
+#legend pos=ur
+#normalize index=1
+#xrange 0, 1
+#x #theta_{g}
+#y 1/N_{jet} dN/ d#theta_{g}
+#miny 0
+#maxy 3.2
+tform_histograms.root 		:h_thetag_pt80pp :p EX0 : title=#theta_{g} pp scale
+tform_histograms.root 		:h_thetag_pt80pp_m12 :hist +f1001 -k +a25: title=#theta_{g} pp scale, matched prongs
+
+tform_histograms.root 		:h_thetag_pt80pp_tflt2 :p EX0 : title=t_{g} < 2
+tform_histograms.root 		:h_thetag_pt80pp_tflt2_m12 :hist +f1001 -k +a25 : title=t_{g} < 2, matched prongs
+
+tform_histograms.root 		:h_thetag_pt80pp_tfgt2 :p EX0 +p25: title=t_{g} > 2
+tform_histograms.root 		:h_thetag_pt80pp_tfgt2_m12 :hist +f1001 -k +a25 : title=t_{g} > 2, matched prongs
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title SD #beta=0 z_{cut}>0.1 p_{T, ch}^{jet}: 80-120 GeV/c tx_size=0.04 
+#legend pos=ur
+#normalize index=1
+#xrange 0, 1
+#x #theta_{g}
+#y 1/N_{jet} dN/ d#theta_{g}
+#miny 0
+#maxy 3.2
+tform_histograms.root 		:h_thetag_pt80AA :p EX0 : title=#theta_{g} AA scale
+tform_histograms.root 		:h_thetag_pt80AA_m12 :hist +f1001 -k +a25: title=#theta_{g} AA scale, matched prongs
+
+tform_histograms.root 		:h_thetag_pt80AA_tflt2 :p EX0 : title=t_{g} < 2
+tform_histograms.root 		:h_thetag_pt80AA_tflt2_m12 :hist +f1001 -k +a25 : title=t_{g} < 2, matched prongs
+tform_histograms.root 		:h_thetag_pt80AA_tfgt2 :p EX0 +p25: title=t_{g} > 2
+tform_histograms.root 		:h_thetag_pt80AA_tfgt2_m12 :hist +f1001 -k +a25 : title=t_{g} > 2, matched prongs
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title SD #beta=0 z_{cut}>0.1 p_{T, ch}^{jet}: 80-120 GeV/c tx_size=0.04 
+#legend pos=ur title=prong matching not required
+#normalize index=1
+#xrange 0, 1
+#x #theta_{g}
+#y 1/N_{jet} dN/ d#theta_{g}
+#miny 0
+#maxy 3.2
+
+tform_histograms.root 		:h_thetag_pt80AA :p EX0 : title=#theta_{g} AA scale
+tform_histograms.root 		:h_thetag_pt80pp :hist +f1001 -k +a25 : title=z_{g} pp scale
+
+tform_histograms.root 		:h_thetag_pt80AA_tflt2 :p EX0 : title=t_{g} < 2 AA scale
+tform_histograms.root 		:h_thetag_pt80pp_tflt2 :hist +f1001 -k +a25 : title=t_{g} < 2 pp scale
+
+tform_histograms.root 		:h_thetag_pt80AA_tfgt2 :p EX0 +p25: title=t_{g} > 2 AA scale
+tform_histograms.root 		:h_thetag_pt80pp_tfgt2 :hist +f1001 -k +a25 : title=t_{g} > 2 pp scale
