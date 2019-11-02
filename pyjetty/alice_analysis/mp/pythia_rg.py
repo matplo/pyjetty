@@ -11,13 +11,13 @@ import argparse
 import os
 import numpy as np
 
+import ROOT
+from pyjetty.mputils import RTreeWriter
+
 from heppy.pythiautils import configuration as pyconf
 import pythia8
 import pythiafjext
 import pythiaext
-
-import ROOT
-from pyjetty.mputils import RTreeWriter
 
 def main():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
