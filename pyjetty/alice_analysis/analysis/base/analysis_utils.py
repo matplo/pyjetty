@@ -334,6 +334,35 @@ class analysis_utils(common_base.common_base):
       print('Integral is 0, check for problem')
 
   #---------------------------------------------------------------
+  # Multiply a tgraph by a histogram, point-by-point
+  #---------------------------------------------------------------
+  def multiply_tgraph(self, g, h):
+  
+    nBins = h.GetNbinsX()
+    for bin in range(1, nBins+1):
+      
+      # Get histogram (x,y)
+      correction_x = h.GetBinCenter(bin)
+      correction_y = h.GetBinContent(bin)
+      
+      # Get TGraph (x,y) and errors
+      x = ROOT.Double(0)
+      y = ROOT.Double(0)
+      g.GetPoint(bin-1, x, y)
+      yErrLow = g.GetErrorYlow(bin-1)
+      yErrUp  = g.GetErrorYhigh(bin-1)
+      
+      #print('hist x: {}'.format(correction_x))
+      #print('graph x: {}'.format(x))
+      
+      new_content = y * correction_y
+      new_error_low = yErrLow * correction_y
+      new_error_up = yErrUp * correction_y
+      
+      g.SetPoint(bin-1, correction_x, new_content)
+      g.SetPointError(bin-1, 0, 0, new_error_low, new_error_up)
+
+  #---------------------------------------------------------------
   # Get regularization parameter
   #---------------------------------------------------------------
   def get_reg_param(self, sd_settings, sd_config_list, sd_config_dict, sd_label, observable, jetR):
