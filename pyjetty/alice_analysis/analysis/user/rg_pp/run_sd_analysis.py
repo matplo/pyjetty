@@ -720,6 +720,7 @@ class run_sd_analysis(common_base.common_base):
     hDenominator.Scale(1./n_jets_inclusive, 'width')
         
     hNumerator.Divide(hDenominator)
+    hNumerator.SetName('hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
     setattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth), hNumerator)
       
     #output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
@@ -761,6 +762,7 @@ class run_sd_analysis(common_base.common_base):
     up = numpy.subtract(numpy.array(up_list), center)
     
     g = ROOT.TGraphAsymmErrors(n_bins_truth, x, center, x_err, x_err, low, up)
+    g.SetName('tgraph_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
     setattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth), g)
 
   #----------------------------------------------------------------------
@@ -935,7 +937,7 @@ class run_sd_analysis(common_base.common_base):
       xmax = 1.
       ymax = 4.
       if plot_nll:
-        ymax = 8
+        ymax = 5
     if observable == 'zg':
       xmin = 0.
       xmax = 0.5
@@ -1093,17 +1095,31 @@ class run_sd_analysis(common_base.common_base):
         
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
-        hRatioSys.Divide(hPythia)
-        hRatioSys.SetLineColor(0)
-        hRatioSys.SetFillColor(color)
-        hRatioSys.SetFillColorAlpha(color, 0.3)
-        hRatioSys.SetFillStyle(1001)
-        hRatioSys.SetLineWidth(0)
-        hRatioSys.DrawCopy('E2 same')
+        if plot_pythia:
+          hRatioSys.Divide(hPythia)
+          hRatioSys.SetLineColor(0)
+          hRatioSys.SetFillColor(color)
+          hRatioSys.SetFillColorAlpha(color, 0.3)
+          hRatioSys.SetFillStyle(1001)
+          hRatioSys.SetLineWidth(0)
+          hRatioSys.DrawCopy('E2 same')
+        elif plot_nll:
+          gRatioSys = g.Clone()
+          gRatioSys.SetName('{}_{}_Ratio'.format(sd_label, g.GetName()))
+          self.utils.divide_tgraph(hRatioSys, gRatioSys, combine_errors=True)
+          gRatioSys.SetLineColor(0)
+          gRatioSys.SetFillColor(color)
+          gRatioSys.SetFillColorAlpha(color, 0.3)
+          gRatioSys.SetFillStyle(1001)
+          gRatioSys.SetLineWidth(0)
+          gRatioSys.Draw('L3 same')
 
         hRatioStat = h.Clone()
         hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
-        hRatioStat.Divide(hPythia)
+        if plot_pythia:
+          hRatioStat.Divide(hPythia)
+        elif plot_nll:
+          self.utils.divide_tgraph(hRatioStat, g, combine_errors=False)
         hRatioStat.SetMarkerSize(1.5)
         hRatioStat.SetMarkerStyle(marker)
         hRatioStat.SetMarkerColor(color)
