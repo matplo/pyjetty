@@ -89,7 +89,7 @@ SoftDrop:
 file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/alidock/theta_g/roounfold_rg_output_24309'
 
-do_unfolding: True
+do_unfolding: False
 force_rebin: False
 do_systematics: True
 do_plot_final_result: True
@@ -112,3 +112,10 @@ trkeff_data: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC17pq/22958
 trkeff_response: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC18b8_trkeff/24509/AnalysisResultsFinal.root'
 
 # Theory comparisons
+fPythia: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+
+fNLL: ''
+fNPcorrection_numerator: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+fNPcorrection_denominator: '/Users/jamesmulligan/alidock/theta_g/NP_correction/Full_hadOFF_mpiOFF_isrOFF/default_output.root'
+
+

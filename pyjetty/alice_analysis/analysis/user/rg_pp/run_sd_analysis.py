@@ -123,6 +123,12 @@ class run_sd_analysis(common_base.common_base):
     for observable in self.observables:
       self.create_output_dirs(observable)
 
+    # Theory comparisons
+    self.fPythia_name = config['fPythia']
+    self.fNLL = config['fNLL']
+    self.fNPcorrection_numerator = config['fNPcorrection_numerator']
+    self.fNPcorrection_denominator = config['fNPcorrection_denominator']
+
   #---------------------------------------------------------------
   # Create a set of output directories for a given observable
   #---------------------------------------------------------------
@@ -178,6 +184,7 @@ class run_sd_analysis(common_base.common_base):
         self.perform_unfolding(observable)
       
       for jetR in self.jetR_list:
+        
         for sd_setting in self.sd_settings:
           
           zcut = sd_setting[0]
@@ -189,8 +196,16 @@ class run_sd_analysis(common_base.common_base):
 
           if self.do_plot_final_result:
             self.plot_final_result(observable, jetR, sd_label, zcut, beta)
+            
+            self.get_nll_tgraph(observable, jetR, sd_label, zcut, beta, 20., 40.)
+            self.get_nll_tgraph(observable, jetR, sd_label, zcut, beta, 40., 60.)
+            self.get_nll_tgraph(observable, jetR, sd_label, zcut, beta, 60., 80.)
 
-        self.plot_final_result_overlay(observable, jetR)
+        if self.do_plot_final_result:
+          
+          self.plot_final_result_overlay(observable, jetR)
+
+          self.plot_NPcorrection(observable, jetR)
       
   #----------------------------------------------------------------------
   def perform_unfolding(self, observable):
@@ -670,9 +685,208 @@ class run_sd_analysis(common_base.common_base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
+      self.get_NPcorrection(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth)
+      
       self.plot_observable(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=False)
       self.plot_observable(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=True)
 
+  #----------------------------------------------------------------------
+  def get_NPcorrection(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
+  
+    fNumerator = ROOT.TFile(self.fNPcorrection_numerator, 'READ')
+    fDenominator = ROOT.TFile(self.fNPcorrection_denominator, 'READ')
+    
+    if observable == 'theta_g':
+      n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
+      truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+    if observable == 'zg':
+      n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
+      truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+
+    hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
+    
+    hNumerator = fNumerator.Get(hname)
+    hNumerator.SetDirectory(0)
+    n_jets_inclusive = hNumerator.Integral(0, hNumerator.GetNbinsX()+1)
+    n_jets_tagged = hNumerator.Integral(hNumerator.FindBin(truth_rg_bin_array[0]), hNumerator.GetNbinsX())
+    fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
+    hNumerator.Scale(1./n_jets_inclusive, 'width')
+      
+    hDenominator = fDenominator.Get(hname)
+    hDenominator.SetDirectory(0)
+    n_jets_inclusive = hDenominator.Integral(0, hDenominator.GetNbinsX()+1)
+    n_jets_tagged = hDenominator.Integral(hDenominator.FindBin(truth_rg_bin_array[0]), hDenominator.GetNbinsX())
+    fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
+    hDenominator.Scale(1./n_jets_inclusive, 'width')
+        
+    hNumerator.Divide(hDenominator)
+    hNumerator.SetName('hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+    setattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth), hNumerator)
+      
+    #output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
+    #outputFilename = os.path.join(output_dir, 'hNPcorrection_{}_{}_{}-{}.pdf'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+    #self.utils.plot_hist(hNumerator, outputFilename)
+
+  #----------------------------------------------------------------------
+  def get_nll_tgraph(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
+
+    if observable == 'theta_g':
+      path_txt = '/Users/jamesmulligan/alidock/theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
+      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
+      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+    if observable == 'zg':
+      path_txt = '/Users/jamesmulligan/alidock/theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
+      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
+      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+    
+    filename = open(path_txt, 'r')
+
+    x_list = []
+    center_list = []
+    low_list = []
+    up_list = []
+    for line in filename.readlines():
+      line = line.rstrip('\n')
+      
+      row = line.split(' ')
+      x_list.append(float(row[0]))
+      low_list.append(float(row[1]))
+      center_list.append(float(row[2]))
+      up_list.append(float(row[3]))
+
+    #x = array('d', x_list)
+    x = numpy.array(x_list)
+    x_err = numpy.zeros(n_bins_truth)
+    center = numpy.array(center_list)
+    low = numpy.subtract(center, numpy.array(low_list))
+    up = numpy.subtract(numpy.array(up_list), center)
+    
+    g = ROOT.TGraphAsymmErrors(n_bins_truth, x, center, x_err, x_err, low, up)
+    g.SetName('tgraph_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+    setattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth), g)
+
+  #----------------------------------------------------------------------
+  def plot_NPcorrection(self, observable, jetR):
+
+    self.plot_NPcorrection_overlay(observable, jetR, 20., 40.)
+    self.plot_NPcorrection_overlay(observable, jetR, 40., 60.)
+    self.plot_NPcorrection_overlay(observable, jetR, 60., 80.)
+    
+  #----------------------------------------------------------------------
+  def plot_NPcorrection_overlay(self, observable, jetR, min_pt_truth, max_pt_truth):
+    
+    name = 'cResult_NPcorrection_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
+    c = ROOT.TCanvas(name, name, 600, 450)
+    c.Draw()
+    c.cd()
+    pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    pad1.SetLeftMargin(0.2)
+    pad1.SetTopMargin(0.07)
+    pad1.SetRightMargin(0.04)
+    pad1.SetBottomMargin(0.13)
+    pad1.Draw()
+    pad1.cd()
+
+    if observable == 'theta_g':
+      xmin = 0.
+      xmax = 1.
+      ymax = 5.
+    if observable == 'zg':
+      xmin = 0.
+      xmax = 0.5
+      ymax = 5.
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
+    myBlankHisto.SetNdivisions(505)
+    xtitle = getattr(self, 'xtitle_{}'.format(observable))
+    ytitle = 'Correction'
+    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.SetYTitle(ytitle)
+    myBlankHisto.SetMaximum(ymax)
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.Draw("E")
+    
+    line = ROOT.TLine(0,1,xmax,1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.Draw()
+    
+    pad1.cd()
+    myLegend = ROOT.TLegend(0.76,0.65,0.9,0.85)
+    self.utils.setup_legend(myLegend,0.035)
+    
+    # Retrieve histogram binnings for each SD setting
+    for i, sd_setting in enumerate(self.sd_settings):
+      
+      zcut = sd_setting[0]
+      beta = sd_setting[1]
+      sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+      
+      if observable == 'theta_g':
+        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
+        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+      if observable == 'zg':
+        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
+        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+      
+      if i == 0:
+        marker = 20
+        color = 600-6
+      if i == 1:
+        marker = 21
+        color = 632-4
+      if i == 2:
+        marker = 33
+        color = 416-2
+
+      h = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(marker)
+      h.SetMarkerColor(color)
+      h.SetLineStyle(1)
+      h.SetLineWidth(2)
+      h.SetLineColor(color)
+      h.DrawCopy('PE X0 same')
+      
+      myLegend.AddEntry(h, 'pp #beta={}'.format(beta), 'pe')
+
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE Simulation'
+    #text_latex.DrawLatex(0.25, 0.87, text)
+  
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.81, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'PYTHIA8 Monash2013'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.75, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.69, text)
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.63, text)
+    
+    myLegend.Draw()
+    
+    name = 'hNPcorrection_{}_R{}_{}-{}{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
+    output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
+    outputFilename = os.path.join(output_dir, name)
+    c.SaveAs(outputFilename)
+    c.Close()
+    
   #----------------------------------------------------------------------
   def plot_final_result_overlay(self, observable, jetR):
   
@@ -683,13 +897,19 @@ class run_sd_analysis(common_base.common_base):
     if observable == 'zg':
       ymin_ratio = 0.3
       ymax_ratio = 1.6
-    
-    self.plot_observable_overlay_beta(observable, jetR, 20., 40., plot_pythia=True, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
-    self.plot_observable_overlay_beta(observable, jetR, 40., 60., plot_pythia=True, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
-    self.plot_observable_overlay_beta(observable, jetR, 60., 80., plot_pythia=True, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+  
+    # Plot PYTHIA
+    self.plot_observable_overlay_beta(observable, jetR, 20., 40., plot_pythia=True, plot_nll = False, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(observable, jetR, 40., 60., plot_pythia=True, plot_nll = False, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(observable, jetR, 60., 80., plot_pythia=True, plot_nll = False, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+  
+    # Plot NLL
+    self.plot_observable_overlay_beta(observable, jetR, 20., 40., plot_pythia=False, plot_nll = True, plot_ratio = False, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(observable, jetR, 40., 60., plot_pythia=False, plot_nll = True, plot_ratio = False, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(observable, jetR, 60., 80., plot_pythia=False, plot_nll = True, plot_ratio = False, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
 
   #----------------------------------------------------------------------
-  def plot_observable_overlay_beta(self, observable, jetR, min_pt_truth, max_pt_truth, plot_pythia=False, plot_ratio=False, ymin_ratio=0., ymax_ratio=2.):
+  def plot_observable_overlay_beta(self, observable, jetR, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False, ymin_ratio=0., ymax_ratio=2.):
     
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
     if plot_ratio:
@@ -716,10 +936,14 @@ class run_sd_analysis(common_base.common_base):
       xmin = 0.
       xmax = 1.
       ymax = 4.
+      if plot_nll:
+        ymax = 5
     if observable == 'zg':
       xmin = 0.
       xmax = 0.5
       ymax = 11.
+      if plot_nll:
+        ymax = 20
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
     xtitle = getattr(self, 'xtitle_{}'.format(observable))
@@ -804,8 +1028,7 @@ class run_sd_analysis(common_base.common_base):
       pad1.cd()
       if plot_pythia:
         
-        fPythia_name = '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
-        fPythia = ROOT.TFile(fPythia_name, 'READ')
+        fPythia = ROOT.TFile(self.fPythia_name, 'READ')
         hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
         hPythia = fPythia.Get(hname)
         hPythia.SetDirectory(0)
@@ -828,6 +1051,24 @@ class run_sd_analysis(common_base.common_base):
           hPythia.SetLineWidth(4)
           hPythia.DrawCopy('L hist same')
 
+      if plot_nll:
+        
+        # Get parton-level prediction
+        g = getattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+        
+        # Get correction
+        h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+      
+        # Apply correction
+        self.utils.multiply_tgraph(g, h_correction)
+      
+        g.SetLineColor(color)
+        g.SetLineColorAlpha(color, 0.5)
+        g.SetLineWidth(4)
+        g.SetFillColor(color)
+        g.SetFillColorAlpha(color, 0.5)
+        g.Draw('L3 same')
+    
       h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
       h_sys.SetFillColor(color)
@@ -854,17 +1095,31 @@ class run_sd_analysis(common_base.common_base):
         
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
-        hRatioSys.Divide(hPythia)
-        hRatioSys.SetLineColor(0)
-        hRatioSys.SetFillColor(color)
-        hRatioSys.SetFillColorAlpha(color, 0.3)
-        hRatioSys.SetFillStyle(1001)
-        hRatioSys.SetLineWidth(0)
-        hRatioSys.DrawCopy('E2 same')
+        if plot_pythia:
+          hRatioSys.Divide(hPythia)
+          hRatioSys.SetLineColor(0)
+          hRatioSys.SetFillColor(color)
+          hRatioSys.SetFillColorAlpha(color, 0.3)
+          hRatioSys.SetFillStyle(1001)
+          hRatioSys.SetLineWidth(0)
+          hRatioSys.DrawCopy('E2 same')
+        elif plot_nll:
+          gRatioSys = g.Clone()
+          gRatioSys.SetName('{}_{}_Ratio'.format(sd_label, g.GetName()))
+          self.utils.divide_tgraph(hRatioSys, gRatioSys, combine_errors=True)
+          gRatioSys.SetLineColor(0)
+          gRatioSys.SetFillColor(color)
+          gRatioSys.SetFillColorAlpha(color, 0.3)
+          gRatioSys.SetFillStyle(1001)
+          gRatioSys.SetLineWidth(0)
+          gRatioSys.Draw('L3 same')
 
         hRatioStat = h.Clone()
         hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
-        hRatioStat.Divide(hPythia)
+        if plot_pythia:
+          hRatioStat.Divide(hPythia)
+        elif plot_nll:
+          self.utils.divide_tgraph(hRatioStat, g, combine_errors=False)
         hRatioStat.SetMarkerSize(1.5)
         hRatioStat.SetMarkerStyle(marker)
         hRatioStat.SetMarkerColor(color)
@@ -912,11 +1167,13 @@ class run_sd_analysis(common_base.common_base):
     name = 'h_{}_R{}_{}-{}{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
       name = 'h_{}_R{}_{}-{}_Pythia{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
+    if plot_nll:
+      name = 'h_{}_R{}_{}-{}_NLL{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
     output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
-
+  
   #----------------------------------------------------------------------
   def plot_observable(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=False):
     

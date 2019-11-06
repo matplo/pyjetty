@@ -334,6 +334,74 @@ class analysis_utils(common_base.common_base):
       print('Integral is 0, check for problem')
 
   #---------------------------------------------------------------
+  # Multiply a tgraph by a histogram, point-by-point
+  # Assumes the histogram has zero uncertainty.
+  #---------------------------------------------------------------
+  def multiply_tgraph(self, g, h):
+  
+    nBins = h.GetNbinsX()
+    for bin in range(1, nBins+1):
+      
+      # Get histogram (x,y)
+      h_x = h.GetBinCenter(bin)
+      h_y = h.GetBinContent(bin)
+      
+      # Get TGraph (x,y) and errors
+      g_x = ROOT.Double(0)
+      g_y = ROOT.Double(0)
+      g.GetPoint(bin-1, g_x, g_y)
+      yErrLow = g.GetErrorYlow(bin-1)
+      yErrUp  = g.GetErrorYhigh(bin-1)
+      
+      #print('hist x: {}'.format(h_x))
+      #print('graph x: {}'.format(g_x))
+      
+      new_content = g_y * h_y
+      new_error_low = yErrLow * h_y
+      new_error_up = yErrUp * h_y
+      
+      g.SetPoint(bin-1, h_x, new_content)
+      g.SetPointError(bin-1, 0, 0, new_error_low, new_error_up)
+
+  #---------------------------------------------------------------
+  # Divide a histogram by a tgraph, point-by-point
+  #---------------------------------------------------------------
+  def divide_tgraph(self, h, g, combine_errors=False):
+    
+    nBins = h.GetNbinsX()
+    for bin in range(1, nBins+1):
+
+      # Get histogram (x,y)
+      h_x = h.GetBinCenter(bin)
+      h_y = h.GetBinContent(bin)
+      h_error = h.GetBinError(bin)
+      
+      # Get TGraph (x,y) and errors
+      g_x = ROOT.Double(0)
+      g_y = ROOT.Double(0)
+      g.GetPoint(bin-1, g_x, g_y)
+      yErrLow = g.GetErrorYlow(bin-1)
+      yErrUp  = g.GetErrorYhigh(bin-1)
+      
+      #print('hist x: {}'.format(h_x))
+      #print('graph x: {}'.format(g_x))
+      
+      new_content = h_y / g_y
+      if combine_errors: # combine tgraph and histogram relative uncertainties in quadrature
+        new_error_low = math.sqrt( pow(yErrLow/g_y,2) + pow(h_error/h_y,2) ) * new_content
+        new_error_up = math.sqrt( pow(yErrUp/g_y,2) + pow(h_error/h_y,2) ) * new_content
+      else: # Assume tgraph has zero uncertainty
+        new_error_low = h_error / g_y
+        new_error_up = h_error / g_y
+  
+      if combine_errors:
+        g.SetPoint(bin-1, h_x, new_content)
+        g.SetPointError(bin-1, 0, 0, new_error_low, new_error_up)
+      else:
+        h.SetBinContent(bin, new_content)
+        h.SetBinError(bin, new_error_up)
+  
+  #---------------------------------------------------------------
   # Get regularization parameter
   #---------------------------------------------------------------
   def get_reg_param(self, sd_settings, sd_config_list, sd_config_dict, sd_label, observable, jetR):
