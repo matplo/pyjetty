@@ -6,10 +6,12 @@ from pyjetty.mputils import MPBase, UniqueString, logbins
 
 class BoltzmannEvent(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(mean_pt=0.7, multiplicity=1, max_eta=1, max_pt=100)
+		self.configure_from_args(mean_pt=0.7, multiplicity=1, max_eta=1, max_pt=100, min_pt=0.15)
 		super(BoltzmannEvent, self).__init__(**kwargs)
+		if self.min_pt < 0:
+			self.min_pt = 0
 		self.particles = fj.vectorPJ()
-		self.funbg = ROOT.TF1("funbg", "2. / [0] * x * TMath::Exp(-(2. / [0]) * x)", 0, self.max_pt, 1);
+		self.funbg = ROOT.TF1("funbg", "2. / [0] * x * TMath::Exp(-(2. / [0]) * x)", self.min_pt, self.max_pt, 1);
 		self.funbg.SetParameter(0, self.mean_pt)
 		self.funbg.SetNpx(1000)
 		self.ROOT_random = ROOT.TRandom()
@@ -54,16 +56,17 @@ class BoltzmannSubtractor(MPBase):
 		self.configure_from_args(max_pt_subtract=1000)
 		super(BoltzmannSubtractor, self).__init__(**kwargs)
 		fname = UniqueString.str("BoltzmannSubtractor_function")
-		self.funbg = ROOT.TF1(fname, "[1] * 2. / [0] * x * TMath::Exp(-(2. / [0]) * x)", 0, self.max_pt_subtract, 2)
+		# self.funbg = ROOT.TF1(fname, "[1] * 2. / [0] * x * TMath::Exp(-(2. / [0]) * x)", 0, self.max_pt_subtract, 2)
+		self.funbg = ROOT.TF1(fname, "[1] / [0] * x * TMath::Exp(-(2. / [0]) * x)", 0, self.max_pt_subtract, 2)
 		self.funbg.SetParameter(0, 0.7)
 		self.funbg.SetParameter(1, 1)
-		npx = int(self.max_pt_subtract/0.1)
-		if npx < 100:
-			npx = 100
-		self.funbg.SetNpx(npx)
-		hname = UniqueString.str("BoltzmannSubtractor_histogram")
-		self.h = ROOT.TH1F(hname, hname, 2*npx, -self.max_pt_subtract, self.max_pt_subtract)
-		self.h.SetDirectory(0)
+		# npx = int(self.max_pt_subtract/0.1)
+		# if npx < 100:
+		# 	npx = 100
+		# self.funbg.SetNpx(npx)
+		# hname = UniqueString.str("BoltzmannSubtractor_histogram")
+		# self.h = ROOT.TH1F(hname, hname, 2*npx, -self.max_pt_subtract, self.max_pt_subtract)
+		# self.h.SetDirectory(0)
 
 	def do_subtraction(self, parts):
 		self.sparts = []
@@ -79,11 +82,19 @@ class BoltzmannSubtractor(MPBase):
 					self.sparts.append(newp)
 
 	def subtracted_particles(self, parts):
-		self.h.Reset()
+		# self.h.Reset()
 		_parts_pt = [p.pt() for p in parts if p.pt() < self.max_pt_subtract]
 		self.total_pt = sum(_parts_pt)
-		_tmp = [self.h.Fill(pt) for pt in _parts_pt]
-		self.h.Scale(1./len(_parts_pt))
-		self.h.Fit(self.funbg, "RMNQ0")
+		# _tmp = [self.h.Fill(pt) for pt in _parts_pt]
+		# self.h.Scale(1./len(_parts_pt))
+		# self.h.Fit(self.funbg, "RMNQ0")
+		# print ('par 1', self.funbg.GetParameter(1))
+		# print ('par 0', self.funbg.GetParameter(0))
+		mult = len(_parts_pt)
+		mean_pt = self.total_pt / mult
+		self.funbg.SetParameter(0, mean_pt)
+		self.funbg.SetParameter(1, mean_pt * 2.)
+		# print ('par 1', self.funbg.GetParameter(1))
+		# print ('par 0', self.funbg.GetParameter(0))
 		self.do_subtraction(parts)
 		return self.sparts

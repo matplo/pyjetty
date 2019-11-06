@@ -21,6 +21,7 @@ import pandas as pd
 
 from pyjetty.mputils import logbins, MPBase, CEventSubtractor, CSubtractorJetByJet, RTreeWriter, DataIO, UniqueString
 from pyjetty.mputils import fill_tree_matched, fill_tree_data, JetAnalysis, JetAnalysisWithRho, JetAnalysisPerJet
+from pyjetty.mputils import matched_pt
 from pyjetty.mputils import BoltzmannEvent, BoltzmannSubtractor
 
 from heppy.pythiautils import configuration as pyconf
@@ -199,6 +200,7 @@ def main_test(args):
 		args.nev = 1
 
 	ja = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
+	jas = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 
 	### EVENT LOOP STARTS HERE
 	for iev in tqdm.tqdm(range(args.nev)):
@@ -207,8 +209,8 @@ def main_test(args):
 
 		parts_pythia = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
 		parts_gen = parts_selector(parts_pythia)
-		ja.analyze_event(parts_gen)
-		signal_jets = fj.sorted_by_pt(jet_selector(ja.jets))
+		jas.analyze_event(parts_gen)
+		signal_jets = fj.sorted_by_pt(jet_selector(jas.jets))
 		if len(signal_jets) < 1:
 			continue
 		if data:
@@ -218,27 +220,37 @@ def main_test(args):
 				bg_parts = be.generate(offset=10000)
 
 		for sjet in signal_jets:
-			tw.fill_branch('sjet', sjet)
-
 			tmp = [bg_parts.push_back(psj) for psj in sjet.constituents()]
 
-			subtr_parts = bgestim.subtracted_particles(bg_parts)
-			ja.analyze_event(subtr_parts)
-			bg_signal_jets = fj.sorted_by_pt(ja.jets)
-			tw.fill_branch('sjet_bg', bg_signal_jets[0])
-			tw.fill_branch('delta_pt', sjet.pt() - bg_signal_jets[0].pt())
+		for sjet in signal_jets:
+			tw.fill_branch('sjet', sjet)
+
+			# subtr_parts = bgestim.subtracted_particles(bg_parts)
+			# ja.analyze_event(subtr_parts)
+			# for j in ja.jets:
+			# 	if matched_pt(j, sjet) > 0.5:
+			# 		tw.fill_branch('sjet_bg', j)
+			# 		tw.fill_branch('delta_pt', sjet.pt() - j.pt())
+
+			ja.analyze_event(bg_parts)
+			bg_signal_jets_b = fj.sorted_by_pt(ja.jets)
+			for j in bg_signal_jets_b:
+				if matched_pt(j, sjet) > 0.5:
+					tw.fill_branch('sjet_hybrid', j)
+					tw.fill_branch('delta_pt_hybrid', sjet.pt() - j.pt())
 
 			subtr_parts_b = boltzmann_subtractor.subtracted_particles(bg_parts)
 			ja.analyze_event(subtr_parts_b)
 			bg_signal_jets_b = fj.sorted_by_pt(ja.jets)
-			tw.fill_branch('sjet_bg_b', bg_signal_jets_b[0])
-			tw.fill_branch('delta_pt_b', sjet.pt() - bg_signal_jets_b[0].pt())
+			for j in bg_signal_jets_b:
+				if matched_pt(j, sjet) > 0.5:
+					tw.fill_branch('sjet_bg_b', j)
+					tw.fill_branch('delta_pt_b', sjet.pt() - j.pt())
 
 			tw.fill_branch('p', bg_parts)
-			tw.fill_branch('sp', subtr_parts)
+			# tw.fill_branch('sp', subtr_parts)
 			tw.fill_branch('sp_b', subtr_parts_b)
 			tw.fill_tree()
-			break
 
 	fout.cd()
 	fout.Write()
