@@ -161,7 +161,7 @@ class process_ang_mc(process_base.process_base):
       setattr(self, name, h)
       '''
       name = 'hDeltaR_All_R%s' % str(jetR).replace('.', '')
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+      h = ROOT.TH2F(name, name, 100, 0, 100, 100, 0., 2.)
       setattr(self, name, h)
       '''
       name = 'hZ_Truth_R{}'.format(jetR)
@@ -173,7 +173,7 @@ class process_ang_mc(process_base.process_base):
       setattr(self, name, h)
       '''
       name = ('hResponse_JetpT_R%s' % jetR).replace('.', '')
-      h = ROOT.TH2F(name, name, 300, 0, 300, 300, 0, 300)
+      h = ROOT.TH2F(name, name, 100, 0, 100, 150, 0, 150)
       h.GetXaxis().SetTitle('p_{T,det}')
       h.GetYaxis().SetTitle('p_{T,truth}')
       setattr(self, name, h)
@@ -208,9 +208,9 @@ class process_ang_mc(process_base.process_base):
         # Create THn of response
         dim = 4;
         title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-        nbins = [120, 60, 100, 25]
+        nbins = [100, 30, 100, 25]
         min = [0., 0., 0., 0.]
-        max = [120., 300., 1.0, 1.0]
+        max = [100., 150., 1.0, 1.0]
         
         name = ('hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).replace('.', '')
         nbins = (nbins)

@@ -139,14 +139,14 @@ class process_ang_data(process_base.process_base):
 
         # Lambda vs pT plots to estimate the binning that will be needed
         name = ("hLambda_JetpT_R%s_B%s" % (jetR, beta)).replace('.', '')
-        h = ROOT.TH2F(name, name, 300, 0, 300, self.n_lambda_bins, 0, 1)
+        h = ROOT.TH2F(name, name, 100, 0, 100, self.n_lambda_bins, 0, 1)
         h.GetXaxis().SetTitle('p_{T, jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
 
         # Lambda vs pT plots to estimate the binning that will be needed -- with soft drop
         name = ("hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).replace('.', '')
-        h = ROOT.TH2F(name, name, 300, 0, 300, self.n_lambda_bins, 0, 1)
+        h = ROOT.TH2F(name, name, 100, 0, 100, self.n_lambda_bins, 0, 1)
         h.GetXaxis().SetTitle('p_{T, jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
