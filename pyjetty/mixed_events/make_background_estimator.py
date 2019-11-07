@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+import ROOT
+ROOT.gROOT.SetBatch(True)
 
 import fastjet as fj
 import fjcontrib
 import fjext
+import fjtools
 
-import ROOT
-ROOT.gROOT.SetBatch(True)
+from pyjetty.mputils import logbins, MPBase, CEventSubtractor, CSubtractorJetByJet, RTreeWriter, DataIO, UniqueString
+from pyjetty.mputils import fill_tree_matched, fill_tree_data, JetAnalysis, JetAnalysisWithRho, JetAnalysisPerJet
+from pyjetty.mputils import matched_pt
+from pyjetty.mputils import BoltzmannEvent, BoltzmannSubtractor
+from pyjetty.mputils import fill_tree_matched, mean_pt, sum_pt, remove_jets
 
 import tqdm
 import argparse
@@ -18,11 +23,6 @@ import copy
 import random
 import uproot
 import pandas as pd
-
-from pyjetty.mputils import logbins, MPBase, CEventSubtractor, CSubtractorJetByJet, RTreeWriter, DataIO, UniqueString
-from pyjetty.mputils import fill_tree_matched, fill_tree_data, JetAnalysis, JetAnalysisWithRho, JetAnalysisPerJet
-from pyjetty.mputils import matched_pt
-from pyjetty.mputils import BoltzmannEvent, BoltzmannSubtractor
 
 from heppy.pythiautils import configuration as pyconf
 import pythia8
@@ -172,12 +172,16 @@ def main_test(args):
 		print("[e] pythia initialization failed.")
 		return
 
+	sd_zcut = 0.1
+	sd = fjcontrib.SoftDrop(0, sd_zcut, jet_R0)
 
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
 	fout = ROOT.TFile(args.output, 'recreate')
 	fout.cd()
-	tw = RTreeWriter(tree_name='tw', fout=fout)
+	twj = RTreeWriter(tree_name='jets', fout=fout)
+	twjm = RTreeWriter(tree_name='jetsm', fout=fout)
+	twp = RTreeWriter(tree_name='parts', fout=fout)
 
 	bgestim = BackgroundEstimator(input_file=args.input, name='bg_estim')
 	print(bgestim)
@@ -191,19 +195,26 @@ def main_test(args):
 		data = DataIO(file_list=args.data)
 		print(data)
 	else:
-		be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000 * max_eta * 2, max_eta=max_eta, max_pt=100)
-		print(be)
+		# be = BoltzmannEvent(mean_pt=0.6, multiplicity=2000 * max_eta * 2, max_eta=max_eta, max_pt=100)
+		pass
+
+	be = fjtools.BoltzmannBackground(0.7, 0.01, 1.5)
+	print(be.description())
 
 	parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
 	if args.nev < 1:
 		args.nev = 1
 
-	ja = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 	jas = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
+	ja = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
+	jabg = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 
 	### EVENT LOOP STARTS HERE
-	for iev in tqdm.tqdm(range(args.nev)):
+	pbar = tqdm.tqdm(total=args.nev)
+	iev = 0
+	while pbar.n < args.nev:
+		iev = iev + 1
 		if not pythia.next():
 			continue
 
@@ -213,44 +224,107 @@ def main_test(args):
 		signal_jets = fj.sorted_by_pt(jet_selector(jas.jets))
 		if len(signal_jets) < 1:
 			continue
+		pbar.set_description('tried %i' % iev)
+		pbar.update(1)
+
 		if data:
 			bg_parts = data.load_event(offset=10000)
 		else:
 			if be:
-				bg_parts = be.generate(offset=10000)
+				# bg_parts = be.generate(offset=10000)
+				bg_parts = be.generate(int(2000 * max_eta * 2.), max_eta, 10000)
 
+		# len_bg_parts = len(bg_parts)
+		# subtr_parts_b = be.subtract(bg_parts, 0.7, len(bg_parts))
+		# print('x nparts_bg=', len(bg_parts), 'nparts_pass=', len(subtr_parts_b))
+		# print('   ', be.get_formula())
+		# subtr_parts_b = be.subtract(bg_parts)
+		# print(' - nparts_bg=', len(bg_parts), 'nparts_pass=', len(subtr_parts_b))
+		# print('   ', be.get_formula())
+
+		_pythia_inserts = []
+		_pythia_inserts_indexes = []
 		for sjet in signal_jets:
-			tmp = [bg_parts.push_back(psj) for psj in sjet.constituents()]
+			_pythia_inserts = [bg_parts.push_back(psj) for psj in sjet.constituents() if psj.user_index() >= 0]
+			_pythia_inserts_indexes.extend([psj.user_index() for psj in sjet.constituents() if psj.user_index() >= 0])
 
-		for sjet in signal_jets:
-			tw.fill_branch('sjet', sjet)
+		print ('pythia indexes:', len(_pythia_inserts_indexes), sorted(_pythia_inserts_indexes))
 
-			# subtr_parts = bgestim.subtracted_particles(bg_parts)
-			# ja.analyze_event(subtr_parts)
-			# for j in ja.jets:
-			# 	if matched_pt(j, sjet) > 0.5:
-			# 		tw.fill_branch('sjet_bg', j)
-			# 		tw.fill_branch('delta_pt', sjet.pt() - j.pt())
+		# subtr_parts_b = be.subtract(bg_parts)
+		# print(' - nparts_bg=', len(bg_parts), 'nparts_pass=', len(subtr_parts_b))
+		# print('   ', be.get_formula())
+		# subtr_parts_b = be.subtract(bg_parts, 0.7, len(_pythia_inserts))
+		# print('. nparts_bg=', len_bg_parts, 'nparts_pass=', len(subtr_parts_b))
+		# print('   ', be.get_formula())
+		# _mpt = mean_pt(bg_parts)
+		# subtr_parts_b = be.subtract(bg_parts, _mpt, len(_pythia_inserts))
+		# print('. nparts_bg=', len(bg_parts), 'nparts_pass=', len(subtr_parts_b))
+		# print('   ', be.get_formula())
 
-			ja.analyze_event(bg_parts)
-			bg_signal_jets_b = fj.sorted_by_pt(ja.jets)
-			for j in bg_signal_jets_b:
-				if matched_pt(j, sjet) > 0.5:
-					tw.fill_branch('sjet_hybrid', j)
-					tw.fill_branch('delta_pt_hybrid', sjet.pt() - j.pt())
+		# subtr_parts = bgestim.subtracted_particles(bg_parts)
+		# ja.analyze_event(subtr_parts)
+		# for j in ja.jets:
+		# 	if matched_pt(j, sjet) > 0.5:
+		# 		tw.fill_branch('sjet_bg', j)
+		# 		tw.fill_branch('delta_pt', sjet.pt() - j.pt())
 
-			subtr_parts_b = boltzmann_subtractor.subtracted_particles(bg_parts)
-			ja.analyze_event(subtr_parts_b)
-			bg_signal_jets_b = fj.sorted_by_pt(ja.jets)
-			for j in bg_signal_jets_b:
-				if matched_pt(j, sjet) > 0.5:
-					tw.fill_branch('sjet_bg_b', j)
-					tw.fill_branch('delta_pt_b', sjet.pt() - j.pt())
+		#ja.analyze_event(bg_parts)
+		#bg_signal_jets_b = fj.sorted_by_pt(ja.jets)
+		#for j in bg_signal_jets_b:
+		#	if matched_pt(j, sjet) > 0.5:
+		#		tw.fill_branch('sjet_hybrid', j)
+		#		tw.fill_branch('delta_pt_hybrid', sjet.pt() - j.pt())
 
-			tw.fill_branch('p', bg_parts)
-			# tw.fill_branch('sp', subtr_parts)
-			tw.fill_branch('sp_b', subtr_parts_b)
-			tw.fill_tree()
+		# subtr_parts_b = boltzmann_subtractor.subtracted_particles(bg_parts)
+		# _it1 = [p for p in be.subtract(bg_parts)]
+		# subtr_parts_b = be.subtract(_it1)
+
+		jabg.analyze_event(bg_parts)
+		bg_parts_noleads = remove_jets(bg_parts, jabg.jets[:2])
+		# print(bg_parts_noleads.size())
+		#for j in jabg.jets:
+		#	pass
+		# continue
+		#	if i > 2:
+		#		break
+		#	_tmp = [p.pt() for p in j.constituents()]
+		#	reduce_total_pt = reduce_total_pt + sum(_tmp)
+		#print ('reduce total pt by', reduce_total_pt)
+
+		# subtr_parts_b = be.subtract(bg_parts)
+		# print(be.get_formula())
+		# print('nparts_bg=', len(bg_parts), 'nparts_subtr=', len(subtr_parts_b), 'nparts_pythia=', len(tmp))
+
+		_mpt = mean_pt(bg_parts_noleads)
+		# subtr_parts_b = be.subtract(bg_parts, _mpt, len(_pythia_inserts))
+		# subtr_parts_b = be.subtract(bg_parts, _mpt, len(bg_parts) - len(bg_parts_noleads))
+		subtr_parts_b = be.subtract(bg_parts, _mpt, len(bg_parts_noleads))
+		print('. nparts_bg=', len(bg_parts), 'nparts_pass=', len(subtr_parts_b))
+		print('   ', be.get_formula())
+		_indexes_subtr_parts_b = [p.user_index() for p in subtr_parts_b]
+		print ('remaining indexes:', len(_indexes_subtr_parts_b), sorted(_indexes_subtr_parts_b))
+
+		ja.analyze_event(subtr_parts_b)
+		bg_signal_jets_b = fj.sorted_by_pt(ja.jets)
+
+		w = pythia.info.weight()
+		s = pythia.info.sigmaGen()
+
+		twj.fill_branch('sjet', signal_jets)
+		twj.fill_tree()
+
+		print(	'py jets=', len([j for j in signal_jets if j.pt() > 0.1 ]), 
+				'sub jets=', len([j for j in bg_signal_jets_b if j.pt() > 0.1]))
+		_tmp = [fill_tree_matched(sjet, j, twjm, sd, 0, iev, weight=w, sigma=s)
+				for sjet in signal_jets 
+				for j in bg_signal_jets_b]
+
+		twp.fill_branch('p', bg_parts)
+		#twp.fill_branch('sp', subtr_parts)
+		twp.fill_branch('sp_b', subtr_parts_b)
+		twp.fill_tree()
+
+	pbar.close()
 
 	fout.cd()
 	fout.Write()

@@ -29,11 +29,13 @@ namespace PyJettyFJTools
 		// getNrandom particles w/ indexoffset ...
 		std::vector<fastjet::PseudoJet> generate(int nparts, double max_eta, int offset = 0);
 		// subtract particles (according to the probability... - fixed to 1 in maxpt range)
-		std::vector<fastjet::PseudoJet> subtract(const std::vector<fastjet::PseudoJet> &v);
+		std::vector<fastjet::PseudoJet> subtract_recalc_from_vector(const std::vector<fastjet::PseudoJet> &v);
+		std::vector<fastjet::PseudoJet> subtract(const std::vector<fastjet::PseudoJet> &v, double mean_pt = -1., int n = -1);
 
 		//void set_mean_pt(const double &v) {mean_pt = v;}
 		//void set_max_pt_subtract(const double &v) {max_pt_subtract = v;}
 
+		std::string description();
 	private:
 		TF1 *funbg; //!
 		double fmean_pt;
@@ -41,6 +43,10 @@ namespace PyJettyFJTools
 		double fmax_pt;
 		std::vector<fastjet::PseudoJet> fparts;
 	};
+
+	// fraction of pT of jet j1 contained in j0 - constit by constit
+	double matched_pt(const fastjet::PseudoJet &j0, const fastjet::PseudoJet &j1);
+
 };
 
 #endif

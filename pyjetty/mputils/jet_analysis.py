@@ -2,7 +2,7 @@ from pyjetty.mputils import MPBase
 import fastjet as fj
 import fjcontrib
 import fjext
-
+import fjtools
 
 class JetAnalysis(MPBase):
 	def __init__(self, **kwargs):
@@ -141,8 +141,11 @@ def fill_tree_data(jet, tw, sd, rho, iev=None, weight=None, sigma=None):
 
 def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None, sigma=None):
 	tw.clear()
-	if matched_pt(emb_jet, signal_jet) <= 0.5:
+	mpt = fjtools.matched_pt(emb_jet, signal_jet)
+	if mpt <= 0.5:
 		return None
+
+	tw.fill_branch('j_mpt', mpt)
 
 	if iev:
 		tw.fill_branch('ev_id', iev)
@@ -195,8 +198,8 @@ def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None, s
 	mpt2 = -1.0 # not passed SD
 
 	if has_parents_signal and has_parents_emb:
-		mpt1 = matched_pt(pe1, p1)
-		mpt2 = matched_pt(pe2, p2)
+		mpt1 = fjtools.matched_pt(pe1, p1)
+		mpt2 = fjtools.matched_pt(pe2, p2)
 	tw.fill_branch('mpt1', mpt1)
 	tw.fill_branch('mpt2', mpt2)
 
@@ -213,3 +216,19 @@ def fill_tree_matched(signal_jet, emb_jet, tw, sd, rho, iev=None, weight=None, s
 	tw.fill_tree()
 	return emb_jet
 
+
+def sum_pt(parts):
+	pts = [p.pt() for p in parts]
+	return sum(pts)
+
+
+def mean_pt(parts):
+	return sum_pt(parts) / len(parts)
+
+
+def remove_jets(parts, jets):
+	psjv = fj.vectorPJ()
+	reject_indexes = [p.user_index() for j in jets for p in j.constituents() if p.user_index() >= 0]
+	# print ('indexes leading jets:', len(reject_indexes), sorted(reject_indexes))
+	_tmp = [psjv.push_back(p) for p in parts if p.user_index() not in reject_indexes]
+	return psjv
