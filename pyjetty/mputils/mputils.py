@@ -34,22 +34,25 @@ def print_format_table():
 		print('\n') 
 
 class ColorS(object):
-	def red(s): 
-		return '\033[91m{}\033[00m'.format(s)
-	def green(s): 
-		return '\033[92m{}\033[00m'.format(s)
-	def yellow(s): 
-		return '\033[93m{}\033[00m'.format(s)
-	def light_purple(s): 
-		return '\033[94m{}\033[00m'.format(s)
-	def purple(s): 
-		return '\033[95m{}\033[00m'.format(s)
-	def cyan(s): 
-		return '\033[96m{}\033[00m'.format(s)
-	def light_gray(s): 
-		return '\033[97m{}\033[00m'.format(s)
-	def black(s):
-		return '\033[98m{}\033[00m'.format(s)
+	def str(*args):
+		_s = ' '.join([str(s) for s in args])
+		return _s
+	def red(*s): 
+		return '\033[91m{}\033[00m'.format(ColorS.str(*s))
+	def green(*s): 
+		return '\033[92m{}\033[00m'.format(ColorS.str(*s))
+	def yellow(*s): 
+		return '\033[93m{}\033[00m'.format(ColorS.str(*s))
+	def light_purple(*s): 
+		return '\033[94m{}\033[00m'.format(ColorS.str(*s))
+	def purple(*s): 
+		return '\033[95m{}\033[00m'.format(ColorS.str(*s))
+	def cyan(*s): 
+		return '\033[96m{}\033[00m'.format(ColorS.str(*s))
+	def light_gray(*s): 
+		return '\033[97m{}\033[00m'.format(ColorS.str(*s))
+	def black(*s):
+		return '\033[98m{}\033[00m'.format(ColorS.str(*s))
 	def __init__(self):
 		pass
 
