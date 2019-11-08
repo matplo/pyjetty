@@ -17,22 +17,6 @@ def logbins(xmin, xmax, nbins):
 	return arr
 
 
-# credit: https://www.geeksforgeeks.org/print-colors-python-terminal/
-# Python program to print 
-# colored text and background 
-def print_format_table(): 
-	""" 
-	prints table of formatted text format options 
-	"""
-	for style in range(8): 
-		for fg in range(30, 38): 
-			s1 = '' 
-			for bg in range(40, 48): 
-				format = ';'.join([str(style), str(fg), str(bg)]) 
-				s1 += '\x1b[%sm %s \x1b[0m' % (format, format) 
-			print(s1) 
-		print('\n') 
-
 class ColorS(object):
 	def str(*args):
 		_s = ' '.join([str(s) for s in args])
@@ -55,6 +39,21 @@ class ColorS(object):
 		return '\033[98m{}\033[00m'.format(ColorS.str(*s))
 	def __init__(self):
 		pass
+	# credit: https://www.geeksforgeeks.org/print-colors-python-terminal/
+	# Python program to print 
+	# colored text and background 
+	def print_format_table(): 
+		""" 
+		prints table of formatted text format options 
+		"""
+		for style in range(8): 
+			for fg in range(30, 38): 
+				s1 = '' 
+				for bg in range(40, 48): 
+					format = ';'.join([str(style), str(fg), str(bg)]) 
+					s1 += '\x1b[%sm %s \x1b[0m' % (format, format) 
+				print(s1) 
+			print('\n') 
 
 # think about thread safe implementation
 # use unique file names... for example?
