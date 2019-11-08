@@ -17,6 +17,42 @@ def logbins(xmin, xmax, nbins):
 	return arr
 
 
+# credit: https://www.geeksforgeeks.org/print-colors-python-terminal/
+# Python program to print 
+# colored text and background 
+def print_format_table(): 
+	""" 
+	prints table of formatted text format options 
+	"""
+	for style in range(8): 
+		for fg in range(30, 38): 
+			s1 = '' 
+			for bg in range(40, 48): 
+				format = ';'.join([str(style), str(fg), str(bg)]) 
+				s1 += '\x1b[%sm %s \x1b[0m' % (format, format) 
+			print(s1) 
+		print('\n') 
+
+class ColorS(object):
+	def red(s): 
+		return '\033[91m{}\033[00m'.format(s)
+	def green(s): 
+		return '\033[92m{}\033[00m'.format(s)
+	def yellow(s): 
+		return '\033[93m{}\033[00m'.format(s)
+	def light_purple(s): 
+		return '\033[94m{}\033[00m'.format(s)
+	def purple(s): 
+		return '\033[95m{}\033[00m'.format(s)
+	def cyan(s): 
+		return '\033[96m{}\033[00m'.format(s)
+	def light_gray(s): 
+		return '\033[97m{}\033[00m'.format(s)
+	def black(s):
+		return '\033[98m{}\033[00m'.format(s)
+	def __init__(self):
+		pass
+
 # think about thread safe implementation
 # use unique file names... for example?
 class UniqueString(object):
@@ -46,11 +82,53 @@ class UniqueString(object):
 		return UniqueString._unique(base)
 
 
+class NoneSetWrapper(object):
+	def __init__(self, name):
+		self.name = name
+	def __getattr__(self, key):
+		try:
+			return self.__dict__[key]
+		except:
+			print(ColorS.red('[w] {} : {} attribute is not known'.format(self.name, key)), file=sys.stderr)
+			self.__setattr__(key, None)
+		return None
+	def description(self):
+		return 'NoneSetWrapper named {}'.format(self.name)
+
+class NoneSetWrappers(object):
+	_instance = None
+	def __init__(self):
+		self.wrappers = {}
+	def get(self, name):
+		try:
+			return self.wrappers[name]
+		except KeyError:
+			self.wrappers[name] = NoneSetWrapper(name)
+		return self.wrappers[name]
+	def instance():
+		if NoneSetWrappers._instance is None:
+			NoneSetWrappers._instance = NoneSetWrappers()
+		return NoneSetWrappers._instance
+
+
+def is_iterable(o):
+	result = False
+	try:
+		tmp_iterator = iter(o)
+		result = True
+	except TypeError as te:
+		result = False
+	return result
+
+
 class MPBase(object):
+	_indent = 0
 	def __init__(self, **kwargs):
-		self.configure_from_args(name=None)
+		self.configure_from_args(name=None, args=NoneSetWrappers.instance().get(self.__class__))
 		for key, value in kwargs.items():
 			self.__setattr__(key, value)
+		# if getattr(self, 'args'):
+		# 	self.copy_attributes(self.args)
 		if self.name is None:
 			self.name = UniqueString.str(type(self))
 
@@ -58,12 +136,37 @@ class MPBase(object):
 		for key, value in kwargs.items():
 			self.__setattr__(key, value)
 
+	def copy_attributes(self, ns):
+		for key in ns.__dict__:
+			self.__setattr__(key, getattr(ns, key))
+
 	def __str__(self):
 		s = []
 		variables = self.__dict__.keys()
+		MPBase._indent = MPBase._indent + 1
+		_sindent = ''.join(['   ' for i in range(MPBase._indent)])
 		for v in variables:
-			s.append('{} = {}'.format(v, self.__dict__[v]))
-		return "\n[i] {} with \n .  {}".format(self.__class__.__name__, '\n .  '.join(s))
+			_s = '{} ({}) = {}'.format(v, type(self.__dict__[v]), self.__dict__[v])
+			_descr_method = getattr(self.__dict__[v], 'description', None)
+			if callable(_descr_method):
+				_s = '{} (+description) = {} {}'.format(v, type(self.__dict__[v]), _descr_method())
+			if len(_s) > 500:
+				if is_iterable(self.__dict__[v]):
+					_s = '{} ({}) = {}'.format(v, len(self.__dict__[v]), self.__dict__[v])
+			if '\n' not in _s:
+				_st = (_s[:500] + '..') if len(_s) > 500 else _s
+			else:
+				_st = _s
+			s.append(_st)
+		if MPBase._indent > 1:
+			sret = "..\n{} {} ({}) with \n{} -  {}".format(_sindent, self.name, '', _sindent, '\n{} -  '.format(_sindent).join(s))
+		else:
+			sret = "\n{}[i] {} ({}) with \n{} -  {}".format(_sindent, self.name, type(self), _sindent, '\n{} -  '.format(_sindent).join(s))
+		MPBase._indent = MPBase._indent - 1
+		return sret
+
+	def description(self):
+		return self.__str__()
 
 import sys
 

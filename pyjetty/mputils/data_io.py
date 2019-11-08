@@ -80,7 +80,7 @@ class DataFileIO(MPBase):
 #random order of files; files do not repeat; load_event - single event return
 class DataIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_list='PbPb_file_list.txt', random_file_order=True)
+		self.configure_from_args(file_list='PbPb_file_list.txt', tree_name='tree_Particle', random_file_order=True)
 		super(DataIO, self).__init__(**kwargs)
 		self.current_event_in_file = 0
 		self.file_io = None
@@ -109,7 +109,7 @@ class DataIO(MPBase):
 			print('[w] no more files to open.')
 			return
 		print('[i] opening data file', afile)
-		self.file_io = DataFileIO(file_input=afile)
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
 		print('    number of events', self.current_file_number_of_events())
 		print('    files to go', len(self.list_of_files))
 
@@ -146,7 +146,7 @@ class DataIO(MPBase):
 #random order of files; files can repeat
 class DataBackgroundIO(DataIO):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_list='PbPb_file_list.txt')	
+		self.configure_from_args(file_list='PbPb_file_list.txt', tree_name='tree_Particle')	
 		super(DataBackgroundIO, self).__init__(**kwargs)
 
 	def open_file(self):
@@ -154,5 +154,5 @@ class DataBackgroundIO(DataIO):
 		self.current_event_in_file = 0
 		afile = random.choice(self.list_of_files)
 		print('[i] opening data file', afile)
-		self.file_io = DataFileIO(file_input=afile)
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
 		print('    number of events', self.current_file_number_of_events())
