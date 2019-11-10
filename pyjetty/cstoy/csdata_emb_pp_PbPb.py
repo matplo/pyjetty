@@ -89,6 +89,9 @@ class Embedding(MPBase):
 		self.tpp 	= ROOT.TTree('tpp', 'tpp')
 		self.twpp 	= RTreeWriter(tree=self.tpp, name='Output Tree pp simulation')
 
+		self.th 	= ROOT.TTree('th', 'th')
+		self.twh 	= RTreeWriter(tree=self.th, name='Output Tree pp simulation embedded into PbPb')
+
 	def run(self):
 		# need to change this for data to drive...
 		delta_t = 0
@@ -156,7 +159,7 @@ class Embedding(MPBase):
 				if len(_mactches_pp) == 1:
 					_det_part_matches.append([ j_det, _part_psjv[_mactches_pp[0]] ])
 
-			if _n_matches < 1 or _n_matches > 1:
+			if _n_matches < 1:
 				if _n_matches < 1:
 					pwarning('event:', iev, '- no matched jets in simulation!?', len(_det_part_matches))
 				else:
@@ -192,19 +195,43 @@ class Embedding(MPBase):
 				perror('unable to load PbPb event - permanent - bailing out here.')
 				break
 
-			continue
-
 			_tmp = [_hybrid_event.push_back(p) for p in self.det_sim.particles]
-			# _nparts_hybrid = len(_hybrid_event)
-			# print(_nparts_hybrid_no_emb, _nparts_hybrid)
 
-			# analyze the hybrid event
 			if self.cs:
 				cs_parts = self.cs.process_event(_hybrid_event)
 				rho = self.cs.bge_rho.rho()
 				self.ja_hybrid.analyze_event(cs_parts)
 			else:
 				self.ja_hybrid.analyze_event(_hybrid_event)
+
+			_n_matches_hybrid = 0
+			for m in _det_part_matches:
+				j_det = m[0]
+				_hybrid_psjv = self.ja_hybrid.jets_as_psj_vector()
+				_mactches_hybrid = fjtools.matched_Reta(j_det, _hybrid_psjv, 0.6 * self.jetR)
+				_n_matches_hybrid = _n_matches_hybrid + len(_mactches_hybrid)
+				if len(_mactches_hybrid) > 1:
+					pwarning('event:', iev, 'jet pt=', j_det.pt(), 'more than one match in hybrid jets', [i for i in _mactches_hybrid])
+				if len(_mactches_hybrid) == 1:
+					m.append(_hybrid_psjv[_mactches_hybrid[0]])
+
+			if _n_matches_hybrid < 1:
+				if _n_matches_hybrid < 1:
+					pwarning('event:', iev, '- no matched jets in embedding!?', _n_matches_hybrid)
+				else:
+					pass
+			else:
+				_hybrid_matches = [m for m in _det_part_matches if len(m) == 3]
+				self.twh.fill_branch('iev', iev)
+				self.twh.fill_branch('pt_det', [m[0].pt() for m in _hybrid_matches])
+				self.twh.fill_branch('pt_part', [m[1].pt() for m in _hybrid_matches])
+				self.twh.fill_branch('pt_hybr', [m[2].pt() for m in _hybrid_matches])
+				self.twh.fill_branch('dpt_pp', [m[0].pt() - m[1].pt() for m in _hybrid_matches])
+				self.twh.fill_branch('dpt_hybr', [m[0].pt() - m[2].pt() for m in _hybrid_matches])
+				self.twh.fill_branch('dR_pp', [m[0].delta_R(m[1]) for m in _hybrid_matches])
+				self.twh.fill_branch('dR_hybr', [m[0].delta_R(m[2]) for m in _hybrid_matches])
+				self.twh.fill_tree()
+
 			# fill the trees
 			# tmp = [fill_tree_data(j, self.tw, self.sd, self.ja.rho, iev, 1.) for j in self.ja.jets if j.pt() > self.jetptcut]
 
