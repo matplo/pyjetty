@@ -27,6 +27,8 @@ class ColorS(object):
 		return '\033[92m{}\033[00m'.format(ColorS.str(*s))
 	def yellow(*s): 
 		return '\033[93m{}\033[00m'.format(ColorS.str(*s))
+	def blue(*s): 
+		return '\033[34m{}\033[00m'.format(ColorS.str(*s))
 	def light_purple(*s): 
 		return '\033[94m{}\033[00m'.format(ColorS.str(*s))
 	def purple(*s): 
@@ -42,7 +44,7 @@ class ColorS(object):
 	# credit: https://www.geeksforgeeks.org/print-colors-python-terminal/
 	# Python program to print 
 	# colored text and background 
-	def print_format_table(): 
+	def print_format_table():
 		""" 
 		prints table of formatted text format options 
 		"""
@@ -54,6 +56,15 @@ class ColorS(object):
 					s1 += '\x1b[%sm %s \x1b[0m' % (format, format) 
 				print(s1) 
 			print('\n') 
+
+def pwarning(*args):
+	print(ColorS.yellow('[w]', *args))
+
+def perror(*args):
+	print(ColorS.red('[e]', *args))
+
+def pinfo(*args):
+	print(ColorS.green('[i]', *args))
 
 # think about thread safe implementation
 # use unique file names... for example?

@@ -130,18 +130,41 @@ class DataIO(MPBase):
 		if self.current_event_in_file >= self.current_file_number_of_events():
 			self.current_event_in_file = 0
 			self.file_io = None
-			return self.load_event()
-		event = self.file_io.df_events[self.current_event_in_file]
+			return self.load_event(offset=offset)
+		self.event = self.file_io.df_events[self.current_event_in_file]
 		# print ('reset indexes')
 		# _tmp = [p.set_user_index(0) for ip,p in enumerate(event.particles)]
 		# print('loaded event:', self.current_event_in_file)
 		self.current_event_in_file = self.current_event_in_file + 1
 		self.particles = fj.vectorPJ()
-		for ip,p in enumerate(event.particles):
+		for ip,p in enumerate(self.event.particles):
 			p.set_user_index(offset + ip)
 			self.particles.push_back(p)
 		return self.particles
 
+	def load_event_with_loc(self, run_number=-1, ev_id=-1, offset = 0):
+		self.particles = None
+		if self.file_io is None:
+			self.open_file()
+		if self.file_io is None:
+			print('[e] unable to load the data file')
+			return None
+		if self.current_event_in_file >= self.current_file_number_of_events():
+			self.current_event_in_file = 0
+			self.file_io = None
+			return self.load_event_with_loc(loc=loc, offset=offset)
+		# self.event = self.file_io.df_events[self.current_event_in_file]
+		self.event = self.file_io.df_events.loc[self.file_io.df_events.ev_id=ev_id, self.file_io.df_events.run_number=run_number]
+		print (self.event)
+		# print ('reset indexes')
+		# _tmp = [p.set_user_index(0) for ip,p in enumerate(event.particles)]
+		# print('loaded event:', self.current_event_in_file)
+		# self.current_event_in_file = self.current_event_in_file + 1
+		self.particles = fj.vectorPJ()
+		for ip,p in enumerate(self.event.particles):
+			p.set_user_index(offset + ip)
+			self.particles.push_back(p)
+		return self.particles
 
 #random order of files; files can repeat
 class DataBackgroundIO(DataIO):

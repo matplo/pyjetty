@@ -6,14 +6,14 @@ import fjtools
 
 class JetAnalysis(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, particles=None)
+		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, jet_pt_min=0.0, particles=None)
 		super(JetAnalysis, self).__init__(**kwargs)
 
 		self.particle_selector = fj.SelectorAbsEtaMax(self.particle_eta_max)
 
 		self.jet_eta_max = self.particle_eta_max - self.jet_R * 1.05
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
-		self.jet_selector = fj.SelectorPtMin(0.0) & fj.SelectorAbsEtaMax(self.jet_eta_max)
+		self.jet_selector = fj.SelectorPtMin(self.jet_pt_min) & fj.SelectorAbsEtaMax(self.jet_eta_max)
 		self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
 
 		if self.particles:
@@ -28,6 +28,10 @@ class JetAnalysis(MPBase):
 			self.cs = fj.ClusterSequenceArea(self.particles, self.jet_def, self.jet_area_def)
 			self.jets = fj.sorted_by_pt(self.jet_selector(self.cs.inclusive_jets()))
 
+	def jets_as_psj_vector(self):
+		self.psj_jet_vector = fj.vectorPJ()
+		_tmp = [self.psj_jet_vector.push_back(j) for j in self.jets]
+		return self.psj_jet_vector
 
 class JetAnalysisPerJet(MPBase):
 	def __init__(self, **kwargs):
