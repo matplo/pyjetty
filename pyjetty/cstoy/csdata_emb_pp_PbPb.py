@@ -105,62 +105,41 @@ class Embedding(MPBase):
 					delta_t = time.time()-start_t
 					pinfo('processing event', iev, ' - ev/sec =', iev/delta_t, 'elapsed =', delta_t)
 
+			# find jets on detector level
+			if len(self.det_sim.particles) < 1:
+				pwarning(iev, 'event skipped N detector parts', len(self.det_sim.particles))
+				continue
+			self.ja_det.analyze_event(self.det_sim.particles)
+			_jets_det = self.ja_det.jets
+			if len(_jets_det) < 1:
+				continue
+
+			# load the corresponding event on particle level
 			self.part_sim.open_afile(afile=self.det_sim.file_io.file_input)
 			if not self.part_sim.load_event_with_loc(self.det_sim.event.run_number, self.det_sim.event.ev_id, 0):
 				perror('unable to load partL event run#:', self.det_sim.event.run_number, 'ev_id:', self.det_sim.event.ev_id)
+				iev = iev - 1
 				continue
-
 			if self.det_sim.event.run_number != self.part_sim.event.run_number:
 				perror('run# missmatch detL:', self.det_sim.event.run_number, 'partL:', self.part_sim.event.run_number)
-				if self.det_sim.event.run_number > self.part_sim.event.run_number:
-					pwarning('- trying to recover by advancing partL')
-					self.part_sim.load_event()
-					if self.det_sim.event.run_number != self.part_sim.event.run_number:
-						pwarning('- failed detL:', self.det_sim.event.run_number, 'partL:', self.part_sim.event.run_number)
-					else:
-						pwarning('- looks good (but will skip an event anyways)', self.det_sim.event.run_number)
-				else:
-					pwarning('- trying to recover by advancing detL')
-					self.det_sim.load_event()					
-					if self.det_sim.event.run_number != self.part_sim.event.run_number:
-						pwarning('- failed detL:', self.det_sim.event.run_number, 'partL:', self.part_sim.event.run_number)
-					else:
-						pwarning('- looks good (but will skip an event anyways)', self.det_sim.event.run_number)
 				iev = iev - 1
 				continue
-
 			if self.det_sim.event.ev_id != self.part_sim.event.ev_id:
 				perror('ev_id# missmatch detL:', self.det_sim.event.ev_id, 'partL:',self.part_sim.event.ev_id)
-				if self.det_sim.event.ev_id > self.part_sim.event.ev_id:
-					pwarning('- trying to recover by advancing partL')
-					self.part_sim.load_event()
-					if self.det_sim.event.ev_id != self.part_sim.event.ev_id:
-						pwarning('- failed detL:', self.det_sim.event.ev_id, 'partL:', self.part_sim.event.ev_id)
-					else:
-						pwarning('- looks good (but will skip an event anyways)', self.det_sim.event.ev_id)
-				else:
-					pwarning('- trying to recover by advancing detL')
-					self.det_sim.load_event()					
-					if self.det_sim.event.ev_id != self.part_sim.event.ev_id:
-						pwarning('- failed detL:', self.det_sim.event.ev_id, 'partL:', self.part_sim.event.ev_id)
-					else:
-						pwarning('- looks good (but will skip an event anyways)', self.det_sim.event.ev_id)
 				iev = iev - 1
 				continue
 
-			if len(self.part_sim.particles) < 1 or len(self.det_sim.particles) < 1:
-				pwarning(iev, 'event skipped N particle parts', len(self.part_sim.particles), 'N detector parts', len(self.det_sim.particles))
+			# find jets on particle level
+			if len(self.part_sim.particles) < 1:
+				pwarning(iev, 'event skipped N particle parts', len(self.part_sim.particles))
 				continue
-
 			self.ja_part.analyze_event(self.part_sim.particles)
 			_jets_part = self.ja_part.jets
-			self.ja_det.analyze_event(self.det_sim.particles)
-			_jets_det = self.ja_det.jets
 
-			if len(_jets_part) < 1 or len(_jets_det) < 1:
-				# pwarning(iev, 'event skipped N particle jets', len(_jets_part), 'N detector jets', len(_jets_det))
+			if len(_jets_part) < 1:
 				continue
 
+			# match in pp simulations
 			_det_part_matches = []
 			_n_matches = 0
 			for j_det in _jets_det:
@@ -185,6 +164,7 @@ class Embedding(MPBase):
 				self.twpp.fill_branch('dR', [m[0].delta_R(m[1]) for m in _det_part_matches])
 				self.twpp.fill_tree()
 
+			# here embedding to PbPb data
 			_offset = 10000
 			while _offset < len(self.det_sim.particles):
 				_offset = _offset + 1000
@@ -213,12 +193,14 @@ class Embedding(MPBase):
 			# _nparts_hybrid = len(_hybrid_event)
 			# print(_nparts_hybrid_no_emb, _nparts_hybrid)
 
+			# analyze the hybrid event
 			if self.cs:
 				cs_parts = self.cs.process_event(_hybrid_event)
 				rho = self.cs.bge_rho.rho()
 				self.ja_hybrid.analyze_event(cs_parts)
 			else:
 				self.ja_hybrid.analyze_event(_hybrid_event)
+			# fill the trees
 			# tmp = [fill_tree_data(j, self.tw, self.sd, self.ja.rho, iev, 1.) for j in self.ja.jets if j.pt() > self.jetptcut]
 
 
