@@ -95,7 +95,7 @@ class Embedding(MPBase):
 		start_t = time.time()
 		iev = 1
 		# while self.det_sim.load_event() and self.part_sim.load_event():
-		while self.det_sim.load_event() and self.part_sim.load_event():
+		while self.det_sim.load_event():
 			iev = iev + 1
 			if self.nev > 0:
 				if iev > self.nev:
@@ -105,7 +105,10 @@ class Embedding(MPBase):
 					delta_t = time.time()-start_t
 					pinfo('processing event', iev, ' - ev/sec =', iev/delta_t, 'elapsed =', delta_t)
 
-			# self.part_sim.load_event_with_loc(
+			self.part_sim.open_afile(afile=self.det_sim.file_io.file_input)
+			if not self.part_sim.load_event_with_loc(self.det_sim.event.run_number, self.det_sim.event.ev_id, 0):
+				perror('unable to load partL event run#:', self.det_sim.event.run_number, 'ev_id:', self.det_sim.event.ev_id)
+				continue
 
 			if self.det_sim.event.run_number != self.part_sim.event.run_number:
 				perror('run# missmatch detL:', self.det_sim.event.run_number, 'partL:', self.part_sim.event.run_number)
@@ -171,11 +174,13 @@ class Embedding(MPBase):
 
 			if _n_matches < 1 or _n_matches > 1:
 				if _n_matches < 1:
-					pwarning('event:', iev, 'strange event - no matched jets in simulation!?', len(_det_part_matches))
+					pwarning('event:', iev, '- no matched jets in simulation!?', len(_det_part_matches))
 				else:
 					pass
 			else:
 				self.twpp.fill_branch('iev', iev)
+				self.twpp.fill_branch('pt_det', [m[0].pt() for m in _det_part_matches])
+				self.twpp.fill_branch('pt_part', [m[1].pt() for m in _det_part_matches])
 				self.twpp.fill_branch('dpt', [m[0].pt() - m[1].pt() for m in _det_part_matches])
 				self.twpp.fill_branch('dR', [m[0].delta_R(m[1]) for m in _det_part_matches])
 				self.twpp.fill_tree()

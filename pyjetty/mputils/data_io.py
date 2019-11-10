@@ -110,7 +110,7 @@ class DataIO(MPBase):
 			return
 		print('[i] opening data file', afile)
 		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
-		print('    number of events', self.current_file_number_of_events())
+		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)
 		print('    files to go', len(self.list_of_files))
 
 	def current_file_number_of_events(self):
@@ -142,20 +142,27 @@ class DataIO(MPBase):
 			self.particles.push_back(p)
 		return self.particles
 
+	def open_afile(self, afile):
+		if self.file_io:
+			if self.file_io.file_input == afile:
+				return
+		self.file_io = None
+		self.current_event_in_file = 0
+		print('[i] opening (a) data file', afile)
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
+		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)
+
 	def load_event_with_loc(self, run_number=-1, ev_id=-1, offset = 0):
 		self.particles = None
 		if self.file_io is None:
-			self.open_file()
-		if self.file_io is None:
-			print('[e] unable to load the data file')
+			print('[e] unable to load the data because no file io is set')
 			return None
-		if self.current_event_in_file >= self.current_file_number_of_events():
-			self.current_event_in_file = 0
-			self.file_io = None
-			return self.load_event_with_loc(loc=loc, offset=offset)
-		# self.event = self.file_io.df_events[self.current_event_in_file]
-		self.event = self.file_io.df_events.loc[self.file_io.df_events.ev_id=ev_id, self.file_io.df_events.run_number=run_number]
-		print (self.event)
+		_events_match = [e for e in self.file_io.df_events if e.ev_id==ev_id and e.run_number==run_number]
+		if len(_events_match) == 1:
+			self.event = _events_match[0]
+		else:
+			print('[w] requested ev_id:', ev_id, "run_number:", run_number, 'number of matches', len(_events_match))
+			return None 
 		# print ('reset indexes')
 		# _tmp = [p.set_user_index(0) for ip,p in enumerate(event.particles)]
 		# print('loaded event:', self.current_event_in_file)
@@ -178,4 +185,4 @@ class DataBackgroundIO(DataIO):
 		afile = random.choice(self.list_of_files)
 		print('[i] opening data file', afile)
 		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
-		print('    number of events', self.current_file_number_of_events())
+		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)
