@@ -101,9 +101,9 @@ class Embedding(MPBase):
 				if iev > self.nev:
 					iev = iev - 1
 					break
-				if iev % 1000 == 0:
-					delta_t = time.time()-start_t
-					pinfo('processing event', iev, ' - ev/sec =', iev/delta_t, 'elapsed =', delta_t)
+			if iev % 1000 == 0:
+				delta_t = time.time() - start_t
+				pinfo('processing event', iev, ' - ev/sec =', iev/delta_t, 'elapsed =', delta_t)
 
 			# find jets on detector level
 			if len(self.det_sim.particles) < 1:
@@ -112,6 +112,11 @@ class Embedding(MPBase):
 			self.ja_det.analyze_event(self.det_sim.particles)
 			_jets_det = self.ja_det.jets
 			if len(_jets_det) < 1:
+				continue
+			_too_high_pt = [p.pt() for j in _jets_det for p in j.constituents() if p.pt() > 200.]
+			if len(_too_high_pt) > 0:
+				pwarning(iev, 'a likely fake high pT particle(s)', _too_high_pt, '- skipping whole event')
+				iev = iev - 1
 				continue
 
 			# load the corresponding event on particle level
