@@ -28,6 +28,35 @@ namespace PyJettyFJTools
 		return (pt_sum / pt_sum_1);
 	}
 
+	// return indices of jets matched to j jet	
+	std::vector<int> matched_Ry(const fastjet::PseudoJet &j, const std::vector<fastjet::PseudoJet> &v, double Rmatch)
+	{
+		std::vector<int> retv;
+		for(std::size_t i = 0; i < v.size(); ++i)
+		{
+			if (j.delta_R(v[i]) < Rmatch)
+			{
+				retv.push_back(i);
+			}
+		}
+		return retv;
+	}
+
+	// return indices of jets matched to j jet	
+	std::vector<int> matched_Reta(const fastjet::PseudoJet &j, const std::vector<fastjet::PseudoJet> &v, double Rmatch)
+	{
+		std::vector<int> retv;
+		for(std::size_t i = 0; i < v.size(); ++i)
+		{
+			double dR = TMath::Sqrt(TMath::Power(j.delta_phi_to(v[i]), 2.) + TMath::Power(j.eta() - v[i].eta(), 2.));
+			if (dR < Rmatch)
+			{
+				retv.push_back(i);
+			}
+		}
+		return retv;
+	}
+
 	double boltzmann_norm(double *x, double *par)
 	{
 		// double fval = par[1] / x[0] * x[0] * TMath::Exp(-(2. / par[0]) * x[0]);

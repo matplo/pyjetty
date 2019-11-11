@@ -80,7 +80,7 @@ class DataFileIO(MPBase):
 #random order of files; files do not repeat; load_event - single event return
 class DataIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_list='PbPb_file_list.txt', random_file_order=True)
+		self.configure_from_args(file_list='PbPb_file_list.txt', tree_name='tree_Particle', random_file_order=True)
 		super(DataIO, self).__init__(**kwargs)
 		self.current_event_in_file = 0
 		self.file_io = None
@@ -109,8 +109,8 @@ class DataIO(MPBase):
 			print('[w] no more files to open.')
 			return
 		print('[i] opening data file', afile)
-		self.file_io = DataFileIO(file_input=afile)
-		print('    number of events', self.current_file_number_of_events())
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
+		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)
 		print('    files to go', len(self.list_of_files))
 
 	def current_file_number_of_events(self):
@@ -130,23 +130,53 @@ class DataIO(MPBase):
 		if self.current_event_in_file >= self.current_file_number_of_events():
 			self.current_event_in_file = 0
 			self.file_io = None
-			return self.load_event()
-		event = self.file_io.df_events[self.current_event_in_file]
+			return self.load_event(offset=offset)
+		self.event = self.file_io.df_events[self.current_event_in_file]
 		# print ('reset indexes')
 		# _tmp = [p.set_user_index(0) for ip,p in enumerate(event.particles)]
 		# print('loaded event:', self.current_event_in_file)
 		self.current_event_in_file = self.current_event_in_file + 1
 		self.particles = fj.vectorPJ()
-		for ip,p in enumerate(event.particles):
+		for ip,p in enumerate(self.event.particles):
 			p.set_user_index(offset + ip)
 			self.particles.push_back(p)
 		return self.particles
 
+	def open_afile(self, afile):
+		if self.file_io:
+			if self.file_io.file_input == afile:
+				return
+		self.file_io = None
+		self.current_event_in_file = 0
+		print('[i] opening (a) data file', afile)
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
+		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)
+
+	def load_event_with_loc(self, run_number=-1, ev_id=-1, offset = 0):
+		self.particles = None
+		if self.file_io is None:
+			print('[e] unable to load the data because no file io is set')
+			return None
+		_events_match = [e for e in self.file_io.df_events if e.ev_id==ev_id and e.run_number==run_number]
+		if len(_events_match) == 1:
+			self.event = _events_match[0]
+		else:
+			print('[w] requested ev_id:', ev_id, "run_number:", run_number, 'number of matches', len(_events_match))
+			return None 
+		# print ('reset indexes')
+		# _tmp = [p.set_user_index(0) for ip,p in enumerate(event.particles)]
+		# print('loaded event:', self.current_event_in_file)
+		# self.current_event_in_file = self.current_event_in_file + 1
+		self.particles = fj.vectorPJ()
+		for ip,p in enumerate(self.event.particles):
+			p.set_user_index(offset + ip)
+			self.particles.push_back(p)
+		return self.particles
 
 #random order of files; files can repeat
 class DataBackgroundIO(DataIO):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_list='PbPb_file_list.txt')	
+		self.configure_from_args(file_list='PbPb_file_list.txt', tree_name='tree_Particle')	
 		super(DataBackgroundIO, self).__init__(**kwargs)
 
 	def open_file(self):
@@ -154,5 +184,5 @@ class DataBackgroundIO(DataIO):
 		self.current_event_in_file = 0
 		afile = random.choice(self.list_of_files)
 		print('[i] opening data file', afile)
-		self.file_io = DataFileIO(file_input=afile)
-		print('    number of events', self.current_file_number_of_events())
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
+		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)

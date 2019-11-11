@@ -47,6 +47,11 @@ namespace PyJettyFJTools
 	// fraction of pT of jet j1 contained in j0 - constit by constit
 	double matched_pt(const fastjet::PseudoJet &j0, const fastjet::PseudoJet &j1);
 
+	// return indices of jets matched to j jet - using rapidity to calculate deltaR
+	std::vector<int> matched_Ry(const fastjet::PseudoJet &j, const std::vector<fastjet::PseudoJet> &v, double Rmatch);
+	// return indices of jets matched to j jet - using pseudorapidity to calculate deltaR
+	std::vector<int> matched_Reta(const fastjet::PseudoJet &j, const std::vector<fastjet::PseudoJet> &v, double Rmatch);
+
 };
 
 #endif
