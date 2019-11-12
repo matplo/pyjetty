@@ -34,10 +34,93 @@ from alice_efficiency import AliceChargedParticleEfficiency
 import ROOT
 ROOT.gROOT.SetBatch(True)
 
+
+class EmbeddingOutput(MPBase):
+	def __init__(self, **kwargs):
+		self.configure_from_args(args=None)
+		super(EmbeddingOutput, self).__init__(**kwargs)
+		self.copy_attributes(self.args)
+		self.outf = None
+
+	def initialize_output(self, output_name=None):
+		if output_name:			
+			if self.output_filename != output_name:
+				self.output_filename = output_name
+
+		if self.outf:
+			if self.outf.GetName() != self.output_filename:
+				pinfo('closing output file', self.outf.GetName())
+				self.outf.Write()
+				self.outf.Close()
+				self.outf = None
+			else:
+				return True
+
+		if self.outf is None:
+			self.outf = ROOT.TFile(self.output_filename, 'recreate')
+			self.outf.cd()
+			self.tdet 		= ROOT.TTree('tdet', 'tdet')
+			self.twdet 	= RTreeWriter(tree=self.tdet, name='Output Tree detector level pp simulation')
+
+			self.tpp 	= ROOT.TTree('tpp', 'tpp')
+			self.twpp 	= RTreeWriter(tree=self.tpp, name='Output Tree pp simulation')
+
+			self.th 	= ROOT.TTree('th', 'th')
+			self.twh 	= RTreeWriter(tree=self.th, name='Output Tree pp simulation embedded into PbPb')
+
+			pinfo('new output file', self.outf.GetName())
+
+	def close(self):
+		if self.outf:
+			pinfo('closing output file', self.outf.GetName())
+			self.outf.Write()
+			self.outf.Close()
+			self.outf = None
+
+	def _fill_det_level(self, jet):
+		self.twdet.fill_branch('pt_det', jet.pt())
+		self.twdet.fill_branch('pt_phi', jet.phi())
+		self.twdet.fill_branch('pt_eta', jet.eta())
+
+	def fill_det_level(self, iev=-1, jets=[]):
+		if len(jets) > 0:
+			self.twdet.fill_branch('iev', iev)
+			_tmp = [self._fill_det_level(j) for j in jets]
+			self.twdet.fill_tree()
+
+	def _fill_pp_pair(self, m):
+		if len(m) == 2:
+			self.twpp.fill_branch('pt_det', m[0].pt())
+			self.twpp.fill_branch('pt_part', m[1].pt())
+			self.twpp.fill_branch('dpt', m[0].pt() - m[1].pt())
+			self.twpp.fill_branch('dR', m[0].delta_R(m[1]))
+
+	def fill_pp_pairs(self, iev=-1, pairs=[]):
+		if len(pairs) > 0:
+			self.twpp.fill_branch('iev', iev)
+			_tmp = [self._fill_pp_pair(m) for m in pairs]
+			self.twpp.fill_tree()
+
+	def _fill_emb(self, m):
+		if len(m) == 3:
+			self.twh.fill_branch('pt_det', m[0].pt())
+			self.twh.fill_branch('pt_part', m[1].pt())
+			self.twh.fill_branch('pt_hybr', m[2].pt())
+			self.twh.fill_branch('dpt_pp', m[0].pt() - m[1].pt())
+			self.twh.fill_branch('dpt_hybr', m[2].pt() - m[0].pt())
+			self.twh.fill_branch('dR_pp', m[0].delta_R(m[1]))
+			self.twh.fill_branch('dR_hybr', m[0].delta_R(m[2]))
+
+	def fill_emb(self, iev=-1, threes=[]):
+		if len(threes) > 0:
+			self.twh.fill_branch('iev', iev)
+			_tmp = [self._fill_emb(m) for m in threes]
+			self.twh.fill_tree()
+
 # make it a class
 class Embedding(MPBase):
 	def add_arguments_to_parser(parser):
-		parser.add_argument('--output', default="output.root", type=str)
+		parser.add_argument('-o', '--output-filename', default="output.root", type=str)
 		parser.add_argument('datalistAA', help='run through a file list', default='', type=str)
 		parser.add_argument('simulationpp', help='run through a file list', default='', type=str)
 		parser.add_argument('--jetR', default=0.4, type=float)
@@ -51,7 +134,7 @@ class Embedding(MPBase):
 		parser.add_argument('--max-eta', help='max eta for particles', default=0.9)
 
 	def __init__(self, **kwargs):
-		self.configure_from_args(tree_name='tree_Particle', tree_name_gen='tree_Particle_gen')
+		self.configure_from_args(tree_name='tree_Particle', tree_name_gen='tree_Particle_gen', args=None)
 		super(Embedding, self).__init__(**kwargs)
 		self.copy_attributes(self.args)
 		self.jet_def = fj.JetDefinition(fj.antikt_algorithm, self.jetR)
@@ -60,6 +143,11 @@ class Embedding(MPBase):
 			# jet_selector_cs = fj.SelectorPtMin(50.0) & fj.SelectorAbsEtaMax(max_eta - 1.05 * self.jetR)
 		else:
 			self.jet_selector = fj.SelectorAbsEtaMax(self.max_eta - 1.05 * self.jetR)
+		self.parts_selector = fj.SelectorAbsEtaMax(self.max_eta)
+
+		self.output = EmbeddingOutput(args=self.args)
+		self.output.initialize_output()
+		# self.output.copy_attributes(self)
 
 		self.sd = fjcontrib.SoftDrop(0, self.sd_zcut, self.jetR)
 
@@ -79,18 +167,7 @@ class Embedding(MPBase):
 		if self.dRmax > 0:
 			self.cs = CEventSubtractor(	alpha=self.alpha, max_distance=self.dRmax, max_eta=self.max_eta, 
 										bge_rho_grid_size=0.25, max_pt_correct=100)
-		self.parts_selector = fj.SelectorAbsEtaMax(self.max_eta)
 
-		self.outf = ROOT.TFile(self.output, 'recreate')
-		self.outf.cd()
-		self.t 		= ROOT.TTree('t', 't')
-		self.tw 	= RTreeWriter(tree=self.t, name='Output Tree')
-
-		self.tpp 	= ROOT.TTree('tpp', 'tpp')
-		self.twpp 	= RTreeWriter(tree=self.tpp, name='Output Tree pp simulation')
-
-		self.th 	= ROOT.TTree('th', 'th')
-		self.twh 	= RTreeWriter(tree=self.th, name='Output Tree pp simulation embedded into PbPb')
 
 	def run(self):
 		# need to change this for data to drive...
@@ -119,22 +196,20 @@ class Embedding(MPBase):
 			_too_high_pt = [p.pt() for j in _jets_det for p in j.constituents() if p.pt() > 200.]
 			if len(_too_high_pt) > 0:
 				pwarning(iev, 'a likely fake high pT particle(s)', _too_high_pt, '- skipping whole event')
-				iev = iev - 1
 				continue
+
+			self.output.fill_det_level(iev, _jets_det)
 
 			# load the corresponding event on particle level
 			self.part_sim.open_afile(afile=self.det_sim.file_io.file_input)
 			if not self.part_sim.load_event_with_loc(self.det_sim.event.run_number, self.det_sim.event.ev_id, 0):
 				perror('unable to load partL event run#:', self.det_sim.event.run_number, 'ev_id:', self.det_sim.event.ev_id)
-				iev = iev - 1
 				continue
 			if self.det_sim.event.run_number != self.part_sim.event.run_number:
 				perror('run# missmatch detL:', self.det_sim.event.run_number, 'partL:', self.part_sim.event.run_number)
-				iev = iev - 1
 				continue
 			if self.det_sim.event.ev_id != self.part_sim.event.ev_id:
 				perror('ev_id# missmatch detL:', self.det_sim.event.ev_id, 'partL:',self.part_sim.event.ev_id)
-				iev = iev - 1
 				continue
 
 			# find jets on particle level
@@ -165,12 +240,7 @@ class Embedding(MPBase):
 				else:
 					pass
 			else:
-				self.twpp.fill_branch('iev', iev)
-				self.twpp.fill_branch('pt_det', [m[0].pt() for m in _det_part_matches])
-				self.twpp.fill_branch('pt_part', [m[1].pt() for m in _det_part_matches])
-				self.twpp.fill_branch('dpt', [m[0].pt() - m[1].pt() for m in _det_part_matches])
-				self.twpp.fill_branch('dR', [m[0].delta_R(m[1]) for m in _det_part_matches])
-				self.twpp.fill_tree()
+				self.output.fill_pp_pairs(iev, _det_part_matches)
 
 			# here embedding to PbPb data
 			_offset = 10000
@@ -222,25 +292,14 @@ class Embedding(MPBase):
 					pass
 			else:
 				_hybrid_matches = [m for m in _det_part_matches if len(m) == 3]
-				self.twh.fill_branch('iev', iev)
-				self.twh.fill_branch('pt_det', [m[0].pt() for m in _hybrid_matches])
-				self.twh.fill_branch('pt_part', [m[1].pt() for m in _hybrid_matches])
-				self.twh.fill_branch('pt_hybr', [m[2].pt() for m in _hybrid_matches])
-				self.twh.fill_branch('dpt_pp', [m[0].pt() - m[1].pt() for m in _hybrid_matches])
-				self.twh.fill_branch('dpt_hybr', [m[0].pt() - m[2].pt() for m in _hybrid_matches])
-				self.twh.fill_branch('dR_pp', [m[0].delta_R(m[1]) for m in _hybrid_matches])
-				self.twh.fill_branch('dR_hybr', [m[0].delta_R(m[2]) for m in _hybrid_matches])
-				self.twh.fill_tree()
+				self.output.fill_emb(iev, _hybrid_matches)
 
 			# fill the trees
 			# tmp = [fill_tree_data(j, self.tw, self.sd, self.ja.rho, iev, 1.) for j in self.ja.jets if j.pt() > self.jetptcut]
 
-
 		delta_t = time.time()-start_t
 		pinfo('processed events', iev, ' - ev/sec =', iev/delta_t, 'elapsed =', delta_t)
-		self.outf.Write()
-		self.outf.Close()
-		pinfo('written', self.outf.GetName())
+		self.output.close()
 
 
 def main():
@@ -248,14 +307,14 @@ def main():
 	Embedding.add_arguments_to_parser(parser)
 	args = parser.parse_args()
 
-	if args.output == 'output.root':
-		args.output = 'output_data_emb_CS_alpha_{}_dRmax_{}_SDzcut_{}.root'.format(args.alpha, args.dRmax, args.sd_zcut)
+	if args.output_filename == 'output.root':
+		args.output_filename = 'output_data_emb_CS_alpha_{}_dRmax_{}_SDzcut_{}.root'.format(args.alpha, args.dRmax, args.sd_zcut)
 		if args.jetptcut > -100:
-			args.output = 'output_data_emb_CS_alpha_{}_dRmax_{}_SDzcut_{}_jpt_{}.root'.format(args.alpha, args.dRmax, args.sd_zcut, args.jetptcut)
+			args.output_filename = 'output_data_emb_CS_alpha_{}_dRmax_{}_SDzcut_{}_jpt_{}.root'.format(args.alpha, args.dRmax, args.sd_zcut, args.jetptcut)
 
-	if os.path.isfile(args.output):
+	if os.path.isfile(args.output_filename):
 		if not args.overwrite:
-			print('[i] output', args.output, 'exists - use --overwrite to do just that...')
+			print('[i] output', args.output_filename, 'exists - use --overwrite to do just that...')
 			return
 
 	# print the banner first

@@ -1,4 +1,4 @@
-%module pythiafjext
+%module fjtools
 %include "std_vector.i"
 %{
 	#define SWIG_FILE_WITH_INIT
