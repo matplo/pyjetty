@@ -152,7 +152,7 @@ class Embedding(MPBase):
 		self.sd = fjcontrib.SoftDrop(0, self.sd_zcut, self.jetR)
 
 		self.ja_part 	= JetAnalysis(	jet_R=self.jetR, jet_algorithm=fj.antikt_algorithm, 
-										jet_pt_min=self.jetptcut/2., particle_eta_max=self.max_eta)
+										jet_pt_min=self.jetptcut/4., particle_eta_max=self.max_eta)
 		self.ja_det 	= JetAnalysis(	jet_R=self.jetR, jet_algorithm=fj.antikt_algorithm, 
 										jet_pt_min=self.jetptcut, particle_eta_max=self.max_eta)
 		self.ja_hybrid 	= JetAnalysis(	jet_R=self.jetR, jet_algorithm=fj.antikt_algorithm, 
@@ -193,7 +193,7 @@ class Embedding(MPBase):
 			_jets_det = self.ja_det.jets
 			if len(_jets_det) < 1:
 				continue
-			_too_high_pt = [p.pt() for j in _jets_det for p in j.constituents() if p.pt() > 200.]
+			_too_high_pt = [p.pt() for j in _jets_det for p in j.constituents() if p.pt() > 100.]
 			if len(_too_high_pt) > 0:
 				pwarning(iev, 'a likely fake high pT particle(s)', _too_high_pt, '- skipping whole event')
 				continue
