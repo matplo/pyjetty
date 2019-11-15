@@ -27,7 +27,7 @@ from pyjetty.mputils import CEventSubtractor
 from pyjetty.mputils import RTreeWriter
 from pyjetty.mputils import DataIO, DataBackgroundIO
 from pyjetty.mputils import fill_tree_data, JetAnalysis, JetAnalysisWithRho
-from pyjetty.mputils import ColorS, pwarning, perror, pinfo
+from pyjetty.mputils import ColorS, pwarning, perror, pinfo, pdebug
 
 from alice_efficiency import AliceChargedParticleEfficiency
 
@@ -41,6 +41,7 @@ class EmbeddingOutput(MPBase):
 		super(EmbeddingOutput, self).__init__(**kwargs)
 		self.copy_attributes(self.args)
 		self.outf = None
+		self.sd = fjcontrib.SoftDrop(0, self.sd_zcut, self.jetR)
 
 	def initialize_output(self, output_name=None):
 		if output_name:			
@@ -88,34 +89,59 @@ class EmbeddingOutput(MPBase):
 			_tmp = [self._fill_det_level(j) for j in jets]
 			self.twdet.fill_tree()
 
-	def _fill_pp_pair(self, m):
-		if len(m) == 2:
-			self.twpp.fill_branch('pt_det', m[0].pt())
-			self.twpp.fill_branch('pt_part', m[1].pt())
-			self.twpp.fill_branch('dpt', m[0].pt() - m[1].pt())
-			self.twpp.fill_branch('dR', m[0].delta_R(m[1]))
+	def fill_pp_pairs(self, iev, jm):
+		self.twpp.fill_branch('iev', 	iev)
+		self.twpp.fill_branch('det', 	jm[0])
+		self.twpp.fill_branch('part', 	jm[1])
+		self.twpp.fill_branch('dpt', 	jm[0].pt() - jm[1].pt())
+		self.twpp.fill_branch('dR', 	jm[0].delta_R(jm[1]))
+		self.twpp.fill_tree()
 
-	def fill_pp_pairs(self, iev=-1, pairs=[]):
-		if len(pairs) > 0:
-			self.twpp.fill_branch('iev', iev)
-			_tmp = [self._fill_pp_pair(m) for m in pairs]
-			self.twpp.fill_tree()
+	def fill_emb_3(self, iev, jm):
+		# pdebug('@fill: jm[0]', jm[0], 'jm[1]', jm[1], 'jm[2]', jm[2])
+		self.twh.fill_branch('iev', 	iev)
+		self.twh.fill_branch('det', 	jm[0])
+		self.twh.fill_branch('part', 	jm[1])
+		self.twh.fill_branch('hybr', 	jm[2])
+		self.twh.fill_branch('dpt_pp', 	jm[0].pt() - jm[1].pt())
+		self.twh.fill_branch('dpt_hybr', jm[2].pt() - jm[0].pt())
+		self.twh.fill_branch('dR_pp', 	jm[0].delta_R(jm[1]))
+		self.twh.fill_branch('dR_hybr', jm[0].delta_R(jm[2]))
 
-	def _fill_emb(self, m):
-		if len(m) == 3:
-			self.twh.fill_branch('pt_det', m[0].pt())
-			self.twh.fill_branch('pt_part', m[1].pt())
-			self.twh.fill_branch('pt_hybr', m[2].pt())
-			self.twh.fill_branch('dpt_pp', m[0].pt() - m[1].pt())
-			self.twh.fill_branch('dpt_hybr', m[2].pt() - m[0].pt())
-			self.twh.fill_branch('dR_pp', m[0].delta_R(m[1]))
-			self.twh.fill_branch('dR_hybr', m[0].delta_R(m[2]))
+		sd0 = self.sd.result(jm[0])
+		self.twh.fill_branch('sd_det', sd0)
+		sd0_pe1 = fj.PseudoJet()
+		sd0_pe2 = fj.PseudoJet()
+		sd0_has_parents = sd0.has_parents(sd0_pe1, sd0_pe2)
+		self.twh.fill_branch('sd_det_p1', sd0_pe1)
+		self.twh.fill_branch('sd_det_p2', sd0_pe2)
+		sdi0 = fjcontrib.get_SD_jet_info(sd0)
+		self.twh.fill_branch('sd_det_zg', 	sdi0.z)
+		self.twh.fill_branch('sd_det_Rg', 	sdi0.dR)
 
-	def fill_emb(self, iev=-1, threes=[]):
-		if len(threes) > 0:
-			self.twh.fill_branch('iev', iev)
-			_tmp = [self._fill_emb(m) for m in threes]
-			self.twh.fill_tree()
+		sd1 = self.sd.result(jm[1])
+		self.twh.fill_branch('sd_part', sd1)
+		sd1_pe1 = fj.PseudoJet()
+		sd1_pe2 = fj.PseudoJet()
+		sd1_has_parents = sd1.has_parents(sd1_pe1, sd1_pe2)
+		self.twh.fill_branch('sd_part_p1', sd1_pe1)
+		self.twh.fill_branch('sd_part_p2', sd1_pe2)
+		sdi1 = fjcontrib.get_SD_jet_info(sd1)
+		self.twh.fill_branch('sd_part_zg', 	sdi1.z)
+		self.twh.fill_branch('sd_part_Rg', 	sdi1.dR)
+
+		sd2 = self.sd.result(jm[2])
+		self.twh.fill_branch('sd_hybr', 		sd2)
+		sd2_pe1 = fj.PseudoJet()
+		sd2_pe2 = fj.PseudoJet()
+		sd2_has_parents = sd2.has_parents(sd2_pe1, sd2_pe2)
+		self.twh.fill_branch('sd_hybr_p1', sd2_pe1)
+		self.twh.fill_branch('sd_hybr_p2', sd2_pe2)
+		sdi2 = fjcontrib.get_SD_jet_info(sd2)
+		self.twh.fill_branch('sd_hybr_zg', 	sdi2.z)
+		self.twh.fill_branch('sd_hybr_Rg', 	sdi2.dR)
+
+		self.twh.fill_tree()
 
 # make it a class
 class Embedding(MPBase):
@@ -152,11 +178,11 @@ class Embedding(MPBase):
 		self.sd = fjcontrib.SoftDrop(0, self.sd_zcut, self.jetR)
 
 		self.ja_part 	= JetAnalysis(	jet_R=self.jetR, jet_algorithm=fj.antikt_algorithm, 
-										jet_pt_min=self.jetptcut/4., particle_eta_max=self.max_eta)
+										jet_pt_min=5., particle_eta_max=self.max_eta)
 		self.ja_det 	= JetAnalysis(	jet_R=self.jetR, jet_algorithm=fj.antikt_algorithm, 
 										jet_pt_min=self.jetptcut, particle_eta_max=self.max_eta)
 		self.ja_hybrid 	= JetAnalysis(	jet_R=self.jetR, jet_algorithm=fj.antikt_algorithm, 
-										jet_pt_min=self.jetptcut, particle_eta_max=self.max_eta)
+										jet_pt_min=5., particle_eta_max=self.max_eta)
 
 		self.dataPbPb 	= DataBackgroundIO(	name='Data PbPb', file_list=self.datalistAA)
 		self.det_sim 	= DataIO(	name='Sim Pythia Detector level', file_list=self.simulationpp, random_file_order=False)
@@ -191,6 +217,7 @@ class Embedding(MPBase):
 				continue
 			self.ja_det.analyze_event(self.det_sim.particles)
 			_jets_det = self.ja_det.jets
+			# _x = [pdebug(' -d ', j) for j in _jets_det]
 			if len(_jets_det) < 1:
 				continue
 			_too_high_pt = [p.pt() for j in _jets_det for p in j.constituents() if p.pt() > 100.]
@@ -218,29 +245,29 @@ class Embedding(MPBase):
 				continue
 			self.ja_part.analyze_event(self.part_sim.particles)
 			_jets_part = self.ja_part.jets
-
+			# _x = [pdebug(' -p ', j) for j in _jets_part]
 			if len(_jets_part) < 1:
 				continue
 
 			# match in pp simulations
 			_det_part_matches = []
 			_n_matches = 0
+			_part_psjv = self.ja_part.jets_as_psj_vector()
 			for j_det in _jets_det:
-				_part_psjv = self.ja_part.jets_as_psj_vector()
 				_mactches_pp = fjtools.matched_Reta(j_det, _part_psjv, 0.6 * self.jetR)
+				#_mactches_pp = fjtools.matched_Ry(j_det, _part_psjv, 0.6 * self.jetR)
 				_n_matches = _n_matches + len(_mactches_pp)
 				if len(_mactches_pp) > 1:
 					pwarning('event:', iev, 'jet pt=', j_det.pt(), 'more than one match in pp jets', [i for i in _mactches_pp])
 				if len(_mactches_pp) == 1:
-					_det_part_matches.append([ j_det, _part_psjv[_mactches_pp[0]] ])
+					j_part = _part_psjv[_mactches_pp[0]]
+					# pinfo('j_det', j_det, 'j_part', j_part)
+					_det_part_matches.append([ j_det, j_part])
+					self.output.fill_pp_pairs(iev, [j_det, j_part])
 
 			if _n_matches < 1:
 				if _n_matches < 1:
 					pwarning('event:', iev, '- no matched jets in simulation!?', len(_det_part_matches))
-				else:
-					pass
-			else:
-				self.output.fill_pp_pairs(iev, _det_part_matches)
 
 			# here embedding to PbPb data
 			_offset = 10000
@@ -256,7 +283,7 @@ class Embedding(MPBase):
 				else:
 					_hybrid_event = self.dataPbPb.particles
 					_nparts_hybrid_no_emb = len(_hybrid_event)
-					if len(_hybrid_event) < 1:
+					if _nparts_hybrid_no_emb < 1:
 						pwarning('hybrid event with no particles! trying another one')
 						_PbPb_loaded = 0
 					else:
@@ -274,28 +301,25 @@ class Embedding(MPBase):
 			else:
 				self.ja_hybrid.analyze_event(_hybrid_event)
 
-			_n_matches_hybrid = 0
+			_hybrid_matches = []
+			_hybrid_psjv = self.ja_hybrid.jets_as_psj_vector()
 			for m in _det_part_matches:
 				j_det = m[0]
-				_hybrid_psjv = self.ja_hybrid.jets_as_psj_vector()
+				j_part = m[1]
 				_mactches_hybrid = fjtools.matched_Reta(j_det, _hybrid_psjv, 0.6 * self.jetR)
-				_n_matches_hybrid = _n_matches_hybrid + len(_mactches_hybrid)
 				if len(_mactches_hybrid) > 1:
 					pwarning('event:', iev, 'jet pt=', j_det.pt(), 'more than one match in hybrid jets', [i for i in _mactches_hybrid])
 				if len(_mactches_hybrid) == 1:
-					m.append(_hybrid_psjv[_mactches_hybrid[0]])
+					# m.append(_hybrid_psjv[_mactches_hybrid[0]])
+					j_hybr = _hybrid_psjv[_mactches_hybrid[0]]
+					# pdebug('L302', 'j_det', j_det, 'j_part', j_part, 'j_hybr', j_hybr)
+					_hybrid_matches.append([j_det, j_part, j_hybr])
+					self.output.fill_emb_3(iev, [j_det, j_part, j_hybr])
 
+			_n_matches_hybrid = len(_hybrid_matches)
 			if _n_matches_hybrid < 1:
 				if _n_matches_hybrid < 1:
 					pwarning('event:', iev, '- no matched jets in embedding!?', _n_matches_hybrid)
-				else:
-					pass
-			else:
-				_hybrid_matches = [m for m in _det_part_matches if len(m) == 3]
-				self.output.fill_emb(iev, _hybrid_matches)
-
-			# fill the trees
-			# tmp = [fill_tree_data(j, self.tw, self.sd, self.ja.rho, iev, 1.) for j in self.ja.jets if j.pt() > self.jetptcut]
 
 		delta_t = time.time()-start_t
 		pinfo('processed events', iev, ' - ev/sec =', iev/delta_t, 'elapsed =', delta_t)
