@@ -104,9 +104,9 @@ class EmbeddingOutput(MPBase):
 		self.twh.fill_branch('part', 	jm[1])
 		self.twh.fill_branch('hybr', 	jm[2])
 		self.twh.fill_branch('dpt_pp', 	jm[0].pt() - jm[1].pt())
-		self.twh.fill_branch('dpt_hybr', jm[2].pt() - jm[0].pt())
+		self.twh.fill_branch('dpt_emb', jm[2].pt() - jm[0].pt())
 		self.twh.fill_branch('dR_pp', 	jm[0].delta_R(jm[1]))
-		self.twh.fill_branch('dR_hybr', jm[0].delta_R(jm[2]))
+		self.twh.fill_branch('dR_emb', jm[0].delta_R(jm[2]))
 
 		sd0 = self.sd.result(jm[0])
 		self.twh.fill_branch('sd_det', sd0)
@@ -131,15 +131,28 @@ class EmbeddingOutput(MPBase):
 		self.twh.fill_branch('sd_part_Rg', 	sdi1.dR)
 
 		sd2 = self.sd.result(jm[2])
-		self.twh.fill_branch('sd_hybr', 		sd2)
+		self.twh.fill_branch('sd_emb', 		sd2)
 		sd2_pe1 = fj.PseudoJet()
 		sd2_pe2 = fj.PseudoJet()
 		sd2_has_parents = sd2.has_parents(sd2_pe1, sd2_pe2)
-		self.twh.fill_branch('sd_hybr_p1', sd2_pe1)
-		self.twh.fill_branch('sd_hybr_p2', sd2_pe2)
+		self.twh.fill_branch('sd_emb_p1', sd2_pe1)
+		self.twh.fill_branch('sd_emb_p2', sd2_pe2)
 		sdi2 = fjcontrib.get_SD_jet_info(sd2)
-		self.twh.fill_branch('sd_hybr_zg', 	sdi2.z)
-		self.twh.fill_branch('sd_hybr_Rg', 	sdi2.dR)
+		self.twh.fill_branch('sd_emb_zg', 	sdi2.z)
+		self.twh.fill_branch('sd_emb_Rg', 	sdi2.dR)
+
+		m02_1 = -1
+		m02_2 = -1
+		if sd0_has_parents and sd2_has_parents:
+			m02_1 = fjtools.matched_pt(sd2_pe1, sd0_pe1)
+			m02_2 = fjtools.matched_pt(sd2_pe2, sd0_pe2)
+
+		self.twh.fill_branch('sd_det_emb_mpt1', m02_1)
+		self.twh.fill_branch('sd_det_emb_mpt2', m02_2)
+
+		self.twh.fill_branch('sd_det_split', 	sd0_has_parents)
+		self.twh.fill_branch('sd_part_split', 	sd1_has_parents)
+		self.twh.fill_branch('sd_emb_split', 	sd2_has_parents)
 
 		self.twh.fill_tree()
 
@@ -172,7 +185,6 @@ class Embedding(MPBase):
 		self.parts_selector = fj.SelectorAbsEtaMax(self.max_eta)
 
 		self.output = EmbeddingOutput(args=self.args)
-		self.output.initialize_output()
 		# self.output.copy_attributes(self)
 
 		self.sd = fjcontrib.SoftDrop(0, self.sd_zcut, self.jetR)
@@ -224,6 +236,10 @@ class Embedding(MPBase):
 			if len(_too_high_pt) > 0:
 				pwarning(iev, 'a likely fake high pT particle(s)', _too_high_pt, '- skipping whole event')
 				continue
+
+			_output_fname = os.path.expanduser(os.path.expandvars(self.det_sim.file_io.file_input))
+			_output_fname = _output_fname.replace("/", "_")
+			self.output.initialize_output(_output_fname)
 
 			self.output.fill_det_level(iev, _jets_det)
 
@@ -336,10 +352,10 @@ def main():
 		if args.jetptcut > -100:
 			args.output_filename = 'output_data_emb_CS_alpha_{}_dRmax_{}_SDzcut_{}_jpt_{}.root'.format(args.alpha, args.dRmax, args.sd_zcut, args.jetptcut)
 
-	if os.path.isfile(args.output_filename):
-		if not args.overwrite:
-			print('[i] output', args.output_filename, 'exists - use --overwrite to do just that...')
-			return
+	# if os.path.isfile(args.output_filename):
+	# 	if not args.overwrite:
+	# 		print('[i] output', args.output_filename, 'exists - use --overwrite to do just that...')
+	# 		return
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()
