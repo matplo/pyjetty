@@ -60,6 +60,9 @@ class ColorS(object):
 def pwarning(*args):
 	print(ColorS.yellow('[w]', *args))
 
+def pdebug(*args):
+	print(ColorS.purple('[d]', *args))
+
 def perror(*args):
 	print(ColorS.red('[e]', *args))
 

@@ -40,13 +40,16 @@ class RTreeWriter(MPBase):
 	def fill_branch(self, bname, value, do_enumerate=False):
 		if float == type(value) or int == type(value):
 			self._fill_branch(bname, value)
+			return
 		if tuple == type(value) or list == type(value) or self._fj_psj_vector_type == type(value):
 			if do_enumerate:
 				r = [self.fill_branch('{}_{}'.format(bname, i), x) for i,x in enumerate(value)]
 			else:
 				r = [self.fill_branch(bname, x) for x in value]
+			return
 		if dict == type(value):
 			r = [self.fill_branch('{}_{}'.format(bname, i), x) for i, x in value.items()]
+			return
 		if self._fj_psj_type == type(value):
 			if value.has_area():
 				self.fill_branch(bname, {	'pt' 	: value.pt(), 
@@ -55,6 +58,10 @@ class RTreeWriter(MPBase):
 											'a' 	: value.area()})
 			else:
 				self.fill_branch(bname, {'pt' : value.pt(), 'phi' : value.phi(), 'eta' : value.eta()})
+			return
+		if bool == type(value):
+			self._fill_branch(bname, value)
+			return
 
 	def clear(self):
 		for k in self.branch_containers:

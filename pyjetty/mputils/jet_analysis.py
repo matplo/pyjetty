@@ -30,6 +30,7 @@ class JetAnalysis(MPBase):
 
 	def jets_as_psj_vector(self):
 		self.psj_jet_vector = fj.vectorPJ()
+		# _tmp = [self.psj_jet_vector.push_back(j) for j in self.jets if not j.is_pure_ghost()]
 		_tmp = [self.psj_jet_vector.push_back(j) for j in self.jets]
 		return self.psj_jet_vector
 
