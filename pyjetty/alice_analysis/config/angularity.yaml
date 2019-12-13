@@ -1,6 +1,6 @@
 # Analysis parameters
-pTbins: [5, 20, 40, 60, 100]
-jetR: [0.1, 0.2, 0.3, 0.4]
+pTbins: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+jetR: [0.4]
 betas: [1, 1.5, 2]
 n_lambda_bins: 1000
 
@@ -8,6 +8,15 @@ debug_level: 0
 
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.04
+
+# Rebinning paramaters
+rebin:
+  # Different R & beta configurations
+  R04_B2:
+    pTbins: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    # Point where we will cutoff measurement due to statistics / end of distribution, per pT bin
+    cutoff: [0.6, 0.5, 0.5, 0.45, 0.45, 0.34, 0.32, 0.26, 0.22, 0.18, 0.16, 0.14, 0.08, 0.06]
+    lambda_bins: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.45, 0.5, 0.6]
 
 # Unfolding parameters
 reg_param: 5

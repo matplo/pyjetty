@@ -40,14 +40,15 @@ class analysis_utils(common_base.common_base):
   def rebin_data(self, hData, name_data, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array):
     
     # Create empty TH2 with appropriate binning
-    name = '{}_{}'.format(name_data, 'rebinned')
+    name = "%s_rebinned" % name_data
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
     if h.GetSumw2() is 0:
       print('sumw2 not set')
     else:
       print('sumw2 set')
     
-    # Loop over all bins (including under/over-flow -- needed e.g. for SD tagging rate), and fill rebinned histogram
+    # Loop over all bins (including under/over-flow -- needed e.g. for SD tagging rate), 
+    # and fill rebinned histogram
     for bin_x in range(0, hData.GetNbinsX() + 2):
       for bin_y in range(0, hData.GetNbinsY() + 2):
         x = hData.GetXaxis().GetBinCenter(bin_x)
@@ -70,30 +71,39 @@ class analysis_utils(common_base.common_base):
   # Rebin 4D THn response according to specified binnings, saving both a rebinned
   # THn and a RooUnfoldResponse object, and write to file
   #---------------------------------------------------------------
-  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, observable, power_law_offset=0.):
+  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, 
+                     sd_label, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, 
+                     n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, 
+                     observable, power_law_offset=0.):
   
     # Create empty THn with specified binnings
-    thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
+    thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, 
+                                         n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, 
+                                         truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
     
     # Create empty RooUnfoldResponse with specified binning
     hist_measured = thn_rebinned.Projection(2, 0)
     hist_measured.SetName('hist_measured_R{}_{}'.format(jetR, sd_label))
     hist_truth = thn_rebinned.Projection(3, 1)
     hist_truth.SetName('hist_truth_R{}_{}'.format(jetR, sd_label))
-    roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name_roounfold, name_roounfold) # Sets up binning
+    roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name_roounfold, 
+                                                name_roounfold) # Sets up binning
     
     # Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold
     #roounfold_response.UseOverflow(True)
     
     # Loop through THn and fill rebinned THn
-    self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, observable, power_law_offset)
+    self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, 
+                           observable, power_law_offset)
   
   #---------------------------------------------------------------
   # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
   #---------------------------------------------------------------
-  def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, observable, power_law_offset=0.):
+  def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, 
+                        observable, power_law_offset=0.):
     
-    # I don't find any global bin index implementation, so I manually loop through axes (including under/over-flow)...
+    # I don't find any global bin index implementation, so I manually loop through axes 
+    # (including under/over-flow)...
     for bin_0 in range(0, thn.GetAxis(0).GetNbins() + 2):
       if bin_0 % 5 == 0:
         print('{} / {}'.format(bin_0, thn.GetAxis(0).GetNbins() + 2))
@@ -142,7 +152,8 @@ class analysis_utils(common_base.common_base):
   # Construct 2D (pt, theta) histogram according to specified binnings
   # Note: automatically fills under/over-flow bins (needed for SD tagging rate)
   #---------------------------------------------------------------
-  def construct_data_histograms(self, tree_file_name, name_data, n_pt_bins, pt_bin_array, n_rg_bins, rg_bin_array):
+  def construct_data_histograms(self, tree_file_name, name_data, n_pt_bins, pt_bin_array, 
+                                n_rg_bins, rg_bin_array):
     
     # Create empty TH2 with appropriate binning
     name = '{}_{}'.format(name_data, 'rebinned')
@@ -168,7 +179,11 @@ class analysis_utils(common_base.common_base):
   # Construct THn and RooUnfoldResponse object from tree,
   # according to specified binnings, and write to file
   #---------------------------------------------------------------
-  def construct_response_histograms(self, tree_file_name, response_file_name, name_thn_rebinned, name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, power_law_offset=0.):
+  def construct_response_histograms(self, tree_file_name, response_file_name, name_thn_rebinned, 
+                                    name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, 
+                                    n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, 
+                                    truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, 
+                                    power_law_offset=0.):
     
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
