@@ -77,6 +77,9 @@ class plot_ang_performance(common_base.common_base):
     self.n_lambda_bins = self.config['n_lambda_bins']
     self.jet_matching_distance = self.config['jet_matching_distance']
 
+    # List of histograms to write
+    self.hist_to_write = []
+
     '''
     sd_config_dict = config['SoftDrop']
     sd_config_list = list(sd_config_dict.keys())
@@ -113,41 +116,60 @@ class plot_ang_performance(common_base.common_base):
         # TODO: Implement for all jetR & beta in config.yaml file
         if beta == 2 and jetR == 0.4:
           name = ('hLambda_JetpT_R%s_B%s' % (jetR, beta)).replace('.', '')
-          h = self.fData.Get(name)
-          self.rebin_h(h.Clone(), name, beta, jetR)
+          #self.rebin_h(self.fData.Get(name), name, beta, jetR)
+          self.kin_eff(beta, jetR)
 
-      '''
-      self.plotDeltaR(jetR)
-      self.plotJES(jetR)
-      self.plotJESproj(jetR)
-
-      for sd_setting in self.sd_settings:
-        
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        
-        self.plotJER(jetR, sd_label)
-        self.plot_theta_resolution(jetR, sd_label)
-        self.plot_theta_residual(jetR, sd_label)
-        self.plot_zg_residual(jetR, sd_label)
-        self.plotJetRecoEfficiency(jetR, sd_label)
-        self.plotRg(jetR, sd_label, zcut, beta)
-      '''
+    # Write finished histograms to file
+    self.write_all_histograms()
 
   #---------------------------------------------------------------
   # Take 2D root histogram and rebin it according to yaml config
   def rebin_h(self, root_h, name, beta, jetR):
     cf = ("R%s_B%s" % (jetR, beta)).replace('.', '')
-    pTbins = self.config["rebin"][cf]["pTbins"]
-    lambda_bins = self.config["rebin"][cf]["lambda_bins"]
-    h = self.utils.rebin_data(root_h, name+"_rebin", len(pTbins)-1, pTbins, 
+
+    # Rebinning params
+    pTbins = array('d', self.config["rebin"][cf]["pTbins"])
+    lambda_bins = array('d', self.config["rebin"][cf]["lambda_bins"])
+
+    h = self.utils.rebin_data(root_h, name, len(pTbins)-1, pTbins, 
                               len(lambda_bins)-1, lambda_bins)
 
+    self.hist_to_write.append(h)
+
+  #---------------------------------------------------------------
+  # Take 2D root histogram and rebin it according to yaml config
+  def kin_eff(self, beta, jetR):
+    cf = ("R%s_B%s" % (jetR, beta)).replace('.', '')
+
+    # Lambda response histograms
+    resp = self.fMC.Get('hResponse_JetpT_lambda_%s' % cf)
+
+    # Rebinning params
+    pTbins = array('d', self.config["rebin"][cf]["pTbins"])
+    lambda_bins = array('d', self.config["rebin"][cf]["lambda_bins"])
+    cutoff = array('d', self.config["rebin"][cf]["cutoff"])
+
+    # Create efficiency plots
+    for i, pTmin in list(enumerate(pTbins))[0:-1]:
+      pTmax = pTbins[i+1]
+      resp.GetAxis(0).SetRangeUser(pTmin, pTmax)  # pT (detector level) bin of interest
+      resp.GetAxis(2).SetRangeUser(0, 1)          # Reset to full lambda det range
+      full_proj = resp.Projection(3, 2).ProjectionY().Clone("full_proj")  # Full lambda true vs det
+      resp.GetAxis(2).SetRangeUser(0, cutoff[i])
+      stat_proj = resp.Projection(3, 2).ProjectionY().Clone("stat_proj")  # "Good statistics" range
+      # Divide histograms to get kinematic efficiency
+      eff = stat_proj.Clone("ekin_%s_%i-%i" % (cf, pTmin, pTmax))
+      eff.Divide(full_proj)
+      self.hist_to_write.append(eff)
+
+  #---------------------------------------------------------------
+  # Write all saved histograms to the desired output file
+  def write_all_histograms(self):
     outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
     fout = ROOT.TFile(outputfilename, 'recreate')
     fout.cd()
-    h.tree.Write()
+    for h in self.hist_to_write:
+      h.Write()
 
   '''
   #---------------------------------------------------------------

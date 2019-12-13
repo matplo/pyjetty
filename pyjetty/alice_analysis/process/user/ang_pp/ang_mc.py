@@ -175,10 +175,22 @@ class process_ang_mc(process_base.process_base):
       name = ('hResponse_JetpT_R%s' % jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 100, 0, 100, 150, 0, 150)
       h.GetXaxis().SetTitle('p_{T,det}')
-      h.GetYaxis().SetTitle('p_{T,truth}')
+      h.GetYaxis().SetTitle('p_{T,tru}')
       setattr(self, name, h)
 
       for beta in self.beta_list:
+
+        name = ('hResponse_Lambda_B%s_R%s' % (beta, jetR)).replace('.', '')
+        h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
+        h.GetXaxis().SetTitle('#lambda_{%s,det}' % beta)
+        h.GetYaxis().SetTitle('#lambda_{%s,tru}' % beta)
+        setattr(self, name, h)
+
+        name = ('hResponse_Lambda_B%s_R%s_SD' % (beta, jetR)).replace('.', '')
+        h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
+        h.GetXaxis().SetTitle('#lambda_{%s,det,SD}' % beta)
+        h.GetYaxis().SetTitle('#lambda_{%s,tru,SD}' % beta)
+        setattr(self, name, h)
 
         for i, pTmin in list(enumerate(self.pTbins))[0:-1]:
 
@@ -409,7 +421,7 @@ class process_ang_mc(process_base.process_base):
     (pTmin, pTmax) = pT_bin(jet_sd_det.pt(), self.pTbins)
     if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
       getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l_sd_det)
-    #l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
+    l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
 
     '''
     JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
@@ -420,7 +432,10 @@ class process_ang_mc(process_base.process_base):
                                                                            theta_g_resolution)
     '''
 
-    getattr(self, ('hResponse_JetpT_R%s' % jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
+    getattr(self, ('hResponse_JetpT_R%s' % jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, 
+                                                                        jet_pt_truth_ungroomed)
+    getattr(self, ('hResponse_Lambda_B%s_R%s' % (beta, jetR)).replace('.', '')).Fill(l_det, l_tru)
+    getattr(self, ('hResponse_Lambda_B%s_R%s_SD' % (beta, jetR)).replace('.', '')).Fill(l_sd_det, l_sd_tru)
 
     x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, l_det, l_tru])
     x_array = array('d', x)
