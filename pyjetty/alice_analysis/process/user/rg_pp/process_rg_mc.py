@@ -31,6 +31,7 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io
+from pyjetty.alice_analysis.process.base import process_io_emb
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import process_base
 from pyjetty.mputils import treewriter
@@ -47,6 +48,8 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
     super(process_rg_mc, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    
+    # Initialize configuration
     self.initialize_config()
   
   #---------------------------------------------------------------
@@ -55,9 +58,6 @@ class process_rg_mc(process_base.process_base):
   def process_rg_mc(self):
     
     start_time = time.time()
-    
-    # Initialize configuration
-    self.initialize_config()
     
     # ------------------------------------------------------------------------
     
@@ -89,6 +89,12 @@ class process_rg_mc(process_base.process_base):
     self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth']
     print('--- {} seconds ---'.format(time.time() - start_time))
 
+    # ------------------------------------------------------------------------
+    
+    # Set up the Pb-Pb embedding object
+    if self.do_constituent_subtraction:
+        self.process_io_emb = process_io_emb.process_io_emb(self.emb_file_list, track_tree_name='tree_Particle')
+    
     # ------------------------------------------------------------------------
 
     # Initialize histograms
@@ -132,6 +138,9 @@ class process_rg_mc(process_base.process_base):
     sd_config_dict = config['SoftDrop']
     sd_config_list = list(sd_config_dict.keys())
     self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
+
+    if self.do_constituent_subtraction:
+        self.emb_file_list = config['emb_file_list']
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -298,10 +307,20 @@ class process_rg_mc(process_base.process_base):
       print('fj_particles type mismatch -- skipping event')
       return
     
-    # Perform constituent subtraction on det-level, if applicable
     if self.do_constituent_subtraction:
-      fj_particles_det = self.constituent_subtractor.process_event(fj_particles_det)
-      rho = self.constituent_subtractor.bge_rho.rho()
+        
+        # Get Pb-Pb event, and form combined det-level event
+        fj_particles_combined = self.process_io_emb.load_event()
+        [fj_particles_combined.push_back(p) for p in fj_particles_det]
+    
+        # Perform constituent subtraction on det-level, if applicable
+        fj_particles_combined = self.constituent_subtractor.process_event(fj_particles_combined)
+        rho = self.constituent_subtractor.bge_rho.rho()
+    
+        # Do jet finding
+        cs_combined = fj.ClusterSequence(fj_particles_combined, jet_def)
+        jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
+        jets_combined_selected = jet_selector_det(jets_combined)
 
     # Do jet finding
     cs_det = fj.ClusterSequence(fj_particles_det, jet_def)

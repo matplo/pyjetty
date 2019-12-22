@@ -43,6 +43,9 @@ class process_io_emb(common_base.common_base):
     self.current_file_df = None
     self.current_file_nevents = 0
     self.current_event_index = 0
+  
+    # Initialize by loading a file
+    self.load_file()
     
   #---------------------------------------------------------------
   # Return current event in current file, and increment current_event.
@@ -55,7 +58,7 @@ class process_io_emb(common_base.common_base):
     
     current_event = self.current_file_df[self.current_event_index]
     self.current_event_index += 1
-    print('Get Pb-Pb event {}/{}'.format(self.current_event_index, self.current_file_nevents))
+    #print('Get Pb-Pb event {}/{}'.format(self.current_event_index, self.current_file_nevents))
     return current_event
 
   #---------------------------------------------------------------
@@ -71,4 +74,3 @@ class process_io_emb(common_base.common_base):
     self.current_file_df = io.load_data()
     self.current_file_nevents = len(self.current_file_df.index)
     self.current_event_index = 0
-    print('Done opening Pb-Pb file.')

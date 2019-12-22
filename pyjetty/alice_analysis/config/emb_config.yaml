@@ -1,0 +1,123 @@
+# Analysis parameters
+observables: ['theta_g', 'zg']
+debug_level: 0
+write_tree_output: False
+
+jetR: [0.4]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.0
+
+# SoftDrop (zcut, beta) configurations and final binnings (note: binnings only used during analysis)
+SoftDrop:
+  config1:
+
+    zcut: 0.1
+    beta: 0
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    rg_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
+    zg_bins_truth: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    zg_bins_det: [0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+
+    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    rg_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    zg_bins_det_sys_binning: [0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+
+    # Unfolding parameters
+    reg_param:
+      zg:
+        0.4: 3
+      theta_g:
+        0.4: 5
+
+  config2:
+
+    zcut: 0.1
+    beta: 1
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    rg_bins_det: [0., 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
+    zg_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    zg_bins_det: [0., 0.04, 0.07, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+
+    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    rg_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    zg_bins_det_sys_binning: [0., 0.04, 0.07, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+
+    # Unfolding parameters
+    reg_param:
+      zg:
+        0.4: 3
+      theta_g:
+        0.4: 5
+
+  config3:
+
+    zcut: 0.1
+    beta: 2
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    rg_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    rg_bins_det: [0., 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
+    zg_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    zg_bins_det: [0., 0.04, 0.07, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+
+    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    rg_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    zg_bins_det_sys_binning: [0., 0.04, 0.07, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+
+    # Unfolding parameters
+    reg_param:
+      zg:
+        0.4: 3
+      theta_g:
+        0.4: 5
+
+constituent_subtractor:
+  max_distance: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+emb_file_list: '/Users/jamesmulligan/Analysis_theta_g/test_LHC18qr/PbPb_file_list.txt'
+
+###############################################################################
+# Analysis parameters
+
+file_format: '.pdf'
+#output_dir: '/Users/jamesmulligan/alidock/theta_g/roounfold_rg_output_24309'
+
+do_unfolding: False
+force_rebin: False
+do_systematics: True
+do_plot_final_result: True
+
+# List of which systematics to perform
+# Options: [kMain, kTrackEff, kPrior1, kPrior2, kTruncation, kBinning]
+systematics_list:
+  - kMain
+  - kTrackEff
+  - kPrior1
+  - kPrior2
+  - kTruncation
+  - kBinning
+
+# Paths to processing output, to be used for unfolding
+#main_data: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
+#main_response: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC18b8/24309/AnalysisResultsFinal.root'
+
+#trkeff_data: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
+#trkeff_response: '/Users/jamesmulligan/alidock/theta_g/AnalysisResults/LHC18b8_trkeff/24509/AnalysisResultsFinal.root'
+
+# Theory comparisons
+fPythia: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+
+fNLL: ''
+fNPcorrection_numerator: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+fNPcorrection_denominator: '/Users/jamesmulligan/alidock/theta_g/NP_correction/Full_hadOFF_mpiOFF_isrOFF/default_output.root'
+
+
