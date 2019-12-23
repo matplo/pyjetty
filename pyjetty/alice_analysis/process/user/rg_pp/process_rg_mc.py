@@ -33,6 +33,7 @@ import fjext
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_io_emb
 from pyjetty.alice_analysis.process.base import process_utils
+from pyjetty.alice_analysis.process.base import jet_info
 from pyjetty.alice_analysis.process.base import process_base
 from pyjetty.mputils import treewriter
 from pyjetty.mputils import CEventSubtractor
@@ -92,7 +93,7 @@ class process_rg_mc(process_base.process_base):
     # ------------------------------------------------------------------------
     
     # Set up the Pb-Pb embedding object
-    if self.do_constituent_subtraction:
+    if not self.is_pp:
         self.process_io_emb = process_io_emb.process_io_emb(self.emb_file_list, track_tree_name='tree_Particle')
     
     # ------------------------------------------------------------------------
@@ -140,7 +141,10 @@ class process_rg_mc(process_base.process_base):
     self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
 
     if self.do_constituent_subtraction:
+        self.is_pp = False
         self.emb_file_list = config['emb_file_list']
+    else:
+        self.is_pp = True
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -300,14 +304,14 @@ class process_rg_mc(process_base.process_base):
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
   def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched):
-
+      
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
     if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
       print('fj_particles type mismatch -- skipping event')
       return
     
-    if self.do_constituent_subtraction:
+    if not self.is_pp:
         
         # Get Pb-Pb event, and form combined det-level event
         fj_particles_combined = self.process_io_emb.load_event()
@@ -324,8 +328,8 @@ class process_rg_mc(process_base.process_base):
 
     # Do jet finding
     cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
-    jets_det = fj.sorted_by_pt(cs_det.inclusive_jets())
-    jets_det_selected = jet_selector_det(jets_det)
+    jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
+    jets_det_pp_selected = jet_selector_det(jets_det_pp)
     
     cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
     jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
@@ -333,6 +337,12 @@ class process_rg_mc(process_base.process_base):
     jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
 
     jetR = jet_def.R()
+    
+    # Set det-level jet list as appropriate
+    if self.is_pp:
+        jets_det_selected = jets_det_pp_selected
+    else:
+        jets_det_selected = jets_combined_selected
     
     # Fill det-level jet histograms (before matching)
     for jet_det in jets_det_selected:
@@ -349,15 +359,17 @@ class process_rg_mc(process_base.process_base):
     for jet_truth in jets_truth_selected:
       self.fill_truth_before_matching(jet_truth, jetR)
   
-    # Set number of jet matches for each jet in user_index (to ensure unique matches)
-    self.setNJetMatches(jets_det_selected, jets_truth_selected_matched, jetR)
+    # Loop through jets and set jet matching candidates for each jet in user_info
+    #if self.is_pp:
+    result = [[self.set_matches(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
     
     # Loop through jets and fill matching histograms
+    #if self.is_pp:
     result = [[self.fill_matching_histograms(jet_truth, jet_det, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
     
     # Loop through jets and fill response if both det and truth jets are unique match
     for sd_setting in self.sd_settings:
-      
+
       # Get tree writer
       tree_writer = None
       if self.write_tree_output:
@@ -374,27 +386,17 @@ class process_rg_mc(process_base.process_base):
   # Loop through jets and store number of matching candidates in user_index
   # (In principle could also store matching candidate in user_info)
   #---------------------------------------------------------------
-  def setNJetMatches(self, jets_det_selected, jets_truth_selected, jetR):
-    
-    # Reset user_index to 0
-    for jet_det in jets_det_selected:
-      jet_det.set_user_index(0)
-    for jet_truth in jets_truth_selected:
-      jet_truth.set_user_index(0)
-    
-    # Loop through jets and store number of matching candidates in user_index
-    result = [[self.set_matches(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected] for jet_det in jets_det_selected]
-  
-  #---------------------------------------------------------------
-  # Loop through jets and store number of matching candidates in user_index
-  # (In principle could also store matching candidate in user_info)
-  #---------------------------------------------------------------
   def set_matches(self, jet_det, jet_truth, jetR):
-        
+      
     if jet_det.delta_R(jet_truth) < self.jet_matching_distance*jetR:
-          
-      jet_det.set_user_index(jet_det.user_index() + 1)
-      jet_truth.set_user_index(jet_truth.user_index() + 1)
+        
+      jet_info_det = jet_info.jet_info()
+      jet_info_det.matching_candidates_pp.append(jet_truth)
+      jet_det.set_python_info(jet_info_det)
+
+      #jet_info_truth = jet_info.jet_info()
+      #jet_info_truth.matching_candidates_pp.append(jet_det)
+      #jet_truth.set_python_info(fj.UserInfoPython(jet_info_truth))
 
   #---------------------------------------------------------------
   # Fill truth jet histograms
@@ -423,6 +425,9 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   def fill_matching_histograms(self, jet_truth, jet_det, jetR):
       
+    if jet_det.has_user_info():
+      print(len(jet_det.python_info().matching_candidates_pp))
+      
     if self.debug_level > 0:
       print('deltaR: {}'.format(jet_det.delta_R(jet_truth)))
       print('jet_det matches: {}'.format(jet_det.user_index()))
@@ -447,7 +452,7 @@ class process_rg_mc(process_base.process_base):
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
   def fill_jet_matches(self, sd_setting, jet_truth, jet_det, jetR, tree_writer):
-      
+            
     zcut = sd_setting[0]
     beta = sd_setting[1]
     sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
