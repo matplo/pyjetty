@@ -163,9 +163,18 @@ class process_rg_mc(process_base.process_base):
       h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
       setattr(self, name, h)
       
-      name = 'hDeltaR_All_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-      setattr(self, name, h)
+      if self.is_pp:
+          name = 'hDeltaR_All_R{}'.format(jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+          setattr(self, name, h)
+      else:
+          name = 'hDeltaR_ppdet_pptrue_R{}'.format(jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+          setattr(self, name, h)
+          
+          name = 'hDeltaR_combined_ppdet_R{}'.format(jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+          setattr(self, name, h)
       
       name = 'hZ_Truth_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
@@ -365,21 +374,18 @@ class process_rg_mc(process_base.process_base):
         [[self.set_matching_candidates(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
-        [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
-        [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected]
+        [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, 'hDeltaR_combined_ppdet_R{}', fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
+        [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{}') for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected]
         
     # Loop through jets and set accepted matches
     if self.is_pp:
         [self.set_matches_pp(jet_det) for jet_det in jets_det_selected]
     else:
-        [[self.set_matches_AA(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+        [self.set_matches_AA(jet_det_combined, jetR) for jet_det_combined in jets_det_selected]
     
     # Loop through jets and fill matching histograms
-    if self.is_pp:
-        result = [self.fill_matching_histograms_pp(jet_det, jetR) for jet_det in jets_det_selected]
-    else:
-        result = [[self.fill_matching_histograms_AA(jet_truth, jet_det, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
-    
+    result = [self.fill_matching_histograms(jet_det, jetR) for jet_det in jets_det_selected]
+
     # Loop through jets and fill response if both det and truth jets are unique match
     for sd_setting in self.sd_settings:
 
@@ -398,14 +404,13 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Loop through jets and store matching candidates in user_info
   #---------------------------------------------------------------
-  def set_matching_candidates(self, jet1, jet2, jetR, fill_jet1_matches_only=False):
+  def set_matching_candidates(self, jet1, jet2, jetR, hname='hDeltaR_All_R{}', fill_jet1_matches_only=False):
   
     # Fill histogram of matching distance of all candidates
     deltaR = jet1.delta_R(jet2)
-    getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet1.pt(), deltaR)
+    getattr(self, hname.format(jetR)).Fill(jet1.pt(), deltaR)
   
     # Add a matching candidate to the list if it is within the geometrical cut
-    deltaR = jet1.delta_R(jet2)
     if deltaR < self.jet_matching_distance*jetR:
         self.set_jet_info(jet1, jet2, deltaR)
         if not fill_jet1_matches_only:
@@ -450,6 +455,36 @@ class process_rg_mc(process_base.process_base):
                     jet_det.set_python_info(jet_info_det)
 
   #---------------------------------------------------------------
+  # Set accepted jet matches for Pb-Pb case
+  #---------------------------------------------------------------
+  def set_matches_AA(self, jet_det_combined, jetR):
+  
+    set_match = False
+
+    # Check if combined jet has a pp-det match (uniqueness not currently enforced)
+    if jet_det_combined.has_user_info():
+      
+        jet_info_combined = jet_det_combined.python_info()
+        jet_pp_det = jet_info_combined.closest_jet
+          
+        # Check if the pp-det jet has a pp-truth match (uniqueness not currently enforced)
+        if jet_pp_det.has_user_info():
+          jet_info_pp_det = jet_pp_det.python_info()
+          jet_pp_truth = jet_info_pp_det.closest_jet
+              
+          # Check matching distance between combined jet and pp-truth
+          if jet_det_combined.delta_R(jet_pp_truth) < self.jet_matching_distance*jetR:
+    
+            # Check if >50% of the pp-det tracks are in the Pb-Pb det jet
+    
+            set_match = True
+           
+    # Set accepted match
+    if set_match:
+        jet_info_combined.match = jet_pp_truth
+        jet_det_combined.set_python_info(jet_info_combined)
+
+  #---------------------------------------------------------------
   # Fill truth jet histograms
   #---------------------------------------------------------------
   def fill_truth_before_matching(self, jet, jetR):
@@ -474,7 +509,7 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
   #---------------------------------------------------------------
-  def fill_matching_histograms_pp(self, jet_det, jetR):
+  def fill_matching_histograms(self, jet_det, jetR):
       
     if jet_det.has_user_info():
       jet_truth = jet_det.python_info().match
