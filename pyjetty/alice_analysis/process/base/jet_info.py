@@ -20,8 +20,8 @@ class jet_info(common_base.common_base):
   def __init__(self, **kwargs):
     super(jet_info, self).__init__(**kwargs)
 
-    self.closest_jet_pp = None
-    self.closest_jet_AA = None
-    self.matching_candidates_pp = []
-    self.matching_candidates_AA = []
-
+    # Store the matching candidates
+    self.matching_candidates = []
+    self.closest_jet = None
+    self.closest_jet_deltaR = 1000.
+    self.match = None

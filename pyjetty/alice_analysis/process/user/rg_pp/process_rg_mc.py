@@ -339,6 +339,7 @@ class process_rg_mc(process_base.process_base):
     jetR = jet_def.R()
     
     # Set det-level jet list as appropriate
+    jets_det_selected = None
     if self.is_pp:
         jets_det_selected = jets_det_pp_selected
     else:
@@ -360,12 +361,24 @@ class process_rg_mc(process_base.process_base):
       self.fill_truth_before_matching(jet_truth, jetR)
   
     # Loop through jets and set jet matching candidates for each jet in user_info
-    #if self.is_pp:
-    result = [[self.set_matches(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+    if self.is_pp:
+        [[self.set_matching_candidates(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+    else:
+        # First fill the combined-to-pp matches, then the pp-to-pp matches
+        [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
+        [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected]
+        
+    # Loop through jets and set accepted matches
+    if self.is_pp:
+        [self.set_matches_pp(jet_det) for jet_det in jets_det_selected]
+    else:
+        [[self.set_matches_AA(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
     
     # Loop through jets and fill matching histograms
-    #if self.is_pp:
-    result = [[self.fill_matching_histograms(jet_truth, jet_det, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+    if self.is_pp:
+        result = [self.fill_matching_histograms_pp(jet_det, jetR) for jet_det in jets_det_selected]
+    else:
+        result = [[self.fill_matching_histograms_AA(jet_truth, jet_det, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
     
     # Loop through jets and fill response if both det and truth jets are unique match
     for sd_setting in self.sd_settings:
@@ -376,27 +389,65 @@ class process_rg_mc(process_base.process_base):
         name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
         tree_writer = getattr(self, name)
 
-      result = [[self.fill_jet_matches(sd_setting, jet_truth, jet_det, jetR, tree_writer) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+      result = [self.fill_jet_matches(sd_setting, jet_det, jetR, tree_writer) for jet_det in jets_det_selected]
 
       # Fill the tree
       if self.write_tree_output:
         tree_writer.fill_tree()
 
   #---------------------------------------------------------------
-  # Loop through jets and store number of matching candidates in user_index
-  # (In principle could also store matching candidate in user_info)
+  # Loop through jets and store matching candidates in user_info
   #---------------------------------------------------------------
-  def set_matches(self, jet_det, jet_truth, jetR):
+  def set_matching_candidates(self, jet1, jet2, jetR, fill_jet1_matches_only=False):
+  
+    # Fill histogram of matching distance of all candidates
+    deltaR = jet1.delta_R(jet2)
+    getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet1.pt(), deltaR)
+  
+    # Add a matching candidate to the list if it is within the geometrical cut
+    deltaR = jet1.delta_R(jet2)
+    if deltaR < self.jet_matching_distance*jetR:
+        self.set_jet_info(jet1, jet2, deltaR)
+        if not fill_jet1_matches_only:
+            self.set_jet_info(jet2, jet1, deltaR)
+  
+  #---------------------------------------------------------------
+  # Set 'jet_match' as a matching candidate in user_info of 'jet'
+  #---------------------------------------------------------------
+  def set_jet_info(self, jet, jet_match, deltaR):
+  
+    # Get/create object to store list of matching candidates
+    jet_user_info = None
+    if jet.has_user_info():
+        jet_user_info = jet.python_info()
+    else:
+        jet_user_info = jet_info.jet_info()
       
-    if jet_det.delta_R(jet_truth) < self.jet_matching_distance*jetR:
-        
-      jet_info_det = jet_info.jet_info()
-      jet_info_det.matching_candidates_pp.append(jet_truth)
-      jet_det.set_python_info(jet_info_det)
+    jet_user_info.matching_candidates.append(jet_match)
+    if deltaR < jet_user_info.closest_jet_deltaR:
+        jet_user_info.closest_jet = jet_match
+        jet_user_info.closest_jet_deltaR = deltaR
+          
+    jet.set_python_info(jet_user_info)
 
-      #jet_info_truth = jet_info.jet_info()
-      #jet_info_truth.matching_candidates_pp.append(jet_det)
-      #jet_truth.set_python_info(fj.UserInfoPython(jet_info_truth))
+  #---------------------------------------------------------------
+  # Set accepted jet matches for pp case
+  #---------------------------------------------------------------
+  def set_matches_pp(self, jet_det):
+  
+    if jet_det.has_user_info():
+        jet_info_det = jet_det.python_info()
+        if len(jet_info_det.matching_candidates) == 1:
+            jet_truth = jet_info_det.closest_jet
+            
+            # Check that the match is unique
+            if jet_truth.has_user_info():
+                jet_info_truth = jet_truth.python_info()
+                if len(jet_info_truth.matching_candidates) == 1:
+                    
+                    # Set accepted match
+                    jet_info_det.match = jet_truth
+                    jet_det.set_python_info(jet_info_det)
 
   #---------------------------------------------------------------
   # Fill truth jet histograms
@@ -423,25 +474,12 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
   #---------------------------------------------------------------
-  def fill_matching_histograms(self, jet_truth, jet_det, jetR):
+  def fill_matching_histograms_pp(self, jet_det, jetR):
       
     if jet_det.has_user_info():
-      print(len(jet_det.python_info().matching_candidates_pp))
+      jet_truth = jet_det.python_info().match
       
-    if self.debug_level > 0:
-      print('deltaR: {}'.format(jet_det.delta_R(jet_truth)))
-      print('jet_det matches: {}'.format(jet_det.user_index()))
-      print('jet_truth matches: {}'.format(jet_truth.user_index()))
-
-    # Check that jets match geometrically
-    deltaR = jet_det.delta_R(jet_truth)
-    getattr(self, 'hDeltaR_All_R{}'.format(jetR)).Fill(jet_det.pt(), deltaR)
-    
-    # If match if successful, fill histograms
-    if deltaR < self.jet_matching_distance*jetR:
-  
-      # Check that match is unique
-      if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
+      if jet_truth:
         
         jet_pt_det_ungroomed = jet_det.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
@@ -451,7 +489,7 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
-  def fill_jet_matches(self, sd_setting, jet_truth, jet_det, jetR, tree_writer):
+  def fill_jet_matches(self, sd_setting, jet_det, jetR, tree_writer):
             
     zcut = sd_setting[0]
     beta = sd_setting[1]
@@ -471,13 +509,10 @@ class process_rg_mc(process_base.process_base):
     if not self.utils.is_det_jet_accepted(jet_det):
       return
 
-    # Check that jets match geometrically
-    deltaR = jet_det.delta_R(jet_truth)
-    if deltaR < self.jet_matching_distance*jetR:
-
-      # Check that match is unique
-      if jet_det.user_index() == 1 and jet_truth.user_index() == 1:
-        
+    if jet_det.has_user_info():
+      jet_truth = jet_det.python_info().match
+      
+      if jet_truth:
         self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR, sd_label)
 
   #---------------------------------------------------------------
