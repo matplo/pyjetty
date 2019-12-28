@@ -133,6 +133,7 @@ class process_rg_mc(process_base.process_base):
     self.write_tree_output = config['write_tree_output']
 
     self.jet_matching_distance = config['jet_matching_distance']
+    self.mc_fraction_threshold = config['mc_fraction_threshold']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
     
     # Retrieve list of SD grooming settings
@@ -338,10 +339,28 @@ class process_rg_mc(process_base.process_base):
     
     if not self.is_pp:
         
-        # Get Pb-Pb event, and form combined det-level event
+        # Get Pb-Pb event
         fj_particles_combined = self.process_io_emb.load_event()
+        
+        # Set user_index=0 to keep track that these are Pb-Pb tracks
+        # Note:
+        #   fj_particles is a std::vector<fastjet::PseudoJet>
+        #   Iterating over std::vector returns *copy* of object -- modifying the copy doesn't change the original object
+        #   So we re-assign each entry...
+        #   This is highly inefficient...should swigify (iterate by reference in c++) ...
+        for i, track in enumerate(fj_particles_combined):
+            track.set_user_index(0)
+            fj_particles_combined[i] = track
+        
+        # Set user_index >0 on the pp-det tracks to keep track that these are from pp-det
+        # Here we set user_index=1, but other values will later be used during prong-matching
+        for i, track in enumerate(fj_particles_det):
+            track.set_user_index(1)
+            fj_particles_det[i] = track
+            
+        # Form the combined det-level event
         [fj_particles_combined.push_back(p) for p in fj_particles_det]
-    
+
         # Perform constituent subtraction on det-level, if applicable
         fj_particles_combined = self.constituent_subtractor.process_event(fj_particles_combined)
         rho = self.constituent_subtractor.bge_rho.rho()
@@ -516,7 +535,11 @@ class process_rg_mc(process_base.process_base):
             set_match = False
     
           # Check if >50% of the pp-det tracks are in the Pb-Pb det jet
-          #h.Fill('mc_fraction', jet_det_combined.pt(), 1)
+          mc_fraction = self.mc_fraction(jet_pp_det, jet_det_combined)
+          if mc_fraction > self.mc_fraction_threshold:
+            h.Fill('mc_fraction', jet_det_combined.pt(), 1)
+          else:
+            set_match = False
                
     # Set accepted match
     if set_match:
@@ -524,6 +547,20 @@ class process_rg_mc(process_base.process_base):
         jet_det_combined.set_python_info(jet_info_combined)
         
         h.Fill('passed_all_cuts', jet_det_combined.pt(), 1)
+
+  #---------------------------------------------------------------
+  # Return pt-fraction of tracks in jet_pp_det that are contained in jet_det_combined
+  #---------------------------------------------------------------
+  def mc_fraction(self, jet_pp_det, jet_det_combined):
+  
+    pt_total = jet_pp_det.pt()
+    
+    pt_contained = 0.
+    for track in jet_det_combined.constituents():
+        if track.user_index() > 0:
+            pt_contained += track.pt()
+            
+    return pt_contained/pt_total
 
   #---------------------------------------------------------------
   # Return whether a jet has a unique match

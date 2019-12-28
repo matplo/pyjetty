@@ -5,6 +5,7 @@ write_tree_output: False
 
 jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
 reject_tracks_fraction: 0.0
 
 # SoftDrop (zcut, beta) configurations and final binnings (note: binnings only used during analysis)
