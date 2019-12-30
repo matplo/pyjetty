@@ -241,13 +241,13 @@ class process_rg_mc(process_base.process_base):
         if not self.is_pp:
         
             name = 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 150, -0.4, 1.1)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('Prong matching fraction')
             setattr(self, name, h)
             
             name = 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 150, -0.4, 1.1)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('Prong matching fraction')
             setattr(self, name, h)
@@ -717,6 +717,8 @@ class process_rg_mc(process_base.process_base):
     jet_pp_det_sd = sd.result(jet_pp_det)
 
     # Use the fastjet::PseudoJet::has_parents function which returns the last clustering step
+    #   If the jet passed SoftDrop, then its parents are the SoftDrop splitting
+    #   If the jet didn't pass SoftDrop, then it will have no parents
     jet_pp_det_prong1 = fj.PseudoJet()
     jet_pp_det_prong2 = fj.PseudoJet()
     has_parents_pp_det = jet_pp_det_sd.has_parents(jet_pp_det_prong1, jet_pp_det_prong2)
@@ -729,14 +731,30 @@ class process_rg_mc(process_base.process_base):
     # Compute fraction of pt of the pp-det prong tracks that is contained in the combined-jet prong,
     # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-det prong
     if has_parents_pp_det and has_parents_combined:
-
-        # Leading prong
+    
         leading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong1)
-        getattr(self, 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, leading_prong_matched_pt)
-        
-        # Subleading prong
         subleading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
-        getattr(self, 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, subleading_prong_matched_pt)
+
+    elif has_parents_pp_det: # pp-det passed SD, but combined jet failed SD
+    
+        leading_prong_matched_pt = -0.1
+        subleading_prong_matched_pt = -0.1
+    
+    elif has_parents_combined: # combined jet passed SD, but pp-det failed SD
+    
+        leading_prong_matched_pt = -0.2
+        subleading_prong_matched_pt = -0.2
+        
+    else: # both pp-det and combined jet failed SoftDrop
+    
+        leading_prong_matched_pt = -0.3
+        subleading_prong_matched_pt = -0.3
+    
+    # Leading prong
+    getattr(self, 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, leading_prong_matched_pt)
+    
+    # Subleading prong
+    getattr(self, 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, subleading_prong_matched_pt)
 
   #---------------------------------------------------------------
   # Compute theta_g
