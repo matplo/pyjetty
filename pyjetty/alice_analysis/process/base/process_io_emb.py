@@ -71,6 +71,6 @@ class process_io_emb(common_base.common_base):
     print('Opening Pb-Pb file: {}'.format(input_file))
 
     io = process_io.process_io(input_file=input_file, track_tree_name=self.track_tree_name)
-    self.current_file_df = io.load_data()
+    self.current_file_df = io.load_data(offset_indices=True)
     self.current_file_nevents = len(self.current_file_df.index)
     self.current_event_index = 0

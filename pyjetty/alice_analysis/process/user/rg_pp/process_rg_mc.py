@@ -28,6 +28,7 @@ import yaml
 import fastjet as fj
 import fjcontrib
 import fjext
+import fjtools
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io
@@ -66,7 +67,7 @@ class process_rg_mc(process_base.process_base):
     # a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
     io_det = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
-    df_fjparticles_det = io_det.load_data(self.reject_tracks_fraction)
+    df_fjparticles_det = io_det.load_data(reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
     print('--- {} seconds ---'.format(time.time() - start_time))
@@ -341,24 +342,11 @@ class process_rg_mc(process_base.process_base):
         
         # Get Pb-Pb event
         fj_particles_combined = self.process_io_emb.load_event()
-        
-        # Set user_index=0 to keep track that these are Pb-Pb tracks
-        # Note:
-        #   fj_particles is a std::vector<fastjet::PseudoJet>
-        #   Iterating over std::vector returns *copy* of object -- modifying the copy doesn't change the original object
-        #   So we re-assign each entry...
-        #   This is highly inefficient...should swigify (iterate by reference in c++) ...
-        for i, track in enumerate(fj_particles_combined):
-            track.set_user_index(0)
-            fj_particles_combined[i] = track
-        
-        # Set user_index >0 on the pp-det tracks to keep track that these are from pp-det
-        # Here we set user_index=1, but other values will later be used during prong-matching
-        for i, track in enumerate(fj_particles_det):
-            track.set_user_index(1)
-            fj_particles_det[i] = track
             
         # Form the combined det-level event
+        # The pp-det tracks are each stored with a unique user_index >= 0
+        #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
+        # The Pb-Pb tracks are each stored with a unique user_index < 0
         [fj_particles_combined.push_back(p) for p in fj_particles_det]
 
         # Perform constituent subtraction on det-level, if applicable
@@ -546,6 +534,11 @@ class process_rg_mc(process_base.process_base):
         jet_info_combined.match = jet_pp_truth
         jet_det_combined.set_python_info(jet_info_combined)
         
+        # Set also the pp-truth match info, since we will need to access the matching pp-det jet for prong matching
+        jet_info_pp_truth = jet_pp_truth.python_info()
+        jet_info_pp_truth.match = jet_pp_det
+        jet_pp_truth.set_python_info(jet_info_pp_truth)
+        
         h.Fill('passed_all_cuts', jet_det_combined.pt(), 1)
 
   #---------------------------------------------------------------
@@ -557,7 +550,7 @@ class process_rg_mc(process_base.process_base):
     
     pt_contained = 0.
     for track in jet_det_combined.constituents():
-        if track.user_index() > 0:
+        if track.user_index() >= 0:
             pt_contained += track.pt()
             
     return pt_contained/pt_total
@@ -653,7 +646,7 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   def fill_response(self, tree_writer, jet_det, jet_truth, sd, jetR, sd_label):
     
-    # Fill tree
+    # Fill tree or histograms with various SoftDrop info
     jet_pt_det_ungroomed = jet_det.pt()
     jet_pt_truth_ungroomed = jet_truth.pt()
     
@@ -691,6 +684,37 @@ class process_rg_mc(process_base.process_base):
 
     zg_resolution = zg_det - zg_truth
     getattr(self, 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
+
+    # Do prong-matching
+    if not self.is_pp:
+    
+        # Do SoftDrop on pp-det jet, and get prongs
+        jet_pp_det = jet_truth.python_info().match
+        jet_pp_det_sd = sd.result(jet_pp_det)
+        
+        jet_pp_det_prong1 = fj.PseudoJet()
+        jet_pp_det_prong2 = fj.PseudoJet()
+        has_parents_pp_det = jet_pp_det_sd.has_parents(jet_pp_det_prong1, jet_pp_det_prong2)
+        
+        # Do SoftDrop on combined jet, and get prongs
+        jet_combined_sd = sd.result(jet_det)
+        
+        # Use the fastjet::PseudoJet::has_parents function which returns the last clustering step
+        jet_combined_prong1 = fj.PseudoJet()
+        jet_combined_prong2 = fj.PseudoJet()
+        has_parents_combined = jet_combined_sd.has_parents(jet_combined_prong1, jet_combined_prong2)
+        
+        # Compute fraction of pt of the pp-det prong tracks that is contained in the combined-jet prong,
+        # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-det prong
+        if has_parents_pp_det and has_parents_combined:
+        
+            # Leading prong
+            leading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong1)
+            print('leading_prong_matched_pt: {}'.format(leading_prong_matched_pt))
+            
+            # Subleading prong
+            subleading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
+            print('subleading_prong_matched_pt: {}'.format(subleading_prong_matched_pt))
 
   #---------------------------------------------------------------
   # Compute theta_g
