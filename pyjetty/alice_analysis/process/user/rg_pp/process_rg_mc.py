@@ -237,6 +237,20 @@ class process_rg_mc(process_base.process_base):
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('z_{g,det}-z_{g,truth}')
         setattr(self, name, h)
+        
+        if not self.is_pp:
+        
+            name = 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('Prong matching fraction')
+            setattr(self, name, h)
+            
+            name = 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('Prong matching fraction')
+            setattr(self, name, h)
 
         if  self.write_tree_output:
 
@@ -639,23 +653,31 @@ class process_rg_mc(process_base.process_base):
       jet_truth = jet_det.python_info().match
       
       if jet_truth:
-        self.fill_response(tree_writer, jet_det, jet_truth, sd, jetR, sd_label)
+      
+        jet_pt_det_ungroomed = jet_det.pt()
+        jet_pt_truth_ungroomed = jet_truth.pt()
+          
+        jet_det_sd = sd.result(jet_det)
+        jet_truth_sd = sd.result(jet_truth)
+      
+        self.fill_response(tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label)
+        
+        if not self.is_pp:
+          self.fill_prong_matching_histograms(jet_truth, jet_det_sd, sd, jet_pt_truth_ungroomed, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_response(self, tree_writer, jet_det, jet_truth, sd, jetR, sd_label):
+  def fill_response(self, tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label):
     
-    # Fill tree or histograms with various SoftDrop info
-    jet_pt_det_ungroomed = jet_det.pt()
-    jet_pt_truth_ungroomed = jet_truth.pt()
+    # Get various SoftDrop info
+    theta_g_det = self.theta_g(jet_det_sd, jetR)
+    theta_g_truth = self.theta_g(jet_truth_sd, jetR)
     
-    theta_g_det = self.theta_g(jet_det, sd, jetR)
-    theta_g_truth = self.theta_g(jet_truth, sd, jetR)
+    zg_det = self.zg(jet_det_sd)
+    zg_truth = self.zg(jet_truth_sd)
     
-    zg_det = self.zg(jet_det, sd)
-    zg_truth = self.zg(jet_truth, sd)
-    
+    # Fill tree or histograms
     if self.write_tree_output:
       tree_writer.fill_branch('jet_pt_det_ungroomed', jet_pt_det_ungroomed)
       tree_writer.fill_branch('jet_pt_truth_ungroomed', jet_pt_truth_ungroomed)
@@ -685,43 +707,42 @@ class process_rg_mc(process_base.process_base):
     zg_resolution = zg_det - zg_truth
     getattr(self, 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
 
-    # Do prong-matching
-    if not self.is_pp:
+  #---------------------------------------------------------------
+  # Do prong-matching
+  #---------------------------------------------------------------
+  def fill_prong_matching_histograms(self, jet_truth, jet_det_sd, sd, jet_pt_truth_ungroomed, jetR, sd_label):
     
-        # Do SoftDrop on pp-det jet, and get prongs
-        jet_pp_det = jet_truth.python_info().match
-        jet_pp_det_sd = sd.result(jet_pp_det)
+    # Do SoftDrop on pp-det jet, and get prongs
+    jet_pp_det = jet_truth.python_info().match
+    jet_pp_det_sd = sd.result(jet_pp_det)
+
+    # Use the fastjet::PseudoJet::has_parents function which returns the last clustering step
+    jet_pp_det_prong1 = fj.PseudoJet()
+    jet_pp_det_prong2 = fj.PseudoJet()
+    has_parents_pp_det = jet_pp_det_sd.has_parents(jet_pp_det_prong1, jet_pp_det_prong2)
+
+    # Get prongs of combined jet
+    jet_combined_prong1 = fj.PseudoJet()
+    jet_combined_prong2 = fj.PseudoJet()
+    has_parents_combined = jet_det_sd.has_parents(jet_combined_prong1, jet_combined_prong2)
+
+    # Compute fraction of pt of the pp-det prong tracks that is contained in the combined-jet prong,
+    # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-det prong
+    if has_parents_pp_det and has_parents_combined:
+
+        # Leading prong
+        leading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong1)
+        getattr(self, 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, leading_prong_matched_pt)
         
-        jet_pp_det_prong1 = fj.PseudoJet()
-        jet_pp_det_prong2 = fj.PseudoJet()
-        has_parents_pp_det = jet_pp_det_sd.has_parents(jet_pp_det_prong1, jet_pp_det_prong2)
-        
-        # Do SoftDrop on combined jet, and get prongs
-        jet_combined_sd = sd.result(jet_det)
-        
-        # Use the fastjet::PseudoJet::has_parents function which returns the last clustering step
-        jet_combined_prong1 = fj.PseudoJet()
-        jet_combined_prong2 = fj.PseudoJet()
-        has_parents_combined = jet_combined_sd.has_parents(jet_combined_prong1, jet_combined_prong2)
-        
-        # Compute fraction of pt of the pp-det prong tracks that is contained in the combined-jet prong,
-        # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-det prong
-        if has_parents_pp_det and has_parents_combined:
-        
-            # Leading prong
-            leading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong1)
-            print('leading_prong_matched_pt: {}'.format(leading_prong_matched_pt))
-            
-            # Subleading prong
-            subleading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
-            print('subleading_prong_matched_pt: {}'.format(subleading_prong_matched_pt))
+        # Subleading prong
+        subleading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
+        getattr(self, 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, subleading_prong_matched_pt)
 
   #---------------------------------------------------------------
   # Compute theta_g
   #---------------------------------------------------------------
-  def theta_g(self, jet, sd, jetR):
+  def theta_g(self, jet_sd, jetR):
     
-    jet_sd = sd.result(jet)
     sd_info = fjcontrib.get_SD_jet_info(jet_sd)
     theta_g = sd_info.dR / jetR
     return theta_g
@@ -729,9 +750,8 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Compute z_g
   #---------------------------------------------------------------
-  def zg(self, jet, sd):
+  def zg(self, jet_sd):
     
-    jet_sd = sd.result(jet)
     sd_info = fjcontrib.get_SD_jet_info(jet_sd)
     zg = sd_info.z
     return zg
