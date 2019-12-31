@@ -114,6 +114,8 @@ class process_rg_data(process_base.process_base):
     
     self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
+    
+    self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
 
     for jetR in self.jetR_list:
       
@@ -188,6 +190,7 @@ class process_rg_data(process_base.process_base):
     if self.do_constituent_subtraction:
       fj_particles = self.constituent_subtractor.process_event(fj_particles)
       rho = self.constituent_subtractor.bge_rho.rho()
+      getattr(self, 'hRho').Fill(rho)
     
     # Do jet finding
     cs = fj.ClusterSequence(fj_particles, jet_def)
