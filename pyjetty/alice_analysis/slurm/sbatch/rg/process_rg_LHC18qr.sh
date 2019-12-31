@@ -26,13 +26,6 @@ else
   echo "Wrong command line arguments"
 fi
 
-if [ "$4" != "" ]; then
-  JOB_N=$4
-  echo "JOB_N: $JOB_N"
-else
-  echo "Wrong command line arguments"
-fi
-
 # Define output path from relevant sub-path of input file
 OUTPUT_PREFIX="AnalysisResults/$JOB_ID"
 # Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
@@ -53,4 +46,4 @@ cd /software/users/james/pyjetty/pyjetty/alice_analysis
 pipenv run python process/user/rg_pp/process_rg_data.py -c config/rg_PbPb.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
-mv /storage/u/alice/AnalysisResults/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/${JOB_ID}/slurm-${JOB_ID}_${TASK_ID}_${JOB_N}.out
+mv /storage/u/alice/AnalysisResults/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/${JOB_ID}
