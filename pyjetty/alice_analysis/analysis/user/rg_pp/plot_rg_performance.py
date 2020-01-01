@@ -41,7 +41,10 @@ class plot_rg_performance(common_base.common_base):
   def __init__(self, mc_file = '', data_file = '', config_file = '', output_dir = '', **kwargs):
     super(plot_rg_performance, self).__init__(**kwargs)
     self.fMC = ROOT.TFile(mc_file, 'READ')
-    self.fData = ROOT.TFile(data_file, 'READ')
+    if data_file:
+        self.fData = ROOT.TFile(data_file, 'READ')
+    else:
+        self.fData = None
     self.config_file = config_file
     self.output_dir = output_dir
     
@@ -101,6 +104,12 @@ class plot_rg_performance(common_base.common_base):
       
       truth_rg_bin_array = array('d',rg_bins_truth)
       setattr(self, 'truth_rg_bin_array_{}'.format(sd_label), truth_rg_bin_array)
+      
+    if 'constituent_subtractor' in config:
+        self.is_pp = False
+    else:
+        self.is_pp = True
+    print('is_pp: {}'.format(self.is_pp))
   
   #---------------------------------------------------------------
   def plot_rg_performance(self):
@@ -110,6 +119,7 @@ class plot_rg_performance(common_base.common_base):
       self.plotDeltaR(jetR)
       self.plotJES(jetR)
       self.plotJESproj(jetR)
+      self.plot_prong_matching(jetR)
 
       for sd_setting in self.sd_settings:
         
@@ -123,6 +133,11 @@ class plot_rg_performance(common_base.common_base):
         self.plot_zg_residual(jetR, sd_label)
         self.plotJetRecoEfficiency(jetR, sd_label)
         self.plotRg(jetR, sd_label, zcut, beta)
+
+  #---------------------------------------------------------------
+  def plot_prong_matching(self, jetR):
+  
+    name = 'h'
 
   #---------------------------------------------------------------
   def plotRg(self, jetR, sd_label, zcut, beta):
@@ -147,8 +162,9 @@ class plot_rg_performance(common_base.common_base):
       hThetaG_JetPt = None
       hZg_JetPt = None
 
-    self.plot2D_theta_statistics(hThetaG_JetPt.Clone(), jetR, sd_label)
-    self.plot2D_zg_statistics(hZg_JetPt.Clone(), jetR, sd_label)
+    if self.fData:
+        self.plot2D_theta_statistics(hThetaG_JetPt.Clone(), jetR, sd_label)
+        self.plot2D_zg_statistics(hZg_JetPt.Clone(), jetR, sd_label)
 
     self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 20, 40)
     self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 40, 60)
@@ -385,7 +401,10 @@ class plot_rg_performance(common_base.common_base):
   #---------------------------------------------------------------
   def plotDeltaR(self, jetR):
 
-    name = 'hDeltaR_All_R{}Scaled'.format(jetR)
+    if self.is_pp:
+        name = 'hDeltaR_All_R{}Scaled'.format(jetR)
+    else:
+        name = 'hDeltaR_combined_ppdet_R{}Scaled'.format(jetR)
     h = self.fMC.Get(name)
     
     c = ROOT.TCanvas("c","c: hist",600,450)
@@ -478,14 +497,14 @@ class plot_rg_performance(common_base.common_base):
       resolution = sigma/theta_gen
       histThetaResolution.SetBinContent(bin, resolution)
     
-      histThetaResolution.GetYaxis().SetTitle("#frac{#sigma(#theta_{g}^{gen})}{#theta_{g}^{gen}}")
-      histThetaResolution.GetXaxis().SetTitle("#theta_{g}^{gen}")
-      histThetaResolution.GetYaxis().SetRangeUser(-0.01, 1.)
-      histThetaResolution.GetXaxis().SetRangeUser(5., 100.)
-      outputFilename = os.path.join(self.output_dir, 'histThetaResolution_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
-      histThetaResolution.SetMarkerStyle(21)
-      histThetaResolution.SetMarkerColor(2)
-      self.utils.plot_hist(histThetaResolution, outputFilename, "hist P")
+    histThetaResolution.GetYaxis().SetTitle("#frac{#sigma(#theta_{g}^{gen})}{#theta_{g}^{gen}}")
+    histThetaResolution.GetXaxis().SetTitle("#theta_{g}^{gen}")
+    histThetaResolution.GetYaxis().SetRangeUser(-0.01, 1.)
+    histThetaResolution.GetXaxis().SetRangeUser(5., 100.)
+    outputFilename = os.path.join(self.output_dir, 'histThetaResolution_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+    histThetaResolution.SetMarkerStyle(21)
+    histThetaResolution.SetMarkerColor(2)
+    self.utils.plot_hist(histThetaResolution, outputFilename, "hist P")
 
   #---------------------------------------------------------------
   def plot_theta_residual(self, jetR, sd_label):
@@ -735,7 +754,7 @@ class plot_rg_performance(common_base.common_base):
     name = 'hJetPt_Truth_R{}Scaled'.format(jetR)
     histPtGen = self.fMC.Get(name)
     histPtGen.Rebin(5)
-    histPtGen.Scale(1/3.) # TEMP fix since I accidentally filled 3x
+    #histPtGen.Scale(1/3.) # TEMP fix since I accidentally filled 3x
     
     # Then, get the pT^gen spectrum for matched jets
     name = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
@@ -769,7 +788,7 @@ if __name__ == '__main__':
                       help='Path of MC ROOT file')
   parser.add_argument('-d', '--dataFile', action='store',
                       type=str, metavar='dataFile',
-                      default='AnalysisResults.root',
+                      default='',
                       help='Path of data ROOT file')
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
