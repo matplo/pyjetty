@@ -23,6 +23,7 @@ import numpy as np
 from array import *
 import ROOT
 import yaml
+import random
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -158,6 +159,9 @@ class process_rg_mc(process_base.process_base):
     
     self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
+    
+    if not self.is_pp:
+        self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
 
     for jetR in self.jetR_list:
       
@@ -178,6 +182,18 @@ class process_rg_mc(process_base.process_base):
             h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
           setattr(self, name, h)
       else:
+          name = 'hDeltaPt_emb_R{}'.format(jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 400, -200., 200.)
+          setattr(self, name, h)
+          
+          name = 'hDeltaPt_RC_beforeCS_R{}'.format(jetR)
+          h = ROOT.TH1F(name, name, 400, -200., 200.)
+          setattr(self, name, h)
+          
+          name = 'hDeltaPt_RC_afterCS_R{}'.format(jetR)
+          h = ROOT.TH1F(name, name, 400, -200., 200.)
+          setattr(self, name, h)
+      
           name = 'hDeltaR_ppdet_pptrue_R{}'.format(jetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
@@ -352,20 +368,22 @@ class process_rg_mc(process_base.process_base):
       print('fj_particles type mismatch -- skipping event')
       return
     
+    jetR = jet_def.R()
+    
     if not self.is_pp:
         
         # Get Pb-Pb event
-        fj_particles_combined = self.process_io_emb.load_event()
+        fj_particles_combined_beforeCS = self.process_io_emb.load_event()
             
         # Form the combined det-level event
         # The pp-det tracks are each stored with a unique user_index >= 0
         #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
         # The Pb-Pb tracks are each stored with a unique user_index < 0
-        [fj_particles_combined.push_back(p) for p in fj_particles_det]
+        [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_det]
 
         # Perform constituent subtraction on det-level, if applicable
-        fj_particles_combined = self.constituent_subtractor.process_event(fj_particles_combined)
-        rho = self.constituent_subtractor.bge_rho.rho()
+        fj_particles_combined = self.constituent_subtractor.process_event(fj_particles_combined_beforeCS)
+        self.fill_background_histograms(fj_particles_combined_beforeCS, fj_particles_combined, jetR)
     
         # Do jet finding
         cs_combined = fj.ClusterSequence(fj_particles_combined, jet_def)
@@ -381,8 +399,6 @@ class process_rg_mc(process_base.process_base):
     jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
     jets_truth_selected = jet_selector_det(jets_truth)
     jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
-
-    jetR = jet_def.R()
     
     # Set det-level jet list as appropriate
     jets_det_selected = None
@@ -437,6 +453,43 @@ class process_rg_mc(process_base.process_base):
       # Fill the tree
       if self.write_tree_output:
         tree_writer.fill_tree()
+
+  #---------------------------------------------------------------
+  # Fill some background histograms
+  #---------------------------------------------------------------
+  def fill_background_histograms(self, fj_particles_combined_beforeCS, fj_particles_combined, jetR):
+
+    # Fill rho
+    rho = self.constituent_subtractor.bge_rho.rho()
+    getattr(self, 'hRho').Fill(rho)
+    
+    # Fill random cone delta-pt before constituent subtraction
+    self.fill_deltapt_RC_histogram(fj_particles_combined_beforeCS, rho, jetR, before_CS=True)
+    
+    # Fill random cone delta-pt after constituent subtraction
+    self.fill_deltapt_RC_histogram(fj_particles_combined, rho, jetR, before_CS=False)
+    
+  #---------------------------------------------------------------
+  # Fill delta-pt histogram
+  #---------------------------------------------------------------
+  def fill_deltapt_RC_histogram(self, fj_particles, rho, jetR, before_CS=False):
+  
+    # Choose a random eta-phi in the fiducial acceptance
+    phi = random.uniform(0., 2*np.pi)
+    eta = random.uniform(-0.9+jetR, 0.9-jetR)
+    
+    # Loop through tracks and sum pt inside the cone
+    pt_sum = 0.
+    for track in fj_particles:
+        if self.utils.delta_R(track, eta, phi) < jetR:
+            pt_sum += track.pt()
+            
+    if before_CS:
+        delta_pt = pt_sum - rho * np.pi * jetR * jetR
+        getattr(self, 'hDeltaPt_RC_beforeCS_R{}'.format(jetR)).Fill(delta_pt)
+    else:
+        delta_pt = pt_sum
+        getattr(self, 'hDeltaPt_RC_afterCS_R{}'.format(jetR)).Fill(delta_pt)
 
   #---------------------------------------------------------------
   # Loop through jets and store matching candidates in user_info
@@ -625,6 +678,16 @@ class process_rg_mc(process_base.process_base):
         jet_pt_truth_ungroomed = jet_truth.pt()
         JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
         getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
+        
+        if not self.is_pp:
+        
+            # Get pp-det match, and fill delta-pt histogram
+            jet_pp_det = jet_truth.python_info().match
+            
+            if jet_pp_det:
+                jet_pp_det_pt = jet_pp_det.pt()
+                delta_pt = (jet_pt_det_ungroomed - jet_pp_det_pt)
+                getattr(self, 'hDeltaPt_emb_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, delta_pt)
 
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match

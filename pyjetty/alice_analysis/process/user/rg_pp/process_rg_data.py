@@ -69,7 +69,7 @@ class process_rg_data(process_base.process_base):
     self.initialize_output_objects()
     
     # Create constituent subtractor, if configured
-    if self.do_constituent_subtraction:
+    if not self.is_pp:
       self.constituent_subtractor = CEventSubtractor(max_distance=self.max_distance, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR)
     
     print(self)
@@ -103,6 +103,11 @@ class process_rg_data(process_base.process_base):
     sd_config_dict = config['SoftDrop']
     sd_config_list = list(sd_config_dict.keys())
     self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
+    
+    if self.do_constituent_subtraction:
+        self.is_pp = False
+    else:
+        self.is_pp = True
   
   #---------------------------------------------------------------
   # Initialize histograms
@@ -115,7 +120,8 @@ class process_rg_data(process_base.process_base):
     self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
     
-    self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
+    if not self.is_pp:
+        self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
 
     for jetR in self.jetR_list:
       
@@ -187,7 +193,7 @@ class process_rg_data(process_base.process_base):
   def analyzeJets(self, fj_particles, jet_def, jet_selector):
     
     # Perform constituent subtraction
-    if self.do_constituent_subtraction:
+    if not self.is_pp:
       fj_particles = self.constituent_subtractor.process_event(fj_particles)
       rho = self.constituent_subtractor.bge_rho.rho()
       getattr(self, 'hRho').Fill(rho)
