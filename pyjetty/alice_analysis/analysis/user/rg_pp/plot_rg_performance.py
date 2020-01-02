@@ -119,7 +119,8 @@ class plot_rg_performance(common_base.common_base):
       self.plotDeltaR(jetR)
       self.plotJES(jetR)
       self.plotJESproj(jetR)
-      self.plot_prong_matching(jetR)
+      self.plot_prong_matching(jetR, leading_prong=True)
+      self.plot_prong_matching(jetR, leading_prong=False)
 
       for sd_setting in self.sd_settings:
         
@@ -135,9 +136,102 @@ class plot_rg_performance(common_base.common_base):
         self.plotRg(jetR, sd_label, zcut, beta)
 
   #---------------------------------------------------------------
-  def plot_prong_matching(self, jetR):
+  def plot_prong_matching(self, jetR, leading_prong=False):
   
-    name = 'h'
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    
+    leg = ROOT.TLegend(0.5,0.25,0.85,0.45, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+
+    if leading_prong:
+        hname = 'hLeadingProngMatching_JetPt_R{}_{}Scaled'
+    else:
+        hname = 'hSubleadingProngMatching_JetPt_R{}_{}Scaled'
+
+    sd_setting = self.sd_settings[0]
+    zcut0 = sd_setting[0]
+    beta0 = sd_setting[1]
+    sd_label0 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut0), beta0)
+    name = hname.format(jetR, sd_label0)
+    hFraction_vs_pt0 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[1]
+    zcut1 = sd_setting[0]
+    beta1 = sd_setting[1]
+    sd_label1 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut1), beta1)
+    name = hname.format(jetR, sd_label1)
+    hFraction_vs_pt1 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[2]
+    zcut2 = sd_setting[0]
+    beta2 = sd_setting[1]
+    sd_label2 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut2), beta2)
+    name = hname.format(jetR, sd_label2)
+    hFraction_vs_pt2 = self.fMC.Get(name)
+
+    epsilon = 1e-5
+    min_bin = hFraction_vs_pt0.GetYaxis().FindBin(0. + epsilon)
+    cut_bin = hFraction_vs_pt0.GetYaxis().FindBin(0.1 + epsilon)
+    max_bin = hFraction_vs_pt0.GetYaxis().FindBin(1. + epsilon)
+
+    hTotal_vs_pt0 = hFraction_vs_pt0.ProjectionX('hTotal_vs_pt0_{}_{}'.format(jetR, sd_label0), min_bin, max_bin)
+    hTotal_vs_pt1 = hFraction_vs_pt1.ProjectionX('hTotal_vs_pt1_{}_{}'.format(jetR, sd_label1), min_bin, max_bin)
+    hTotal_vs_pt2 = hFraction_vs_pt2.ProjectionX('hTotal_vs_pt2_{}_{}'.format(jetR, sd_label2), min_bin, max_bin)
+
+    hMatched_vs_pt0 = hFraction_vs_pt0.ProjectionX('hMatched_vs_pt0_{}_{}'.format(jetR, sd_label0), cut_bin, max_bin)
+    hMatched_vs_pt1 = hFraction_vs_pt1.ProjectionX('hMatched_vs_pt1_{}_{}'.format(jetR, sd_label1), cut_bin, max_bin)
+    hMatched_vs_pt2 = hFraction_vs_pt2.ProjectionX('hMatched_vs_pt2_{}_{}'.format(jetR, sd_label2), cut_bin, max_bin)
+
+    hMatchedFraction_vs_pt0 = hMatched_vs_pt0.Clone()
+    hMatchedFraction_vs_pt0.SetName('hMatchedFraction_vs_pt0_{}_{}'.format(jetR, sd_label0))
+    hMatchedFraction_vs_pt0.Divide(hTotal_vs_pt0)
+    hMatchedFraction_vs_pt0.SetMarkerStyle(20+0)
+    hMatchedFraction_vs_pt0.SetMarkerColor(ColorArray[0])
+    hMatchedFraction_vs_pt0.SetLineColor(ColorArray[0])
+    hMatchedFraction_vs_pt0.Draw('P same')
+
+    hMatchedFraction_vs_pt1 = hMatched_vs_pt1.Clone()
+    hMatchedFraction_vs_pt1.SetName('hMatchedFraction_vs_pt1_{}_{}'.format(jetR, sd_label1))
+    hMatchedFraction_vs_pt1.Divide(hTotal_vs_pt1)
+    hMatchedFraction_vs_pt1.SetMarkerStyle(20+1)
+    hMatchedFraction_vs_pt1.SetMarkerColor(ColorArray[1])
+    hMatchedFraction_vs_pt1.SetLineColor(ColorArray[1])
+    hMatchedFraction_vs_pt1.Draw('P same')
+
+    hMatchedFraction_vs_pt2 = hMatched_vs_pt2.Clone()
+    hMatchedFraction_vs_pt2.SetName('hMatchedFraction_vs_pt2_{}_{}'.format(jetR, sd_label2))
+    hMatchedFraction_vs_pt2.Divide(hTotal_vs_pt2)
+    hMatchedFraction_vs_pt2.SetMarkerStyle(20+2)
+    hMatchedFraction_vs_pt2.SetMarkerColor(ColorArray[2])
+    hMatchedFraction_vs_pt2.SetLineColor(ColorArray[2])
+    hMatchedFraction_vs_pt2.Draw('P same')
+
+    leg.AddEntry(hMatchedFraction_vs_pt0, 'z_cut = {}, #beta = {}'.format(zcut0, beta0), 'P')
+    leg.AddEntry(hMatchedFraction_vs_pt1, 'z_cut = {}, #beta = {}'.format(zcut1, beta1), 'P')
+    leg.AddEntry(hMatchedFraction_vs_pt2, 'z_cut = {}, #beta = {}'.format(zcut2, beta2), 'P')
+  
+    leg.Draw("same")
+
+    if leading_prong:
+        output_filename = os.path.join(self.output_dir, 'hLeadingProngMatching_R{}.pdf'.format(self.utils.remove_periods(jetR)))
+    else:
+        output_filename = os.path.join(self.output_dir, 'hSubleadingProngMatching_R{}.pdf'.format(self.utils.remove_periods(jetR)))
+    c.SaveAs(output_filename)
+    c.Close()
 
   #---------------------------------------------------------------
   def plotRg(self, jetR, sd_label, zcut, beta):
