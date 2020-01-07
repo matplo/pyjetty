@@ -1,7 +1,7 @@
 #! /bin/bash
 #
 # Script to merge output ROOT files
-JOB_ID=29650
+JOB_ID=30272
 OUTPUT_DIR="/remote_storage/hiccup6/u/alice/AnalysisResults/$JOB_ID"
 
 # Merge all output files from each pt-hat bin
