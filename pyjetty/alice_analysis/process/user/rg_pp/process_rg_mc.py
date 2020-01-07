@@ -790,6 +790,23 @@ class process_rg_mc(process_base.process_base):
     jet_combined_prong1 = fj.PseudoJet()
     jet_combined_prong2 = fj.PseudoJet()
     has_parents_combined = jet_det_sd.has_parents(jet_combined_prong1, jet_combined_prong2)
+    
+    if self.debug_level > 2:
+
+        if jet_pt_truth_ungroomed > 80.:
+        
+            print('=======================================================')
+            print('jet_pt_truth_ungroomed: {}'.format(jet_pt_truth_ungroomed))
+            print('jet_pt_pp_det_ungroomed: {}'.format(jet_pp_det.pt()))
+            print('jet_pt_pp_det_sd: {}'.format(jet_pp_det_sd.pt()))
+            print('jet_pt_combined_sd: {}'.format(jet_det_sd.pt()))
+            print('')
+            print('jet_pp_det tracks: {}'.format([track.user_index() for track in jet_pp_det.constituents()]))
+            print('         track pt: {}'.format([np.around(track.pt(),2) for track in jet_pp_det.constituents()]))
+            print('jet_pp_det_sd tracks: {}'.format([track.user_index() for track in jet_pp_det_sd.constituents()]))
+            print('            track pt: {}'.format([np.around(track.pt(),2) for track in jet_pp_det_sd.constituents()]))
+            print('jet_combined tracks: {}'.format([track.user_index() for track in jet_det_sd.constituents()]))
+            print('           track pt: {}'.format([np.around(track.pt(),2) for track in jet_det_sd.constituents()]))
 
     # Compute fraction of pt of the pp-det prong tracks that is contained in the combined-jet prong,
     # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-det prong
@@ -797,6 +814,19 @@ class process_rg_mc(process_base.process_base):
     
         leading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong1)
         subleading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
+        
+        if self.debug_level > 2:
+
+            if jet_pt_truth_ungroomed > 80.:
+                print('leading_prong_pt: {}'.format(jet_combined_prong1.pt()))
+                print('leading_prong_matched_pt fraction: {}'.format(leading_prong_matched_pt))
+                print('leading prong tracks -- combined: {}'.format([track.user_index() for track in jet_combined_prong1.constituents()]))
+                print('leading prong tracks -- pp-det: {}'.format([track.user_index() for track in jet_pp_det_prong1.constituents()]))
+                
+                print('subleading_prong_pt: {}'.format(jet_combined_prong2.pt()))
+                print('subleading_prong_matched_pt fraction: {}'.format(subleading_prong_matched_pt))
+                print('subleading prong tracks -- combined: {}'.format([track.user_index() for track in jet_combined_prong2.constituents()]))
+                print('subleading prong tracks -- pp-det: {}'.format([track.user_index() for track in jet_pp_det_prong2.constituents()]))
 
     elif has_parents_pp_det: # pp-det passed SD, but combined jet failed SD
     
