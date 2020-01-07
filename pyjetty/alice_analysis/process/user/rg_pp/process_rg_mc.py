@@ -257,13 +257,37 @@ class process_rg_mc(process_base.process_base):
         if not self.is_pp:
         
             name = 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 150, -0.4, 1.1)
+            h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 40, 0., 2*jetR)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('Prong matching fraction')
             setattr(self, name, h)
             
             name = 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 150, -0.4, 1.1)
+            h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 40, 0., 2*jetR)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('Prong matching fraction')
+            setattr(self, name, h)
+            
+            name = 'hLeadingProngMatching_JetPtZ_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 50, -0.5, 0.5)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('Prong matching fraction')
+            setattr(self, name, h)
+            
+            name = 'hSubleadingProngMatching_JetPtZ_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 50, -0.5, 0.5)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('Prong matching fraction')
+            setattr(self, name, h)
+            
+            name = 'hLeadingProngMatching_JetPtDet_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 40, 0., 2*jetR)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('Prong matching fraction')
+            setattr(self, name, h)
+            
+            name = 'hSubleadingProngMatching_JetPtDet_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 40, 0., 2*jetR)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('Prong matching fraction')
             setattr(self, name, h)
@@ -810,13 +834,21 @@ class process_rg_mc(process_base.process_base):
 
     # Compute fraction of pt of the pp-det prong tracks that is contained in the combined-jet prong,
     # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-det prong
+    deltaR_prong1 = -1.
+    deltaR_prong2 = -1.
+    deltaZ = -1.
     if has_parents_pp_det and has_parents_combined:
     
         leading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong1)
         subleading_prong_matched_pt = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
         
+        # Compute delta-R between pp-det prong and combined prong
+        deltaR_prong1 = jet_combined_prong1.delta_R(jet_pp_det_prong1)
+        deltaR_prong2 = jet_combined_prong1.delta_R(jet_pp_det_prong2)
+        deltaZ = self.zg(jet_det_sd) - self.zg(jet_pp_det_sd)
+        
         if self.debug_level > 2:
-
+        
             if jet_pt_truth_ungroomed > 80.:
                 print('leading_prong_pt: {}'.format(jet_combined_prong1.pt()))
                 print('leading_prong_matched_pt fraction: {}'.format(leading_prong_matched_pt))
@@ -827,6 +859,9 @@ class process_rg_mc(process_base.process_base):
                 print('subleading_prong_matched_pt fraction: {}'.format(subleading_prong_matched_pt))
                 print('subleading prong tracks -- combined: {}'.format([track.user_index() for track in jet_combined_prong2.constituents()]))
                 print('subleading prong tracks -- pp-det: {}'.format([track.user_index() for track in jet_pp_det_prong2.constituents()]))
+                
+                print('deltaR_prong1: {}'.format(deltaR_prong1))
+                print('deltaR_prong2: {}'.format(deltaR_prong2))
 
     elif has_parents_pp_det: # pp-det passed SD, but combined jet failed SD
     
@@ -844,10 +879,14 @@ class process_rg_mc(process_base.process_base):
         subleading_prong_matched_pt = -0.3
     
     # Leading prong
-    getattr(self, 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, leading_prong_matched_pt)
+    getattr(self, 'hLeadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, leading_prong_matched_pt, deltaR_prong1)
+    getattr(self, 'hLeadingProngMatching_JetPtDet_R{}_{}'.format(jetR, sd_label)).Fill(jet_pp_det.pt(), leading_prong_matched_pt, deltaR_prong1)
     
     # Subleading prong
-    getattr(self, 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, subleading_prong_matched_pt)
+    getattr(self, 'hSubleadingProngMatching_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, subleading_prong_matched_pt, deltaR_prong2)
+    getattr(self, 'hSubleadingProngMatching_JetPtDet_R{}_{}'.format(jetR, sd_label)).Fill(jet_pp_det.pt(), subleading_prong_matched_pt, deltaR_prong2)
+    getattr(self, 'hSubleadingProngMatching_JetPtZ_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, subleading_prong_matched_pt, deltaZ)
+
 
   #---------------------------------------------------------------
   # Compute theta_g
