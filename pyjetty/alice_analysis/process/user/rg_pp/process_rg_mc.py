@@ -844,7 +844,7 @@ class process_rg_mc(process_base.process_base):
         
         # Compute delta-R between pp-det prong and combined prong
         deltaR_prong1 = jet_combined_prong1.delta_R(jet_pp_det_prong1)
-        deltaR_prong2 = jet_combined_prong1.delta_R(jet_pp_det_prong2)
+        deltaR_prong2 = jet_combined_prong2.delta_R(jet_pp_det_prong2)
         deltaZ = self.zg(jet_det_sd) - self.zg(jet_pp_det_sd)
         
         if self.debug_level > 2:
