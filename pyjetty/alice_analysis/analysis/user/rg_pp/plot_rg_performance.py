@@ -202,6 +202,7 @@ class plot_rg_performance(common_base.common_base):
     hMatchedFraction_vs_pt0.SetMarkerStyle(20+0)
     hMatchedFraction_vs_pt0.SetMarkerColor(ColorArray[0])
     hMatchedFraction_vs_pt0.SetLineColor(ColorArray[0])
+    hMatchedFraction_vs_pt0.GetYaxis().SetRangeUser(0., 1.2)
     hMatchedFraction_vs_pt0.Draw('P same')
 
     hMatchedFraction_vs_pt1 = hMatched_vs_pt1.Clone()
@@ -239,6 +240,7 @@ class plot_rg_performance(common_base.common_base):
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
     hRM_theta = self.fMC.Get(name)
+    hRM_theta.Sumw2()
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_zg_R{}_{}Scaled'.format(jetR, sd_label)
@@ -260,13 +262,22 @@ class plot_rg_performance(common_base.common_base):
         self.plot2D_theta_statistics(hThetaG_JetPt.Clone(), jetR, sd_label)
         self.plot2D_zg_statistics(hZg_JetPt.Clone(), jetR, sd_label)
 
-    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 20, 40)
-    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 40, 60)
-    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
-
-    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 20, 40)
-    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 40, 60)
-    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+    if self.is_pp:
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 20, 40)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 40, 60)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+        
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 20, 40)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 40, 60)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+    else:
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 80, 100)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 100, 120)
+        
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 80, 100)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 100, 120)
 
   #---------------------------------------------------------------
   def plot2D_theta_statistics(self, hThetaG_JetPt, jetR, sd_label):
