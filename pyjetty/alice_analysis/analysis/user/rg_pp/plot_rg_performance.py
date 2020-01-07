@@ -127,6 +127,8 @@ class plot_rg_performance(common_base.common_base):
       self.plot_prong_matching_deltaR(jetR, leading_prong=True, matched=False)
       self.plot_prong_matching_deltaR(jetR, leading_prong=False, matched=True)
       self.plot_prong_matching_deltaR(jetR, leading_prong=False, matched=False)
+      self.plot_prong_matching_deltaR(jetR, leading_prong=False, matched=True, plot_deltaz=True)
+      self.plot_prong_matching_deltaR(jetR, leading_prong=False, matched=False, plot_deltaz=True)
 
       for sd_setting in self.sd_settings:
         
@@ -142,7 +144,7 @@ class plot_rg_performance(common_base.common_base):
         self.plotRg(jetR, sd_label, zcut, beta)
 
   #---------------------------------------------------------------
-  def plot_prong_matching_deltaR(self, jetR, leading_prong=False, matched=False):
+  def plot_prong_matching_deltaR(self, jetR, leading_prong=False, matched=False, plot_deltaz=False):
   
     c = ROOT.TCanvas("c","c: hist",600,450)
     c.cd()
@@ -163,10 +165,16 @@ class plot_rg_performance(common_base.common_base):
     kPink    = 900
     ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
 
-    if leading_prong:
-        hname = 'hLeadingProngMatching_JetPt_R{}_{}Scaled'
+    if plot_deltaz:
+        if leading_prong:
+            hname = 'hLeadingProngMatching_JetPtZ_R{}_{}Scaled'
+        else:
+            hname = 'hSubleadingProngMatching_JetPtZ_R{}_{}Scaled'
     else:
-        hname = 'hSubleadingProngMatching_JetPt_R{}_{}Scaled'
+        if leading_prong:
+            hname = 'hLeadingProngMatching_JetPt_R{}_{}Scaled'
+        else:
+            hname = 'hSubleadingProngMatching_JetPt_R{}_{}Scaled'
         
     if matched:
         label = 'Matched'
@@ -214,7 +222,10 @@ class plot_rg_performance(common_base.common_base):
     hUnmatched_vs_pt0 = hFraction_vs_pt0.Project3D('z')
     hUnmatched_vs_pt0.SetName('hUnmatched_vs_pt0_{}_{}'.format(jetR, sd_label0))
     hUnmatched_vs_pt0.SetLineColor(ColorArray[0])
-    hUnmatched_vs_pt0.GetXaxis().SetTitle('#Delta R_{prong}')
+    if plot_deltaz:
+        hUnmatched_vs_pt0.GetXaxis().SetTitle('#Delta z_{prong}')
+    else:
+        hUnmatched_vs_pt0.GetXaxis().SetTitle('#Delta R_{prong}')
     hUnmatched_vs_pt0.Draw('L hist same')
     leg.AddEntry(hUnmatched_vs_pt0, 'z_cut = {}, #beta = {}, {}'.format(zcut0, beta0, label), 'L')
 
@@ -236,10 +247,16 @@ class plot_rg_performance(common_base.common_base):
     
     leg.Draw("same")
 
-    if leading_prong:
-        output_filename = os.path.join(self.output_dir, 'hLeadingProngMatching_deltaR_{}_R{}.pdf'.format(label, self.utils.remove_periods(jetR)))
+    if plot_deltaz:
+        if leading_prong:
+            output_filename = os.path.join(self.output_dir, 'hLeadingProngMatching_deltaZ_{}_R{}.pdf'.format(label, self.utils.remove_periods(jetR)))
+        else:
+            output_filename = os.path.join(self.output_dir, 'hSubleadingProngMatching_deltaZ_{}_R{}.pdf'.format(label, self.utils.remove_periods(jetR)))
     else:
-        output_filename = os.path.join(self.output_dir, 'hSubleadingProngMatching_deltaR_{}_R{}.pdf'.format(label, self.utils.remove_periods(jetR)))
+        if leading_prong:
+            output_filename = os.path.join(self.output_dir, 'hLeadingProngMatching_deltaR_{}_R{}.pdf'.format(label, self.utils.remove_periods(jetR)))
+        else:
+            output_filename = os.path.join(self.output_dir, 'hSubleadingProngMatching_deltaR_{}_R{}.pdf'.format(label, self.utils.remove_periods(jetR)))
     c.SaveAs(output_filename)
     c.Close()
 
