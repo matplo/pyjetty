@@ -43,7 +43,7 @@ module list
 
 # Run python script via pipenv
 cd /software/users/james/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/rg_pp/process_rg_data.py -c config/rg_config.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+pipenv run python process/user/rg_pp/process_rg_data.py -c config/rg_pp.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /storage/u/alice/AnalysisResults/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/${JOB_ID}
