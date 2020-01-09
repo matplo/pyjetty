@@ -276,13 +276,12 @@ class process_rg_mc(process_base.process_base):
                     h.GetYaxis().SetTitle('#Delta R_{prong}')
                     setattr(self, name, h)
                     
-                    if 'subleading' in prong:
-                        name = 'hProngMatching_{}_{}_JetPtZ_R{}_{}'.format(prong, match, jetR, sd_label)
-                        h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 50, -0.5, 0.5)
-                        h.GetXaxis().SetTitle('p_{T,truth}')
-                        h.GetYaxis().SetTitle('Prong matching fraction')
-                        h.GetYaxis().SetTitle('#Delta z_{prong}')
-                        setattr(self, name, h)
+                    name = 'hProngMatching_{}_{}_JetPtZ_R{}_{}'.format(prong, match, jetR, sd_label)
+                    h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 50, -0.5, 0.5)
+                    h.GetXaxis().SetTitle('p_{T,truth}')
+                    h.GetYaxis().SetTitle('Prong matching fraction')
+                    h.GetYaxis().SetTitle('#Delta z_{prong}')
+                    setattr(self, name, h)
 
         if  self.write_tree_output:
 
@@ -924,6 +923,12 @@ class process_rg_mc(process_base.process_base):
     getattr(self, 'hProngMatching_leading_groomed_JetPtDet_R{}_{}'.format(jetR, sd_label)).Fill(jet_pp_det.pt(), matched_pt_leading_groomed_noprong, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_ungroomed_JetPtDet_R{}_{}'.format(jetR, sd_label)).Fill(jet_pp_det.pt(), matched_pt_leading_ungroomed_notgroomed, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_outside_JetPtDet_R{}_{}'.format(jetR, sd_label)).Fill(jet_pp_det.pt(), matched_pt_leading_outside, deltaR_prong1)
+    
+    getattr(self, 'hProngMatching_leading_leading_JetPtZ_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaZ)
+    getattr(self, 'hProngMatching_leading_subleading_JetPtZ_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaZ)
+    getattr(self, 'hProngMatching_leading_groomed_JetPtZ_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_groomed_noprong, deltaZ)
+    getattr(self, 'hProngMatching_leading_ungroomed_JetPtZ_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaZ)
+    getattr(self, 'hProngMatching_leading_outside_JetPtZ_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaZ)
 
     # Subleading prong
     getattr(self, 'hProngMatching_subleading_leading_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaR_prong2)
