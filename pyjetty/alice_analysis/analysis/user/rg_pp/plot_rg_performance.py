@@ -154,6 +154,23 @@ class plot_rg_performance(common_base.common_base):
         self.plot_zg_residual(jetR, sd_label)
         self.plotJetRecoEfficiency(jetR, sd_label)
         self.plotRg(jetR, sd_label, zcut, beta)
+        self.plot_prong_N_vs_z(jetR, sd_label, 'tagged')
+        self.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
+
+
+  #---------------------------------------------------------------
+  def plot_prong_N_vs_z(self, jetR, sd_label, tagged='tagged'):
+  
+    name = 'hProngMatching_subleading_leading_N_{}_JetPtDet_R{}_{}_80-100Scaled'.format(tagged, jetR, sd_label)
+    h3D = self.fMC.Get(name)
+    
+    h2D = h3D.Project3D('yx')
+    h2D.GetXaxis().SetTitle('z')
+    h2D.GetYaxis().SetTitle('N_{tracks}^{subleading pp-det prong}')
+    h2D.GetXaxis().SetRangeUser(0, 0.5)
+    h2D.GetYaxis().SetRangeUser(0, 30)
+    outputFilename = os.path.join(self.output_dir, '{}.pdf'.format(name))
+    self.utils.plot_hist(h2D, outputFilename, 'colz')
 
   #---------------------------------------------------------------
   def plot_prong_matching_delta(self, jetR, hname, plot_deltaz=False):
