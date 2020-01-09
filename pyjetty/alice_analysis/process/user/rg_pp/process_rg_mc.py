@@ -297,6 +297,19 @@ class process_rg_mc(process_base.process_base):
             h.GetZaxis().SetTitle('Prong matching fraction, subleading_leading')
             setattr(self, name, h)
             
+            name = 'hProngMatching_subleading_leading_N_untagged_JetPtDet_R{}_{}_80-100'.format(jetR, sd_label)
+            h = ROOT.TH3F(name, name, 50, 0., 1., 100, 0, 100, 100, 0, 100)
+            h.GetXaxis().SetTitle('z')
+            h.GetYaxis().SetTitle('N_subleading_pp_det')
+            h.GetZaxis().SetTitle('N_leading_pp_det')
+            setattr(self, name, h)
+            
+            name = 'hProngMatching_subleading_leading_N_tagged_JetPtDet_R{}_{}_80-100'.format(jetR, sd_label)
+            h = ROOT.TH3F(name, name, 50, 0., 1., 100, 0, 100, 100, 0, 100)
+            h.GetXaxis().SetTitle('z')
+            h.GetYaxis().SetTitle('N_subleading_pp_det')
+            h.GetZaxis().SetTitle('N_leading_pp_det')
+            setattr(self, name, h)
 
         if  self.write_tree_output:
 
@@ -891,6 +904,9 @@ class process_rg_mc(process_base.process_base):
         deltaR_prong2 = jet_combined_prong2.delta_R(jet_pp_det_prong2)
         deltaZ = self.zg(jet_det_sd) - self.zg(jet_pp_det_sd)
         
+        N_subleading_pp_det = len(jet_pp_det_prong2.constituents())
+        N_leading_pp_det = len(jet_pp_det_prong1.constituents())
+
         if self.debug_level > 1:
         
             if jet_pt_truth_ungroomed > 80.:
@@ -970,8 +986,15 @@ class process_rg_mc(process_base.process_base):
     if jet_pp_det.pt() > 80. and jet_pp_det.pt() < 100.:
         getattr(self, 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{}_deltaR_80-100'.format(jetR, sd_label)).Fill(deltaR_prong2, matched_pt_leading_subleading, matched_pt_subleading_leading)
 
-
-
+        # Plot z, N distribution for leading/subleading prongs that get mis-tagged
+        if has_parents_pp_det:
+            for track in jet_pp_det_prong2.constituents():
+                z = track.pt() / jet_pp_det.pt()
+                if matched_pt_subleading_leading > 0. and matched_pt_subleading_leading < 0.5:
+                    getattr(self, 'hProngMatching_subleading_leading_N_untagged_JetPtDet_R{}_{}_80-100'.format(jetR, sd_label)).Fill(z, N_subleading_pp_det, N_leading_pp_det)
+                elif  matched_pt_subleading_leading > 0.5:
+                    getattr(self, 'hProngMatching_subleading_leading_N_tagged_JetPtDet_R{}_{}_80-100'.format(jetR, sd_label)).Fill(z, N_subleading_pp_det, N_leading_pp_det)
+        
   #---------------------------------------------------------------
   # Compute theta_g
   #---------------------------------------------------------------
