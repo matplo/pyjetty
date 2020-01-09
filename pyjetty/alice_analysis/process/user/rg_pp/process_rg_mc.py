@@ -174,13 +174,6 @@ class process_rg_mc(process_base.process_base):
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
           
-          name = 'hJetMatchingQA_R{}'.format(jetR)
-          bin_labels = ['all', 'has_matching_candidate', 'unique_match']
-          nbins = len(bin_labels)
-          h = ROOT.TH2F(name, name, nbins, 0, nbins, 30, 0., 300.)
-          for i in range(1, nbins+1):
-            h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
-          setattr(self, name, h)
       else:
           name = 'hDeltaPt_emb_R{}'.format(jetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 400, -200., 200.)
@@ -200,14 +193,6 @@ class process_rg_mc(process_base.process_base):
           
           name = 'hDeltaR_combined_ppdet_R{}'.format(jetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-          setattr(self, name, h)
-          
-          name = 'hJetMatchingQA_R{}'.format(jetR)
-          bin_labels = ['all', 'has_matching_ppdet_candidate', 'has_matching_pptrue_candidate', 'has_matching_pptrue_unique_candidate', 'mc_fraction', 'deltaR_combined-truth', 'passed_all_cuts']
-          nbins = len(bin_labels)
-          h = ROOT.TH2F(name, name, nbins, 0, nbins,  30, 0., 300.)
-          for i in range(1, nbins+1):
-            h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
           setattr(self, name, h)
       
       name = 'hZ_Truth_R{}'.format(jetR)
@@ -467,7 +452,7 @@ class process_rg_mc(process_base.process_base):
   
     # Loop through jets and set jet matching candidates for each jet in user_info
     if self.is_pp:
-        [[self.set_matching_candidates(jet_det, jet_truth, jetR) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+        [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}') for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
         [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, 'hDeltaR_combined_ppdet_R{}', fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
@@ -533,157 +518,6 @@ class process_rg_mc(process_base.process_base):
     else:
         delta_pt = pt_sum
         getattr(self, 'hDeltaPt_RC_afterCS_R{}'.format(jetR)).Fill(delta_pt)
-
-  #---------------------------------------------------------------
-  # Loop through jets and store matching candidates in user_info
-  #---------------------------------------------------------------
-  def set_matching_candidates(self, jet1, jet2, jetR, hname='hDeltaR_All_R{}', fill_jet1_matches_only=False):
-  
-    # Fill histogram of matching distance of all candidates
-    deltaR = jet1.delta_R(jet2)
-    getattr(self, hname.format(jetR)).Fill(jet1.pt(), deltaR)
-  
-    # Add a matching candidate to the list if it is within the geometrical cut
-    if deltaR < self.jet_matching_distance*jetR:
-        self.set_jet_info(jet1, jet2, deltaR)
-        if not fill_jet1_matches_only:
-            self.set_jet_info(jet2, jet1, deltaR)
-  
-  #---------------------------------------------------------------
-  # Set 'jet_match' as a matching candidate in user_info of 'jet'
-  #---------------------------------------------------------------
-  def set_jet_info(self, jet, jet_match, deltaR):
-  
-    # Get/create object to store list of matching candidates
-    jet_user_info = None
-    if jet.has_user_info():
-        jet_user_info = jet.python_info()
-    else:
-        jet_user_info = jet_info.jet_info()
-      
-    jet_user_info.matching_candidates.append(jet_match)
-    if deltaR < jet_user_info.closest_jet_deltaR:
-        jet_user_info.closest_jet = jet_match
-        jet_user_info.closest_jet_deltaR = deltaR
-          
-    jet.set_python_info(jet_user_info)
-
-  #---------------------------------------------------------------
-  # Set accepted jet matches for pp case
-  #---------------------------------------------------------------
-  def set_matches_pp(self, jet_det, jetR):
-
-    h = getattr(self, 'hJetMatchingQA_R{}'.format(jetR))
-    h.Fill('all', jet_det.pt(), 1)
-  
-    if jet_det.has_user_info():
-        
-        jet_info_det = jet_det.python_info()
-        h.Fill('has_matching_candidate', jet_det.pt(), 1)
-        
-        if len(jet_info_det.matching_candidates) == 1:
-            jet_truth = jet_info_det.closest_jet
-            
-            # Check that the match is unique
-            if jet_truth.has_user_info():
-                jet_info_truth = jet_truth.python_info()
-                if len(jet_info_truth.matching_candidates) == 1:
-                    
-                    # Set accepted match
-                    jet_info_det.match = jet_truth
-                    jet_det.set_python_info(jet_info_det)
-                    h.Fill('unique_match', jet_det.pt(), 1)
-
-  #---------------------------------------------------------------
-  # Set accepted jet matches for Pb-Pb case
-  #---------------------------------------------------------------
-  def set_matches_AA(self, jet_det_combined, jetR):
-  
-    set_match = False
-    
-    h = getattr(self, 'hJetMatchingQA_R{}'.format(jetR))
-    h.Fill('all', jet_det_combined.pt(), 1)
-
-    # Check if combined jet has a pp-det match (uniqueness not currently enforced)
-    if jet_det_combined.has_user_info():
-    
-        h.Fill('has_matching_ppdet_candidate', jet_det_combined.pt(), 1)
-
-        jet_info_combined = jet_det_combined.python_info()
-        jet_pp_det = jet_info_combined.closest_jet
-          
-        # Check if the pp-det jet has a pp-truth match
-        if jet_pp_det.has_user_info():
-        
-          jet_info_pp_det = jet_pp_det.python_info()
-          jet_pp_truth = jet_info_pp_det.closest_jet
-          h.Fill('has_matching_pptrue_candidate', jet_det_combined.pt(), 1)
-          set_match = True
-          
-          # Check that pp-det to pp-true match is unique
-          if self.is_match_unique(jet_pp_det):
-              h.Fill('has_matching_pptrue_unique_candidate', jet_det_combined.pt(), 1)
-          else:
-            set_match = False
-              
-          # Check matching distance between combined jet and pp-truth
-          if jet_det_combined.delta_R(jet_pp_truth) < self.jet_matching_distance*jetR:
-            h.Fill('deltaR_combined-truth', jet_det_combined.pt(), 1)
-          else:
-            set_match = False
-    
-          # Check if >50% of the pp-det tracks are in the Pb-Pb det jet
-          mc_fraction = self.mc_fraction(jet_pp_det, jet_det_combined)
-          if mc_fraction > self.mc_fraction_threshold:
-            h.Fill('mc_fraction', jet_det_combined.pt(), 1)
-          else:
-            set_match = False
-               
-    # Set accepted match
-    if set_match:
-        jet_info_combined.match = jet_pp_truth
-        jet_det_combined.set_python_info(jet_info_combined)
-        
-        # Set also the pp-truth match info, since we will need to access the matching pp-det jet for prong matching
-        jet_info_pp_truth = jet_pp_truth.python_info()
-        jet_info_pp_truth.match = jet_pp_det
-        jet_pp_truth.set_python_info(jet_info_pp_truth)
-        
-        h.Fill('passed_all_cuts', jet_det_combined.pt(), 1)
-
-  #---------------------------------------------------------------
-  # Return pt-fraction of tracks in jet_pp_det that are contained in jet_det_combined
-  #---------------------------------------------------------------
-  def mc_fraction(self, jet_pp_det, jet_det_combined):
-  
-    pt_total = jet_pp_det.pt()
-    
-    pt_contained = 0.
-    for track in jet_det_combined.constituents():
-        if track.user_index() >= 0:
-            pt_contained += track.pt()
-            
-    return pt_contained/pt_total
-
-  #---------------------------------------------------------------
-  # Return whether a jet has a unique match
-  #---------------------------------------------------------------
-  def is_match_unique(self, jet_pp_det):
-  
-    if jet_pp_det.has_user_info():
-
-        jet_info_pp_det = jet_pp_det.python_info()
-        jet_pp_truth = jet_info_pp_det.closest_jet
-
-        if len(jet_info_pp_det.matching_candidates) == 1:
-
-            if jet_pp_truth.has_user_info():
-            
-                jet_info_pp_truth = jet_pp_truth.python_info()
-                if len(jet_info_pp_truth.matching_candidates) == 1:
-                  return True
-                  
-    return False
 
   #---------------------------------------------------------------
   # Fill truth jet histograms
