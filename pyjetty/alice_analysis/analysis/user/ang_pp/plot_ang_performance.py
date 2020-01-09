@@ -117,7 +117,7 @@ class plot_ang_performance(common_base.common_base):
         if beta == 2 and jetR == 0.4:
           name = ('hLambda_JetpT_R%s_B%s' % (jetR, beta)).replace('.', '')
           #self.rebin_h(self.fData.Get(name), name, beta, jetR)
-          self.kin_eff(beta, jetR)
+          self.eff_plots(beta, jetR)
 
     # Write finished histograms to file
     self.write_all_histograms()
@@ -137,8 +137,8 @@ class plot_ang_performance(common_base.common_base):
     self.hist_to_write.append(h)
 
   #---------------------------------------------------------------
-  # Take 2D root histogram and rebin it according to yaml config
-  def kin_eff(self, beta, jetR):
+  # Plot kinematic and reconstruction efficiencies
+  def eff_plots(self, beta, jetR):
     cf = ("R%s_B%s" % (jetR, beta)).replace('.', '')
 
     # Lambda response histograms
@@ -153,7 +153,6 @@ class plot_ang_performance(common_base.common_base):
     for i, pTmin in list(enumerate(pTbins))[0:-1]:
       pTmax = pTbins[i+1]
       resp.GetAxis(0).SetRangeUser(pTmin, pTmax)  # pT (detector level) bin of interest
-      resp.GetAxis(2).SetRangeUser(0, 1)          # Reset to full lambda det range
       full_proj = resp.Projection(3, 2).ProjectionY().Clone("full_proj")  # Full lambda true vs det
       resp.GetAxis(2).SetRangeUser(0, cutoff[i])
       stat_proj = resp.Projection(3, 2).ProjectionY().Clone("stat_proj")  # "Good statistics" range
@@ -161,6 +160,13 @@ class plot_ang_performance(common_base.common_base):
       eff = stat_proj.Clone("ekin_%s_%i-%i" % (cf, pTmin, pTmax))
       eff.Divide(full_proj)
       self.hist_to_write.append(eff)
+      resp.GetAxis(2).SetRangeUser(0, 1)  # Reset to full lambda det range
+
+    #jes = ROOT.TH1D("jes", "jes", 100, -1, 1)  # jet energy scale
+    #jes_pt_bins = array('d', self.config["rebin"][cf]["jes_pt_bins"])
+    #for i, pTmin in list(enumerate(pTbins))[0:-1]:
+    #  pTmax = pTbins[i+1]
+      
 
   #---------------------------------------------------------------
   # Write all saved histograms to the desired output file

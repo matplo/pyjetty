@@ -17,7 +17,7 @@ from pyjetty.alice_analysis.analysis.base import analysis_base
 
 # Load the RooUnfold library
 #ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnfold.so")
-ROOT.gSystem.Load('/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib')
+ROOT.gSystem.Load('/home/elesser/RooUnfold/build/libRooUnfold.dylib')
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -27,14 +27,17 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 ################################################################
 class roounfold_sd(analysis_base.analysis_base):
-  
+
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, power_law_offset=0., **kwargs):
-    
-    super(roounfold_sd, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
-    
+  def __init__(self, observable='', input_file_data='', input_file_response='', config_file='',
+               output_dir='', file_format='', rebin_response=False, truncation=False,
+               binning=False, power_law_offset=0., **kwargs):
+
+    super(roounfold_sd, self).__init__(input_file_data, input_file_response, config_file,
+                                       output_dir, file_format, **kwargs)
+
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
     self.observable = observable
@@ -42,45 +45,45 @@ class roounfold_sd(analysis_base.analysis_base):
     self.truncation = truncation
     self.binning = binning
     self.power_law_offset = power_law_offset
-    
+
     self.initialize_config()
-  
+
     self.get_responses(self.rebin_response)
-    
+
     # Create output files to store results
     for jetR in self.jetR_list:
       for sd_setting in self.sd_settings:
-        
+
         zcut = sd_setting[0]
         beta = sd_setting[1]
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        
+
         fResult_name = os.path.join(self.output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
         setattr(self, 'fResult_name_R{}_{}'.format(jetR, sd_label), fResult_name)
         fResult = ROOT.TFile(fResult_name, 'RECREATE')
         fResult.Close()
-    
+
     print(self)
-  
+
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
   def roounfold_sd(self):
-    
+
     for jetR in self.jetR_list:
       for sd_setting in self.sd_settings:
-        
+
         zcut = sd_setting[0]
         beta = sd_setting[1]
         sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-      
+
         self.unfoldSingleOutputList(jetR, sd_label, zcut, beta)
 
   #---------------------------------------------------------------
   # Initialize config file into class members
   #---------------------------------------------------------------
   def initialize_config(self):
-    
+
     # Call base class initialization
     analysis_base.analysis_base.initialize_config(self)
     
@@ -95,7 +98,8 @@ class roounfold_sd(analysis_base.analysis_base):
       self.jetR_list = config['jetR']
       self.sd_config_dict = config['SoftDrop']
       self.sd_config_list = list(self.sd_config_dict.keys())
-      self.sd_settings = [[self.sd_config_dict[name]['zcut'], self.sd_config_dict[name]['beta']] for name in self.sd_config_list]
+      self.sd_settings = [[self.sd_config_dict[name]['zcut'],
+                           self.sd_config_dict[name]['beta']] for name in self.sd_config_list]
       
       if self.observable == 'theta_g':
         self.xtitle = '#theta_{g}'
@@ -224,10 +228,16 @@ class roounfold_sd(analysis_base.analysis_base):
           if self.write_tree_output:
             tree_file_name = '/Users/jamesmulligan/alidock/theta_g/rganalysis_embed_PbPb/output_alpha_0_dRmax_0.25_SDzcut_0.2_emb.root'
             
-            self.utils.construct_response_from_ntuple(response_file_name, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array, self.power_law_offset)
+            self.utils.construct_response_from_ntuple(response_file_name, name_thn_rebinned, name_roounfold,
+                                                      jetR, beta, n_pt_bins_det, det_pt_bin_array, n_bins_det,
+                                                      det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
+                                                      n_bins_truth, truth_bin_array, self.power_law_offset)
 
           else:
-            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array, self.observable, self.power_law_offset)
+            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR,
+                                      sd_label, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
+                                      n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
+                                      self.observable, self.power_law_offset)
           
         # Also re-bin the data histogram
         hData = self.fData.Get(name_data)
@@ -258,12 +268,14 @@ class roounfold_sd(analysis_base.analysis_base):
     name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, sd_label))
     hData_PerBin = getattr(self, name)
     hData_PerBin.GetXaxis().SetRangeUser(0., 100.)
-    outputFilename = os.path.join(self.output_dir, 'hData_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
+    outputFilename = os.path.join(self.output_dir, 'hData_R{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                           sd_label, self.file_format))
     self.utils.plot_hist(hData_PerBin, outputFilename, 'colz', False, True)
     
     hDataProj = hData_PerBin.ProjectionY()
     hDataProj.SetName('{}_{}'.format(hDataProj.GetName(), 'proj'))
-    outputFilename = os.path.join(self.output_dir, 'hData_proj_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
+    outputFilename = os.path.join(self.output_dir, 'hData_proj_R{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                                sd_label, self.file_format))
     self.utils.plot_hist(hDataProj, outputFilename)
     
     # Plot various slices of the response matrix (from the THn)
@@ -310,12 +322,14 @@ class roounfold_sd(analysis_base.analysis_base):
     name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, sd_label))
     hData2D = getattr(self, name).Clone()
     hData2D.SetName('{}_tagging'.format(hData2D.GetName()))
-    hData2D_rebinned = self.utils.rebin_data(hData2D, name, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array)
+    hData2D_rebinned = self.utils.rebin_data(hData2D, name, n_pt_bins_truth, truth_pt_bin_array,
+                                             n_bins_truth, truth_bin_array)
     
     name = 'hMC_Det_R{}_{}'.format(jetR, sd_label)
     hMC_Det = getattr(self, name).Clone()
     hMC_Det.SetName('{}_tagging'.format(hMC_Det.GetName()))
-    hMC_Det_rebinned = self.utils.rebin_data(hMC_Det, name, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array)
+    hMC_Det_rebinned = self.utils.rebin_data(hMC_Det, name, n_pt_bins_truth, truth_pt_bin_array,
+                                             n_bins_truth, truth_bin_array)
     
     name = 'hMC_Truth_R{}_{}'.format(jetR, sd_label)
     hMC_Truth = getattr(self, name).Clone()
@@ -326,7 +340,8 @@ class roounfold_sd(analysis_base.analysis_base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
     
-      fraction_tagged = self.get_tagging_rate(jetR, min_pt_truth, max_pt_truth, hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
+      fraction_tagged = self.get_tagging_rate(jetR, min_pt_truth, max_pt_truth,
+                                              hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
 
       x = (min_pt_truth + max_pt_truth)/2.
       bin = h.FindBin(x)
@@ -396,7 +411,8 @@ class roounfold_sd(analysis_base.analysis_base):
     fResult_name = getattr(self, 'fResult_name_R{}_{}'.format(jetR, sd_label))
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
     
-    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict,
+                                               sd_label, self.observable, jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -511,7 +527,8 @@ class roounfold_sd(analysis_base.analysis_base):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list,
+                                               self.sd_config_dict, sd_label, self.observable, jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -590,7 +607,11 @@ class roounfold_sd(analysis_base.analysis_base):
     text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
     text_latex.DrawLatex(0.25, 0.75, text)
     
-    outputFilename = os.path.join(self.output_dir, 'hUnfolded{}_{}_R{}_{}_{}-{}{}'.format(option, self.observable, self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+    outputFilename = os.path.join(self.output_dir,
+                                  'hUnfolded{}_{}_R{}_{}_{}-{}{}'.format(option, self.observable,
+                                                                         self.utils.remove_periods(jetR),
+                                                                         sd_label, int(min_pt_truth),
+                                                                         int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
@@ -661,7 +682,8 @@ class roounfold_sd(analysis_base.analysis_base):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
     
-    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list,
+                                               self.sd_config_dict, sd_label, self.observable, jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -755,7 +777,9 @@ class roounfold_sd(analysis_base.analysis_base):
     hKinematicEfficiency.Divide(hDenominator)
     for bin in range(0, hKinematicEfficiency.GetNcells()+1):
       hKinematicEfficiency.SetBinError(bin, 0)
-    outputFilename = os.path.join(self.output_dir, 'hKinematicEfficiency2D_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
+    outputFilename = os.path.join(self.output_dir,
+                                  'hKinematicEfficiency2D_R{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                           sd_label, self.file_format))
     self.utils.plot_hist(hKinematicEfficiency, outputFilename, 'colz')
     
     # Save kinematic efficiency as class member
@@ -856,7 +880,9 @@ class roounfold_sd(analysis_base.analysis_base):
     line.SetLineWidth(4)
     line.Draw()
 
-    outputFilename = os.path.join(self.output_dir, 'hKinematicEfficiency_R{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, self.file_format))
+    outputFilename = os.path.join(self.output_dir,
+                                  'hKinematicEfficiency_R{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                         sd_label, self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
@@ -897,7 +923,8 @@ class roounfold_sd(analysis_base.analysis_base):
     hResponse4D.GetAxis(3).SetRangeUser(truth_bin_array[0], truth_bin_array[-1])
 
     hResponse_Obs = hResponse4D.Projection(3,2)
-    hResponse_Obs.SetName('hResponse_Obs_R{}_{}_{}_{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth)))
+    hResponse_Obs.SetName('hResponse_Obs_R{}_{}_{}_{}'.format(self.utils.remove_periods(jetR),
+                                                              sd_label, int(min_pt_truth), int(max_pt_truth)))
     
     hResponse_Obs_Normalized = self.normalizeResponseMatrix(hResponse_Obs)
     
@@ -950,14 +977,17 @@ class roounfold_sd(analysis_base.analysis_base):
       min_pt_det = det_pt_bin_array[bin]
       max_pt_det = det_pt_bin_array[bin+1]
       
-      self.plot_sd_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding)
+      self.plot_sd_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det,
+                                  max_pt_det, output_dir_refolding)
 
-    self.plot_pt_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, det_pt_bin_array[2], det_pt_bin_array[-1], output_dir_refolding)
+    self.plot_pt_refolded_slice(hFoldedTruth, i, jetR, sd_label, zcut, beta, det_pt_bin_array[2],
+                                det_pt_bin_array[-1], output_dir_refolding)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_sd_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding):
+  def plot_sd_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det,
+                             max_pt_det, output_dir_refolding):
     
     hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
     hFolded_obs = hFoldedTruth.ProjectionY()
@@ -973,13 +1003,19 @@ class roounfold_sd(analysis_base.analysis_base):
     h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
-    outputFilename = os.path.join(output_dir_refolding, 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_det), int(max_pt_det), i, self.file_format))
-    self.plot_sd_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    outputFilename = os.path.join(output_dir_refolding,
+                                  'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                          sd_label, int(min_pt_det),
+                                                                          int(max_pt_det), i, self.file_format))
+    self.plot_sd_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle,
+                           int(min_pt_det), int(max_pt_det), jetR, sd_label, zcut, beta,
+                           outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_pt_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det, max_pt_det, output_dir_refolding):
+  def plot_pt_refolded_slice(self, hFoldedTruth, i, jetR, sd_label, zcut, beta, min_pt_det,
+                             max_pt_det, output_dir_refolding):
     
     hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
     hFolded_pt = hFoldedTruth.ProjectionX()
@@ -995,8 +1031,12 @@ class roounfold_sd(analysis_base.analysis_base):
     h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
-    outputFilename = os.path.join(output_dir_refolding, 'hFoldedTruth_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, i, self.file_format))
-    self.plot_sd_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    outputFilename = os.path.join(output_dir_refolding,
+                                  'hFoldedTruth_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                       sd_label, i, self.file_format))
+    self.plot_sd_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle,
+                           0, 0, jetR, sd_label, zcut, beta, outputFilename, 'width',
+                           legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Closure test
@@ -1021,15 +1061,18 @@ class roounfold_sd(analysis_base.analysis_base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.plot_sd_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure)
+      self.plot_sd_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta,
+                                 min_pt_truth, max_pt_truth, output_dir_closure)
 
     # Closure test for pt dimension
-    self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta, truth_pt_bin_array[1], truth_pt_bin_array[-4], output_dir_closure)
+    self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, sd_label, zcut, beta,
+                               truth_pt_bin_array[1], truth_pt_bin_array[-4], output_dir_closure)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_sd_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure):
+  def plot_sd_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta,
+                            min_pt_truth, max_pt_truth, output_dir_closure):
     
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_obs = hUnfolded.ProjectionY()
@@ -1043,13 +1086,19 @@ class roounfold_sd(analysis_base.analysis_base):
     h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    outputFilename = os.path.join(output_dir_closure, 'hClosure_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), i, self.file_format))
-    self.plot_sd_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    outputFilename = os.path.join(output_dir_closure,
+                                  'hClosure_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                      sd_label, int(min_pt_truth),
+                                                                      int(max_pt_truth), i, self.file_format))
+    self.plot_sd_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle,
+                           min_pt_truth, max_pt_truth, jetR, sd_label, zcut, beta, outputFilename,
+                           'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_pt_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, output_dir_closure):
+  def plot_pt_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, sd_label, zcut, beta,
+                            min_pt_truth, max_pt_truth, output_dir_closure):
   
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_pt = hUnfolded.ProjectionX()
@@ -1063,8 +1112,12 @@ class roounfold_sd(analysis_base.analysis_base):
     h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    outputFilename = os.path.join(output_dir_closure, 'hClosure_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), sd_label, i, self.file_format))
-    self.plot_sd_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, sd_label, zcut, beta, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    outputFilename = os.path.join(output_dir_closure,
+                                  'hClosure_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR),
+                                                                   sd_label, i, self.file_format))
+    self.plot_sd_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle,
+                           0, 0, jetR, sd_label, zcut, beta, outputFilename, 'width',
+                           legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Get errors from measured spectrum, stored as dictionary {bin:error}
@@ -1142,7 +1195,9 @@ class roounfold_sd(analysis_base.analysis_base):
   #################################################################################################
   # Plot spectra and ratio of h (and h3, if supplied) to h2
   #################################################################################################
-  def plot_sd_obs_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, sd_label, zcut, beta, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
+  def plot_sd_obs_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det,
+                        jetR, sd_label, zcut, beta, outputFilename, scalingOptions = "", legendTitle = "",
+                        hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -1337,5 +1392,8 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = roounfold_sd(observable=args.observable, input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat, rebin_response=True, truncation=False, binning=False, power_law_offset=0.)
+  analysis = roounfold_sd(observable=args.observable, input_file_data = args.inputFileData,
+                          input_file_response = args.inputFileResponse, config_file = args.configFile,
+                          output_dir = args.outputDir, file_format = args.imageFormat,
+                          rebin_response=True, truncation=False, binning=False, power_law_offset=0.)
   analysis.roounfold_sd()
