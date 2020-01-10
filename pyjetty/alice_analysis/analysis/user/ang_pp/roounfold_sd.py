@@ -31,16 +31,14 @@ class roounfold_sd(analysis_base.analysis_base):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, observable='', input_file_data='', input_file_response='', config_file='',
-               output_dir='', file_format='', rebin_response=False, truncation=False,
-               binning=False, power_law_offset=0., **kwargs):
+  def __init__(self, input_file_data='', input_file_response='', config_file='',
+               output_dir='', file_format='', rebin_response=False, power_law_offset=0., **kwargs):
 
     super(roounfold_sd, self).__init__(input_file_data, input_file_response, config_file,
                                        output_dir, file_format, **kwargs)
 
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
-    self.observable = observable
     self.rebin_response = rebin_response
     self.truncation = truncation
     self.binning = binning
@@ -51,17 +49,16 @@ class roounfold_sd(analysis_base.analysis_base):
     self.get_responses(self.rebin_response)
 
     # Create output files to store results
+
     for jetR in self.jetR_list:
-      for sd_setting in self.sd_settings:
-
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-
-        fResult_name = os.path.join(self.output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
-        setattr(self, 'fResult_name_R{}_{}'.format(jetR, sd_label), fResult_name)
-        fResult = ROOT.TFile(fResult_name, 'RECREATE')
-        fResult.Close()
+      for beta in self.beta_list:
+        #TODO -- implement for all jetR and beta
+        if jetR == 0.4 and beta == 2:
+          label = ('R' + str(jetR) + "_B" + str(beta)).replace('.', '')
+          fResult_name = os.path.join(self.output_dir, 'fResult_%s.root' % label)
+          setattr(self, 'fResult_name_%s' % label, fResult_name)
+          fResult = ROOT.TFile(fResult_name, 'RECREATE')
+          fResult.Close()
 
     print(self)
 
@@ -71,13 +68,11 @@ class roounfold_sd(analysis_base.analysis_base):
   def roounfold_sd(self):
 
     for jetR in self.jetR_list:
-      for sd_setting in self.sd_settings:
+      for beta in self.beta_list:
 
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+        label = ("R%s_B%s" % (jetR, beta)).replace('.', '')
 
-        self.unfoldSingleOutputList(jetR, sd_label, zcut, beta)
+        self.unfoldSingleOutputList(jetR, label, jetR, beta)
 
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -96,81 +91,41 @@ class roounfold_sd(analysis_base.analysis_base):
       
       # Retrieve list of SD grooming settings
       self.jetR_list = config['jetR']
-      self.sd_config_dict = config['SoftDrop']
-      self.sd_config_list = list(self.sd_config_dict.keys())
-      self.sd_settings = [[self.sd_config_dict[name]['zcut'],
-                           self.sd_config_dict[name]['beta']] for name in self.sd_config_list]
-      
-      if self.observable == 'theta_g':
-        self.xtitle = '#theta_{g}'
-        self.ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
-      if self.observable == 'zg':
-        self.xtitle = '#it{z}_{g}'
-        self.ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
-    
+      self.beta_list = config['betas']
+      self.config_dict = config['configs']
+      self.config_list = list(self.sd_config_dict.keys())
+
       # Retrieve histogram binnings for each SD setting
-      for i, sd_setting in enumerate(self.sd_settings):
-        
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        config_name = self.sd_config_list[i]
-        
-        pt_det_bins_name = 'pt_bins_det'
-        if self.truncation:
-          pt_det_bins_name += '_sys_truncation'
-        pt_bins_det = (self.sd_config_dict[config_name][pt_det_bins_name])
-        pt_bins_truth = (self.sd_config_dict[config_name]['pt_bins_truth'])
+      for i, config in enumerate(self.config_list):
+
+        pt_bins_det = self.config_dict[config]['pt_bins_det']
+        pt_bins_truth = self.config_dict[config]['pt_bins_truth']
         n_pt_bins_det = len(pt_bins_det) - 1
-        setattr(self, 'n_pt_bins_det_{}'.format(sd_label), n_pt_bins_det)
+        setattr(self, 'n_pt_bins_det_%s' % config, n_pt_bins_det)
         n_pt_bins_truth = len(pt_bins_truth) - 1
-        setattr(self, 'n_pt_bins_truth_{}'.format(sd_label), n_pt_bins_truth)
-        det_pt_bin_array = array('d',pt_bins_det)
-        setattr(self, 'det_pt_bin_array_{}'.format(sd_label), det_pt_bin_array)
-        truth_pt_bin_array = array('d',pt_bins_truth)
-        setattr(self, 'truth_pt_bin_array_{}'.format(sd_label), truth_pt_bin_array)
-          
-        if self.observable == 'theta_g':
-          det_bins_name = 'rg_bins_det'
-          if self.binning:
-            det_bins_name += '_sys_binning'
-          rg_bins_det = (self.sd_config_dict[config_name][det_bins_name])
-          rg_bins_truth = (self.sd_config_dict[config_name]['rg_bins_truth'])
-          n_rg_bins_det = len(rg_bins_det) - 1
-          setattr(self, 'n_bins_det_{}'.format(sd_label), n_rg_bins_det)
-          n_rg_bins_truth = len(rg_bins_truth) - 1
-          setattr(self, 'n_bins_truth_{}'.format(sd_label), n_rg_bins_truth)
-          det_rg_bin_array = array('d',rg_bins_det)
-          setattr(self, 'det_bin_array_{}'.format(sd_label), det_rg_bin_array)
-          truth_rg_bin_array = array('d',rg_bins_truth)
-          setattr(self, 'truth_bin_array_{}'.format(sd_label), truth_rg_bin_array)
-        if self.observable == 'zg':
-          det_bins_name = 'zg_bins_det'
-          if self.binning:
-            det_bins_name += '_sys_binning'
-          zg_bins_det = (self.sd_config_dict[config_name][det_bins_name])
-          zg_bins_truth = (self.sd_config_dict[config_name]['zg_bins_truth'])
-          n_zg_bins_det = len(zg_bins_det) - 1
-          setattr(self, 'n_bins_det_{}'.format(sd_label), n_zg_bins_det)
-          n_zg_bins_truth = len(zg_bins_truth) - 1
-          setattr(self, 'n_bins_truth_{}'.format(sd_label), n_zg_bins_truth)
-          det_zg_bin_array = array('d',zg_bins_det)
-          setattr(self, 'det_bin_array_{}'.format(sd_label), det_zg_bin_array)
-          truth_zg_bin_array = array('d',zg_bins_truth)
-          setattr(self, 'truth_bin_array_{}'.format(sd_label), truth_zg_bin_array)
+        setattr(self, 'n_pt_bins_truth_%s' % config, n_pt_bins_truth)
+        det_pt_bin_array = array('d', pt_bins_det)
+        setattr(self, 'det_pt_bin_array_%s' % config, det_pt_bin_array)
+        truth_pt_bin_array = array('d', pt_bins_truth)
+        setattr(self, 'truth_pt_bin_array_%s' % config, truth_pt_bin_array)
+
+        lambda_bins_det = (self.config_dict[config_name]['lambda_bins_det'])
+        lambda_bins_truth = (self.config_dict[config_name]['lambda_bins_truth'])
+        n_lambda_bins_det = len(lambda_bins_det) - 1
+        setattr(self, 'n_bins_det_%s' % config, n_lambda_bins_det)
+        n_lambda_bins_truth = len(lambda_bins_truth) - 1
+        setattr(self, 'n_bins_truth_%s' % config, n_lambda_bins_truth)
+        det_lambda_bin_array = array('d', lambda_bins_det)
+        setattr(self, 'det_bin_array_%s' % config, det_lambda_bin_array)
+        truth_lambda_bin_array = array('d', lambda_bins_truth)
+        setattr(self, 'truth_bin_array_%s' % config, truth_lambda_bin_array)
         
         for jetR in self.jetR_list:
 
-          if self.observable == 'theta_g':
-            name_thn = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
-            name_thn_rebinned = 'hResponse_JetPt_ThetaG_R{}_{}_rebinned'.format(jetR, sd_label)
-            name_data = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
-            name_data_rebinned = 'hThetaG_JetPt_R{}_{}_rebinned'.format(jetR, sd_label)
-          if self.observable == 'zg':
-            name_thn = 'hResponse_JetPt_zg_R{}_{}Scaled'.format(jetR, sd_label)
-            name_thn_rebinned = 'hResponse_JetPt_zg_R{}_{}_rebinned'.format(jetR, sd_label)
-            name_data = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
-            name_data_rebinned = 'hZg_JetPt_R{}_{}_rebinned'.format(jetR, sd_label)
+          name_thn = 'hResponse_JetPt_zg_R{}_{}Scaled'.format(jetR, sd_label)
+          name_thn_rebinned = 'hResponse_JetPt_zg_R{}_{}_rebinned'.format(jetR, sd_label)
+          name_data = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
+          name_data_rebinned = 'hZg_JetPt_R{}_{}_rebinned'.format(jetR, sd_label)
           name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, sd_label)
           setattr(self, 'name_thn_R{}_{}'.format(jetR, sd_label), name_thn)
           setattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, sd_label), name_thn_rebinned)
@@ -1345,10 +1300,6 @@ class roounfold_sd(analysis_base.analysis_base):
 if __name__ == '__main__':
   # Define arguments
   parser = argparse.ArgumentParser(description='Unfold sd-observable distribution')
-  parser.add_argument('-m', '--observable', action='store',
-                      type=str, metavar='inputFileData',
-                      default='theta_g',
-                      help='Observable to be unfolded')
   parser.add_argument('-d', '--inputFileData', action='store',
                       type=str, metavar='inputFileData',
                       default='AnalysisResults.root',
@@ -1392,8 +1343,8 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = roounfold_sd(observable=args.observable, input_file_data = args.inputFileData,
+  analysis = roounfold_sd(input_file_data = args.inputFileData,
                           input_file_response = args.inputFileResponse, config_file = args.configFile,
                           output_dir = args.outputDir, file_format = args.imageFormat,
-                          rebin_response=True, truncation=False, binning=False, power_law_offset=0.)
+                          rebin_response=True,  power_law_offset=0.)
   analysis.roounfold_sd()

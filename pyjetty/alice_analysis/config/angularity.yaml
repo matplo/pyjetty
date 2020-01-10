@@ -5,18 +5,23 @@ betas: [1, 1.5, 2]
 n_lambda_bins: 1000
 
 debug_level: 0
+write_tree_output: False
 
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.04
 
-# Rebinning paramaters
-rebin:
+# Rebinning and unfolding parameters
+configs:
   # Different R & beta configurations
   R04_B2:
-    pTbins: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    lambda_bins_truth: [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6]
+    lambda_bins_det: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, \
+                      0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.45, 0.5, 0.6]
+
     # Point where we will cutoff measurement due to statistics / end of distribution, per pT bin
     cutoff: [0.6, 0.5, 0.5, 0.45, 0.45, 0.34, 0.32, 0.26, 0.22, 0.18, 0.16, 0.14, 0.08, 0.06]
-    lambda_bins: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.45, 0.5, 0.6]
 
 # Efficiency plotting parameters
 jes_pt_bins: [10, 20, 30, 40, 50, 60, 70, 80, 100]
