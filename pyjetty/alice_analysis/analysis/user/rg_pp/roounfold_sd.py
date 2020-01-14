@@ -227,7 +227,8 @@ class roounfold_sd(analysis_base.analysis_base):
             self.utils.construct_response_from_ntuple(response_file_name, name_thn_rebinned, name_roounfold, jetR, beta, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array, self.power_law_offset)
 
           else:
-            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array, self.observable, self.power_law_offset)
+            label = 'R{}_{}'.format(jetR, sd_label)
+            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, label, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array, self.observable, self.power_law_offset)
           
         # Also re-bin the data histogram
         hData = self.fData.Get(name_data)
