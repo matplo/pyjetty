@@ -17,7 +17,7 @@ from pyjetty.alice_analysis.analysis.base import analysis_base
 
 # Load the RooUnfold library
 #ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnfold.so")
-ROOT.gSystem.Load('/home/elesser/RooUnfold/build/libRooUnfold.dylib')
+ROOT.gSystem.Load('/home/ezra/RooUnfold/build/libRooUnfold.dylib')
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -40,8 +40,6 @@ class roounfold_ang(analysis_base.analysis_base):
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
     self.rebin_response = rebin_response
-    self.truncation = truncation
-    self.binning = binning
     self.power_law_offset = power_law_offset
 
     self.initialize_config()
@@ -91,42 +89,43 @@ class roounfold_ang(analysis_base.analysis_base):
       self.config_list = list(self.config_dict.keys())
 
       # Retrieve histogram binnings for each setting
-      for i, config in enumerate(self.config_list):
+      for i, conf in enumerate(self.config_list):
+        params = self.config_dict[conf]
 
-        pt_bins_det = self.config_dict[config]['pt_bins_det']
-        pt_bins_truth = self.config_dict[config]['pt_bins_truth']
+        pt_bins_det = params['pt_bins_det']
+        pt_bins_truth = params['pt_bins_truth']
         n_pt_bins_det = len(pt_bins_det) - 1
-        setattr(self, 'n_pt_bins_det_%s' % config, n_pt_bins_det)
+        setattr(self, 'n_pt_bins_det_%s' % conf, n_pt_bins_det)
         n_pt_bins_truth = len(pt_bins_truth) - 1
-        setattr(self, 'n_pt_bins_truth_%s' % config, n_pt_bins_truth)
+        setattr(self, 'n_pt_bins_truth_%s' % conf, n_pt_bins_truth)
         det_pt_bin_array = array('d', pt_bins_det)
-        setattr(self, 'det_pt_bin_array_%s' % config, det_pt_bin_array)
+        setattr(self, 'det_pt_bin_array_%s' % conf, det_pt_bin_array)
         truth_pt_bin_array = array('d', pt_bins_truth)
-        setattr(self, 'truth_pt_bin_array_%s' % config, truth_pt_bin_array)
+        setattr(self, 'truth_pt_bin_array_%s' % conf, truth_pt_bin_array)
 
-        lambda_bins_det = (self.config_dict[config_name]['lambda_bins_det'])
-        lambda_bins_truth = (self.config_dict[config_name]['lambda_bins_truth'])
+        lambda_bins_det = params['lambda_bins_det']
+        lambda_bins_truth = params['lambda_bins_truth']
         n_lambda_bins_det = len(lambda_bins_det) - 1
-        setattr(self, 'n_bins_det_%s' % config, n_lambda_bins_det)
+        setattr(self, 'n_bins_det_%s' % conf, n_lambda_bins_det)
         n_lambda_bins_truth = len(lambda_bins_truth) - 1
-        setattr(self, 'n_bins_truth_%s' % config, n_lambda_bins_truth)
+        setattr(self, 'n_bins_truth_%s' % conf, n_lambda_bins_truth)
         det_lambda_bin_array = array('d', lambda_bins_det)
-        setattr(self, 'det_bin_array_%s' % config, det_lambda_bin_array)
+        setattr(self, 'det_bin_array_%s' % conf, det_lambda_bin_array)
         truth_lambda_bin_array = array('d', lambda_bins_truth)
-        setattr(self, 'truth_bin_array_%s' % config, truth_lambda_bin_array)
+        setattr(self, 'truth_bin_array_%s' % conf, truth_lambda_bin_array)
 
-        name_thn = 'hResponse_JetPt_lambda_%sScaled' % config
-        name_thn_rebinned = 'hResponse_JetPt_lambda_%s_rebinned' % config
-        name_roounfold = 'roounfold_response_%s' % configd)
-        setattr(self, 'name_roounfold_%s' % config, name_roounfold)
-        setattr(self, 'name_thn_%s' % config, name_thn)
-        setattr(self, 'name_thn_rebinned_%s' % config, name_thn_rebinned)
-        for i, pTmin in list(enumerate(config['configs'][config][pt_bins_det]))[0:-1]:
-          pTmax = config['configs'][config][pt_bins_det][i+1]
-          name_data = 'hLambda_pT%i-%i_%s_mcdetScaled' % (pTmin, pTmax, config)
-          name_data_rebinned = 'hLambda_pT%i-%i_%s_rebinned' % (pTmin, pTmax, config)
-          setattr(self, 'name_data_pT%i-%i_%s' % (pTmin, pTmax, config), name_data)
-          setattr(self, 'name_data_rebinned_pT%i-%i_%s' % (pTmin, pTmax, config), name_data_rebinned)
+        name_thn = 'hResponse_JetPt_lambda_%sScaled' % conf
+        name_thn_rebinned = 'hResponse_JetPt_lambda_%s_rebinned' % conf
+        name_roounfold = 'roounfold_response_%s' % conf
+        setattr(self, 'name_roounfold_%s' % conf, name_roounfold)
+        setattr(self, 'name_thn_%s' % conf, name_thn)
+        setattr(self, 'name_thn_rebinned_%s' % conf, name_thn_rebinned)
+        for i, pTmin in list(enumerate(pt_bins_det))[0:-1]:
+          pTmax = pt_bins_det[i+1]
+          name_data = 'hLambda_pT%i-%i_%s_mcdetScaled' % (pTmin, pTmax, conf)
+          name_data_rebinned = 'hLambda_pT%i-%i_%s_rebinned' % (pTmin, pTmax, conf)
+          setattr(self, 'name_data_pT%i-%i_%s' % (pTmin, pTmax, conf), name_data)
+          setattr(self, 'name_data_rebinned_pT%i-%i_%s' % (pTmin, pTmax, conf), name_data_rebinned)
             
       self.min_pt_reported = 20
       self.max_pt_reported = 80
@@ -137,23 +136,23 @@ class roounfold_ang(analysis_base.analysis_base):
   # Get responses, either from file or manually rebin
   #---------------------------------------------------------------
   def get_responses(self, rebin_response=False):
-    
+
     response_file_name = os.path.join(self.output_dir, 'response.root')
     if rebin_response:
       f = ROOT.TFile(response_file_name, 'RECREATE')
       f.Close()
-        
+
     # Rebin response matrix, and create RooUnfoldResponse object
     # THn response matrix is: (pt-det, pt-true, obs-det, obs-true)
     for jetR in self.jetR_list:
       for beta in self.beta_list:
         label = ("R%s_B%s" % (jetR, beta)).replace('.', '')
-        
+
         name_thn = getattr(self, 'name_thn_%s' % label)
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_%s' % label)
         name_data = getattr(self, 'name_data_%s' % label)
         name_roounfold = getattr(self, 'name_roounfold_%s' % label)
-        
+
         # Retrieve desired binnings
         n_pt_bins_det = getattr(self, 'n_pt_bins_det_%s' % label)
         det_pt_bin_array = getattr(self, 'det_pt_bin_array_%s' % label)
@@ -164,7 +163,7 @@ class roounfold_ang(analysis_base.analysis_base):
         det_bin_array = getattr(self, 'det_bin_array_%s' % label)
         n_bins_truth = getattr(self, 'n_bins_truth_%s' % label)
         truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
-        
+
         # Rebin if requested, and write to file
         thn = self.fResponse.Get(name_thn)
         thn.SetName(name_thn)
@@ -681,7 +680,7 @@ class roounfold_ang(analysis_base.analysis_base):
   #   Numerator: 2D truth-level projection [pt-true, sd-obs-true] using no cut on det-level
   #   Denominator: 2D truth-level projection [pt-true, sd-obs-true] using [pt-det, sd-obs-det] cut on det-level
   ###################################################################################################
-                  def plot_kinematic_efficiency(self, jetR, beta, label):
+  def plot_kinematic_efficiency(self, jetR, beta, label):
     
     # (pt-det, pt-true, obs-det, obs-true)
     name_response = getattr(self, 'name_thn_rebinned_%s' % label)
@@ -830,7 +829,7 @@ class roounfold_ang(analysis_base.analysis_base):
     hResponse = getattr(self, name_response)
 
     # Fix pt-true, and plot the 2D sd-observable response
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_%s' label)
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_%s' % label)
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_%s' % label)
     for bin in range(1, n_pt_bins_truth-1):
       min_pt_truth = truth_pt_bin_array[bin]
@@ -890,7 +889,7 @@ class roounfold_ang(analysis_base.analysis_base):
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum
   #################################################################################################
-                  def plot_refolding_test(self, i, jetR, beta, label):
+  def plot_refolding_test(self, i, jetR, beta, label):
         
     output_dir_refolding = os.path.join(self.output_dir, 'Refolding')
     if not os.path.isdir(output_dir_refolding):
@@ -989,7 +988,7 @@ class roounfold_ang(analysis_base.analysis_base):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.plot_sd_closure_slice(hUnfolded2, hMC_Truth, i, jetR, beta label,
+      self.plot_sd_closure_slice(hUnfolded2, hMC_Truth, i, jetR, beta, label,
                                  min_pt_truth, max_pt_truth, output_dir_closure)
 
     # Closure test for pt dimension
