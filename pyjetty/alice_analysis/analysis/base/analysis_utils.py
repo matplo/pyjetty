@@ -23,8 +23,6 @@ import ROOT
 # Base class
 from pyjetty.alice_analysis.analysis.base import common_base
 
-from pyjetty.mputils import treereader
-
 ################################################################
 class analysis_utils(common_base.common_base):
   
@@ -72,14 +70,14 @@ class analysis_utils(common_base.common_base):
   # THn and a RooUnfoldResponse object, and write to file
   #---------------------------------------------------------------
   def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, label,
-                     n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, 
-                     n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, 
+                     n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array,
+                     n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array,
                      observable, power_law_offset=0.):
   
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, 
-                                         n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, 
-                                         truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
+                                         n_obs_bins_det, det_obs_bin_array, n_pt_bins_truth,
+                                         truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array)
     
     # Create empty RooUnfoldResponse with specified binning
     hist_measured = thn_rebinned.Projection(2, 0)
@@ -111,11 +109,11 @@ class analysis_utils(common_base.common_base):
       for bin_1 in range(0, thn.GetAxis(1).GetNbins() + 2):
         pt_true = thn.GetAxis(1).GetBinCenter(bin_1)
         for bin_2 in range(0, thn.GetAxis(2).GetNbins() + 2):
-          theta_det = thn.GetAxis(2).GetBinCenter(bin_2)
+          obs_det = thn.GetAxis(2).GetBinCenter(bin_2)
           for bin_3 in range(0, thn.GetAxis(3).GetNbins() + 2):
-            theta_true = thn.GetAxis(3).GetBinCenter(bin_3)
+            obs_true = thn.GetAxis(3).GetBinCenter(bin_3)
             
-            x_list = (pt_det, pt_true, theta_det, theta_true)
+            x_list = (pt_det, pt_true, obs_det, obs_true)
             x = array('d', x_list)
             global_bin = thn.GetBin(x)
             content = thn.GetBinContent(global_bin)
@@ -123,23 +121,23 @@ class analysis_utils(common_base.common_base):
             # Impose a custom prior, if desired
             if math.fabs(power_law_offset) > 1e-3 :
               #print('Scaling prior by power_law_offset={}'.format(power_law_offset))
-              if pt_true > 0. and theta_true > 0.:
+              if pt_true > 0. and obs_true > 0.:
 
                 scale_factor = math.pow(pt_true, power_law_offset)
                 
                 if observable == 'zg':
-                  scale_factor *= math.pow(theta_true, power_law_offset)
+                  scale_factor *= math.pow(obs_true, power_law_offset)
                 if observable == 'theta_g':
-                  scale_factor *= (1 + theta_true)
+                  scale_factor *= (1 + obs_true)
 
                 content = content*scale_factor
           
-            # THn is filled as (pt_det, pt_true, theta_det, theta_true)
+            # THn is filled as (pt_det, pt_true, obs_det, obs_true)
             thn_rebinned.Fill(x, content)
-            #print('Fill ({}, {}, {}, {}) to response'.format(pt_det, pt_true, theta_det, theta_true))
+            #print('Fill ({}, {}, {}, {}) to response'.format(pt_det, pt_true, obs_det, obs_true))
             
-            # RooUnfoldResponse should be filled (pt_det, theta_det, pt_true, theta_true)
-            roounfold_response.Fill(pt_det, theta_det, pt_true, theta_true, content)
+            # RooUnfoldResponse should be filled (pt_det, obs_det, pt_true, obs_true)
+            roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
 
     print('writing response...')
     f = ROOT.TFile(response_file_name, 'UPDATE')
@@ -149,104 +147,9 @@ class analysis_utils(common_base.common_base):
     print('done')
 
   #---------------------------------------------------------------
-  # Construct 2D (pt, theta) histogram according to specified binnings
-  # Note: automatically fills under/over-flow bins (needed for SD tagging rate)
-  #---------------------------------------------------------------
-  def construct_data_histograms(self, tree_file_name, name_data, n_pt_bins, pt_bin_array, 
-                                n_rg_bins, rg_bin_array):
-    
-    # Create empty TH2 with appropriate binning
-    name = '%s_rebinned' % name_data
-    h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_rg_bins, rg_bin_array)
-    h.Sumw2()
-    
-    # Loop through tree and fill each entry into histogram
-    tr = treereader.RTreeReader(tree_name='t',
-                                branches = ['j_pt', 'sd_j_dR'],
-                                file_name=tree_file_name)
-      
-    for i in range(tr.tree.GetEntries()):
-      tr.tree.GetEntry(i)
-      if tr.j_pt.size() > 0:
-        
-        pt = tr.j_pt[0]
-        theta = tr.sd_j_dR[0]
-        h.Fill(pt, theta)
-  
-    return h
-
-  #---------------------------------------------------------------
-  # Construct THn and RooUnfoldResponse object from tree,
-  # according to specified binnings, and write to file
-  #---------------------------------------------------------------
-  def construct_response_histograms(self, tree_file_name, response_file_name, name_thn_rebinned, 
-                                    name_roounfold, jetR, sd_label, n_pt_bins_det, det_pt_bin_array, 
-                                    n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, 
-                                    truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, 
-                                    power_law_offset=0.):
-    
-    # Create empty THn with specified binnings
-    thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array)
-    
-    # Create empty RooUnfoldResponse with specified binning
-    hist_measured = thn_rebinned.Projection(2, 0)
-    hist_measured.SetName('hist_measured_R{}_{}'.format(jetR, sd_label))
-    hist_truth = thn_rebinned.Projection(3, 1)
-    hist_truth.SetName('hist_truth_R{}_{}'.format(jetR, sd_label))
-    roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name_roounfold, name_roounfold) # Sets up binning
-    
-    # Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold
-    #roounfold_response.UseOverflow(True)
-    
-    # Loop through tree and fill response objects
-    self.fill_response_histograms(tree_file_name, response_file_name, thn_rebinned, roounfold_response, power_law_offset)
-  
-  #---------------------------------------------------------------
-  # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
-  #---------------------------------------------------------------
-  def fill_response_histograms(self, tree_file_name, response_file_name, thn_rebinned, roounfold_response, power_law_offset=0.):
-    
-    tr = treereader.RTreeReader(tree_name='t',
-                                branches = ['j_pt', 'ej_pt', 'sd_j_dR', 'sd_ej_dR'],
-                                file_name=tree_file_name)
-      
-    for i in range(tr.tree.GetEntries()):
-      tr.tree.GetEntry(i)
-      if tr.j_pt.size() > 0 and tr.ej_pt.size() > 0:
-        
-        pt_det = tr.ej_pt[0]
-        pt_true = tr.j_pt[0]
-        theta_det = tr.sd_ej_dR[0]
-        theta_true = tr.sd_j_dR[0]
-      
-        # Impose a custom prior, if desired
-        content = 1
-        if math.fabs(power_law_offset) > 1e-3 :
-          #print('Scaling prior by power_law_offset={}'.format(power_law_offset))
-          if pt_true > 0.:
-            scale_factor = math.pow(pt_true, power_law_offset)
-            content = content*scale_factor
-              
-        # THn is filled as (pt_det, pt_true, theta_det, theta_true)
-        x_list = (pt_det, pt_true, theta_det, theta_true)
-        x = array('d', x_list)
-        thn_rebinned.Fill(x)
-        #print('Fill ({}, {}, {}, {}) to response'.format(pt_det, pt_true, theta_det, theta_true))
-        
-        # RooUnfoldResponse should be filled (pt_det, theta_det, pt_true, theta_true)
-        roounfold_response.Fill(pt_det, theta_det, pt_true, theta_true)
-
-      print('writing response...')
-      f = ROOT.TFile(response_file_name, 'UPDATE')
-      thn_rebinned.Write()
-      roounfold_response.Write()
-      f.Close()
-      print('done')
-
-  #---------------------------------------------------------------
   # Create an empty THn according to specified binnings
   #---------------------------------------------------------------
-  def create_empty_thn(self, name, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array):
+  def create_empty_thn(self, name, n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array):
     
     # Create THn of response
     dim = 0;
@@ -270,18 +173,18 @@ class analysis_utils(common_base.common_base):
     max.append(truth_pt_bin_array[-1])
     dim+=1
       
-    title.append('#theta_{g,det}')
-    nbins.append(n_rg_bins_det)
-    bin_edges.append(det_rg_bin_array)
-    min.append(det_rg_bin_array[0])
-    max.append(det_rg_bin_array[-1])
+    title.append('#obs_{det}')
+    nbins.append(n_obs_bins_det)
+    bin_edges.append(det_obs_bin_array)
+    min.append(det_obs_bin_array[0])
+    max.append(det_obs_bin_array[-1])
     dim+=1
 
-    title.append('#theta_{g,truth}')
-    nbins.append(n_rg_bins_truth)
-    bin_edges.append(truth_rg_bin_array)
-    min.append(truth_rg_bin_array[0])
-    max.append(truth_rg_bin_array[-1])
+    title.append('#obs_{truth}')
+    nbins.append(n_obs_bins_truth)
+    bin_edges.append(truth_obs_bin_array)
+    min.append(truth_obs_bin_array[0])
+    max.append(truth_obs_bin_array[-1])
     dim+=1
       
     nbins = (nbins)
@@ -416,28 +319,6 @@ class analysis_utils(common_base.common_base):
         h.SetBinContent(bin, new_content)
         h.SetBinError(bin, new_error_up)
   
-  #---------------------------------------------------------------
-  # Get regularization parameter
-  #---------------------------------------------------------------
-  def get_reg_param(self, sd_settings, sd_config_list, sd_config_dict, sd_label, observable, jetR):
-    
-    for i, sd_setting in enumerate(sd_settings):
-      
-      zcut = sd_setting[0]
-      beta = sd_setting[1]
-      label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
-      if label == sd_label:
-        
-        config_name = sd_config_list[i]
-        
-        reg_param = sd_config_dict[config_name]['reg_param'][observable][jetR]
-        #print('reg_param for {} {} jetR={}: {}'.format(sd_label, observable, jetR, reg_param))
-          
-        return reg_param
-      
-      else:
-        continue
-
   #---------------------------------------------------------------
   # Remove periods from a label
   #---------------------------------------------------------------

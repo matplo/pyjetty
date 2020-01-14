@@ -12,7 +12,7 @@ import yaml
 # Analysis utilities
 #sys.path.append('/mnt/pyjetty')
 #print(sys.path)
-from pyjetty.alice_analysis.analysis.base import analysis_utils
+import analysis_utils_sd
 from pyjetty.alice_analysis.analysis.base import analysis_base
 
 # Load the RooUnfold library
@@ -34,6 +34,7 @@ class roounfold_sd(analysis_base.analysis_base):
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, power_law_offset=0., **kwargs):
     
     super(roounfold_sd, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
+    self.utils = analysis_utils_sd.analysis_utils_sd()
     
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
