@@ -77,12 +77,12 @@ class process_base(common_base.common_base):
   #---------------------------------------------------------------
   # Compare two jets and store matching candidates in user_info
   #---------------------------------------------------------------
-  def set_matching_candidates(self, jet1, jet2, jetR, hname, fill_jet1_matches_only=False):
+  def set_matching_candidates(self, jet1, jet2, hname, fill_jet1_matches_only=False):
   
     # Fill histogram of matching distance of all candidates
     deltaR = jet1.delta_R(jet2)
     if hname:
-      getattr(self, hname.format(jetR)).Fill(jet1.pt(), deltaR)
+      getattr(self, hname).Fill(jet1.pt(), deltaR)
   
     # Add a matching candidate to the list if it is within the geometrical cut
     if deltaR < self.jet_matching_distance*jetR:

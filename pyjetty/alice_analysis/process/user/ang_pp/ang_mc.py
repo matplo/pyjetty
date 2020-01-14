@@ -327,7 +327,7 @@ class process_ang_mc(process_base.process_base):
     '''
 
     # Loop through jets and set jet matching candidates for each jet in user_info
-    [ [ self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}') 
+    [ [ self.set_matching_candidates(jet_det, jet_truth, 'hDeltaR_All_R%s' % (jetR.replace('.', ''))) 
         for jet_truth in jets_truth_selected_matched ] for jet_det in jets_det_selected ]
    
     # Loop through jets and set accepted matches
