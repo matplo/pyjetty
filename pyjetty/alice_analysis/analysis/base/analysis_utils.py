@@ -71,8 +71,8 @@ class analysis_utils(common_base.common_base):
   # Rebin 4D THn response according to specified binnings, saving both a rebinned
   # THn and a RooUnfoldResponse object, and write to file
   #---------------------------------------------------------------
-  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, jetR, 
-                     sd_label, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, 
+  def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, label,
+                     n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array, 
                      n_pt_bins_truth, truth_pt_bin_array, n_rg_bins_truth, truth_rg_bin_array, 
                      observable, power_law_offset=0.):
   
@@ -83,9 +83,9 @@ class analysis_utils(common_base.common_base):
     
     # Create empty RooUnfoldResponse with specified binning
     hist_measured = thn_rebinned.Projection(2, 0)
-    hist_measured.SetName('hist_measured_R{}_{}'.format(jetR, sd_label))
+    hist_measured.SetName('hist_measured_%s' % label)
     hist_truth = thn_rebinned.Projection(3, 1)
-    hist_truth.SetName('hist_truth_R{}_{}'.format(jetR, sd_label))
+    hist_truth.SetName('hist_truth_%s' % label)
     roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name_roounfold, 
                                                 name_roounfold) # Sets up binning
     
@@ -156,7 +156,7 @@ class analysis_utils(common_base.common_base):
                                 n_rg_bins, rg_bin_array):
     
     # Create empty TH2 with appropriate binning
-    name = '{}_{}'.format(name_data, 'rebinned')
+    name = '%s_rebinned' % name_data
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_rg_bins, rg_bin_array)
     h.Sumw2()
     
