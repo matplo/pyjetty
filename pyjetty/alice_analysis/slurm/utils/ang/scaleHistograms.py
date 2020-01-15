@@ -21,7 +21,7 @@ ROOT.gROOT.SetBatch(True)
 
 ###################################################################################
 # Main function
-def scaleHistograms(configFile):
+def scaleHistograms(configFile, remove_unscaled):
 
   # Option to remove outliers from specified histograms
   # If the average bin content stays below the "outlierLimit" for "outlierNBinsThreshold" bins, it is removed
@@ -74,6 +74,8 @@ def scaleHistograms(configFile):
         print('obj not found!')
 
       obj.Write("%sScaled" % obj.GetName())
+      if remove_unscaled:
+        f.Delete("%s;1" % obj.GetName())  # Remove unscaled histogram
 
     f.Close()
 
@@ -345,11 +347,13 @@ if __name__ == '__main__':
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
                       default='analysis_config.yaml',
-                      help="Path of config file for jetscape analysis")
+                      help="Path of config file for analysis")
+  parser.add_argument("-r", "--remove_unscaled", help="Remove unscaled histograms",
+                      action="store_true")
   
   # Parse the arguments
   args = parser.parse_args()
-  
+
   print('Configuring...')
   print('configFile: \'{0}\''.format(args.configFile))
   print('----------------------------------------------------------------')
@@ -359,4 +363,7 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  scaleHistograms(configFile = args.configFile)
+  if args.remove_unscaled:
+    print("WARNING: Will remove unscaled histograms from stage 1 ROOT files.")
+
+  scaleHistograms(configFile=args.configFile, remove_unscaled=args.remove_unscaled)

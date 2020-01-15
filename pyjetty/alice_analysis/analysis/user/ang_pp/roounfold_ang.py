@@ -17,7 +17,7 @@ from pyjetty.alice_analysis.analysis.base import analysis_base
 
 # Load the RooUnfold library
 #ROOT.gSystem.Load("$ALIBUILD_WORK_DIR/slc7_x86-64/RooUnfold/latest/lib/libRooUnfold.so")
-ROOT.gSystem.Load('/home/ezra/RooUnfold/build/libRooUnfold.dylib')
+ROOT.gSystem.Load('/home/ezra/RooUnfold/libRooUnfold.so')
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -123,7 +123,7 @@ class roounfold_ang(analysis_base.analysis_base):
         for i, pTmin in list(enumerate(pt_bins_det))[0:-1]:
           pTmax = pt_bins_det[i+1]
           name_data = 'hLambda_pT%i-%i_%s_mcdetScaled' % (pTmin, pTmax, conf)
-          name_data_rebinned = 'hLambda_pT%i-%i_%s_rebinned' % (pTmin, pTmax, conf)
+          name_data_rebinned = '%s_rebinned' % name_data
           setattr(self, 'name_data_pT%i-%i_%s' % (pTmin, pTmax, conf), name_data)
           setattr(self, 'name_data_rebinned_pT%i-%i_%s' % (pTmin, pTmax, conf), name_data_rebinned)
             
@@ -150,7 +150,6 @@ class roounfold_ang(analysis_base.analysis_base):
 
         name_thn = getattr(self, 'name_thn_%s' % label)
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_%s' % label)
-        name_data = getattr(self, 'name_data_%s' % label)
         name_roounfold = getattr(self, 'name_roounfold_%s' % label)
 
         # Retrieve desired binnings
@@ -175,12 +174,15 @@ class roounfold_ang(analysis_base.analysis_base):
                                     n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
                                     self.observable, self.power_law_offset)
           
-        # Also re-bin the data histogram
-        hData = self.fData.Get(name_data)
-        h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array)
-        h.SetDirectory(0)
-        name = '%s_rebinned' % name_data
-        setattr(self, name, h)
+        # Also re-bin the data histograms
+        for i, pTmin in list(enumerate(pt_bins_det))[0:-1]:
+          pTmax = pt_bins_det[i+1]
+          name_data = getattr(self, 'name_data_pT%i-%i_%s' % (pTmin, pTmax, label))
+          hData = self.fData.Get(name_data)
+          h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array)
+          h.SetDirectory(0)
+          name_data_rebinned = getattr(self, 'name_data_rebinned_pT%i-%i_%s' % (pTmin, pTmax, label))
+          setattr(self, name, h)
 
         # Retrieve responses from file
         f = ROOT.TFile(response_file_name, 'READ')
