@@ -23,7 +23,7 @@ import yaml
 
 # Analysis utilities
 from pyjetty.alice_analysis.analysis.base import common_base
-from pyjetty.alice_analysis.analysis.base import analysis_utils
+from pyjetty.alice_analysis.analysis.user import analysis_utils_sd
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -49,7 +49,7 @@ class plot_rg_performance(common_base.common_base):
     self.output_dir = output_dir
     
     # Initialize utils class
-    self.utils = analysis_utils.analysis_utils()
+    self.utils = analysis_utils_sd.analysis_utils_sd()
     
     # Create output dir
     if not self.output_dir.endswith('/'):

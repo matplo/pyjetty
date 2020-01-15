@@ -11,7 +11,7 @@ import ROOT
 import yaml
 
 from pyjetty.alice_analysis.analysis.base import common_base
-from pyjetty.alice_analysis.analysis.base import analysis_utils
+import analysis_utils_sd
 import roounfold_sd
 
 # Prevent ROOT from stealing focus when plotting
@@ -28,7 +28,7 @@ class run_sd_analysis(common_base.common_base):
     self.config_file = config_file
     
     # Initialize utils class
-    self.utils = analysis_utils.analysis_utils()
+    self.utils = analysis_utils_sd.analysis_utils_sd()
     
     # Initialize yaml config
     self.initialize_config()

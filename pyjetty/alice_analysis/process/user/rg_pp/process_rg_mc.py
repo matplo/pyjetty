@@ -452,7 +452,7 @@ class process_rg_mc(process_base.process_base):
   
     # Loop through jets and set jet matching candidates for each jet in user_info
     if self.is_pp:
-        [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}') for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+        [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR)) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
         [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, 'hDeltaR_combined_ppdet_R{}', fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
