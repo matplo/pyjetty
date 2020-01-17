@@ -127,8 +127,11 @@ class analysis_utils(common_base.common_base):
                 
                 if observable == 'zg':
                   scale_factor *= math.pow(obs_true, power_law_offset)
-                if observable == 'theta_g':
+                elif observable == 'theta_g':
                   scale_factor *= (1 + obs_true)
+                elif observable == "ang":
+                  # TODO
+                  pass
 
                 content = content*scale_factor
           

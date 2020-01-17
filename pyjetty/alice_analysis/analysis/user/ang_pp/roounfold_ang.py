@@ -81,12 +81,16 @@ class roounfold_ang(analysis_base.analysis_base):
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
+      self.config = config
 
       # Retrieve list of configuration settings
       self.jetR_list = config['jetR']
       self.beta_list = config['betas']
       self.config_dict = config['configs']
       self.config_list = list(self.config_dict.keys())
+
+      # For some plots
+      self.ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
 
       # Retrieve histogram binnings for each setting
       for i, conf in enumerate(self.config_list):
@@ -114,18 +118,16 @@ class roounfold_ang(analysis_base.analysis_base):
         truth_lambda_bin_array = array('d', lambda_bins_truth)
         setattr(self, 'truth_bin_array_%s' % conf, truth_lambda_bin_array)
 
-        name_thn = 'hResponse_JetPt_lambda_%sScaled' % conf
-        name_thn_rebinned = 'hResponse_JetPt_lambda_%s_rebinned' % conf
+        name_thn = 'hResponse_JetpT_lambda_%sScaled' % conf
+        name_thn_rebinned = 'hResponse_JetpT_lambda_%s_rebinned' % conf
         name_roounfold = 'roounfold_response_%s' % conf
+        name_data = 'hLambda_JetpT_%s' % conf
+        name_data_rebinned = '%s_rebinned' % name_data
         setattr(self, 'name_roounfold_%s' % conf, name_roounfold)
         setattr(self, 'name_thn_%s' % conf, name_thn)
         setattr(self, 'name_thn_rebinned_%s' % conf, name_thn_rebinned)
-        for i, pTmin in list(enumerate(pt_bins_det))[0:-1]:
-          pTmax = pt_bins_det[i+1]
-          name_data = 'hLambda_pT%i-%i_%s_mcdetScaled' % (pTmin, pTmax, conf)
-          name_data_rebinned = '%s_rebinned' % name_data
-          setattr(self, 'name_data_pT%i-%i_%s' % (pTmin, pTmax, conf), name_data)
-          setattr(self, 'name_data_rebinned_pT%i-%i_%s' % (pTmin, pTmax, conf), name_data_rebinned)
+        setattr(self, 'name_data_%s' % conf, name_data)
+        setattr(self, 'name_data_rebinned_%s' % conf, name_data_rebinned)
             
       self.min_pt_reported = 20
       self.max_pt_reported = 80
@@ -172,17 +174,15 @@ class roounfold_ang(analysis_base.analysis_base):
           self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, label,
                                     n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
                                     n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
-                                    self.observable, self.power_law_offset)
-          
-        # Also re-bin the data histograms
-        for i, pTmin in list(enumerate(pt_bins_det))[0:-1]:
-          pTmax = pt_bins_det[i+1]
-          name_data = getattr(self, 'name_data_pT%i-%i_%s' % (pTmin, pTmax, label))
-          hData = self.fData.Get(name_data)
-          h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array)
-          h.SetDirectory(0)
-          name_data_rebinned = getattr(self, 'name_data_rebinned_pT%i-%i_%s' % (pTmin, pTmax, label))
-          setattr(self, name, h)
+                                    "ang", self.power_law_offset)
+
+        # Also re-bin the data histogram
+        name_data = getattr(self, 'name_data_%s' % label)
+        hData = self.fData.Get(name_data)
+        h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array)
+        h.SetDirectory(0)
+        name_data_rebinned = getattr(self, 'name_data_rebinned_%s' % label)
+        setattr(self, name_data_rebinned, h)
 
         # Retrieve responses from file
         f = ROOT.TFile(response_file_name, 'READ')
@@ -210,7 +210,7 @@ class roounfold_ang(analysis_base.analysis_base):
     self.utils.plot_hist(hData_PerBin, outputFilename, 'colz', False, True)
 
     hDataProj = hData_PerBin.ProjectionY()
-    hDataProj.SetName('{}_{}'.format(hDataProj.GetName(), 'proj'))
+    hDataProj.SetName('%s_proj' % hDataProj.GetName())
     outputFilename = os.path.join(self.output_dir, 'hData_proj_%s%s' % (label, self.file_format))
     self.utils.plot_hist(hDataProj, outputFilename)
 
@@ -224,99 +224,16 @@ class roounfold_ang(analysis_base.analysis_base):
 
     # Get MC-det and MC-truth 2D projections for unfolding closure test
     name = 'hMC_Det_%s' % label
-    hMC_Det = self.get_MCdet2D(jetR, beta, label)
+    hMC_Det = self.get_MCdet2D(label)
     setattr(self, name, hMC_Det)
 
     name = 'hMC_Truth_%s' % label
-    hMC_Truth = self.get_MCtruth2D(jetR, beta, label)
+    hMC_Truth = self.get_MCtruth2D(label)
     setattr(self, name, hMC_Truth)
-
-    # Compute tagging rate
-    self.compute_tagging_rate(jetR, beta, label)
 
     # Unfold spectrum
     if hData_PerBin and hMC_Det and hMC_Truth:
       self.unfoldJetSpectrum(jetR, beta, label)
-
-  #################################################################################################
-  # Compute tagging rate, based on MC correction
-  #################################################################################################
-  def compute_tagging_rate(self, jetR, beta, label):
-
-    # Get truth binnings, since we need to rebin the det-level histograms
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_%s' % label)
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_%s' % label)
-    n_bins_truth = getattr(self, 'n_bins_truth_%s' % label)
-    truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
-
-    # Create a histogram to store the tagging fractions
-    name = 'hTaggingFractions_%s' % label
-    h = ROOT.TH1F(name, name, n_pt_bins_truth, truth_pt_bin_array)
-
-    # Get relevant histograms
-    name = getattr(self, 'name_data_rebinned_%s' % label)
-    hData2D = getattr(self, name).Clone()
-    hData2D.SetName('{}_tagging'.format(hData2D.GetName()))
-    hData2D_rebinned = self.utils.rebin_data(hData2D, name, n_pt_bins_truth, truth_pt_bin_array,
-                                             n_bins_truth, truth_bin_array)
-
-    name = 'hMC_Det_%s' % label
-    hMC_Det = getattr(self, name).Clone()
-    hMC_Det.SetName('{}_tagging'.format(hMC_Det.GetName()))
-    hMC_Det_rebinned = self.utils.rebin_data(hMC_Det, name, n_pt_bins_truth, truth_pt_bin_array,
-                                             n_bins_truth, truth_bin_array)
-
-    name = 'hMC_Truth_%s' % label
-    hMC_Truth = getattr(self, name).Clone()
-    hMC_Truth.SetName('{}_tagging'.format(hMC_Truth.GetName()))
-
-    # Compute the tagging fraction for each pt bin
-    for bin in range(1, n_pt_bins_truth - 3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
-
-      fraction_tagged = self.get_tagging_rate(jetR, min_pt_truth, max_pt_truth,
-                                              hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
-
-      x = (min_pt_truth + max_pt_truth) / 2.
-      bin = h.FindBin(x)
-      h.SetBinContent(bin, fraction_tagged)
-
-    fResult_name = getattr(self, 'fResult_name_%s' % label)
-    fResult = ROOT.TFile(fResult_name, 'UPDATE')
-    h.Write()
-    fResult.Close()
-
-  #################################################################################################
-  # Compute tagging rate, based on MC correction
-  #################################################################################################
-  def get_tagging_rate(self, jetR, min_pt_truth, max_pt_truth, hData2D, hMC_Det2D, hMC_Truth2D):
-
-    hData2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hData = hData2D.ProjectionY()
-    n_jets_inclusive = hData.Integral(0, hData.GetNbinsX()+1)
-    n_jets_tagged = hData.Integral(1, hData.GetNbinsX())
-    fraction_tagged_data =  n_jets_tagged/n_jets_inclusive
-    #print('fraction_tagged_data: {}'.format(fraction_tagged_data))
-
-    hMC_Det2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hMC_Det = hMC_Det2D.ProjectionY()
-    n_jets_inclusive = hMC_Det.Integral(0, hMC_Det.GetNbinsX()+1)
-    n_jets_tagged = hMC_Det.Integral(1, hMC_Det.GetNbinsX())
-    fraction_tagged_mc_det =  n_jets_tagged/n_jets_inclusive
-    #print('fraction_tagged_mc_det: {}'.format(fraction_tagged_mc_det))
-
-    hMC_Truth2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hMC_Truth = hMC_Truth2D.ProjectionY()
-    n_jets_inclusive = hMC_Truth.Integral(0, hMC_Truth.GetNbinsX()+1)
-    n_jets_tagged = hMC_Truth.Integral(1, hMC_Truth.GetNbinsX())
-    fraction_tagged_mc_truth =  n_jets_tagged/n_jets_inclusive
-    #print('fraction_tagged_mc_truth: {}'.format(fraction_tagged_mc_truth))
-
-    fraction_tagged = fraction_tagged_data * fraction_tagged_mc_truth / fraction_tagged_mc_det
-    #print('fraction_tagged: {}'.format(fraction_tagged))
-
-    return fraction_tagged
 
   #################################################################################################
   # Unfold jet spectrum
@@ -360,7 +277,7 @@ class roounfold_ang(analysis_base.analysis_base):
       hUnfolded = unfoldBayes.Hreco(self.errorType) # Produces the truth distribution, with errors, PerBin (will scale by bin width below, after refolding checks)
 
       # Save unfolded solution as class member
-      name = 'hUnfolded_{}_{}_{}'.format(self.observable, label, i)
+      name = 'hUnfolded_lambda_%s_%i' % (label, i)
       hUnfolded.SetName(name)
       setattr(self, name, hUnfolded)
       hUnfolded.SetDirectory(0)
@@ -444,7 +361,7 @@ class roounfold_ang(analysis_base.analysis_base):
     truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(self.xtitle)
+    myBlankHisto.SetXTitle('#lambda_{%s}, R=%s' % (beta, jetR))
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(self.ytitle)
     myBlankHisto.SetMaximum(4)
@@ -519,8 +436,8 @@ class roounfold_ang(analysis_base.analysis_base):
       else:
         h.DrawCopy('PE X0 same')
 
-      label = '{} = {}'.format(self.regularizationParamName, i)
-      leg.AddEntry(h, label, 'Pe')
+      la = '{} = {}'.format(self.regularizationParamName, i)
+      leg.AddEntry(h, la, 'Pe')
 
     leg.Draw()
 
@@ -538,14 +455,14 @@ class roounfold_ang(analysis_base.analysis_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(config["zcut"]) + '   sd_#beta = ' + str(config["sd_beta"])
+    text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(self.config["zcut"]) + \
+           '   sd_#beta = ' + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.25, 0.75, text)
 
-    outputFilename = os.path.join(self.output_dir,
-                                  'hUnfolded{}_{}_{}_{}-{}{}'.format(option, self.observable, label,
-                                                                     int(min_pt_truth), int(max_pt_truth), 
-                                                                     self.file_format))
-    c.SaveAs(outputFilename)
+    fname_out = os.path.join(self.output_dir,
+                             'hUnfolded%s_lambda_%s_%i-%i%s' % (option, label, min_pt_truth,
+                                                                max_pt_truth, self.file_format))
+    c.SaveAs(fname_out)
     c.Close()
 
   #################################################################################################
@@ -553,11 +470,11 @@ class roounfold_ang(analysis_base.analysis_base):
   #################################################################################################
   def get_unfolded_result(self, label, i, min_pt_truth, max_pt_truth, option):
 
-    name = 'hUnfolded_{}_{}_{}'.format(self.observable, label, i)
+    name = 'hUnfolded_lambda_%s_%i' % (label, i)
     h2D = getattr(self, name)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     h = h2D.ProjectionY()
-    h.SetName('{}_{}'.format(h.GetName(), option))
+    h.SetName('%s_%s' % (h.GetName(), option))
 
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
     n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
@@ -588,7 +505,7 @@ class roounfold_ang(analysis_base.analysis_base):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
     
-    name = 'cResultPt_R{}_{}'.format(jetR, sd_label)
+    name = 'cResultPt_%s' % label
     c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
     
@@ -601,8 +518,8 @@ class roounfold_ang(analysis_base.analysis_base):
     myPad.Draw()
     myPad.cd()
     
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_%s' % label)
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_%s' % label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_pt_bins_truth, truth_pt_bin_array)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle('#it{p}_{T, ch jet}')
@@ -614,13 +531,13 @@ class roounfold_ang(analysis_base.analysis_base):
     
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
-    
-    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list,
-                                               self.sd_config_dict, sd_label, self.observable, jetR)
+
+    # TODO: Just hard code reg param for now
+    reg_param_final = 5 #self.utils.get_reg_param(self.settings, self.config_list, self.config_dict, label, "ang", jetR)
     
     for i in range(1, reg_param_final + 3):
       
-      name = 'hUnfolded_{}_{}_{}'.format(self.observable, label, i)
+      name = 'hUnfolded_lambda_%s_%i' % (label, i)
       h2D = getattr(self, name)
       h2D.GetXaxis().SetRangeUser(5., 120.)
       h = h2D.ProjectionX()
@@ -668,11 +585,11 @@ class roounfold_ang(analysis_base.analysis_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = "R = " + str(jetR) + "   z_{cut} = " + str(config["zcut"]) + "   sd_#beta = " + str(config["beta"])
+    text = "R = " + str(jetR) + "   z_{cut} = " + str(self.config["zcut"]) + \
+           "   sd_#beta = " + str(self.config["beta"])
     text_latex.DrawLatex(0.25, 0.75, text)
 
-    outputFilename = os.path.join(self.output_dir, "hUnfoldedPt_{}_{}{}".format(self.observable, label,
-                                                                                self.file_format))
+    outputFilename = os.path.join(self.output_dir, "hUnfoldedPt_lambda_%s%s" % (label, self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
@@ -746,7 +663,7 @@ class roounfold_ang(analysis_base.analysis_base):
     truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(self.xtitle)
+    myBlankHisto.SetXTitle('#lambda_{%s}, R=%s' % (beta, jetR))
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('#varepsilon_{kin}')
     myBlankHisto.SetMaximum(1.2)
@@ -804,7 +721,7 @@ class roounfold_ang(analysis_base.analysis_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'z_{cut} = ' + str(config["zcut"]) + '   sd_#beta = ' + str(config["sd_beta"])
+    text = 'z_{cut} = ' + str(self.config["zcut"]) + '   sd_#beta = ' + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.3, 0.75, text)
     
     line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
@@ -897,7 +814,7 @@ class roounfold_ang(analysis_base.analysis_base):
     if not os.path.isdir(output_dir_refolding):
       os.makedirs(output_dir_refolding)
     
-    hUnfolded = getattr(self, 'hUnfolded_{}_{}_{}'.format(self.observable, label, i))
+    hUnfolded = getattr(self, 'hUnfolded_lambda_%s_%i' % (label, i))
     response = getattr(self, 'roounfold_response_%s' % label)
     
     hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment)
@@ -1089,7 +1006,7 @@ class roounfold_ang(analysis_base.analysis_base):
   #################################################################################################
   # Get MC-det 2D projection
   #################################################################################################
-  def get_MCdet2D(self, jetR, label):
+  def get_MCdet2D(self, label):
     
     # (pt-det, pt-true, obs-det, obs-true)
     name_response = getattr(self, 'name_thn_rebinned_%s' % label)
@@ -1105,7 +1022,7 @@ class roounfold_ang(analysis_base.analysis_base):
   #################################################################################################
   # Get MC-det 2D projection
   #################################################################################################
-  def get_MCtruth2D(self, jetR, label):
+  def get_MCtruth2D(self, label):
     
     # (pt-det, pt-true, obs-det, obs-true)
     name_response = getattr(self, 'name_thn_rebinned_%s' % label)
@@ -1145,26 +1062,22 @@ class roounfold_ang(analysis_base.analysis_base):
     h.SetLineStyle(1)
     
     h.Scale(1./h.Integral(), scalingOptions)
-    if '_pt_' in outputFilename:
+    if '_pt_' in outputFilename.lower():
       h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{p}_{T}}')
     else:
       h.GetYaxis().SetTitle(yAxisTitle)
     
     h.GetYaxis().SetTitleSize(0.06)
-    if self.observable == 'theta_g':
-      if '_pt_' in outputFilename:
-        h.GetYaxis().SetRangeUser(1e-4, 10.)
-      else:
-        h.GetYaxis().SetRangeUser(0., 3.)
 
-    if self.observable == 'zg':
-      if '_pt_' in outputFilename:
-        h.GetYaxis().SetRangeUser(1e-4, 10.)
-      else:
-        h.GetYaxis().SetRangeUser(0., 8.)
+    # TODO: Put in correct values
+    if '_pt_' in outputFilename.lower():
+      h.GetYaxis().SetRangeUser(1e-4, 10.)
+    else:
+      h.GetYaxis().SetRangeUser(0., 8.)
+
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
-    xAxisTitle = self.xtitle
+    xAxisTitle = '#lambda_{%s}, R=%s' % (beta, jetR)
     h.GetXaxis().SetTitle("")
     
     h2.SetLineColor(4)
@@ -1261,7 +1174,7 @@ class roounfold_ang(analysis_base.analysis_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'z_{cut} = ' + str(label["zcut"]) + '   sd_#beta = ' + str(config["sd_beta"])
+    text = 'z_{cut} = ' + str(self.config["zcut"]) + '   sd_#beta = ' + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.25, 0.65, text)
 
     c.SaveAs(outputFilename)
@@ -1288,20 +1201,19 @@ if __name__ == '__main__':
                       default='./unfolding_output/',
                       help='Output directory for plots to be written to')
   parser.add_argument('-i', '--imageFormat', action='store',
-                      type=str, metavar='imageFormat',
-                      default='.pdf',
+                      type=str, metavar='imageFormat', default='.pdf',
                       help='Image format to save plots in, e.g. \".pdf\" or \".png\"')
                       
   # Parse the arguments
   args = parser.parse_args()
-  
+
   print('Configuring...')
   print('inputFileData: \'{0}\''.format(args.inputFileData))
   print('inputFileResponse: \'{0}\''.format(args.inputFileResponse))
   print('configFile: \'{0}\''.format(args.configFile))
   print('ouputDir: \'{0}\''.format(args.outputDir))
   print('imageFormat: \'{0}\''.format(args.imageFormat))
-  
+
   # If invalid inputFile is given, exit
   if not os.path.exists(args.inputFileData):
     print('File \"{0}\" does not exist! Exiting!'.format(args.inputFileData))
