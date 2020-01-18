@@ -90,7 +90,7 @@ class roounfold_ang(analysis_base.analysis_base):
       self.config_list = list(self.config_dict.keys())
 
       # For some plots
-      self.ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+      self.ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#lambda}'
 
       # Retrieve histogram binnings for each setting
       for i, conf in enumerate(self.config_list):
@@ -173,13 +173,14 @@ class roounfold_ang(analysis_base.analysis_base):
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
           self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, label,
                                     n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
-                                    n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
-                                    "ang", self.power_law_offset)
+                                    n_pt_bins_truth, truth_pt_bin_array, n_bins_truth,
+                                    truth_bin_array, "ang", self.power_law_offset)
 
         # Also re-bin the data histogram
         name_data = getattr(self, 'name_data_%s' % label)
         hData = self.fData.Get(name_data)
-        h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array)
+        h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, 
+                                  det_pt_bin_array, n_bins_det, det_bin_array)
         h.SetDirectory(0)
         name_data_rebinned = getattr(self, 'name_data_rebinned_%s' % label)
         setattr(self, name_data_rebinned, h)
@@ -361,7 +362,7 @@ class roounfold_ang(analysis_base.analysis_base):
     truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle('#lambda_{%s}, R=%s' % (beta, jetR))
+    myBlankHisto.SetXTitle('#lambda_{#beta=%s} with #it{R}=%s' % (beta, jetR))
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(self.ytitle)
     myBlankHisto.SetMaximum(4)
@@ -455,8 +456,8 @@ class roounfold_ang(analysis_base.analysis_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(self.config["zcut"]) + \
-           '   sd_#beta = ' + str(self.config["sd_beta"])
+    text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(self.config["sd_zcut"]) + \
+           '   #beta_{sd} = ' + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.25, 0.75, text)
 
     fname_out = os.path.join(self.output_dir,
@@ -491,6 +492,9 @@ class roounfold_ang(analysis_base.analysis_base):
   
     for bin in range(1, h.GetNbinsX() + 1):
       content = h.GetBinContent(bin)
+      # TODO: Figure out how to deal with empty bin
+      if content == 0:
+        continue
       uncertainty = h.GetBinError(bin)
       h.SetBinContent(bin, uncertainty / content * 100)
       h.SetBinError(bin, 0)
@@ -578,15 +582,15 @@ class roounfold_ang(analysis_base.analysis_base):
       
       h.DrawCopy("PE X0 same")
       
-      label = "{} = {}".format(self.regularizationParamName, i)
-      leg.AddEntry(h, label, 'Pe')
+      la = "{} = {}".format(self.regularizationParamName, i)
+      leg.AddEntry(h, la, 'Pe')
     
     leg.Draw()
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = "R = " + str(jetR) + "   z_{cut} = " + str(self.config["zcut"]) + \
-           "   sd_#beta = " + str(self.config["beta"])
+    text = "R = " + str(jetR) + "   z_{cut} = " + str(self.config["sd_zcut"]) + \
+           "   #beta_{sd} = " + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.25, 0.75, text)
 
     outputFilename = os.path.join(self.output_dir, "hUnfoldedPt_lambda_%s%s" % (label, self.file_format))
@@ -663,7 +667,7 @@ class roounfold_ang(analysis_base.analysis_base):
     truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle('#lambda_{%s}, R=%s' % (beta, jetR))
+    myBlankHisto.SetXTitle('#lambda_{#beta=%s} with #it{R}=%s' % (beta, jetR))
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('#varepsilon_{kin}')
     myBlankHisto.SetMaximum(1.2)
@@ -709,8 +713,8 @@ class roounfold_ang(analysis_base.analysis_base):
       
       h.DrawCopy('P X0 same')
       
-      label = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-      leg.AddEntry(h, label, 'Pe')
+      la = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+      leg.AddEntry(h, la, 'Pe')
     
     leg.Draw()
 
@@ -721,7 +725,8 @@ class roounfold_ang(analysis_base.analysis_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'z_{cut} = ' + str(self.config["zcut"]) + '   sd_#beta = ' + str(self.config["sd_beta"])
+    text = 'z_{cut} = ' + str(self.config["sd_zcut"]) + '   #beta_{sd} = ' \
+           + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.3, 0.75, text)
     
     line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
@@ -1077,7 +1082,7 @@ class roounfold_ang(analysis_base.analysis_base):
 
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
-    xAxisTitle = '#lambda_{%s}, R=%s' % (beta, jetR)
+    xAxisTitle = '#lambda_{#beta=%s} with #it{R}=%s' % (beta, jetR)
     h.GetXaxis().SetTitle("")
     
     h2.SetLineColor(4)
@@ -1174,7 +1179,8 @@ class roounfold_ang(analysis_base.analysis_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'z_{cut} = ' + str(self.config["zcut"]) + '   sd_#beta = ' + str(self.config["sd_beta"])
+    text = 'z_{cut} = ' + str(self.config["sd_zcut"]) + '   #beta_{sd} = ' \
+           + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.25, 0.65, text)
 
     c.SaveAs(outputFilename)
@@ -1183,7 +1189,7 @@ class roounfold_ang(analysis_base.analysis_base):
 #---------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
   # Define arguments
-  parser = argparse.ArgumentParser(description='Unfold sd-observable distribution')
+  parser = argparse.ArgumentParser(description='Unfold angularity distributions')
   parser.add_argument('-d', '--inputFileData', action='store',
                       type=str, metavar='inputFileData',
                       default='AnalysisResults.root',
@@ -1201,7 +1207,7 @@ if __name__ == '__main__':
                       default='./unfolding_output/',
                       help='Output directory for plots to be written to')
   parser.add_argument('-i', '--imageFormat', action='store',
-                      type=str, metavar='imageFormat', default='.pdf',
+                      type=str, metavar='imageFormat', default='.png',
                       help='Image format to save plots in, e.g. \".pdf\" or \".png\"')
                       
   # Parse the arguments
@@ -1229,5 +1235,5 @@ if __name__ == '__main__':
   analysis = roounfold_ang(input_file_data = args.inputFileData,
                           input_file_response = args.inputFileResponse, config_file = args.configFile,
                           output_dir = args.outputDir, file_format = args.imageFormat,
-                          rebin_response=True,  power_law_offset=0.)
+                          rebin_response=False,  power_law_offset=0.)
   analysis.roounfold_ang()
