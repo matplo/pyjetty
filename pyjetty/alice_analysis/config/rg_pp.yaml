@@ -7,6 +7,12 @@ jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.0
 
+Subjet:
+  subjet_R: [0.1, 0.2]
+  
+JetAxis:
+  axis_list: ['WTA', 'SD']
+
 # SoftDrop (zcut, beta) configurations and final binnings (note: binnings only used during analysis)
 SoftDrop:
   config1:

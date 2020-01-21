@@ -108,6 +108,24 @@ class process_rg_data(process_base.process_base):
         self.is_pp = False
     else:
         self.is_pp = True
+        
+    # Check if sub-jet analysis is activated
+    self.do_subjets = False
+    if 'Subjet' in config:
+      print('Subjet analysis activated')
+      self.do_subjets = True
+      self.subjet_R = config['Subjet']['subjet_R']
+      
+      self.subjet_def = {}
+      for subjetR in self.subjet_R:
+        self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+    
+    # Check if jet axis analysis is activated
+    self.do_jet_axes = False
+    if 'JetAxis' in config:
+      print('Jet axis analysis activated')
+      self.do_jet_axes = True
+      self.axis_list = config['JetAxis']['axis_list']
   
   #---------------------------------------------------------------
   # Initialize histograms
@@ -156,6 +174,24 @@ class process_rg_data(process_base.process_base):
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
           h.GetXaxis().SetTitle('p_{T,ch jet}')
           h.GetYaxis().SetTitle('z_{g,ch}')
+          setattr(self, name, h)
+          
+      if self.do_subjets:
+        for subjetR in self.subjet_R:
+        
+          name = 'hSubjetZ_JetPt_R{}_{}'.format(jetR, subjetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle('z_{subjet}')
+          setattr(self, name, h)
+      
+      if self.do_jet_axes:
+        for axis in self.axis_list:
+        
+          name = 'hJetAxisDeltaR_JetPt_Standard_{}_R{}'.format(axis, jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle('#Delta R')
           setattr(self, name, h)
 
   #---------------------------------------------------------------
@@ -209,7 +245,7 @@ class process_rg_data(process_base.process_base):
           
     # Loop through SD settings and fill SD histograms
     result = [[self.analyze_softdrop_jet(sd_setting, jet, jetR) for sd_setting in self.sd_settings] for jet in jets_selected]
-
+    
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
@@ -221,6 +257,10 @@ class process_rg_data(process_base.process_base):
     # Check additional acceptance criteria
     if not self.utils.is_det_jet_accepted(jet):
       return
+      
+    # Find subjets
+    if self.do_subjets:
+      result = [self.analyze_subjets(jet, jetR, subjetR) for subjetR in self.subjet_R]
     
     if not self.write_tree_output:
       self.fill_jet_histograms(jet, jetR)
@@ -259,6 +299,10 @@ class process_rg_data(process_base.process_base):
       self.fill_tree(jet, jet_sd, jetR, sd_label)
     else:
       self.fill_softdrop_histograms(jet_sd, jet, jetR, sd_label)
+      
+    # Fill jet axis difference
+    if self.do_jet_axes:
+      self.fill_jet_axis_histograms(jet, jet_sd, jetR)
 
   #---------------------------------------------------------------
   # Fill histograms
@@ -270,6 +314,17 @@ class process_rg_data(process_base.process_base):
     for constituent in jet.constituents():
       z = constituent.pt() / jet_pt
       hZ.Fill(jet_pt, z)
+
+  #---------------------------------------------------------------
+  # For a given jet, find subjets of a given radius, and fill histograms
+  #---------------------------------------------------------------
+  def analyze_subjets(self, jet, jetR, subjetR):
+
+    cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[subjetR])
+    subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
+    for subjet in subjets:
+      z = subjet.pt() / jet.pt()
+      getattr(self, 'hSubjetZ_JetPt_R{}_{}'.format(jetR, subjetR)).Fill(jet.pt(), z)
 
   #---------------------------------------------------------------
   # Fill soft drop histograms
@@ -291,6 +346,21 @@ class process_rg_data(process_base.process_base):
 
     if self.debug_level > 1:
       print('Done.')
+          
+  #---------------------------------------------------------------
+  # Fill jet axis histograms
+  #---------------------------------------------------------------
+  def fill_jet_axis_histograms(self, jet, jet_sd, jetR):
+
+    for axis in self.axis_list:
+      
+      if axis == 'SD':
+        deltaR = jet.delta_R(jet_sd)
+      
+      elif axis == 'WTA':
+        deltaR = jet.delta_R(self.utils.get_leading_constituent(jet))
+      
+      getattr(self, 'hJetAxisDeltaR_JetPt_Standard_{}_R{}'.format(axis, jetR)).Fill(jet.pt(), deltaR)
           
   #---------------------------------------------------------------
   # Fill tree

@@ -64,6 +64,19 @@ class process_utils(common_base.common_base):
     
     deltaR = np.sqrt(delta_phi*delta_phi + delta_eta*delta_eta)
     return deltaR
+    
+  #---------------------------------------------------------------
+  # Get the leading constituent of a jet
+  #---------------------------------------------------------------
+  def get_leading_constituent(self, jet):
+  
+    leading_particle = None
+    leading_particle_pt = 0.
+    for particle in jet.constituents():
+      if particle.pt() > leading_particle_pt:
+        leading_particle = particle
+      
+    return leading_particle
 
   #---------------------------------------------------------------
   # Remove periods from a label
