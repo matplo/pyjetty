@@ -77,7 +77,7 @@ class process_base(common_base.common_base):
   #---------------------------------------------------------------
   # Compare two jets and store matching candidates in user_info
   #---------------------------------------------------------------
-  def set_matching_candidates(self, jet1, jet2, hname, fill_jet1_matches_only=False):
+  def set_matching_candidates(self, jet1, jet2, jetR, hname, fill_jet1_matches_only=False):
   
     # Fill histogram of matching distance of all candidates
     deltaR = jet1.delta_R(jet2)
@@ -111,20 +111,22 @@ class process_base(common_base.common_base):
 
   #---------------------------------------------------------------
   # Set accepted jet matches for pp case
+  #
+  # hname is the name of a matching QA histogram that will be created
+  # it can be anything you want, e.g. 'hJetMatchingQA_R{}'.format(jetR)
   #---------------------------------------------------------------
-  def set_matches_pp(self, jet_det, jetR):
+  def set_matches_pp(self, jet_det, hname):
 
     # Create pp matching QA histogram, if not already created
-    if not hasattr(self, 'hJetMatchingQA_R{}'.format(jetR)):
-      name = 'hJetMatchingQA_R{}'.format(jetR)
+    if not hasattr(self, hname):
       bin_labels = ['all', 'has_matching_candidate', 'unique_match']
       nbins = len(bin_labels)
-      h = ROOT.TH2F(name, name, nbins, 0, nbins, 30, 0., 300.)
+      h = ROOT.TH2F(hname, hname, nbins, 0, nbins, 30, 0., 300.)
       for i in range(1, nbins+1):
         h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
-      setattr(self, name, h)
+      setattr(self, hname, h)
       
-    h = getattr(self, 'hJetMatchingQA_R{}'.format(jetR))
+    h = getattr(self, hname)
     h.Fill('all', jet_det.pt(), 1)
   
     if jet_det.has_user_info():
@@ -147,22 +149,24 @@ class process_base(common_base.common_base):
 
   #---------------------------------------------------------------
   # Set accepted jet matches for Pb-Pb case
+  #
+  # hname is the name of a matching QA histogram that will be created
+  # it can be anything you want, e.g. 'hJetMatchingQA_R{}'.format(jetR)
   #---------------------------------------------------------------
-  def set_matches_AA(self, jet_det_combined, jetR):
+  def set_matches_AA(self, jet_det_combined, jetR, hname):
   
     set_match = False
     
     # Create Pb-Pb matching QA histogram, if not already created
-    if not hasattr(self, 'hJetMatchingQA_R{}'.format(jetR)):
-      name = 'hJetMatchingQA_R{}'.format(jetR)
+    if not hasattr(self, hname):
       bin_labels = ['all', 'has_matching_ppdet_candidate', 'has_matching_pptrue_candidate', 'has_matching_pptrue_unique_candidate', 'mc_fraction', 'deltaR_combined-truth', 'passed_all_cuts']
       nbins = len(bin_labels)
-      h = ROOT.TH2F(name, name, nbins, 0, nbins,  30, 0., 300.)
+      h = ROOT.TH2F(hname, hname, nbins, 0, nbins,  30, 0., 300.)
       for i in range(1, nbins+1):
         h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
-      setattr(self, name, h)
+      setattr(self, hname, h)
     
-    h = getattr(self, 'hJetMatchingQA_R{}'.format(jetR))
+    h = getattr(self, hname)
     h.Fill('all', jet_det_combined.pt(), 1)
 
     # Check if combined jet has a pp-det match (uniqueness not currently enforced)

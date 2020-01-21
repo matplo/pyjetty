@@ -135,8 +135,9 @@ class process_rg_mc(process_base.process_base):
     self.write_tree_output = config['write_tree_output']
 
     self.jet_matching_distance = config['jet_matching_distance']
-    self.mc_fraction_threshold = config['mc_fraction_threshold']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
+    if 'mc_fraction_threshold' in config:
+      self.mc_fraction_threshold = config['mc_fraction_threshold']
     
     # Retrieve list of SD grooming settings
     sd_config_dict = config['SoftDrop']
@@ -148,6 +149,24 @@ class process_rg_mc(process_base.process_base):
         self.emb_file_list = config['emb_file_list']
     else:
         self.is_pp = True
+        
+    # Check if sub-jet analysis is activated
+    self.do_subjets = False
+    if 'Subjet' in config:
+      print('Subjet analysis activated')
+      self.do_subjets = True
+      self.subjet_R = config['Subjet']['subjet_R']
+      
+      self.subjet_def = {}
+      for subjetR in self.subjet_R:
+        self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+    
+    # Check if jet axis analysis is activated
+    self.do_jet_axes = False
+    if 'JetAxis' in config:
+      print('Jet axis analysis activated')
+      self.do_jet_axes = True
+      self.axis_list = config['JetAxis']['axis_list']
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -344,6 +363,66 @@ class process_rg_mc(process_base.process_base):
           for i in range(0, dim):
             h.GetAxis(i).SetTitle(title[i])
             setattr(self, name, h)
+            
+      if self.do_subjets:
+        for subjetR in self.subjet_R:
+        
+          name = 'hSubjetDeltaR_All_R{}_{}'.format(jetR, subjetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+          setattr(self, name, h)
+        
+          name = 'hSubjetZResidual_JetPt_R{}_{}'.format(jetR, subjetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, -0.5, 0.5)
+          h.GetXaxis().SetTitle('p_{T,truth}')
+          h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
+          setattr(self, name, h)
+          
+          # Create THn of response for subjet z
+          dim = 4;
+          title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
+          nbins = [100, 60, 100, 25]
+          min = [0., 0., 0., 0.]
+          max = [100., 300., 1., 1.]
+
+          name = 'hResponse_JetPt_SubjetZ_R{}_{}'.format(jetR, subjetR)
+          nbins = (nbins)
+          xmin = (min)
+          xmax = (max)
+          nbins_array = array('i', nbins)
+          xmin_array = array('d', xmin)
+          xmax_array = array('d', xmax)
+          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+          for i in range(0, dim):
+            h.GetAxis(i).SetTitle(title[i])
+            setattr(self, name, h)
+      
+      if self.do_jet_axes:
+        for axis in self.axis_list:
+        
+          name = 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+          h.GetXaxis().SetTitle('p_{T,truth}')
+          h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+          setattr(self, name, h)
+          
+          # Create THn of response for jet axis deltaR
+          dim = 4;
+          title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
+          nbins = [100, 60, 200, 40]
+          min = [0., 0., 0., 0.]
+          max = [100., 300., jetR, jetR]
+
+          name = 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)
+          nbins = (nbins)
+          xmin = (min)
+          xmax = (max)
+          nbins_array = array('i', nbins)
+          xmin_array = array('d', xmin)
+          xmax_array = array('d', xmax)
+          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+          for i in range(0, dim):
+            h.GetAxis(i).SetTitle(title[i])
+            setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -459,10 +538,11 @@ class process_rg_mc(process_base.process_base):
         [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{}') for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected]
         
     # Loop through jets and set accepted matches
+    hname = 'hJetMatchingQA_R{}'.format(jetR)
     if self.is_pp:
-        [self.set_matches_pp(jet_det, jetR) for jet_det in jets_det_selected]
+        [self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected]
     else:
-        [self.set_matches_AA(jet_det_combined, jetR) for jet_det_combined in jets_det_selected]
+        [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
     
     # Loop through jets and fill matching histograms
     result = [self.fill_matching_histograms(jet_det, jetR) for jet_det in jets_det_selected]
@@ -565,6 +645,55 @@ class process_rg_mc(process_base.process_base):
                 jet_pp_det_pt = jet_pp_det.pt()
                 delta_pt = (jet_pt_det_ungroomed - jet_pp_det_pt)
                 getattr(self, 'hDeltaPt_emb_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, delta_pt)
+                
+        if self.do_subjets:
+        
+          result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, jetR, subjetR) for subjetR in self.subjet_R]
+        
+  #---------------------------------------------------------------
+  # Loop through jets and fill matching histos
+  #---------------------------------------------------------------
+  def fill_subjet_matching_histograms(self, jet_det, jet_truth, jetR, subjetR):
+  
+    # Find subjets
+    cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
+    subjets_det = fj.sorted_by_pt(cs_subjet_det.inclusive_jets())
+
+    cs_subjet_truth = fj.ClusterSequence(jet_truth.constituents(), self.subjet_def[subjetR])
+    subjets_truth = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
+
+    # Loop through subjets and set subjet matching candidates for each subjet in user_info
+    if self.is_pp:
+        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hSubjetDeltaR_All_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
+    else:
+        # First fill the combined-to-pp matches, then the pp-to-pp matches
+        [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hSubjetDeltaR_combined_ppdet_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
+        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hSubjetDeltaR_ppdet_pptrue_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets]
+      
+    # Loop through subjets and set accepted matches
+    if self.is_pp:
+        [self.set_matches_pp(subjet_det, 'hSubjetMatchingQA_R{}_{}'.format(jetR, subjetR)) for subjet_det in subjets_det]
+    else:
+        [self.set_matches_AA(subjet_det_combined, subjetR, 'hSubjetMatchingQA_R{}_{}'.format(jetR, subjetR)) for subjet_det_combined in subjets_det]
+
+    # Loop through matches and fill histograms
+    for subjet_det in subjets_det:
+
+      if subjet_det.has_user_info():
+        subjet_truth = subjet_det.python_info().match
+      
+        if subjet_truth:
+          
+          z_det = subjet_det.pt() / jet_det.pt()
+          z_truth = subjet_truth.pt() / jet_truth.pt()
+
+          x = ([jet_det.pt(), jet_truth.pt(), z_det, z_truth])
+          x_array = array('d', x)
+          getattr(self, 'hResponse_JetPt_SubjetZ_R{}_{}'.format(jetR, subjetR)).Fill(x_array)
+
+          if z_truth > 1e-5:
+            z_resolution = (z_det - z_truth) / z_truth
+            getattr(self, 'hSubjetZResidual_JetPt_R{}_{}'.format(jetR, subjetR)).Fill(jet_truth.pt(), z_resolution)
 
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
@@ -600,15 +729,42 @@ class process_rg_mc(process_base.process_base):
         jet_det_sd = sd.result(jet_det)
         jet_truth_sd = sd.result(jet_truth)
       
-        self.fill_response(tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label)
+        self.fill_sd_response(tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label)
         
         if not self.is_pp:
           self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_sd, sd, jet_pt_truth_ungroomed, jetR, sd_label)
+          
+        # Fill jet axis difference
+        if self.do_jet_axes:
+          self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR)
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_response(self, tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label):
+  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR):
+          
+    for axis in self.axis_list:
+      
+      if axis == 'SD':
+        deltaR_det = jet_det.delta_R(jet_det_sd)
+        deltaR_truth = jet_truth.delta_R(jet_truth_sd)
+      
+      elif axis == 'WTA':
+        deltaR_det = jet_det.delta_R(self.utils.get_leading_constituent(jet_det))
+        deltaR_truth = jet_truth.delta_R(self.utils.get_leading_constituent(jet_truth))
+         
+      x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+      x_array = array('d', x)
+      getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)).Fill(x_array)
+      
+      if deltaR_truth > 1e-5:
+        axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+        getattr(self, 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)).Fill(jet_truth.pt(), axis_resolution)
+
+  #---------------------------------------------------------------
+  # Fill response histograms
+  #---------------------------------------------------------------
+  def fill_sd_response(self, tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label):
     
     # Get various SoftDrop info
     theta_g_det = self.theta_g(jet_det_sd, jetR)
