@@ -75,14 +75,6 @@ SoftDrop:
       theta_g:
         0.4: 5
 
-#constituent_subtractor:
-#  max_distance: 0.25
-#  alpha: 0
-#  max_eta: 0.9
-#  bge_rho_grid_size: 1.0
-#  max_pt_correct: 100
-#  ghost_area: 0.01
-
 ###############################################################################
 # Analysis parameters
 
@@ -117,5 +109,3 @@ fPythia: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
 fNLL: ''
 fNPcorrection_numerator: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
 fNPcorrection_denominator: '/Users/jamesmulligan/alidock/theta_g/NP_correction/Full_hadOFF_mpiOFF_isrOFF/default_output.root'
-
-
