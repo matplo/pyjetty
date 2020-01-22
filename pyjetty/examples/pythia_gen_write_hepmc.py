@@ -16,7 +16,7 @@ import pythiaext
 # pythia8+hepmc3 writing - experimental and not functioning as of now - switching off
 # import pythiahepmc3
 
-from pythiautils import configuration as pyconf
+from heppy.pythiautils import configuration as pyconf
 
 
 def main():
