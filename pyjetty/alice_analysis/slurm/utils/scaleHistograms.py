@@ -21,7 +21,7 @@ ROOT.gROOT.SetBatch(True)
 
 ###################################################################################
 # Main function
-def scaleHistograms(configFile):
+def scaleHistograms(configFile, remove_unscaled):
 
   # Option to remove outliers from specified histograms
   # If the average bin content stays below the "outlierLimit" for "outlierNBinsThreshold" bins, it is removed
@@ -73,6 +73,9 @@ def scaleHistograms(configFile):
         print('obj not found!')
   
       obj.Write("%sScaled" % obj.GetName())
+      
+      if remove_unscaled:
+        f.Delete('{};1'.format(obj.GetName()))  # Remove unscaled histogram
 
     f.Close()
 
@@ -343,6 +346,8 @@ if __name__ == '__main__':
                       type=str, metavar='configFile',
                       default='analysis_config.yaml',
                       help="Path of config file for jetscape analysis")
+  parser.add_argument('-r', '--remove_unscaled', action='store_true',
+                      help='Remove unscaled histograms')
   
   # Parse the arguments
   args = parser.parse_args()
@@ -356,4 +361,4 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  scaleHistograms(configFile = args.configFile)
+  scaleHistograms(configFile = args.configFile, remove_unscaled = args.remove_unscaled)
