@@ -11,24 +11,24 @@ import ROOT
 import yaml
 
 from pyjetty.alice_analysis.analysis.base import common_base
-import analysis_utils_sd
-import roounfold_sd
+import analysis_utils_obs
+import roounfold_obs
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class run_sd_analysis(common_base.common_base):
+class run_analysis(common_base.common_base):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, config_file='', **kwargs):
-    super(run_sd_analysis, self).__init__(**kwargs)
+    super(run_analysis, self).__init__(**kwargs)
     self.config_file = config_file
     
     # Initialize utils class
-    self.utils = analysis_utils_sd.analysis_utils_sd()
+    self.utils = analysis_utils_obs.analysis_utils_obs()
     
     # Initialize yaml config
     self.initialize_config()
@@ -53,59 +53,57 @@ class run_sd_analysis(common_base.common_base):
     self.do_plot_final_result = config['do_plot_final_result']
     self.force_rebin_response=config['force_rebin']
     
-    # Retrieve list of SD grooming settings
     self.jetR_list = config['jetR']
-    self.sd_config_dict = config['SoftDrop']
-    self.sd_config_list = list(self.sd_config_dict.keys())
-    self.sd_settings = [[self.sd_config_dict[name]['zcut'], self.sd_config_dict[name]['beta']] for name in self.sd_config_list]
     
     for observable in self.observables:
     
+      # Retrieve list of observable settings
       if observable == 'theta_g':
-        xtitle = '#it{#theta}_{g}'
-        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{#theta}_{g}}'
-      if observable == 'zg':
+        self.obs_config_dict = config['SoftDrop']
+        self.obs_config_list = list(self.obs_config_dict.keys())
+        self.obs_settings = [[self.obs_config_dict[name]['zcut'], self.obs_config_dict[name]['beta']] for name in self.obs_config_list]
+        xtitle = '#theta_{g}'
+        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+      elif observable == 'zg':
+        self.obs_config_dict = config['SoftDrop']
+        self.obs_config_list = list(self.obs_config_dict.keys())
+        self.obs_settings = [[self.obs_config_dict[name]['zcut'], self.obs_config_dict[name]['beta']] for name in self.obs_config_list]
         xtitle = '#it{z}_{g}'
         ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
+      elif observable == 'subjet_z':
+        self.obs_config_dict = config['Subjet']
+        self.obs_config_list = list(self.obs_config_dict.keys())
+        self.obs_settings = [self.obs_config_dict[name]['subjet_R'] for name in self.obs_config_list]
+        xtitle = '#it{z}'
+        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}}'
       setattr(self, 'xtitle_{}'.format(observable), xtitle)
       setattr(self, 'ytitle_{}'.format(observable), ytitle)
 
-    # Retrieve histogram binnings for each SD setting
-    for i, sd_setting in enumerate(self.sd_settings):
-        
-      zcut = sd_setting[0]
-      beta = sd_setting[1]
-      sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-      config_name = self.sd_config_list[i]
+      # Retrieve histogram binnings for each observable setting
+      for i, obs_setting in enumerate(self.obs_settings):
       
-      pt_bins_truth = (self.sd_config_dict[config_name]['pt_bins_truth'])
-      
-      n_pt_bins_truth = len(pt_bins_truth) - 1
-      setattr(self, 'n_pt_bins_truth_{}'.format(sd_label), n_pt_bins_truth)
+        config_name = self.obs_config_list[i]
+        obs_label = self.utils.obs_label(observable, obs_setting)
 
-      truth_pt_bin_array = array('d',pt_bins_truth)
-      setattr(self, 'truth_pt_bin_array_{}'.format(sd_label), truth_pt_bin_array)
-
-      if 'theta_g' in self.observables:
-      
-        rg_bins_truth = (self.sd_config_dict[config_name]['rg_bins_truth'])
-      
-        n_rg_bins_truth = len(rg_bins_truth) - 1
-        setattr(self, 'n_rg_bins_truth_{}'.format(sd_label), n_rg_bins_truth)
+        pt_bins_truth = (self.obs_config_dict[config_name]['pt_bins_truth'])
+        n_pt_bins_truth = len(pt_bins_truth) - 1
+        setattr(self, 'n_pt_bins_truth_{}'.format(obs_label), n_pt_bins_truth)
+        truth_pt_bin_array = array('d',pt_bins_truth)
+        setattr(self, 'truth_pt_bin_array_{}'.format(obs_label), truth_pt_bin_array)
+          
+        if observable == 'theta_g':
+          truth_bins_name = 'rg_bins_truth'
+        elif observable == 'zg':
+          truth_bins_name = 'zg_bins_truth'
+        else:
+          truth_bins_name = 'obs_bins_truth'
         
-        truth_rg_bin_array = array('d',rg_bins_truth)
-        setattr(self, 'truth_rg_bin_array_{}'.format(sd_label), truth_rg_bin_array)
-      
-      if 'zg' in self.observables:
+        obs_bins_truth = (self.obs_config_dict[config_name][truth_bins_name])
+        n_obs_bins_truth = len(obs_bins_truth) - 1
+        setattr(self, 'n_bins_truth_{}'.format(obs_label), n_obs_bins_truth)
+        truth_obs_bin_array = array('d',obs_bins_truth)
+        setattr(self, 'truth_bin_array_{}'.format(obs_label), truth_obs_bin_array)
         
-        zg_bins_truth = (self.sd_config_dict[config_name]['zg_bins_truth'])
-
-        n_zg_bins_truth = len(zg_bins_truth) - 1
-        setattr(self, 'n_zg_bins_truth_{}'.format(sd_label), n_zg_bins_truth)
-        
-        truth_zg_bin_array = array('d',zg_bins_truth)
-        setattr(self, 'truth_zg_bin_array_{}'.format(sd_label), truth_zg_bin_array)
-
     # List of systematic variations to perform
     self.systematics_list = config['systematics_list']
     
@@ -176,7 +174,7 @@ class run_sd_analysis(common_base.common_base):
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
-  def run_sd_analysis(self):
+  def run_analysis(self):
 
     for observable in self.observables:
     
@@ -185,21 +183,19 @@ class run_sd_analysis(common_base.common_base):
       
       for jetR in self.jetR_list:
         
-        for sd_setting in self.sd_settings:
+        for obs_setting in self.obs_settings:
           
-          zcut = sd_setting[0]
-          beta = sd_setting[1]
-          sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-
+          obs_label = self.utils.obs_label(observable, obs_setting)
+          
           if self.do_systematics:
-            self.compute_systematics(observable, jetR, sd_label, zcut, beta)
+            self.compute_systematics(observable, jetR, obs_label, obs_setting)
 
           if self.do_plot_final_result:
-            self.plot_final_result(observable, jetR, sd_label, zcut, beta)
+            self.plot_final_result(observable, jetR, obs_label, obs_setting)
             
-            self.get_nll_tgraph(observable, jetR, sd_label, zcut, beta, 20., 40.)
-            self.get_nll_tgraph(observable, jetR, sd_label, zcut, beta, 40., 60.)
-            self.get_nll_tgraph(observable, jetR, sd_label, zcut, beta, 60., 80.)
+            self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 20., 40.)
+            self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 40., 60.)
+            self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 60., 80.)
 
         if self.do_plot_final_result:
           
@@ -213,38 +209,38 @@ class run_sd_analysis(common_base.common_base):
     
     # Main result
     output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
-    analysis_main = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
-    analysis_main.roounfold_sd()
+    analysis_main = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
+    analysis_main.roounfold_obs()
 
     # Tracking efficiency variation
     if 'kTrackEff' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
-      analysis_trkeff = roounfold_sd.roounfold_sd(observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
-      analysis_trkeff.roounfold_sd()
+      analysis_trkeff = roounfold_obs.roounfold_obs(observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
+      analysis_trkeff.roounfold_obs()
 
     # Prior variation 1
     if 'kPrior1' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
-      analysis_prior1 = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
-      analysis_prior1.roounfold_sd()
+      analysis_prior1 = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
+      analysis_prior1.roounfold_obs()
     
     # Prior variation 2
     if 'kPrior2' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
-      analysis_prior2 = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
-      analysis_prior2.roounfold_sd()
+      analysis_prior2 = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
+      analysis_prior2.roounfold_obs()
 
     # Truncation variation
     if 'kTruncation' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
-      analysis_truncation = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
-      analysis_truncation.roounfold_sd()
+      analysis_truncation = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
+      analysis_truncation.roounfold_obs()
         
     # Binning variation
     if 'kBinning' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
-      analysis_binning = roounfold_sd.roounfold_sd(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
-      analysis_binning.roounfold_sd()
+      analysis_binning = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
+      analysis_binning.roounfold_obs()
 
   #----------------------------------------------------------------------
   def check_rebin_response(self, output_dir):
@@ -264,35 +260,35 @@ class run_sd_analysis(common_base.common_base):
     return rebin_response
 
   #----------------------------------------------------------------------
-  def compute_systematics(self, observable, jetR, sd_label, zcut, beta):
-    print('Compute systematics for {}: R = {}, {} ...'.format(observable, jetR, sd_label))
+  def compute_systematics(self, observable, jetR, obs_label, obs_setting):
+    print('Compute systematics for {}: R = {}, {} ...'.format(observable, jetR, obs_label))
 
     # Get main result
     output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
-    path_main = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+    path_main = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
     fMain = ROOT.TFile(path_main, 'READ')
     
-    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.obs_config_list, self.obs_config_dict, obs_label, observable, jetR)
 
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
     hMain = fMain.Get(name)
     hMain.SetDirectory(0)
     setattr(self, name, hMain)
     
     # Tagging rate histogram
-    name = 'hTaggingFractions_R{}_{}'.format(jetR, sd_label)
+    name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
     hTaggingFractions = fMain.Get(name)
     hTaggingFractions.SetDirectory(0)
     setattr(self, name, hTaggingFractions)
 
     # Regularization parameter +2
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final+2)
+    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final+2)
     hRegParam1 = fMain.Get(name)
     hRegParam1.SetDirectory(0)
     setattr(self, name, hRegParam1)
     
     # Regularization parameter -2
-    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final-2)
+    name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final-2)
     hRegParam2 = fMain.Get(name)
     hRegParam2.SetDirectory(0)
     setattr(self, name, hRegParam2)
@@ -300,9 +296,9 @@ class run_sd_analysis(common_base.common_base):
     # Get trkeff result
     if 'kTrackEff' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
-      path_trkeff = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      path_trkeff = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fTrkEff = ROOT.TFile(path_trkeff, 'READ')
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
       hTrkEff = fTrkEff.Get(name)
       hTrkEff.SetDirectory(0)
       setattr(self, '{}_trkeff'.format(name), hTrkEff)
@@ -310,9 +306,9 @@ class run_sd_analysis(common_base.common_base):
     # Get prior result
     if 'kPrior1' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
-      path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fPrior1 = ROOT.TFile(path_prior1, 'READ')
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
       hPrior1 = fPrior1.Get(name)
       hPrior1.SetDirectory(0)
       setattr(self, '{}_prior1'.format(name), hPrior1)
@@ -320,9 +316,9 @@ class run_sd_analysis(common_base.common_base):
     # Get prior result
     if 'kPrior2' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
-      path_prior2 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      path_prior2 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fPrior2 = ROOT.TFile(path_prior2, 'READ')
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
       hPrior2 = fPrior2.Get(name)
       hPrior2.SetDirectory(0)
       setattr(self, '{}_prior2'.format(name), hPrior2)
@@ -330,9 +326,9 @@ class run_sd_analysis(common_base.common_base):
     # Get truncation result
     if 'kTruncation' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
-      path_truncation = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      path_truncation = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fTruncation = ROOT.TFile(path_truncation, 'READ')
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
       hTruncation = fTruncation.Get(name)
       hTruncation.SetDirectory(0)
       setattr(self, '{}_truncation'.format(name), hTruncation)
@@ -340,25 +336,25 @@ class run_sd_analysis(common_base.common_base):
     # Get binning result
     if 'kBinning' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
-      path_binning = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, sd_label))
+      path_binning = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fBinning = ROOT.TFile(path_binning, 'READ')
-      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
+      name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
       hBinning = fBinning.Get(name)
       hBinning.SetDirectory(0)
       setattr(self, '{}_binning'.format(name), hBinning)
     
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
     
     for bin in range(1, n_pt_bins_truth-3):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.compute_sd_observable_systematic(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth)
+      self.compute_obs_observable_systematic(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
-  def get_sd_observable_distribution(self, jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth):
+  def get_obs_observable_distribution(self, jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth):
   
     h2D = getattr(self, name2D)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
@@ -366,7 +362,7 @@ class run_sd_analysis(common_base.common_base):
     h.SetName(name1D)
     h.SetDirectory(0)
     
-    name = 'hTaggingFractions_R{}_{}'.format(jetR, sd_label)
+    name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
     hTaggingFrac = getattr(self, name)
     x = (min_pt_truth + max_pt_truth)/2.
     fraction_tagged =  hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
@@ -381,64 +377,64 @@ class run_sd_analysis(common_base.common_base):
     return h
 
   #----------------------------------------------------------------------
-  def compute_sd_observable_systematic(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
+  def compute_obs_observable_systematic(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
     
     #------------------------------------
     # Get 1D histograms
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin (cross-check this)
     
-    reg_param_final = self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, sd_label, observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.obs_config_list, self.obs_config_dict, obs_label, observable, jetR)
     
     # Get main histogram
-    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final)
-    name1D = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hMain = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
+    name1D = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    hMain = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get reg param +2
-    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final+2)
-    name1D = 'hRegParam1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hRegParam1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final+2)
+    name1D = 'hRegParam1_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    hRegParam1 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get reg param -2
-    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, sd_label, reg_param_final-2)
-    name1D = 'hRegParam2_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-    hRegParam2 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final-2)
+    name1D = 'hRegParam2_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    hRegParam2 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
     if 'kTrackEff' in self.systematics_list:
-      name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, sd_label, reg_param_final)
-      name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-      hTrkEff = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, obs_label, reg_param_final)
+      name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      hTrkEff = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior1
     if 'kPrior1' in self.systematics_list:
-      name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, sd_label, reg_param_final)
-      name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-      hPrior1 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, obs_label, reg_param_final)
+      name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      hPrior1 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior2
     if 'kPrior2' in self.systematics_list:
-      name2D = 'hUnfolded_{}_R{}_{}_{}_prior2'.format(observable, jetR, sd_label, reg_param_final)
-      name1D = 'hPrior2_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-      hPrior2 = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      name2D = 'hUnfolded_{}_R{}_{}_{}_prior2'.format(observable, jetR, obs_label, reg_param_final)
+      name1D = 'hPrior2_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      hPrior2 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get truncation
     if 'kTruncation' in self.systematics_list:
-      name2D = 'hUnfolded_{}_R{}_{}_{}_truncation'.format(observable, jetR, sd_label, reg_param_final)
-      name1D = 'hTruncation_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-      hTruncation = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      name2D = 'hUnfolded_{}_R{}_{}_{}_truncation'.format(observable, jetR, obs_label, reg_param_final)
+      name1D = 'hTruncation_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      hTruncation = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get binning
     if 'kBinning' in self.systematics_list:
-      name2D = 'hUnfolded_{}_R{}_{}_{}_binning'.format(observable, jetR, sd_label, reg_param_final)
-      name1D = 'hBinning_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
-      hBinning = self.get_sd_observable_distribution(jetR, sd_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      name2D = 'hUnfolded_{}_R{}_{}_{}_binning'.format(observable, jetR, obs_label, reg_param_final)
+      name1D = 'hBinning_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      hBinning = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     #------------------------------------
     # Compute systematics
 
     # Reg param +2
-    name = 'hSystematic_{}_RegParam1_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'hSystematic_{}_RegParam1_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     hSystematic_RegParam1 = hMain.Clone()
     hSystematic_RegParam1.SetName(name)
     hSystematic_RegParam1.Divide(hRegParam1)
@@ -446,25 +442,25 @@ class run_sd_analysis(common_base.common_base):
     setattr(self, name, hSystematic_RegParam1)
 
     # Reg param -2
-    name = 'hSystematic_{}_RegParam2_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'hSystematic_{}_RegParam2_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     hSystematic_RegParam2 = hMain.Clone()
     hSystematic_RegParam2.SetName(name)
     hSystematic_RegParam2.Divide(hRegParam2)
     self.change_to_per(hSystematic_RegParam2)
     setattr(self, name, hSystematic_RegParam2)
     
-    name = 'hSystematic_{}_RegParam_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'hSystematic_{}_RegParam_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     hSystematic_RegParam = self.build_average(hSystematic_RegParam1, hSystematic_RegParam2)
     setattr(self, name, hSystematic_RegParam)
     
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
     # Prior 1
     hSystematic_Prior1 = None
     if 'kPrior1' in self.systematics_list:
-      name = 'hSystematic_{}_Prior1_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      name = 'hSystematic_{}_Prior1_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Prior1 = hMain.Clone()
       hSystematic_Prior1.SetName(name)
       hSystematic_Prior1.Divide(hPrior1)
@@ -472,13 +468,13 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Prior1)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
 
     # Prior 2
     hSystematic_Prior2 = None
     if 'kPrior2' in self.systematics_list:
-      name = 'hSystematic_{}_Prior2_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      name = 'hSystematic_{}_Prior2_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Prior2 = hMain.Clone()
       hSystematic_Prior2.SetName(name)
       hSystematic_Prior2.Divide(hPrior2)
@@ -486,13 +482,13 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Prior2)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior2, outputFilename, 'P E')
 
     # Truncation
     hSystematic_Truncation = None
     if 'kTruncation' in self.systematics_list:
-      name = 'hSystematic_{}_Truncation_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      name = 'hSystematic_{}_Truncation_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Truncation = hMain.Clone()
       hSystematic_Truncation.SetName(name)
       hSystematic_Truncation.Divide(hTruncation)
@@ -500,13 +496,13 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Truncation)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
     
     # Binning
     hSystematic_Binning = None
     if 'kBinning' in self.systematics_list:
-      name = 'hSystematic_{}_Binning_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      name = 'hSystematic_{}_Binning_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Binning = hMain.Clone()
       hSystematic_Binning.SetName(name)
       hSystematic_Binning.Divide(hBinning)
@@ -514,12 +510,12 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_Binning)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
     
     # Trk eff
     if 'kTrackEff' in self.systematics_list:
-      name = 'hSystematic_{}_TrkEff_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      name = 'hSystematic_{}_TrkEff_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_TrkEff = hMain.Clone()
       hSystematic_TrkEff.SetName(name)
       hSystematic_TrkEff.Divide(hTrkEff)
@@ -527,16 +523,16 @@ class run_sd_analysis(common_base.common_base):
       setattr(self, name, hSystematic_TrkEff)
       
       output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-      outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+      outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
 
     # Add uncertainties in quadrature
     hSystematic_Total = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff)
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
-    name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     hResult_sys = hMain.Clone()
     hResult_sys.SetName(name)
     hResult_sys.SetDirectory(0)
@@ -545,15 +541,15 @@ class run_sd_analysis(common_base.common_base):
       
     # Plot systematic uncertainties
     h_list = [hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff]
-    self.plot_systematic_uncertainties(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, h_list, hSystematic_Total)
+    self.plot_systematic_uncertainties(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, h_list, hSystematic_Total)
       
   #----------------------------------------------------------------------
-  def plot_systematic_uncertainties(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, h_list, h_total):
+  def plot_systematic_uncertainties(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, h_list, h_total):
   
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
     
-    name = 'cSys_R{}_{}_{}-{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'cSys_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
     
@@ -567,11 +563,11 @@ class run_sd_analysis(common_base.common_base):
     myPad.cd()
     
     if observable == 'theta_g':
-      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
-      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
+      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
     if observable == 'zg':
-      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
-      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
+      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
@@ -637,11 +633,12 @@ class run_sd_analysis(common_base.common_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'z_{cut} = ' + str(zcut) + '   #beta = ' + str(beta)
+    if observable == 'theta_g' or observable == 'zg':
+      text = 'z_{cut} = ' + str(obs_setting[0]) + '   #beta = ' + str(obs_setting[1])
     text_latex.DrawLatex(0.25, 0.71, text)
 
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
-    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
@@ -671,37 +668,37 @@ class run_sd_analysis(common_base.common_base):
     return h_new
   
   #----------------------------------------------------------------------
-  def plot_final_result(self, observable, jetR, sd_label, zcut, beta):
-    print('Plot final results for {}: R = {}, {} ...'.format(observable, jetR, sd_label))
+  def plot_final_result(self, observable, jetR, obs_label, obs_setting):
+    print('Plot final results for {}: R = {}, {} ...'.format(observable, jetR, obs_label))
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(sd_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(sd_label))
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
   
     for bin in range(1, n_pt_bins_truth-3):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.get_NPcorrection(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth)
+      self.get_NPcorrection(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
       
-      self.plot_observable(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=False)
-      self.plot_observable(observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=True)
+      self.plot_observable(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
+      self.plot_observable(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
 
   #----------------------------------------------------------------------
-  def get_NPcorrection(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
+  def get_NPcorrection(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
   
     fNumerator = ROOT.TFile(self.fNPcorrection_numerator, 'READ')
     fDenominator = ROOT.TFile(self.fNPcorrection_denominator, 'READ')
     
     if observable == 'theta_g':
-      n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
-      truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+      n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
+      truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
     if observable == 'zg':
-      n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
-      truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+      n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
+      truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
 
     hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
     
@@ -720,24 +717,24 @@ class run_sd_analysis(common_base.common_base):
     hDenominator.Scale(1./n_jets_inclusive, 'width')
         
     hNumerator.Divide(hDenominator)
-    hNumerator.SetName('hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
-    setattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth), hNumerator)
+    hNumerator.SetName('hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
+    setattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth), hNumerator)
       
     #output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
-    #outputFilename = os.path.join(output_dir, 'hNPcorrection_{}_{}_{}-{}.pdf'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+    #outputFilename = os.path.join(output_dir, 'hNPcorrection_{}_{}_{}-{}.pdf'.format(observable, obs_label, min_pt_truth, max_pt_truth))
     #self.utils.plot_hist(hNumerator, outputFilename)
 
   #----------------------------------------------------------------------
-  def get_nll_tgraph(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth):
+  def get_nll_tgraph(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
 
     if observable == 'theta_g':
       path_txt = '/Users/jamesmulligan/alidock/theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
-      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
-      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
+      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
     if observable == 'zg':
       path_txt = '/Users/jamesmulligan/alidock/theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
-      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
-      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
+      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
     
     filename = open(path_txt, 'r')
 
@@ -762,8 +759,8 @@ class run_sd_analysis(common_base.common_base):
     up = numpy.subtract(numpy.array(up_list), center)
     
     g = ROOT.TGraphAsymmErrors(n_bins_truth, x, center, x_err, x_err, low, up)
-    g.SetName('tgraph_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
-    setattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth), g)
+    g.SetName('tgraph_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
+    setattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth), g)
 
   #----------------------------------------------------------------------
   def plot_NPcorrection(self, observable, jetR):
@@ -815,19 +812,17 @@ class run_sd_analysis(common_base.common_base):
     myLegend = ROOT.TLegend(0.76,0.65,0.9,0.85)
     self.utils.setup_legend(myLegend,0.035)
     
-    # Retrieve histogram binnings for each SD setting
-    for i, sd_setting in enumerate(self.sd_settings):
+    # Retrieve histogram binnings for each observable setting
+    for i, obs_setting in enumerate(self.obs_settings):
       
-      zcut = sd_setting[0]
-      beta = sd_setting[1]
-      sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+      obs_label = self.utils.obs_label(observable, obs_setting)
       
       if observable == 'theta_g':
-        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
-        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
+        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
       if observable == 'zg':
-        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
-        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
+        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
       
       if i == 0:
         marker = 20
@@ -839,7 +834,7 @@ class run_sd_analysis(common_base.common_base):
         marker = 33
         color = 416-2
 
-      h = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+      h = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(marker)
       h.SetMarkerColor(color)
@@ -848,7 +843,8 @@ class run_sd_analysis(common_base.common_base):
       h.SetLineColor(color)
       h.DrawCopy('PE X0 same')
       
-      myLegend.AddEntry(h, 'pp #beta={}'.format(beta), 'pe')
+      if observable == 'theta_g' or observable == 'zg':
+        myLegend.AddEntry(h, 'pp #beta={}'.format(obs_setting[1]), 'pe')
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -869,7 +865,8 @@ class run_sd_analysis(common_base.common_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
+    if observable == 'theta_g' or observable == 'zg':
+      text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(obs_setting[0])
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.69, text)
     
@@ -998,19 +995,17 @@ class run_sd_analysis(common_base.common_base):
     myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
     self.utils.setup_legend(myLegend,0.035)
       
-    # Retrieve histogram binnings for each SD setting
-    for i, sd_setting in enumerate(self.sd_settings):
+    # Retrieve histogram binnings for each observable setting
+    for i, obs_setting in enumerate(self.obs_settings):
       
-      zcut = sd_setting[0]
-      beta = sd_setting[1]
-      sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+      obs_label = self.utils.obs_label(observable, obs_setting)
       
       if observable == 'theta_g':
-        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
-        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
+        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
       if observable == 'zg':
-        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
-        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
+        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
       
       if i == 0:
         marker = 20
@@ -1054,10 +1049,10 @@ class run_sd_analysis(common_base.common_base):
       if plot_nll:
         
         # Get parton-level prediction
-        g = getattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+        g = getattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
         
         # Get correction
-        h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, sd_label, min_pt_truth, max_pt_truth))
+        h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
       
         # Apply correction
         self.utils.multiply_tgraph(g, h_correction)
@@ -1069,7 +1064,7 @@ class run_sd_analysis(common_base.common_base):
         g.SetFillColorAlpha(color, 0.5)
         g.Draw('L3 same')
     
-      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
       h_sys.SetFillColor(color)
       h_sys.SetFillColorAlpha(color, 0.3)
@@ -1077,7 +1072,7 @@ class run_sd_analysis(common_base.common_base):
       h_sys.SetLineWidth(0)
       h_sys.DrawCopy('E2 same')
     
-      name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+      name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
       h = getattr(self, name)
       h.SetMarkerSize(1.5)
@@ -1105,7 +1100,7 @@ class run_sd_analysis(common_base.common_base):
           hRatioSys.DrawCopy('E2 same')
         elif plot_nll:
           gRatioSys = g.Clone()
-          gRatioSys.SetName('{}_{}_Ratio'.format(sd_label, g.GetName()))
+          gRatioSys.SetName('{}_{}_Ratio'.format(obs_label, g.GetName()))
           self.utils.divide_tgraph(hRatioSys, gRatioSys, combine_errors=True)
           gRatioSys.SetLineColor(0)
           gRatioSys.SetFillColor(color)
@@ -1152,7 +1147,8 @@ class run_sd_analysis(common_base.common_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(zcut)
+    if observable == 'theta_g' or observable == 'zg':
+      text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(obs_setting[0])
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.69, text)
     
@@ -1175,9 +1171,9 @@ class run_sd_analysis(common_base.common_base):
     c.Close()
   
   #----------------------------------------------------------------------
-  def plot_observable(self, observable, jetR, sd_label, zcut, beta, min_pt_truth, max_pt_truth, plot_pythia=False):
+  def plot_observable(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
     
-    name = 'cResult_R{}_{}_{}-{}'.format(jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
     
@@ -1191,12 +1187,12 @@ class run_sd_analysis(common_base.common_base):
     myPad.cd()
     
     if observable == 'theta_g':
-      n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(sd_label))
-      truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(sd_label))
+      n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
+      truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
       ymax = 5.
     if observable == 'zg':
-      n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(sd_label))
-      truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(sd_label))
+      n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
+      truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
       ymax = 12.
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_rg_bins_truth, truth_rg_bin_array)
     myBlankHisto.SetNdivisions(505)
@@ -1214,7 +1210,7 @@ class run_sd_analysis(common_base.common_base):
       plot_pythia_from_response = False
       plot_pythia_from_mateusz = True
       if plot_pythia_from_response:
-        hPythia = self.get_pythia_from_response(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+        hPythia = self.get_pythia_from_response(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
         n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
         n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_rg_bin_array[0]), hPythia.GetNbinsX())
         fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
@@ -1246,7 +1242,7 @@ class run_sd_analysis(common_base.common_base):
         hPythia2.Draw('E2 same')
     
     color = 600-6
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h_sys.SetLineColor(0)
     h_sys.SetFillColor(color)
     h_sys.SetFillColorAlpha(color, 0.3)
@@ -1254,7 +1250,7 @@ class run_sd_analysis(common_base.common_base):
     h_sys.SetLineWidth(0)
     h_sys.DrawCopy('E2 same')
     
-    name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth)
+    name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = getattr(self, name)
     h.SetMarkerSize(1.5)
@@ -1290,7 +1286,8 @@ class run_sd_analysis(common_base.common_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = '#it{z}_{cut} = ' + str(zcut) + '  #beta = ' + str(beta)
+    if observable == 'theta_g' or observable == 'zg':
+      text = '#it{z}_{cut} = ' + str(obs_setting[0]) + '  #beta = ' + str(obs_setting[1])
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.59, text)
     
@@ -1318,9 +1315,9 @@ class run_sd_analysis(common_base.common_base):
         myLegend.AddEntry(hPythia2, 'PYTHIA Monash2013', 'pe')
     myLegend.Draw()
 
-    name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+    name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
-      name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), sd_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+      name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
     output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
@@ -1335,22 +1332,22 @@ class run_sd_analysis(common_base.common_base):
 
 
   #----------------------------------------------------------------------
-  def get_pythia_from_response(self, observable, jetR, sd_label, min_pt_truth, max_pt_truth):
+  def get_pythia_from_response(self, observable, jetR, obs_label, min_pt_truth, max_pt_truth):
   
     output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
     file = os.path.join(output_dir, 'response.root')
     f = ROOT.TFile(file, 'READ')
 
     if observable == 'theta_g':
-      thn_name = 'hResponse_JetPt_ThetaG_R{}_{}_rebinned'.format(jetR, sd_label)
+      thn_name = 'hResponse_JetPt_ThetaG_R{}_{}_rebinned'.format(jetR, obs_label)
     if observable == 'zg':
-      thn_name = 'hResponse_JetPt_zg_R{}_{}_rebinned'.format(jetR, sd_label)
+      thn_name = 'hResponse_JetPt_zg_R{}_{}_rebinned'.format(jetR, obs_label)
     
     thn = f.Get(thn_name)
     thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
     h = thn.Projection(3)
-    h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(observable, jetR, sd_label, min_pt_truth, max_pt_truth))
+    h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h.SetDirectory(0)
 
     return h
@@ -1414,5 +1411,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = run_sd_analysis(config_file = args.configFile)
-  analysis.run_sd_analysis()
+  analysis = run_analysis(config_file = args.configFile)
+  analysis.run_analysis()
