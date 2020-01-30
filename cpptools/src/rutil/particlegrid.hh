@@ -3,6 +3,7 @@
 
 #include <TObject.h>
 #include <TH2F.h>
+#include <cmath>
 #include <fastjet/PseudoJet.hh>
 
 namespace RUtil
@@ -12,14 +13,14 @@ namespace RUtil
 	public:
 		ParticleGrid() : TObject(), fGrid(0)
 		{;}
-		ParticleGrid(Double_t fNbinsEta, Double_t fMinEta, Double_t fMaxEta, Double_t fNbinsPhi, Double_t fMinPhi, Double_t fMaxPhi) 
+		ParticleGrid(Double_t fNbinsEta, Double_t fMinEta, Double_t fMaxEta, Double_t fNbinsPhi, Double_t fMinPhi, Double_t fMaxPhi)
 		: TObject()
 		, fGrid(0)
 		{
 			newGrid(fNbinsEta, fMinEta, fMaxEta, fNbinsPhi, fMinPhi, fMaxPhi);
 		}
 
-		virtual ~ParticleGrid() 
+		virtual ~ParticleGrid()
 		{
 			delete fGrid;
 		}
@@ -52,7 +53,7 @@ namespace RUtil
 					if (fGrid->GetBinContent(ieta, iphi) > 0)
 					{
 						fastjet::PseudoJet psj;
-						psj.reset_PtYPhiM(	fGrid->GetBinContent(ieta, iphi), 
+						psj.reset_PtYPhiM(	fGrid->GetBinContent(ieta, iphi),
 											fGrid->GetXaxis()->GetBinCenter(ieta),
 											fGrid->GetYaxis()->GetBinCenter(iphi),
 											0.);
