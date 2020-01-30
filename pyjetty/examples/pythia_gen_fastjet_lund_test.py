@@ -11,7 +11,7 @@ import argparse
 import os
 import numpy as np
 
-from pythiautils import configuration as pyconf
+from heppy.pythiautils import configuration as pyconf
 import pythia8
 import pythiafjext
 import pythiaext
@@ -19,7 +19,7 @@ import pythiaext
 def main():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
 	pyconf.add_standard_pythia_args(parser)
-	args = parser.parse_args()	
+	args = parser.parse_args()
 
 	# print the banner first
 	fj.ClusterSequence.print_banner()
