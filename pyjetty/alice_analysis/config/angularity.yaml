@@ -1,16 +1,58 @@
 # Analysis parameters
-pTbins: [5, 20, 40, 60, 100]
-jetR: [0.1, 0.2, 0.3, 0.4]
+jetR: [0.4]
 betas: [1, 1.5, 2]
-n_lambda_bins: 1000
 
+# Initial detector-level binnings. Distributions are rebinned via configs before unfolding
+n_pt_bins: 195
+pt_limits: [5, 200]
+n_lambda_bins: 100
+lambda_limits: [0, 1]
+n_rap_bins: 20            # just for fun, look at lambda distribution vs rapidity
+rap_limits: [-0.5, 0.5]
+
+# For extra verbose output in some functions
 debug_level: 0
 
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.04
 
+# SoftDrop setting (current same for all SD plots)
+sd_zcut: 0.1    # multiplier
+sd_beta: 0      # exponent on (deltaR / R)
+
+# Rebinning parameters
+configs:
+
+  # Different R & beta configurations
+  R04_B1:
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100, 120, 150]
+    lambda_bins_truth: [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 
+                        0.5, 0.55, 0.6, 0.65, 0.75, 0.85]
+    lambda_bins_det: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22,
+                      0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.42, 0.44, 
+                      0.46, 0.48, 0.5, 0.55, 0.6, 0.65, 0.75, 0.85]
+    # Point where we will cutoff measurement due to statistics / end of distribution, per pT bin
+    cutoff: [0.6, 0.5, 0.5, 0.45, 0.45, 0.34, 0.32, 0.26, 0.22, 0.18, 0.16, 0.14, 0.08, 0.06]
+
+  R04_B15:
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100, 120, 150]
+    lambda_bins_truth: [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7]
+    lambda_bins_det: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22,
+                      0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.45, 0.5, 0.55, 0.6, 0.7]
+    cutoff: [0.6, 0.5, 0.5, 0.45, 0.45, 0.34, 0.32, 0.26, 0.22, 0.18, 0.16, 0.14, 0.08, 0.06]
+
+  R04_B2:
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100, 120, 150]
+    lambda_bins_truth: [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6]
+    lambda_bins_det: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22,
+                      0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.45, 0.5, 0.6]
+    cutoff: [0.6, 0.5, 0.5, 0.45, 0.45, 0.34, 0.32, 0.26, 0.22, 0.18, 0.16, 0.14, 0.08, 0.06]
+
 # Unfolding parameters
 reg_param: 5
 
 # Plotting parameters
-fileFormat: ".pdf"
+fileFormat: ".png"

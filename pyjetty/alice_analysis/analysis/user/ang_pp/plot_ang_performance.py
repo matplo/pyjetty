@@ -66,16 +66,19 @@ class plot_ang_performance(common_base.common_base):
     
     # Read config file
     with open(self.config_file, 'r') as stream:
-      config = yaml.safe_load(stream)
+      self.config = yaml.safe_load(stream)
     
     # Set debug level (0 = no debug info, 1 = some debug info, 2 = all debug info)
-    self.debug_level = config['debug_level']
+    self.debug_level = self.config['debug_level']
     
     # Retrieve list of SD grooming settings
-    self.jetR_list = config['jetR']
-    self.beta_list = config['betas']
-    self.n_lambda_bins = config['n_lambda_bins']
-    self.jet_matching_distance = config['jet_matching_distance']
+    self.jetR_list = self.config['jetR']
+    self.beta_list = self.config['betas']
+    self.n_lambda_bins = self.config['n_lambda_bins']
+    self.jet_matching_distance = self.config['jet_matching_distance']
+
+    # List of histograms to write
+    self.hist_to_write = []
 
     '''
     sd_config_dict = config['SoftDrop']
@@ -109,24 +112,72 @@ class plot_ang_performance(common_base.common_base):
   def plot_ang_performance(self):
     
     for jetR in self.jetR_list:
+      for beta in self.beta_list:
+        # TODO: Implement for all jetR & beta in config.yaml file
+        if beta == 2 and jetR == 0.4:
+          name = ('hLambda_JetpT_R%s_B%s' % (jetR, beta)).replace('.', '')
+          #self.rebin_h(self.fData.Get(name), name, beta, jetR)
+          self.eff_plots(beta, jetR)
 
-      self.plotDeltaR(jetR)
-      self.plotJES(jetR)
-      self.plotJESproj(jetR)
+    # Write finished histograms to file
+    self.write_all_histograms()
 
-      for sd_setting in self.sd_settings:
-        
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        
-        self.plotJER(jetR, sd_label)
-        self.plot_theta_resolution(jetR, sd_label)
-        self.plot_theta_residual(jetR, sd_label)
-        self.plot_zg_residual(jetR, sd_label)
-        self.plotJetRecoEfficiency(jetR, sd_label)
-        self.plotRg(jetR, sd_label, zcut, beta)
+  #---------------------------------------------------------------
+  # Take 2D root histogram and rebin it according to yaml config
+  def rebin_h(self, root_h, name, beta, jetR):
+    cf = ("R%s_B%s" % (jetR, beta)).replace('.', '')
 
+    # Rebinning params
+    pTbins = array('d', self.config["rebin"][cf]["pTbins"])
+    lambda_bins = array('d', self.config["rebin"][cf]["lambda_bins"])
+
+    h = self.utils.rebin_data(root_h, name, len(pTbins)-1, pTbins, 
+                              len(lambda_bins)-1, lambda_bins)
+
+    self.hist_to_write.append(h)
+
+  #---------------------------------------------------------------
+  # Plot kinematic and reconstruction efficiencies
+  def eff_plots(self, beta, jetR):
+    cf = ("R%s_B%s" % (jetR, beta)).replace('.', '')
+
+    # Lambda response histograms
+    resp = self.fMC.Get('hResponse_JetpT_lambda_%s' % cf)
+
+    # Rebinning params
+    pTbins = array('d', self.config["rebin"][cf]["pTbins"])
+    lambda_bins = array('d', self.config["rebin"][cf]["lambda_bins"])
+    cutoff = array('d', self.config["rebin"][cf]["cutoff"])
+
+    # Create efficiency plots
+    for i, pTmin in list(enumerate(pTbins))[0:-1]:
+      pTmax = pTbins[i+1]
+      resp.GetAxis(0).SetRangeUser(pTmin, pTmax)  # pT (detector level) bin of interest
+      full_proj = resp.Projection(3, 2).ProjectionY().Clone("full_proj")  # Full lambda true vs det
+      resp.GetAxis(2).SetRangeUser(0, cutoff[i])
+      stat_proj = resp.Projection(3, 2).ProjectionY().Clone("stat_proj")  # "Good statistics" range
+      # Divide histograms to get kinematic efficiency
+      eff = stat_proj.Clone("ekin_%s_%i-%i" % (cf, pTmin, pTmax))
+      eff.Divide(full_proj)
+      self.hist_to_write.append(eff)
+      resp.GetAxis(2).SetRangeUser(0, 1)  # Reset to full lambda det range
+
+    #jes = ROOT.TH1D("jes", "jes", 100, -1, 1)  # jet energy scale
+    #jes_pt_bins = array('d', self.config["rebin"][cf]["jes_pt_bins"])
+    #for i, pTmin in list(enumerate(pTbins))[0:-1]:
+    #  pTmax = pTbins[i+1]
+      
+
+  #---------------------------------------------------------------
+  # Write all saved histograms to the desired output file
+  def write_all_histograms(self):
+    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
+    fout = ROOT.TFile(outputfilename, 'recreate')
+    fout.cd()
+    for h in self.hist_to_write:
+      h.Write()
+
+  '''
   #---------------------------------------------------------------
   def plotRg(self, jetR, sd_label, zcut, beta):
 
@@ -175,7 +226,8 @@ class plot_ang_performance(common_base.common_base):
     hThetaG_JetPt.RebinY(5)
     hThetaG_JetPt.Draw('text colz')
 
-    output_filename = os.path.join(self.output_dir, 'h2D_theta_statistics_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+    output_filename = os.path.join(self.output_dir, 
+              'h2D_theta_statistics_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
     c.SaveAs(output_filename)
     c.Close()
   
@@ -761,6 +813,7 @@ class plot_ang_performance(common_base.common_base):
     histEfficiency.SetMarkerColor(1)
     outputFilename = os.path.join(self.output_dir, '{}_R{}.pdf'.format(self.utils.remove_periods(histEfficiency.GetName()), self.utils.remove_periods(jetR)))
     self.utils.plot_hist(histEfficiency, outputFilename)
+  '''
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
@@ -803,5 +856,6 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = plot_ang_performance(mc_file = args.mcFile, data_file = args.dataFile, config_file = args.configFile, output_dir = args.outputDir)
+  analysis = plot_ang_performance(mc_file = args.mcFile, data_file = args.dataFile, 
+                                  config_file = args.configFile, output_dir = args.outputDir)
   analysis.plot_ang_performance()

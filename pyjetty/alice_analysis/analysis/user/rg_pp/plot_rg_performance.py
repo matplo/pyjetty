@@ -23,7 +23,7 @@ import yaml
 
 # Analysis utilities
 from pyjetty.alice_analysis.analysis.base import common_base
-from pyjetty.alice_analysis.analysis.base import analysis_utils
+from pyjetty.alice_analysis.analysis.user import analysis_utils_sd
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -41,12 +41,15 @@ class plot_rg_performance(common_base.common_base):
   def __init__(self, mc_file = '', data_file = '', config_file = '', output_dir = '', **kwargs):
     super(plot_rg_performance, self).__init__(**kwargs)
     self.fMC = ROOT.TFile(mc_file, 'READ')
-    self.fData = ROOT.TFile(data_file, 'READ')
+    if data_file:
+        self.fData = ROOT.TFile(data_file, 'READ')
+    else:
+        self.fData = None
     self.config_file = config_file
     self.output_dir = output_dir
     
     # Initialize utils class
-    self.utils = analysis_utils.analysis_utils()
+    self.utils = analysis_utils_sd.analysis_utils_sd()
     
     # Create output dir
     if not self.output_dir.endswith('/'):
@@ -101,6 +104,12 @@ class plot_rg_performance(common_base.common_base):
       
       truth_rg_bin_array = array('d',rg_bins_truth)
       setattr(self, 'truth_rg_bin_array_{}'.format(sd_label), truth_rg_bin_array)
+      
+    if 'constituent_subtractor' in config:
+        self.is_pp = False
+    else:
+        self.is_pp = True
+    print('is_pp: {}'.format(self.is_pp))
   
   #---------------------------------------------------------------
   def plot_rg_performance(self):
@@ -110,6 +119,28 @@ class plot_rg_performance(common_base.common_base):
       self.plotDeltaR(jetR)
       self.plotJES(jetR)
       self.plotJESproj(jetR)
+
+      self.prong_match_threshold = 0.5
+      self.min_pt = 80.
+      self.max_pt = 100.
+      prong_list = ['leading', 'subleading']
+      match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
+      for prong in prong_list:
+          for match in match_list:
+  
+              hname = 'hProngMatching_{}_{}_JetPt_R{}_{{}}Scaled'.format(prong, match, jetR)
+              self.plot_prong_matching(jetR, hname)
+              self.plot_prong_matching_delta(jetR, hname, plot_deltaz=False)
+              
+              hname = 'hProngMatching_{}_{}_JetPtDet_R{}_{{}}Scaled'.format(prong, match, jetR)
+              self.plot_prong_matching(jetR, hname)
+              
+              if 'subleading' in prong:
+                hname = 'hProngMatching_{}_{}_JetPtZ_R{}_{{}}Scaled'.format(prong, match, jetR)
+                self.plot_prong_matching_delta(jetR, hname, plot_deltaz=True)
+
+      hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{{}}Scaled'.format(jetR)
+      self.plot_prong_matching_correlation(jetR, hname)
 
       for sd_setting in self.sd_settings:
         
@@ -123,6 +154,307 @@ class plot_rg_performance(common_base.common_base):
         self.plot_zg_residual(jetR, sd_label)
         self.plotJetRecoEfficiency(jetR, sd_label)
         self.plotRg(jetR, sd_label, zcut, beta)
+        self.plot_prong_N_vs_z(jetR, sd_label, 'tagged')
+        self.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
+
+
+  #---------------------------------------------------------------
+  def plot_prong_N_vs_z(self, jetR, sd_label, tagged='tagged'):
+  
+    name = 'hProngMatching_subleading_leading_N_{}_JetPtDet_R{}_{}_80-100Scaled'.format(tagged, jetR, sd_label)
+    h3D = self.fMC.Get(name)
+    
+    h2D = h3D.Project3D('yx')
+    h2D.GetXaxis().SetTitle('z')
+    h2D.GetYaxis().SetTitle('N_{tracks}^{subleading pp-det prong}')
+    h2D.GetXaxis().SetRangeUser(0, 0.5)
+    h2D.GetYaxis().SetRangeUser(0, 30)
+    outputFilename = os.path.join(self.output_dir, '{}.pdf'.format(name))
+    self.utils.plot_hist(h2D, outputFilename, 'colz')
+
+  #---------------------------------------------------------------
+  def plot_prong_matching_delta(self, jetR, hname, plot_deltaz=False):
+  
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.2)
+    ROOT.gPad.SetBottomMargin(0.15)
+    
+    leg = ROOT.TLegend(0.55,0.65,0.88,0.85, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+
+    sd_setting = self.sd_settings[0]
+    zcut0 = sd_setting[0]
+    beta0 = sd_setting[1]
+    sd_label0 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut0), beta0)
+    name = hname.format(sd_label0)
+    hFraction_vs_pt0 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[1]
+    zcut1 = sd_setting[0]
+    beta1 = sd_setting[1]
+    sd_label1 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut1), beta1)
+    name = hname.format(sd_label1)
+    hFraction_vs_pt1 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[2]
+    zcut2 = sd_setting[0]
+    beta2 = sd_setting[1]
+    sd_label2 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut2), beta2)
+    name = hname.format(sd_label2)
+    hFraction_vs_pt2 = self.fMC.Get(name)
+
+    epsilon = 1e-5
+    min_bin = hFraction_vs_pt0.GetYaxis().FindBin(0. + epsilon)
+    cut_bin = hFraction_vs_pt0.GetYaxis().FindBin(self.prong_match_threshold + epsilon)
+    max_bin = hFraction_vs_pt0.GetYaxis().FindBin(1. + epsilon)
+    min_frac_bin = cut_bin
+    max_frac_bin = max_bin
+
+    min_pt_bin = hFraction_vs_pt0.GetXaxis().FindBin(self.min_pt + epsilon)
+    max_pt_bin = hFraction_vs_pt0.GetXaxis().FindBin(self.max_pt + epsilon)
+
+    # Get projections of deltaR
+    hFraction_vs_pt0.GetXaxis().SetRange(min_pt_bin, max_pt_bin)
+    hFraction_vs_pt0.GetYaxis().SetRange(min_frac_bin, max_frac_bin)
+    hUnmatched_vs_pt0 = hFraction_vs_pt0.Project3D('z')
+    hUnmatched_vs_pt0.SetName('hUnmatched_vs_pt0_{}_{}'.format(jetR, sd_label0))
+    hUnmatched_vs_pt0.SetLineColor(ColorArray[0])
+    if plot_deltaz:
+        hUnmatched_vs_pt0.GetXaxis().SetTitle('#Delta z_{prong}')
+        hUnmatched_vs_pt0.GetYaxis().SetTitle('#frac{dN}{d#Delta z_{prong}}')
+    else:
+        hUnmatched_vs_pt0.GetXaxis().SetTitle('#Delta R_{prong}')
+        hUnmatched_vs_pt0.GetYaxis().SetTitle('#frac{dN}{d#Delta R_{prong}}')
+    hUnmatched_vs_pt0.GetYaxis().SetTitleOffset(2.)
+    hUnmatched_vs_pt0.Draw('L hist same')
+    leg.AddEntry(hUnmatched_vs_pt0, 'z_{{cut}} = {}, #beta = {}'.format(zcut0, beta0), 'L')
+
+    hFraction_vs_pt1.GetXaxis().SetRange(min_pt_bin, max_pt_bin)
+    hFraction_vs_pt1.GetYaxis().SetRange(min_frac_bin, max_frac_bin)
+    hUnmatched_vs_pt1 = hFraction_vs_pt1.Project3D('z')
+    hUnmatched_vs_pt1.SetName('hUnmatched_vs_pt1_{}_{}'.format(jetR, sd_label1))
+    hUnmatched_vs_pt1.SetLineColor(ColorArray[1])
+    hUnmatched_vs_pt1.Draw('L hist same')
+    leg.AddEntry(hUnmatched_vs_pt1, 'z_{{cut}} = {}, #beta = {}'.format(zcut1, beta1), 'L')
+    
+    hFraction_vs_pt2.GetXaxis().SetRange(min_pt_bin, max_pt_bin)
+    hFraction_vs_pt2.GetYaxis().SetRange(min_frac_bin, max_frac_bin)
+    hUnmatched_vs_pt2 = hFraction_vs_pt2.Project3D('z')
+    hUnmatched_vs_pt2.SetName('hUnmatched_vs_pt2_{}_{}'.format(jetR, sd_label2))
+    hUnmatched_vs_pt2.SetLineColor(ColorArray[2])
+    hUnmatched_vs_pt2.Draw('L hist same')
+    leg.AddEntry(hUnmatched_vs_pt2, 'z_{{cut}} = {}, #beta = {}'.format(zcut2, beta2), 'L')
+    
+    text = 'p_{{T}} = {} - {} GeV/c'.format(int(self.min_pt), int(self.max_pt))
+    leg.AddEntry(None, text, '')
+    
+    leg.Draw("same")
+
+    if plot_deltaz:
+        output_filename = os.path.join(self.output_dir, '{}_deltaZ.pdf'.format(name))
+    else:
+        output_filename = os.path.join(self.output_dir, '{}_deltaR.pdf'.format(name))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  def plot_prong_matching(self, jetR, hname):
+  
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.15)
+    
+    leg = ROOT.TLegend(0.55,0.3,0.85,0.5, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+
+    sd_setting = self.sd_settings[0]
+    zcut0 = sd_setting[0]
+    beta0 = sd_setting[1]
+    sd_label0 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut0), beta0)
+    name = hname.format(sd_label0)
+    hFraction_vs_pt0 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[1]
+    zcut1 = sd_setting[0]
+    beta1 = sd_setting[1]
+    sd_label1 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut1), beta1)
+    name = hname.format(sd_label1)
+    hFraction_vs_pt1 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[2]
+    zcut2 = sd_setting[0]
+    beta2 = sd_setting[1]
+    sd_label2 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut2), beta2)
+    name = hname.format(sd_label2)
+    hFraction_vs_pt2 = self.fMC.Get(name)
+
+    epsilon = 1e-5
+    min_bin = hFraction_vs_pt0.GetYaxis().FindBin(0. + epsilon)
+    cut_bin = hFraction_vs_pt0.GetYaxis().FindBin(self.prong_match_threshold + epsilon)
+    max_bin = hFraction_vs_pt0.GetYaxis().FindBin(1. + epsilon)
+
+    hTotal_vs_pt0 = hFraction_vs_pt0.ProjectionX('hTotal_vs_pt0_{}_{}'.format(jetR, sd_label0), min_bin, max_bin)
+    hTotal_vs_pt1 = hFraction_vs_pt1.ProjectionX('hTotal_vs_pt1_{}_{}'.format(jetR, sd_label1), min_bin, max_bin)
+    hTotal_vs_pt2 = hFraction_vs_pt2.ProjectionX('hTotal_vs_pt2_{}_{}'.format(jetR, sd_label2), min_bin, max_bin)
+
+    hMatched_vs_pt0 = hFraction_vs_pt0.ProjectionX('hMatched_vs_pt0_{}_{}'.format(jetR, sd_label0), cut_bin, max_bin)
+    hMatched_vs_pt1 = hFraction_vs_pt1.ProjectionX('hMatched_vs_pt1_{}_{}'.format(jetR, sd_label1), cut_bin, max_bin)
+    hMatched_vs_pt2 = hFraction_vs_pt2.ProjectionX('hMatched_vs_pt2_{}_{}'.format(jetR, sd_label2), cut_bin, max_bin)
+
+    hMatchedFraction_vs_pt0 = hMatched_vs_pt0.Clone()
+    hMatchedFraction_vs_pt0.SetName('hMatchedFraction_vs_pt0_{}_{}'.format(jetR, sd_label0))
+    hMatchedFraction_vs_pt0.Divide(hTotal_vs_pt0)
+    hMatchedFraction_vs_pt0.SetMarkerStyle(20+0)
+    hMatchedFraction_vs_pt0.SetMarkerColor(ColorArray[0])
+    hMatchedFraction_vs_pt0.SetLineColor(ColorArray[0])
+    hMatchedFraction_vs_pt0.GetYaxis().SetRangeUser(0., 1.2)
+    hMatchedFraction_vs_pt0.GetYaxis().SetTitle('Fraction tagged')
+    hMatchedFraction_vs_pt0.Draw('P same')
+
+    hMatchedFraction_vs_pt1 = hMatched_vs_pt1.Clone()
+    hMatchedFraction_vs_pt1.SetName('hMatchedFraction_vs_pt1_{}_{}'.format(jetR, sd_label1))
+    hMatchedFraction_vs_pt1.Divide(hTotal_vs_pt1)
+    hMatchedFraction_vs_pt1.SetMarkerStyle(20+1)
+    hMatchedFraction_vs_pt1.SetMarkerColor(ColorArray[1])
+    hMatchedFraction_vs_pt1.SetLineColor(ColorArray[1])
+    hMatchedFraction_vs_pt1.Draw('P same')
+
+    hMatchedFraction_vs_pt2 = hMatched_vs_pt2.Clone()
+    hMatchedFraction_vs_pt2.SetName('hMatchedFraction_vs_pt2_{}_{}'.format(jetR, sd_label2))
+    hMatchedFraction_vs_pt2.Divide(hTotal_vs_pt2)
+    hMatchedFraction_vs_pt2.SetMarkerStyle(20+2)
+    hMatchedFraction_vs_pt2.SetMarkerColor(ColorArray[2])
+    hMatchedFraction_vs_pt2.SetLineColor(ColorArray[2])
+    hMatchedFraction_vs_pt2.Draw('P same')
+
+    leg.AddEntry(hMatchedFraction_vs_pt0, 'z_{{cut}} = {}, #beta = {}'.format(zcut0, beta0), 'P')
+    leg.AddEntry(hMatchedFraction_vs_pt1, 'z_{{cut}} = {}, #beta = {}'.format(zcut1, beta1), 'P')
+    leg.AddEntry(hMatchedFraction_vs_pt2, 'z_{{cut}} = {}, #beta = {}'.format(zcut2, beta2), 'P')
+  
+    leg.Draw("same")
+
+    output_filename = os.path.join(self.output_dir, '{}.pdf'.format(name))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  def plot_prong_matching_correlation(self, jetR, hname):
+
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.15)
+
+    leg = ROOT.TLegend(0.55,0.3,0.85,0.5, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+
+    sd_setting = self.sd_settings[0]
+    zcut0 = sd_setting[0]
+    beta0 = sd_setting[1]
+    sd_label0 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut0), beta0)
+    name = hname.format(sd_label0)
+    hFraction_vs_pt0 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[1]
+    zcut1 = sd_setting[0]
+    beta1 = sd_setting[1]
+    sd_label1 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut1), beta1)
+    name = hname.format(sd_label1)
+    hFraction_vs_pt1 = self.fMC.Get(name)
+
+    sd_setting = self.sd_settings[2]
+    zcut2 = sd_setting[0]
+    beta2 = sd_setting[1]
+    sd_label2 = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut2), beta2)
+    name = hname.format(sd_label2)
+    hFraction_vs_pt2 = self.fMC.Get(name)
+
+    epsilon = 1e-5
+    min_bin = hFraction_vs_pt0.GetYaxis().FindBin(0. + epsilon)
+    cut_bin = hFraction_vs_pt0.GetYaxis().FindBin(self.prong_match_threshold + epsilon)
+    max_bin = hFraction_vs_pt0.GetYaxis().FindBin(1. + epsilon)
+
+    hTotal_vs_pt0 = hFraction_vs_pt0.ProjectionX('hTotal_vs_pt0_{}_{}'.format(jetR, sd_label0), 0, -1, cut_bin, max_bin)
+    hTotal_vs_pt1 = hFraction_vs_pt1.ProjectionX('hTotal_vs_pt1_{}_{}'.format(jetR, sd_label1), 0, -1, cut_bin, max_bin)
+    hTotal_vs_pt2 = hFraction_vs_pt2.ProjectionX('hTotal_vs_pt2_{}_{}'.format(jetR, sd_label2), 0, -1, cut_bin, max_bin)
+
+    hMatched_vs_pt0 = hFraction_vs_pt0.ProjectionX('hMatched_vs_pt0_{}_{}'.format(jetR, sd_label0), cut_bin, max_bin, cut_bin, max_bin)
+    hMatched_vs_pt1 = hFraction_vs_pt1.ProjectionX('hMatched_vs_pt1_{}_{}'.format(jetR, sd_label1), cut_bin, max_bin, cut_bin, max_bin)
+    hMatched_vs_pt2 = hFraction_vs_pt2.ProjectionX('hMatched_vs_pt2_{}_{}'.format(jetR, sd_label2), cut_bin, max_bin, cut_bin, max_bin)
+
+    hMatchedFraction_vs_pt0 = hMatched_vs_pt0.Clone()
+    hMatchedFraction_vs_pt0.SetName('hMatchedFraction_vs_pt0_{}_{}'.format(jetR, sd_label0))
+    hMatchedFraction_vs_pt0.Divide(hTotal_vs_pt0)
+    hMatchedFraction_vs_pt0.SetMarkerStyle(20+0)
+    hMatchedFraction_vs_pt0.SetMarkerColor(ColorArray[0])
+    hMatchedFraction_vs_pt0.SetLineColor(ColorArray[0])
+    hMatchedFraction_vs_pt0.GetYaxis().SetRangeUser(0., 1.2)
+    hMatchedFraction_vs_pt0.GetYaxis().SetTitle('Fraction tagged but swapped')
+    hMatchedFraction_vs_pt0.Draw('P same')
+
+    hMatchedFraction_vs_pt1 = hMatched_vs_pt1.Clone()
+    hMatchedFraction_vs_pt1.SetName('hMatchedFraction_vs_pt1_{}_{}'.format(jetR, sd_label1))
+    hMatchedFraction_vs_pt1.Divide(hTotal_vs_pt1)
+    hMatchedFraction_vs_pt1.SetMarkerStyle(20+1)
+    hMatchedFraction_vs_pt1.SetMarkerColor(ColorArray[1])
+    hMatchedFraction_vs_pt1.SetLineColor(ColorArray[1])
+    hMatchedFraction_vs_pt1.Draw('P same')
+
+    hMatchedFraction_vs_pt2 = hMatched_vs_pt2.Clone()
+    hMatchedFraction_vs_pt2.SetName('hMatchedFraction_vs_pt2_{}_{}'.format(jetR, sd_label2))
+    hMatchedFraction_vs_pt2.Divide(hTotal_vs_pt2)
+    hMatchedFraction_vs_pt2.SetMarkerStyle(20+2)
+    hMatchedFraction_vs_pt2.SetMarkerColor(ColorArray[2])
+    hMatchedFraction_vs_pt2.SetLineColor(ColorArray[2])
+    hMatchedFraction_vs_pt2.Draw('P same')
+
+    leg.AddEntry(hMatchedFraction_vs_pt0, 'z_{{cut}} = {}, #beta = {}'.format(zcut0, beta0), 'P')
+    leg.AddEntry(hMatchedFraction_vs_pt1, 'z_{{cut}} = {}, #beta = {}'.format(zcut1, beta1), 'P')
+    leg.AddEntry(hMatchedFraction_vs_pt2, 'z_{{cut}} = {}, #beta = {}'.format(zcut2, beta2), 'P')
+
+    leg.Draw("same")
+
+    output_filename = os.path.join(self.output_dir, '{}.pdf'.format(name))
+    c.SaveAs(output_filename)
+    c.Close()
 
   #---------------------------------------------------------------
   def plotRg(self, jetR, sd_label, zcut, beta):
@@ -130,6 +462,7 @@ class plot_rg_performance(common_base.common_base):
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
     hRM_theta = self.fMC.Get(name)
+    hRM_theta.Sumw2()
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_zg_R{}_{}Scaled'.format(jetR, sd_label)
@@ -147,16 +480,26 @@ class plot_rg_performance(common_base.common_base):
       hThetaG_JetPt = None
       hZg_JetPt = None
 
-    self.plot2D_theta_statistics(hThetaG_JetPt.Clone(), jetR, sd_label)
-    self.plot2D_zg_statistics(hZg_JetPt.Clone(), jetR, sd_label)
+    if self.fData:
+        self.plot2D_theta_statistics(hThetaG_JetPt.Clone(), jetR, sd_label)
+        self.plot2D_zg_statistics(hZg_JetPt.Clone(), jetR, sd_label)
 
-    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 20, 40)
-    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 40, 60)
-    self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
-
-    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 20, 40)
-    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 40, 60)
-    self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+    if self.is_pp:
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 20, 40)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 40, 60)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+        
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 20, 40)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 40, 60)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+    else:
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 80, 100)
+        self.plotRgProjection(hRM_theta, hThetaG_JetPt, jetR, sd_label, zcut, beta, 100, 120)
+        
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 60, 80)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 80, 100)
+        self.plotZgProjection(hRM_zg, hZg_JetPt, jetR, sd_label, zcut, beta, 100, 120)
 
   #---------------------------------------------------------------
   def plot2D_theta_statistics(self, hThetaG_JetPt, jetR, sd_label):
@@ -385,7 +728,10 @@ class plot_rg_performance(common_base.common_base):
   #---------------------------------------------------------------
   def plotDeltaR(self, jetR):
 
-    name = 'hDeltaR_All_R{}Scaled'.format(jetR)
+    if self.is_pp:
+        name = 'hDeltaR_All_R{}Scaled'.format(jetR)
+    else:
+        name = 'hDeltaR_combined_ppdet_R{}Scaled'.format(jetR)
     h = self.fMC.Get(name)
     
     c = ROOT.TCanvas("c","c: hist",600,450)
@@ -478,14 +824,14 @@ class plot_rg_performance(common_base.common_base):
       resolution = sigma/theta_gen
       histThetaResolution.SetBinContent(bin, resolution)
     
-      histThetaResolution.GetYaxis().SetTitle("#frac{#sigma(#theta_{g}^{gen})}{#theta_{g}^{gen}}")
-      histThetaResolution.GetXaxis().SetTitle("#theta_{g}^{gen}")
-      histThetaResolution.GetYaxis().SetRangeUser(-0.01, 1.)
-      histThetaResolution.GetXaxis().SetRangeUser(5., 100.)
-      outputFilename = os.path.join(self.output_dir, 'histThetaResolution_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
-      histThetaResolution.SetMarkerStyle(21)
-      histThetaResolution.SetMarkerColor(2)
-      self.utils.plot_hist(histThetaResolution, outputFilename, "hist P")
+    histThetaResolution.GetYaxis().SetTitle("#frac{#sigma(#theta_{g}^{gen})}{#theta_{g}^{gen}}")
+    histThetaResolution.GetXaxis().SetTitle("#theta_{g}^{gen}")
+    histThetaResolution.GetYaxis().SetRangeUser(-0.01, 1.)
+    histThetaResolution.GetXaxis().SetRangeUser(5., 100.)
+    outputFilename = os.path.join(self.output_dir, 'histThetaResolution_R{}_{}.pdf'.format(self.utils.remove_periods(jetR), sd_label))
+    histThetaResolution.SetMarkerStyle(21)
+    histThetaResolution.SetMarkerColor(2)
+    self.utils.plot_hist(histThetaResolution, outputFilename, "hist P")
 
   #---------------------------------------------------------------
   def plot_theta_residual(self, jetR, sd_label):
@@ -735,7 +1081,7 @@ class plot_rg_performance(common_base.common_base):
     name = 'hJetPt_Truth_R{}Scaled'.format(jetR)
     histPtGen = self.fMC.Get(name)
     histPtGen.Rebin(5)
-    histPtGen.Scale(1/3.) # TEMP fix since I accidentally filled 3x
+    #histPtGen.Scale(1/3.) # TEMP fix since I accidentally filled 3x
     
     # Then, get the pT^gen spectrum for matched jets
     name = 'hResponse_JetPt_ThetaG_R{}_{}Scaled'.format(jetR, sd_label)
@@ -769,7 +1115,7 @@ if __name__ == '__main__':
                       help='Path of MC ROOT file')
   parser.add_argument('-d', '--dataFile', action='store',
                       type=str, metavar='dataFile',
-                      default='AnalysisResults.root',
+                      default='',
                       help='Path of data ROOT file')
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',

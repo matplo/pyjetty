@@ -54,7 +54,8 @@ class process_ang_data(process_base.process_base):
     
     start_time = time.time()
 
-    # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
+    # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object
+    # of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
     io = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
     self.df_fjparticles = io.load_data()
@@ -90,10 +91,24 @@ class process_ang_data(process_base.process_base):
       config = yaml.safe_load(stream)
 
     # Set configuration for analysis
-    self.pTbins = config['pTbins']
-    self.jetR_list = config['jetR']
-    self.beta_list = config['betas']
-    self.n_lambda_bins = config['n_lambda_bins']
+    self.jetR_list = config["jetR"]
+    self.beta_list = config["betas"]
+
+    self.n_pt_bins = config["n_pt_bins"]
+    self.pt_limits = config["pt_limits"]
+    self.pTbins = np.arange(self.pt_limits[0], self.pt_limits[1] + 1, 
+                            (self.pt_limits[1] - self.pt_limits[0]) / self.n_pt_bins)
+    self.n_lambda_bins = config["n_lambda_bins"]
+    self.lambda_limits = config["lambda_limits"]
+    self.n_rap_bins = config["n_rap_bins"]
+    self.rap_limits = config["rap_limits"]
+
+    # SoftDrop configuration
+    self.sd_zcut = config["sd_zcut"]
+    self.sd_beta = config["sd_beta"]
+
+    # Configs for each jetR / beta
+    self.config_dict = config["configs"]
   
   #---------------------------------------------------------------
   # Initialize histograms
@@ -105,13 +120,15 @@ class process_ang_data(process_base.process_base):
     
     for jetR in self.jetR_list:
 
-      name = 'hJetPt_R{}'.format(jetR)
+      str_jetR = str(jetR).replace('.', '')
+
+      name = 'hJetPt_R%s' % str_jetR
       h = ROOT.TH1F(name, name, 300, 0, 300)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('dN/dp_{T}')
       setattr(self, name, h)
       
-      name = 'hM_JetPt_R{}'.format(jetR)
+      name = 'hM_JetPt_R%s' % str_jetR
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('m_{ch jet}')
@@ -120,66 +137,65 @@ class process_ang_data(process_base.process_base):
       
       for beta in self.beta_list:
 
+        config = ("R%s_B%s" % (jetR, beta)).replace('.', '')
+
+        '''
         for i, pTmin in list(enumerate(self.pTbins))[0:-1]:
 
-          # Angularities, \lambda_{\beta}^{\kappa}
+          # Individual angularity plots, \lambda_{\beta}^{\kappa}
           pTmax = self.pTbins[i+1]
-          name = ("hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).replace('.', '')
+          name = "hLambda_pT%i-%i_%s" % (pTmin, pTmax, config)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
 
           # Angularities with soft drop
-          name = ("hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')
+          name = "hLambda_pT%i-%i_%s_SD" % (pTmin, pTmax, config)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
-
-        # Lambda vs pT plots to estimate the binning that will be needed
-        name = ("hLambda_JetpT_R%s_B%s" % (jetR, beta)).replace('.', '')
-        h = ROOT.TH2F(name, name, 300, 0, 300, self.n_lambda_bins, 0, 1)
-        h.GetXaxis().SetTitle('p_{T, jet}')
-        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
-        setattr(self, name, h)
-
-        # Lambda vs pT plots to estimate the binning that will be needed -- with soft drop
-        name = ("hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).replace('.', '')
-        h = ROOT.TH2F(name, name, 300, 0, 300, self.n_lambda_bins, 0, 1)
-        h.GetXaxis().SetTitle('p_{T, jet}')
-        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
-        setattr(self, name, h)
-          
         '''
-        # Retrieve histogram binnings
-        n_pt_bins_det = getattr(self, 'n_pt_bins_det_B{}'.format(beta))
-        det_pt_bin_array = getattr(self, 'det_pt_bin_array_B{}'.format(beta))
-        n_rg_bins_det = getattr(self, 'n_rg_bins_det_B{}'.format(beta))
-        det_rg_bin_array = getattr(self, 'det_rg_bin_array_B{}'.format(beta))
-        
+
+        # Lambda vs pT plots with fine binning
+        name = "hLambda_JetpT_%s" % config
+        h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
+                      self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+        h.GetXaxis().SetTitle('p_{T, jet}')
+        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+        setattr(self, name, h)
+
+        # Lambda vs pT plots with fine binning -- with soft drop
+        name = "hLambda_JetpT_%s_SD" % config
+        h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
+                      self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+        h.GetXaxis().SetTitle('p_{T, jet}')
+        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+        setattr(self, name, h)
+
+        # Lambda vs rapidity plots with fine binning
+        name = "hLambda_JetRap_%s" % config
+        h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
+                      self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+        h.GetXaxis().SetTitle('#eta_{jet}')
+        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+        setattr(self, name, h)
+
+        # Lambda vs pT plots with fine binning -- with soft drop
+        name = "hLambda_JetRap_%s_SD" % config
+        h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
+                      self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+        h.GetXaxis().SetTitle('#eta_{jet}')
+        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+        setattr(self, name, h)
+
+
+        '''
         name = 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)
         h = ROOT.TH2F(name, name, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array)
         h.GetXaxis().SetTitle('p_{T,ch jet}')
         h.GetYaxis().SetTitle('#theta_{g,ch}')
-        setattr(self, name, h)
-
-        name = 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('#theta_{g,ch}')
-        setattr(self, name, h)
-
-        name = 'hZg_JetPt_R{}_B{}'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('z_{g,ch}')
-        setattr(self, name, h)
-
-        name = 'hMg_JetPt_R{}_B{}'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('m_{g,ch jet}')
         setattr(self, name, h)
         '''
 
@@ -202,8 +218,7 @@ class process_ang_data(process_base.process_base):
         print('jet selector is:', jet_selector,'\n')
         
         # Define SoftDrop settings
-        zcut = 0.1
-        sd = fjcontrib.SoftDrop(beta, zcut, jetR)
+        sd = fjcontrib.SoftDrop(self.sd_beta, self.sd_zcut, jetR)
         print('SoftDrop groomer is: {}'.format(sd.description()));
 
         # Use list comprehension to do jet-finding and fill histograms
@@ -235,10 +250,7 @@ class process_ang_data(process_base.process_base):
       
       # Fill histograms
       self.fillJetHistograms(jet, jetR, beta, sd)
-      
-      # Perform SoftDrop grooming and fill histograms
-      #jet_sd = sd.result(jet)
-      #self.fillSoftDropHistograms(jet_sd, jet, jetR, beta)
+
 
   #---------------------------------------------------------------
   # Fill jet histograms
@@ -246,45 +258,42 @@ class process_ang_data(process_base.process_base):
   def fillJetHistograms(self, jet, jetR, beta, sd):
 
     jet_pt = jet.pt()
+    config = ("R%s_B%s" % (jetR, beta)).replace('.', '')
 
+    # jet with softdrop
+    jet_sd = sd.result(jet)
+
+    # Calculate observable for this jet
+    # just use kappa = 1 for now
+    l = lambda_beta_kappa(jet, jetR, beta, 1)
+    lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
+
+    # Fill plots
+    getattr(self, ("hLambda_JetpT_%s" % config)).Fill(jet_pt, l)
+    getattr(self, ("hLambda_JetpT_%s_SD" % config)).Fill(jet_sd.pt(), lsd)
+    getattr(self, ("hLambda_JetRap_%s" % config)).Fill(jet.rap(), l)
+    getattr(self, ("hLambda_JetRap_%s_SD" % config)).Fill(jet_sd.rap(), lsd)
+
+    '''
     # just use kappa = 1 for now
     l = lambda_beta_kappa(jet, jetR, beta, 1)
     (pTmin, pTmax) = pT_bin(jet_pt, self.pTbins)
     if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
-      getattr(self, ("hLambda_pT%i-%i_R%s_B%s" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l)
-      getattr(self, ("hLambda_JetpT_R%s_B%s" % (jetR, beta)).replace('.', '')).Fill(jet_pt, l)
+      getattr(self, ("hLambda_pT%i-%i_%s" % (pTmin, pTmax, config))).Fill(l)
+      getattr(self, ("hLambda_JetpT_%s" % config)).Fill(jet_pt, l)
 
     # jet with softdrop
     jet_sd = sd.result(jet)
     lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
     (pTmin, pTmax) = pT_bin(jet_sd.pt(), self.pTbins)
     if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
-      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(lsd)
-      getattr(self, ("hLambda_JetpT_R%s_B%s_SD" % (jetR, beta)).replace('.', '')).Fill(jet_sd.pt(), lsd)
+      getattr(self, ("hLambda_pT%i-%i_%s_SD" % (pTmin, pTmax, config))).Fill(lsd)
+      getattr(self, ("hLambda_JetpT_%s_SD" % config)).Fill(jet_sd.pt(), lsd)
+    '''
 
-    getattr(self, 'hJetPt_R{}'.format(jetR)).Fill(jet_pt)
-    getattr(self, 'hM_JetPt_R{}'.format(jetR)).Fill(jet_pt, jet.m())
+    getattr(self, 'hJetPt_R%s' % str(jetR).replace('.', '')).Fill(jet_pt)
+    getattr(self, 'hM_JetPt_R%s' % str(jetR).replace('.', '')).Fill(jet_pt, jet.m())
 
-  '''
-  #---------------------------------------------------------------
-  # Fill soft drop histograms
-  #---------------------------------------------------------------
-    jet_pt_ungroomed = jet.pt()
-    
-    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
-    theta_g = sd_info.dR / jetR
-    zg = sd_info.z
-    mg = jet_sd.m()
-    
-    
-    getattr(self, 'hThetaG_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, theta_g)
-    getattr(self, 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)).Fill(jet_pt_ungroomed, theta_g)
-    getattr(self, 'hZg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, zg)
-    getattr(self, 'hMg_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_ungroomed, mg)
-  '''
-
-
-      
 
 ##################################################################
 if __name__ == '__main__':
@@ -296,7 +305,7 @@ if __name__ == '__main__':
                       help='Path of ROOT file containing TTrees')
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
-                      default='config/analysis_config.yaml',
+                      default='config/angularity.yaml',
                       help="Path of config file for jetscape analysis")
   parser.add_argument('-o', '--outputDir', action='store',
                       type=str, metavar='outputDir',
@@ -322,5 +331,6 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = process_ang_data(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis = process_ang_data(input_file=args.inputFile, config_file=args.configFile, 
+                              output_dir=args.outputDir)
   analysis.process_ang_data()

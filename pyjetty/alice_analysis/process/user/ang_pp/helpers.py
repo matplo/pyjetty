@@ -7,16 +7,27 @@ Ezra Lesser (elesser@berkeley.edu)
 '''
 
 import numpy as np
+from math import pi
 
 
 # Return \Delta{R} between two fastjet.PsuedoJet objects  
 def deltaR(pjet1, pjet2):
-  return np.sqrt( (pjet1.eta() - pjet2.eta())**2 + (pjet1.phi() - pjet2.phi())**2 )
+
+  # Check that there's not a problem with +/- pi in phi part
+  phi1 = pjet1.phi()
+  if phi1 - pjet2.phi() > 5:
+    phi1 -= 2*pi
+  elif pjet2.phi() - phi1 > 5:
+    phi1 += 2*pi
+
+  return np.sqrt( (pjet1.eta() - pjet2.eta())**2 + (phi1 - pjet2.phi())**2 )
+
 
 # Return jet angularity for fastjet.PseudoJet object
 def lambda_beta_kappa(jet, jetR, beta, kappa):
   return sum( [ (constit.pt() / jet.pt())**kappa * (deltaR(jet, constit) / jetR)**beta 
                 for constit in jet.constituents() ] )
+
 
 # Helper function for finding the correct jet pT bin
 def pT_bin(jet_pT, pTbins):

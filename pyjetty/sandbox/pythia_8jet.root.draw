@@ -1,0 +1,68 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#logz 1
+#x p_{T}^{jet} (GeV/c)
+#y #sum_{i<8}p_{T,i} / #sum_{ALL}p_{T,i}
+#force_legend 1
+#legend pos=ll title=PYTHIA8 #sqrt{s}=13 TeV, anti-k_{T}, R=0.4, |#eta_{jet}|<1 
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R04.root 		:hfraction2D :colz over noleg: title=hfraction
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R04.root 		:hfraction :p +k1: title=mean p_{T} fraction
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#logz 1
+#x p_{T}^{jet} (GeV/c)
+#y #delta p_{T} / p_{T} = (#sum_{i<8}p_{T,i} - #sum_{ALL}p_{T,i}) / p_{T}^{jet}
+#force_legend 1
+#legend pos=ll title=PYTHIA8 #sqrt{s}=13 TeV, anti-k_{T}, R=0.4, |#eta_{jet}|<1 
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R04.root 		:hdpt2D :colz over noleg : title=hdpt
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R04.root 		:hdpt :p +k1 : title=mean #frac{#deltap_{T}}{p_{T}^{jet}}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#logz 1
+#x p_{T}^{jet} (GeV/c)
+#y #sum_{i<8}p_{T,i} / #sum_{ALL}p_{T,i}
+#force_legend 1
+#legend pos=ll title=PYTHIA8 #sqrt{s}=13 TeV, anti-k_{T}, R=0.6, |#eta_{jet}|<1 
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R06.root 		:hfraction2D :colz over noleg: title=hfraction
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R06.root 		:hfraction :p +k1: title=mean p_{T} fraction
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#logz 1
+#x p_{T}^{jet} (GeV/c)
+#y #delta p_{T} / p_{T} = (#sum_{i<8}p_{T,i} - #sum_{ALL}p_{T,i}) / p_{T}^{jet}
+#force_legend 1
+#legend pos=ll title=PYTHIA8 #sqrt{s}=13 TeV, anti-k_{T}, R=0.6, |#eta_{jet}|<1 
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R06.root 		:hdpt2D :colz over noleg : title=hdpt
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R06.root 		:hdpt :p +k1 : title=mean #frac{#deltap_{T}}{p_{T}^{jet}}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#logz 1
+#x p_{T}^{jet} (GeV/c)
+#y #delta p_{T} / p_{T} = (#sum_{i<8}p_{T,i} - #sum_{ALL}p_{T,i}) / p_{T}^{jet}
+#force_legend 1
+#miny -1.0
+#maxy  0.5
+#legend pos=down ncol=2 title=PYTHIA8 #sqrt{s}=13 TeV, anti-k_{T} |#eta_{jet}|<1 
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R04.root 		:hdpt :p : title=mean for R=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R04.root 		:hdpt2D_2 :p +k1: title=#sigma_{Gauss} for R=0.4
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R06.root 		:hdpt :p : title=mean for R=0.6
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/pythia_8jet_R06.root 		:hdpt2D_2 :p +k2: title=#sigma_{Gauss} for R=0.6

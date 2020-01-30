@@ -39,19 +39,19 @@ def scaleHistograms(configFile, remove_unscaled):
 
   # Compute average number of events per bin
   nEventsSum = 0
-  for bin in range(1, EndPtHardBin+1):
-    f = ROOT.TFile("{}/AnalysisResults.root".format(bin), "UPDATE")
+  for i in range(1, EndPtHardBin+1):
+    f = ROOT.TFile("%i/AnalysisResults.root" % i, "UPDATE")
     hNevents = f.Get("hNevents")
     nEvents = hNevents.GetBinContent(2)
     nEventsSum += nEvents
   nEventsAvg = nEventsSum*1./EndPtHardBin
   print("nEventsAvg per bin: {}".format(nEventsAvg))
 
-  for bin in range(1, EndPtHardBin+1):
-    print("ooo Scaling Pt-hard bin {} of {}".format(bin, EndPtHardBin))
+  for i in range(1, EndPtHardBin+1):
+    print("ooo Scaling Pt-hard bin %i of %i" % (i, EndPtHardBin))
 
-    f = ROOT.TFile("{}/AnalysisResults.root".format(bin), "UPDATE")
-    hCrossSection = config[bin]
+    f = ROOT.TFile("%i/AnalysisResults.root" % i, "UPDATE")
+    hCrossSection = config[i]
     nEvents = f.Get("hNevents").GetBinContent(2)
     eventScaleFactor = nEvents / nEventsAvg
     scaleFactor = hCrossSection / eventScaleFactor
@@ -68,32 +68,33 @@ def scaleHistograms(configFile, remove_unscaled):
         continue
       obj = f.Get(name)
       if obj:
-        ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers, outlierLimit, outlierNBinsThreshold, bin-1, EndPtHardBin, name)
+        ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers, outlierLimit,
+                           outlierNBinsThreshold, i-1, EndPtHardBin, name)
       else:
         print('obj not found!')
-  
+
       obj.Write("%sScaled" % obj.GetName())
-      
       if remove_unscaled:
-        f.Delete('{};1'.format(obj.GetName()))  # Remove unscaled histogram
+        f.Delete("%s;1" % obj.GetName())  # Remove unscaled histogram
 
     f.Close()
 
 ###################################################################################
 # Function to iterate recursively through an object to scale all TH1/TH2/THnSparse
-def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limit=2, nBinsThreshold=4, pTHardBin=0, EndPtHardBin=20, taskName=""):
+def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limit=2,
+                       nBinsThreshold=4, pTHardBin=0, EndPtHardBin=20, taskName=""):
   
   # Set Sumw2 if not already done
   if obj.InheritsFrom(ROOT.THnBase.Class()):
     if obj.GetSumw2() is 0:
       obj.Sumw2()
       if verbose:
-        print('Set Sumw2 on {}'.format(obj.GetName()))
+        print('Set Sumw2 on %s' % obj.GetName())
   else:
     if obj.GetSumw2N() is 0:
       obj.Sumw2()
       if verbose:
-        print('Set Sumw2 on {}'.format(obj.GetName()))
+        print('Set Sumw2 on %s' % obj.GetName())
   
   if obj.InheritsFrom(ROOT.TProfile.Class()):
     if verbose:
@@ -120,7 +121,8 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
       print("Not a histogram!")
       print(obj.GetName())
     for subobj in obj:
-      ScaleAllHistograms(subobj, scaleFactor, f, verbose, bRemoveOutliers, limit, nBinsThreshold, pTHardBin, taskName)
+      ScaleAllHistograms(subobj, scaleFactor, f, verbose, bRemoveOutliers, limit,
+                         nBinsThreshold, pTHardBin, taskName)
 
 ###################################################################################
 # Function to remove outliers from a TH3 (i.e. truncate the spectrum), based on projecting to the y-axis
@@ -130,9 +132,9 @@ def removeOutliers(pTHardBin, EndPtHardBin, hist, verbose, limit=2, nBinsThresho
 
   #Project to the pT Truth axis
   if dimension==3:
-    histToCheck = hist.ProjectionY("{}_projBefore".format(hist.GetName()))
+    histToCheck = hist.ProjectionY("%s_projBefore" % hist.GetName())
   if dimension==2:
-    histToCheck = hist.ProjectionX("{}_projBefore".format(hist.GetName()))
+    histToCheck = hist.ProjectionX("%s_projBefore" % hist.GetName())
   if dimension==1:
     histToCheck = hist
 
@@ -316,7 +318,7 @@ def plotOutlierPDF(h, hAfter, pTHardBin, EndPtHardBin, outputFilename, verbose, 
   c.Close()
 
 ########################################################################################################
-# Get Jet radius from list analysis label                       #############################################
+# Get Jet radius from list analysis label                  #############################################
 ########################################################################################################
 def getRadiusFromlistName(listName):
 
@@ -345,13 +347,13 @@ if __name__ == '__main__':
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
                       default='analysis_config.yaml',
-                      help="Path of config file for jetscape analysis")
-  parser.add_argument('-r', '--remove_unscaled', action='store_true',
-                      help='Remove unscaled histograms')
+                      help="Path of config file for analysis")
+  parser.add_argument("-r", "--remove_unscaled", help="Remove unscaled histograms",
+                      action="store_true")
   
   # Parse the arguments
   args = parser.parse_args()
-  
+
   print('Configuring...')
   print('configFile: \'{0}\''.format(args.configFile))
   print('----------------------------------------------------------------')
@@ -361,4 +363,7 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  scaleHistograms(configFile = args.configFile, remove_unscaled = args.remove_unscaled)
+  if args.remove_unscaled:
+    print("WARNING: Will remove unscaled histograms from stage 1 ROOT files.")
+
+  scaleHistograms(configFile=args.configFile, remove_unscaled=args.remove_unscaled)
