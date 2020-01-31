@@ -92,17 +92,18 @@ class run_analysis(common_base.common_base):
         setattr(self, 'truth_pt_bin_array_{}'.format(obs_label), truth_pt_bin_array)
           
         if observable == 'theta_g':
-          truth_bins_name = 'rg_bins_truth'
+          prefix = 'rg'
         elif observable == 'zg':
-          truth_bins_name = 'zg_bins_truth'
+          prefix = 'zg'
         else:
-          truth_bins_name = 'obs_bins_truth'
+          prefix = 'obs'
+        truth_bins_name = '{}_bins_truth'.format(prefix)
         
         obs_bins_truth = (self.obs_config_dict[config_name][truth_bins_name])
         n_obs_bins_truth = len(obs_bins_truth) - 1
-        setattr(self, 'n_bins_truth_{}'.format(obs_label), n_obs_bins_truth)
+        setattr(self, 'n_{}_bins_truth_{}'.format(prefix, obs_label), n_obs_bins_truth)
         truth_obs_bin_array = array('d',obs_bins_truth)
-        setattr(self, 'truth_bin_array_{}'.format(obs_label), truth_obs_bin_array)
+        setattr(self, 'truth_{}_bin_array_{}'.format(prefix, obs_label), truth_obs_bin_array)
         
     # List of systematic variations to perform
     self.systematics_list = config['systematics_list']
@@ -562,13 +563,9 @@ class run_analysis(common_base.common_base):
     myPad.Draw()
     myPad.cd()
     
-    if observable == 'theta_g':
-      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
-      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
-    if observable == 'zg':
-      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
-      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
-
+    n_bins_truth = self.n_bins_truth(observable, obs_label)
+    truth_bin_array = self.truth_bin_array(observable, obs_label)
+    
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
     xtitle = getattr(self, 'xtitle_{}'.format(observable))
@@ -677,7 +674,7 @@ class run_analysis(common_base.common_base):
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-  
+    
     for bin in range(1, n_pt_bins_truth-3):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
@@ -693,26 +690,22 @@ class run_analysis(common_base.common_base):
     fNumerator = ROOT.TFile(self.fNPcorrection_numerator, 'READ')
     fDenominator = ROOT.TFile(self.fNPcorrection_denominator, 'READ')
     
-    if observable == 'theta_g':
-      n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
-      truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
-    if observable == 'zg':
-      n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
-      truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
-
-    hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
+    n_bins_truth = self.n_bins_truth(observable, obs_label)
+    truth_bin_array = self.truth_bin_array(observable, obs_label)
+    
+    hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, obs_setting[1], int(min_pt_truth), int(max_pt_truth))
     
     hNumerator = fNumerator.Get(hname)
     hNumerator.SetDirectory(0)
     n_jets_inclusive = hNumerator.Integral(0, hNumerator.GetNbinsX()+1)
-    n_jets_tagged = hNumerator.Integral(hNumerator.FindBin(truth_rg_bin_array[0]), hNumerator.GetNbinsX())
+    n_jets_tagged = hNumerator.Integral(hNumerator.FindBin(truth_bin_array[0]), hNumerator.GetNbinsX())
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
     hNumerator.Scale(1./n_jets_inclusive, 'width')
       
     hDenominator = fDenominator.Get(hname)
     hDenominator.SetDirectory(0)
     n_jets_inclusive = hDenominator.Integral(0, hDenominator.GetNbinsX()+1)
-    n_jets_tagged = hDenominator.Integral(hDenominator.FindBin(truth_rg_bin_array[0]), hDenominator.GetNbinsX())
+    n_jets_tagged = hDenominator.Integral(hDenominator.FindBin(truth_bin_array[0]), hDenominator.GetNbinsX())
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
     hDenominator.Scale(1./n_jets_inclusive, 'width')
         
@@ -727,14 +720,13 @@ class run_analysis(common_base.common_base):
   #----------------------------------------------------------------------
   def get_nll_tgraph(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
 
+    n_bins_truth = self.n_bins_truth(observable, obs_label)
+    truth_bin_array = self.truth_bin_array(observable, obs_label)
+    
     if observable == 'theta_g':
-      path_txt = '/Users/jamesmulligan/alidock/theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
-      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
-      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
+      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(obs_setting[1], int(min_pt_truth), int(max_pt_truth))
     if observable == 'zg':
-      path_txt = '/Users/jamesmulligan/alidock/theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
-      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
-      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
+      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(obs_setting[1], int(min_pt_truth), int(max_pt_truth))
     
     filename = open(path_txt, 'r')
 
@@ -817,13 +809,9 @@ class run_analysis(common_base.common_base):
       
       obs_label = self.utils.obs_label(observable, obs_setting)
       
-      if observable == 'theta_g':
-        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
-        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
-      if observable == 'zg':
-        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
-        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
-      
+      n_obs_bins_truth = self.n_bins_truth(observable, obs_label)
+      truth_bin_array = self.truth_bin_array(observable, obs_label)
+
       if i == 0:
         marker = 20
         color = 600-6
@@ -1000,13 +988,9 @@ class run_analysis(common_base.common_base):
       
       obs_label = self.utils.obs_label(observable, obs_setting)
       
-      if observable == 'theta_g':
-        n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
-        truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
-      if observable == 'zg':
-        n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
-        truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
-      
+      n_obs_bins_truth = self.n_bins_truth(observable, obs_label)
+      truth_bin_array = self.truth_bin_array(observable, obs_label)
+
       if i == 0:
         marker = 20
         marker_pythia = marker+4
@@ -1024,12 +1008,12 @@ class run_analysis(common_base.common_base):
       if plot_pythia:
         
         fPythia = ROOT.TFile(self.fPythia_name, 'READ')
-        hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
+        hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, obs_setting[1], int(min_pt_truth), int(max_pt_truth))
         hPythia = fPythia.Get(hname)
         hPythia.SetDirectory(0)
         
         n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_rg_bin_array[0]), hPythia.GetNbinsX())
+        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_bin_array[0]), hPythia.GetNbinsX())
         fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
         hPythia.Scale(1./n_jets_inclusive, 'width')
         
@@ -1083,7 +1067,7 @@ class run_analysis(common_base.common_base):
       h.SetLineColor(color)
       h.DrawCopy('PE X0 same')
         
-      myLegend.AddEntry(h, 'ALICE pp #beta={}'.format(beta), 'pe')
+      myLegend.AddEntry(h, 'ALICE pp #beta={}'.format(obs_setting[1]), 'pe')
 
       if plot_ratio:
         pad2.cd()
@@ -1186,15 +1170,13 @@ class run_analysis(common_base.common_base):
     myPad.Draw()
     myPad.cd()
     
+    n_obs_bins_truth = self.n_bins_truth(observable, obs_label)
+    truth_bin_array = self.truth_bin_array(observable, obs_label)
     if observable == 'theta_g':
-      n_rg_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
-      truth_rg_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
       ymax = 5.
     if observable == 'zg':
-      n_rg_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
-      truth_rg_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
       ymax = 12.
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_rg_bins_truth, truth_rg_bin_array)
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
     xtitle = getattr(self, 'xtitle_{}'.format(observable))
     ytitle = getattr(self, 'ytitle_{}'.format(observable))
@@ -1212,7 +1194,7 @@ class run_analysis(common_base.common_base):
       if plot_pythia_from_response:
         hPythia = self.get_pythia_from_response(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
         n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_rg_bin_array[0]), hPythia.GetNbinsX())
+        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_bin_array[0]), hPythia.GetNbinsX())
         fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
         hPythia.Scale(1./n_jets_inclusive, 'width')
         hPythia.SetFillStyle(0)
@@ -1224,13 +1206,13 @@ class run_analysis(common_base.common_base):
         hPythia.Draw('E2 same')
     
       if plot_pythia_from_mateusz:
-        fPythia_name = '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+        fPythia_name = '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
         fPythia = ROOT.TFile(fPythia_name, 'READ')
-        hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, beta, int(min_pt_truth), int(max_pt_truth))
+        hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, obs_setting[1], int(min_pt_truth), int(max_pt_truth))
         hPythia2 = fPythia.Get(hname)
 
         n_jets_inclusive2 = hPythia2.Integral(0, hPythia2.GetNbinsX()+1)
-        n_jets_tagged2 = hPythia2.Integral(hPythia2.FindBin(truth_rg_bin_array[0]), hPythia2.GetNbinsX())
+        n_jets_tagged2 = hPythia2.Integral(hPythia2.FindBin(truth_bin_array[0]), hPythia2.GetNbinsX())
         fraction_tagged_pythia =  n_jets_tagged2/n_jets_inclusive2
         hPythia2.Scale(1./n_jets_inclusive2, 'width')
         hPythia2.SetFillStyle(0)
@@ -1389,6 +1371,32 @@ class run_analysis(common_base.common_base):
       content = h.GetBinContent(bin)
       perErr = hPercError.GetBinContent(bin)
       h.SetBinError(bin, content*perErr*0.01)
+      
+  #---------------------------------------------------------------
+  # Get n_bins_truth
+  #---------------------------------------------------------------
+  def n_bins_truth(self, observable, obs_label):
+
+    if observable == 'theta_g':
+      n_bins_truth = getattr(self, 'n_rg_bins_truth_{}'.format(obs_label))
+    elif observable == 'zg':
+      n_bins_truth = getattr(self, 'n_zg_bins_truth_{}'.format(obs_label))
+    else:
+      n_bins_truth = getattr(self, 'n_obs_bins_truth_{}'.format(obs_label))
+    return n_bins_truth
+
+  #---------------------------------------------------------------
+  # Get truth_bin_array
+  #---------------------------------------------------------------
+  def truth_bin_array(self, observable, obs_label):
+
+    if observable == 'theta_g':
+      truth_bin_array = getattr(self, 'truth_rg_bin_array_{}'.format(obs_label))
+    elif observable == 'zg':
+      truth_bin_array = getattr(self, 'truth_zg_bin_array_{}'.format(obs_label))
+    else:
+      truth_bin_array = getattr(self, 'truth_obs_bin_array_{}'.format(obs_label))
+    return truth_bin_array
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
