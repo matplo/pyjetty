@@ -32,27 +32,28 @@ class AliceChargedParticleEfficiency(MPBase):
 		if self.csystem == 'pp':
 			self.effi_1GeV = 0.73
 			self.effi_1GeVup = 0.83
-		if self.csystem == 'PbPb':
+		elif self.csystem == 'PbPb':
 			self.effi_1GeV = 0.73 - 0.02
 			self.effi_1GeVup = 0.83 - 0.02
 
 	def apply_efficiency(self, particles):
 		output = []
 		for p in particles:
-			if p.pt() < 0.15:
-				continue
-			if p.pt() < 1:
-				if random.random() > self.effi_1GeV:
-					continue
-				else:
-					output.append(p)
-			if p.pt() >= 1:
-				if random.random() > self.effi_1GeVup:
-					continue
-				else:
-					output.append(p)
+                        if self.pass_eff_cut(p.pt()):
+                                output.append(p)
 		return output
 
+        def pass_eff_cut(self, pt):
+                if pt < 0.15:
+                        return False
+                elif p.pt() < 1:
+                        if random.random() > self.effi_1GeV:
+                                return False
+                        return True
+                else:  # p.pt() >= 1
+                        if random.random() > self.effi_1GeVup:
+                                return False
+                        return True
 
 
 def main():

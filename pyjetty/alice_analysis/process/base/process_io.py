@@ -53,7 +53,7 @@ class process_io(common_base.common_base):
   # Convert ROOT TTree to SeriesGroupBy object of fastjet particles per event.
   # Optionally, remove a certain random fraction of tracks
   #---------------------------------------------------------------
-  def load_data(self, reject_tracks_fraction=0., offset_indices=False):
+  def load_data(self, reject_tracks_fraction=0., offset_indices=False, group_by_evid=True):
     
     self.reject_tracks_fraction = reject_tracks_fraction
     self.reset_dataframes()
@@ -71,8 +71,7 @@ class process_io(common_base.common_base):
       indices_remove = np.random.choice(self.track_df.index, n_remove, replace=False)
       self.track_df.drop(indices_remove, inplace=True)
 
-    print('Transform the track dataframe into a series object of fastjet particles per event...')
-    df_fjparticles = self.group_fjparticles(offset_indices)
+    df_fjparticles = self.group_fjparticles(offset_indices, group_by_evid)
 
     return df_fjparticles
   
@@ -108,15 +107,26 @@ class process_io(common_base.common_base):
   # Transform the track dataframe into a SeriesGroupBy object
   # of fastjet particles per event.
   #---------------------------------------------------------------
-  def group_fjparticles(self, offset_indices=False):
+  def group_fjparticles(self, offset_indices=False, group_by_evid=True):
 
-    # (i) Group the track dataframe by event
-    #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
-    self.track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
+    if group_by_evid:
+      print("Transform the track dataframe into a series object of fastjet particles per event...")
+
+      # (i) Group the track dataframe by event
+      #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
+      self.track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
     
-    # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
-    self.df_fjparticles = self.track_df_grouped.apply(self.get_fjparticles, offset_indices=offset_indices)
+      # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
+      self.df_fjparticles = self.track_df_grouped.apply(self.get_fjparticles, offset_indices=offset_indices)
     
+    else:
+      print("Transform the track dataframe into a dataframe of fastjet particles per track...")
+
+      # Transform into a DataFrame of fastjet particles
+      df = self.track_df
+      self.df_fjparticles = pandas.DataFrame( {"run_number": df["run_number"], "ev_id": df["ev_id"], 
+                                               "fj_particle": self.get_fjparticles(self.track_df)} )
+
     return self.df_fjparticles
 
   #---------------------------------------------------------------

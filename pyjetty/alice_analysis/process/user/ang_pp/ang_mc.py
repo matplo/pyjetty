@@ -45,8 +45,7 @@ class process_ang_mc(process_base.process_base):
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
     super(process_ang_mc, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
-    self.initialize_config()
-  
+
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
