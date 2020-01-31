@@ -127,20 +127,20 @@ class process_ang_mc(process_base.process_base):
     self.reject_tracks_fraction = config['reject_tracks_fraction']
 
     # Set configuration for analysis
-    self.pTbins = config['pTbins']
     self.jetR_list = config['jetR']
     self.beta_list = config['betas']
-    self.n_lambda_bins = config['n_lambda_bins']
 
-    self.write_tree_output = config['write_tree_output']
-    
+    ''' These parameters are not currently in use
+    self.n_pt_bins = config["n_pt_bins"]
+    self.pt_limits = config["pt_limits"]
+    self.pTbins = np.arange(self.pt_limits[0], self.pt_limits[1] + 1, 
+                            (self.pt_limits[1] - self.pt_limits[0]) / self.n_pt_bins)
+    self.n_lambda_bins = config['n_lambda_bins']
     '''
-    # config['beta'] is a dictionary of dictionaries, where each dict is for a value of beta
-    beta_dict = config['beta']
-    
-    # Retrieve list of beta values
-    self.beta_list = list(beta_dict.keys())
-    '''
+
+    self.sd_zcut = config["sd_zcut"]
+    self.sd_beta = config["sd_beta"]
+
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
@@ -182,18 +182,21 @@ class process_ang_mc(process_base.process_base):
 
       for beta in self.beta_list:
 
-        name = ('hResponse_Lambda_B%s_R%s' % (beta, jetR)).replace('.', '')
+        label = ("R%s_B%s" % (str(jetR), str(beta))).replace('.', '')
+
+        name = 'hResponse_lambda_%s' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
         h.GetXaxis().SetTitle('#lambda_{%s,det}' % beta)
         h.GetYaxis().SetTitle('#lambda_{%s,tru}' % beta)
         setattr(self, name, h)
 
-        name = ('hResponse_Lambda_B%s_R%s_SD' % (beta, jetR)).replace('.', '')
+        name = 'hResponse_lambda_%s_SD' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
         h.GetXaxis().SetTitle('#lambda_{%s,det,SD}' % beta)
         h.GetYaxis().SetTitle('#lambda_{%s,tru,SD}' % beta)
         setattr(self, name, h)
 
+        '''
         for i, pTmin in list(enumerate(self.pTbins))[0:-1]:
 
           # Angularities, \lambda_{\beta}^{\kappa}
@@ -210,8 +213,9 @@ class process_ang_mc(process_base.process_base):
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
           setattr(self, name, h)
+        '''
 
-        name = 'hLambdaResidual_JetPt_R{}_B{}'.format(jetR, beta)
+        name = "hLambdaResidual_JetpT_%s" % label
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('#frac{#lambda_{det}-#lambda_{truth}}{#lambda_{truth}}')
@@ -220,11 +224,11 @@ class process_ang_mc(process_base.process_base):
         # Create THn of response
         dim = 4;
         title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-        nbins = [100, 30, 100, 25]
-        min = [0., 0., 0., 0.]
+        nbins = [95, 30, 100, 20]
+        min = [5.,   0.,   0.,  0.]
         max = [100., 150., 1.0, 1.0]
         
-        name = ('hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).replace('.', '')
+        name = 'hResponse_JetpT_lambda_%s' % label
         nbins = (nbins)
         xmin = (min)
         xmax = (max)
@@ -327,11 +331,13 @@ class process_ang_mc(process_base.process_base):
     '''
 
     # Loop through jets and set jet matching candidates for each jet in user_info
-    [ [ self.set_matching_candidates(jet_det, jet_truth, 'hDeltaR_All_R%s' % (jetR.replace('.', ''))) 
+    hname = "hDeltaR_All_R%s" % str(jetR).replace('.', '')
+    [ [ self.set_matching_candidates(jet_det, jet_truth, jetR, hname) 
         for jet_truth in jets_truth_selected_matched ] for jet_det in jets_det_selected ]
    
     # Loop through jets and set accepted matches
-    [ self.set_matches_pp(jet_det, jetR) for jet_det in jets_det_selected ]
+    hname = 'hJetMatchingQA_R%s' % str(jetR).replace('.', '')
+    [ self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected ]
     
     # Loop through jets and fill matching histograms
     result = [ self.fill_matching_histograms(jet_det, jetR) for jet_det in jets_det_selected ]
@@ -340,27 +346,14 @@ class process_ang_mc(process_base.process_base):
     for jetR in self.jetR_list:
       for beta in self.beta_list:
 
-        # Get tree writer
-        tree_writer = None
-        if self.write_tree_output:
-          name = ('tree_writer_R%s_B%s' % (jetR, beta)).replace('.', '')
-          tree_writer = getattr(self, name)
-
-        result = [ self.fill_jet_matches(jet_det, jetR, beta, tree_writer) for jet_det in jets_det_selected ]
-
-        # Fill the tree
-        if self.write_tree_output:
-          tree_writer.fill_tree()
+        result = [ self.fill_jet_matches(jet_det, jetR, beta) for jet_det in jets_det_selected ]
 
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
-  def fill_jet_matches(self, jet_det, jetR, beta, tree_writer):
+  def fill_jet_matches(self, jet_det, jetR, beta):
 
-    # Define SoftDrop settings
-    zcut = 0.1
-    b = 2  # SoftDrop beta, different from angularity param
-    sd = fjcontrib.SoftDrop(b, zcut, jetR)
+    sd = fjcontrib.SoftDrop(self.sd_beta, self.sd_zcut, jetR)
     jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
     reclusterer = fjcontrib.Recluster(jet_def_recluster)
     sd.set_reclustering(True, reclusterer)
@@ -376,7 +369,7 @@ class process_ang_mc(process_base.process_base):
       jet_truth = jet_det.python_info().match
       
       if jet_truth:
-        self.fill_response_histograms(tree_writer, jet_det, jet_truth, sd, jetR, beta)
+        self.fill_response_histograms(jet_det, jet_truth, sd, jetR, beta)
 
   '''
   #---------------------------------------------------------------
@@ -439,16 +432,14 @@ class process_ang_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_response_histograms(self, tree_writer, jet_det, jet_truth, sd, jetR, beta):
-    
-    jet_pt_det_ungroomed = jet_det.pt()
-    jet_pt_truth_ungroomed = jet_truth.pt()
+  def fill_response_histograms(self, jet_det, jet_truth, sd, jetR, beta):
+
+    # Ungroomed jet pT
+    jet_pt_det = jet_det.pt()
+    jet_pt_truth = jet_truth.pt()
 
     # just use kappa = 1 for now
-    l_det = lambda_beta_kappa(jet_det, jetR, beta, 1)
-    (pTmin, pTmax) = pT_bin(jet_det.pt(), self.pTbins)
-    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
-      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l_det)
+    l_det = lambda_beta_kappa(jet_det, jetR, beta, 1) 
     l_tru = lambda_beta_kappa(jet_truth, jetR, beta, 1)
 
     # soft drop jet
@@ -457,23 +448,30 @@ class process_ang_mc(process_base.process_base):
 
     # lambda for soft drop jet
     l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
+    l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
+
+    label = ("R%s_B%s" % (str(jetR), str(beta))).replace('.', '')
+
+    ''' Histograms per pT bin (currently unnecessary and cause clutter)
+    (pTmin, pTmax) = pT_bin(jet_det.pt(), self.pTbins)
+    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
+      getattr(self, ("hLambda_pT%i-%i_%s_mcdet" % (pTmin, pTmax, label)).replace('.', '')).Fill(l_det)
+
     (pTmin, pTmax) = pT_bin(jet_sd_det.pt(), self.pTbins)
     if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
-      getattr(self, ("hLambda_pT%i-%i_R%s_B%s_mcdet_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')).Fill(l_sd_det)
-    l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
+      getattr(self, ("hLambda_pT%i-%i_%s_mcdet_SD" % (pTmin, pTmax, label)).replace('.', '')).Fill(l_sd_det)
+    '''
     
     lambda_resolution = (l_det - l_tru) / l_tru
-    getattr(self, 'hLambdaResidual_JetPt_R{}_B{}'.format(jetR, beta)).Fill(jet_pt_truth_ungroomed,
-                                                                           lambda_resolution)
+    getattr(self, 'hLambdaResidual_JetpT_%s' % label).Fill(jet_pt_truth, lambda_resolution)
 
-    getattr(self, ('hResponse_JetpT_R%s' % jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, 
-                                                                        jet_pt_truth_ungroomed)
-    getattr(self, ('hResponse_Lambda_B%s_R%s' % (beta, jetR)).replace('.', '')).Fill(l_det, l_tru)
-    getattr(self, ('hResponse_Lambda_B%s_R%s_SD' % (beta, jetR)).replace('.', '')).Fill(l_sd_det, l_sd_tru)
+    getattr(self, ('hResponse_JetpT_R%s' % jetR).replace('.', '')).Fill(jet_pt_det, jet_pt_truth)
+    getattr(self, 'hResponse_lambda_%s' % label).Fill(l_det, l_tru)
+    getattr(self, 'hResponse_lambda_%s_SD' % label).Fill(l_sd_det, l_sd_tru)
 
-    x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, l_det, l_tru])
+    x = ([jet_pt_det, jet_pt_truth, l_det, l_tru])
     x_array = array('d', x)
-    getattr(self, ('hResponse_JetpT_lambda_R%s_B%s' % (jetR, beta)).replace('.', '')).Fill(x_array)
+    getattr(self, 'hResponse_JetpT_lambda_%s' % label).Fill(x_array)
 
 
 ##################################################################

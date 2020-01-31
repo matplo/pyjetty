@@ -129,9 +129,6 @@ class analysis_utils(common_base.common_base):
                   scale_factor *= math.pow(obs_true, power_law_offset)
                 elif observable == 'theta_g':
                   scale_factor *= (1 + obs_true)
-                elif observable == "ang":
-                  # TODO
-                  pass
 
                 content = content*scale_factor
           
@@ -152,7 +149,8 @@ class analysis_utils(common_base.common_base):
   #---------------------------------------------------------------
   # Create an empty THn according to specified binnings
   #---------------------------------------------------------------
-  def create_empty_thn(self, name, n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array):
+  def create_empty_thn(self, name, n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array, 
+                       n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array):
     
     # Create THn of response
     dim = 0;

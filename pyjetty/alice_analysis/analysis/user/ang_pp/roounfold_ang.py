@@ -206,12 +206,19 @@ class roounfold_ang(analysis_base.analysis_base):
     # Get data jet spectrum
     name = getattr(self, 'name_data_rebinned_%s' % label)
     hData_PerBin = getattr(self, name)
-    hData_PerBin.GetXaxis().SetRangeUser(0., 100.)
+    #hData_PerBin.GetXaxis().SetRangeUser(0., 100.)
+    hData_PerBin.SetTitle("Rebinned data, #it{R}=%s" % str(jetR))
+    hData_PerBin.GetYaxis().SetTitle("#frac{d#it{N}}{d#lambda_{%s}}" % str(beta))
+    hData_PerBin.GetXaxis().SetTitle("#it{p_{T}}")
     outputFilename = os.path.join(self.output_dir, 'hData_%s%s' % (label, self.file_format))
     self.utils.plot_hist(hData_PerBin, outputFilename, 'colz', False, True)
 
     hDataProj = hData_PerBin.ProjectionY()
     hDataProj.SetName('%s_proj' % hDataProj.GetName())
+    hDataProj.SetTitle("Rebinned data, #it{R}=%s, p_{T} projection, scaled" % str(jetR))
+    hDataProj.GetYaxis().SetTitle("#frac{d#it{N}_{scaled}}{d#lambda_{%s}}" % str(beta))
+    hDataProj.GetXaxis().SetTitle("#lambda_{%s}" % str(beta))
+    hDataProj.Scale(1., "width")
     outputFilename = os.path.join(self.output_dir, 'hData_proj_%s%s' % (label, self.file_format))
     self.utils.plot_hist(hDataProj, outputFilename)
 
@@ -265,7 +272,7 @@ class roounfold_ang(analysis_base.analysis_base):
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
 
     # TODO: Hard code in final reg param for now
-    reg_param_final = 5 #self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, label, self.observable, jetR)
+    reg_param_final = 8 #self.utils.get_reg_param(self.sd_settings, self.sd_config_list, self.sd_config_dict, label, self.observable, jetR)
 
     for i in range(1, reg_param_final + 3):
 
@@ -329,7 +336,7 @@ class roounfold_ang(analysis_base.analysis_base):
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_%s' % label)
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_%s' % label)
 
-    for i in range(1, n_pt_bins_truth-3):
+    for i in range(0, n_pt_bins_truth):
       min_pt_truth = truth_pt_bin_array[i]
       max_pt_truth = truth_pt_bin_array[i+1]
 
@@ -362,7 +369,7 @@ class roounfold_ang(analysis_base.analysis_base):
     truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle('#lambda_{#beta=%s} with #it{R}=%s' % (beta, jetR))
+    myBlankHisto.SetXTitle('#lambda_{#beta=%s}' % beta)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(self.ytitle)
     myBlankHisto.SetMaximum(4)
@@ -456,8 +463,8 @@ class roounfold_ang(analysis_base.analysis_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(self.config["sd_zcut"]) + \
-           '   #beta_{sd} = ' + str(self.config["sd_beta"])
+    text = 'R = ' + str(jetR)# + '   z_{cut} = ' + str(self.config["sd_zcut"]) + \
+    #       '   #beta_{sd} = ' + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.25, 0.75, text)
 
     fname_out = os.path.join(self.output_dir,
@@ -537,7 +544,7 @@ class roounfold_ang(analysis_base.analysis_base):
     self.utils.setup_legend(leg,0.04)
 
     # TODO: Just hard code reg param for now
-    reg_param_final = 5 #self.utils.get_reg_param(self.settings, self.config_list, self.config_dict, label, "ang", jetR)
+    reg_param_final = 8 #self.utils.get_reg_param(self.settings, self.config_list, self.config_dict, label, "ang", jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -589,8 +596,8 @@ class roounfold_ang(analysis_base.analysis_base):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = "R = " + str(jetR) + "   z_{cut} = " + str(self.config["sd_zcut"]) + \
-           "   #beta_{sd} = " + str(self.config["sd_beta"])
+    text = "R = " + str(jetR)# + "   z_{cut} = " + str(self.config["sd_zcut"]) + \
+    #       "   #beta_{sd} = " + str(self.config["sd_beta"])
     text_latex.DrawLatex(0.25, 0.75, text)
 
     outputFilename = os.path.join(self.output_dir, "hUnfoldedPt_lambda_%s%s" % (label, self.file_format))
@@ -600,8 +607,8 @@ class roounfold_ang(analysis_base.analysis_base):
   ###################################################################################################
   # Plot kinematic efficiency
   # The kinematic efficiency is the ratio:
-  #   Numerator: 2D truth-level projection [pt-true, sd-obs-true] using no cut on det-level
-  #   Denominator: 2D truth-level projection [pt-true, sd-obs-true] using [pt-det, sd-obs-det] cut on det-level
+  #   Denominator: 2D truth-level projection [pt-true, obs-true] using no cut on det-level
+  #   Numerator: 2D truth-level projection [pt-true, obs-true] using [pt-det, obs-det] cut on det-level
   ###################################################################################################
   def plot_kinematic_efficiency(self, jetR, beta, label):
     
@@ -667,7 +674,7 @@ class roounfold_ang(analysis_base.analysis_base):
     truth_bin_array = getattr(self, 'truth_bin_array_%s' % label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle('#lambda_{#beta=%s} with #it{R}=%s' % (beta, jetR))
+    myBlankHisto.SetXTitle('#lambda_{#beta=%s}' % beta)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('#varepsilon_{kin}')
     myBlankHisto.SetMaximum(1.2)
@@ -725,9 +732,9 @@ class roounfold_ang(analysis_base.analysis_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'z_{cut} = ' + str(self.config["sd_zcut"]) + '   #beta_{sd} = ' \
-           + str(self.config["sd_beta"])
-    text_latex.DrawLatex(0.3, 0.75, text)
+    #text = 'z_{cut} = ' + str(self.config["sd_zcut"]) + '   #beta_{sd} = ' \
+    #       + str(self.config["sd_beta"])
+    #text_latex.DrawLatex(0.3, 0.75, text)
     
     line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
     line.SetLineColor(920+2)
@@ -1082,7 +1089,7 @@ class roounfold_ang(analysis_base.analysis_base):
 
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
-    xAxisTitle = '#lambda_{#beta=%s} with #it{R}=%s' % (beta, jetR)
+    xAxisTitle = '#lambda_{#beta=%s}' % beta
     h.GetXaxis().SetTitle("")
     
     h2.SetLineColor(4)
@@ -1179,9 +1186,9 @@ class roounfold_ang(analysis_base.analysis_base):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'z_{cut} = ' + str(self.config["sd_zcut"]) + '   #beta_{sd} = ' \
-           + str(self.config["sd_beta"])
-    text_latex.DrawLatex(0.25, 0.65, text)
+    #text = 'z_{cut} = ' + str(self.config["sd_zcut"]) + '   #beta_{sd} = ' \
+    #       + str(self.config["sd_beta"])
+    #text_latex.DrawLatex(0.25, 0.65, text)
 
     c.SaveAs(outputFilename)
     c.Close()
@@ -1235,5 +1242,5 @@ if __name__ == '__main__':
   analysis = roounfold_ang(input_file_data = args.inputFileData,
                           input_file_response = args.inputFileResponse, config_file = args.configFile,
                           output_dir = args.outputDir, file_format = args.imageFormat,
-                          rebin_response=False,  power_law_offset=0.)
+                          rebin_response=True,  power_law_offset=0.)
   analysis.roounfold_ang()
