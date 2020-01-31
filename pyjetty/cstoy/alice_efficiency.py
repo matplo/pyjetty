@@ -46,11 +46,11 @@ class AliceChargedParticleEfficiency(MPBase):
         def pass_eff_cut(self, pt):
                 if pt < 0.15:
                         return False
-                elif p.pt() < 1:
+                elif pt < 1:
                         if random.random() > self.effi_1GeV:
                                 return False
                         return True
-                else:  # p.pt() >= 1
+                else:  # pt >= 1
                         if random.random() > self.effi_1GeVup:
                                 return False
                         return True
