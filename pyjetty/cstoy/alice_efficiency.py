@@ -26,97 +26,97 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 
 class AliceChargedParticleEfficiency(MPBase):
-	def __init__(self, **kwargs):
-		self.configure_from_args(csystem='pp')
-		super(AliceChargedParticleEfficiency, self).__init__(**kwargs)
-		if self.csystem == 'pp':
-			self.effi_1GeV = 0.73
-			self.effi_1GeVup = 0.83
-		elif self.csystem == 'PbPb':
-			self.effi_1GeV = 0.73 - 0.02
-			self.effi_1GeVup = 0.83 - 0.02
+    def __init__(self, **kwargs):
+        self.configure_from_args(csystem='pp')
+        super(AliceChargedParticleEfficiency, self).__init__(**kwargs)
+        if self.csystem == 'pp':
+            self.effi_1GeV = 0.73
+            self.effi_1GeVup = 0.83
+        elif self.csystem == 'PbPb':
+            self.effi_1GeV = 0.73 - 0.02
+            self.effi_1GeVup = 0.83 - 0.02
 
-	def apply_efficiency(self, particles):
-		output = []
-		for p in particles:
-                        if self.pass_eff_cut(p.pt()):
-                                output.append(p)
-		return output
+    def apply_efficiency(self, particles):
+        output = []
+        for p in particles:
+            if self.pass_eff_cut(p.pt()):
+                output.append(p)
+        return output
 
-        def pass_eff_cut(self, pt):
-                if pt < 0.15:
-                        return False
-                elif pt < 1:
-                        if random.random() > self.effi_1GeV:
-                                return False
-                        return True
-                else:  # pt >= 1
-                        if random.random() > self.effi_1GeVup:
-                                return False
-                        return True
+    def pass_eff_cut(self, pt):
+        if pt < 0.15:
+            return False
+        elif pt < 1:
+            if random.random() > self.effi_1GeV:
+                return False
+            return True
+        else:  # pt >= 1
+            if random.random() > self.effi_1GeVup:
+                return False
+            return True
 
 
 def main():
-	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
-	pyconf.add_standard_pythia_args(parser)
-	parser.add_argument('--output', default="output.root", type=str)
-	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
-	args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
+    pyconf.add_standard_pythia_args(parser)
+    parser.add_argument('--output', default="output.root", type=str)
+    parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
+    args = parser.parse_args()
 
-	if args.output == 'output.root':
-		args.output = 'output_alice_efficiency.root'
+    if args.output == 'output.root':
+        args.output = 'output_alice_efficiency.root'
 
-	if os.path.isfile(args.output):
-		if not args.overwrite:
-			print('[i] output', args.output, 'exists - use --overwrite to do just that...')
-			return
+    if os.path.isfile(args.output):
+        if not args.overwrite:
+            print('[i] output', args.output, 'exists - use --overwrite to do just that...')
+            return
 
-	print(args)
+    print(args)
 
-	if args.py_seed >= 0:
-		mycfg.append('Random:setSeed=on')
-		mycfg.append('Random:seed={}'.format(args.py_seed))
+    if args.py_seed >= 0:
+        mycfg.append('Random:setSeed=on')
+        mycfg.append('Random:seed={}'.format(args.py_seed))
 
-	mycfg = []
-	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
-	if not pythia:
-		print("[e] pythia initialization failed.")
-		return
+    mycfg = []
+    pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
+    if not pythia:
+        print("[e] pythia initialization failed.")
+        return
 
-	max_eta = 1
-	parts_selector = fj.SelectorAbsEtaMax(max_eta)
+    max_eta = 1
+    parts_selector = fj.SelectorAbsEtaMax(max_eta)
 
-	if args.nev < 1:
-		args.nev = 1
+    if args.nev < 1:
+        args.nev = 1
 
-	outf = ROOT.TFile(args.output, 'recreate')
-	outf.cd()
-	hpart_gen   = ROOT.TH1F('hpart_gen', 'hpart gen;p_{T};counts', 20, logbins(0.01, 100, 20))
-	heffi_pp 	= ROOT.TH1F('heffi_pp', 'heffi pp;p_{T};efficiency', 20, logbins(0.01, 100, 20))
-	heffi_PbPb 	= ROOT.TH1F('heffi_PbPb', 'heffi PbPb;p_{T};efficiency', 20, logbins(0.01, 100, 20))
+    outf = ROOT.TFile(args.output, 'recreate')
+    outf.cd()
+    hpart_gen   = ROOT.TH1F('hpart_gen', 'hpart gen;p_{T};counts', 20, logbins(0.01, 100, 20))
+    heffi_pp    = ROOT.TH1F('heffi_pp', 'heffi pp;p_{T};efficiency', 20, logbins(0.01, 100, 20))
+    heffi_PbPb  = ROOT.TH1F('heffi_PbPb', 'heffi PbPb;p_{T};efficiency', 20, logbins(0.01, 100, 20))
 
-	effi_pp = AliceChargedParticleEfficiency(csystem='pp')
-	effi_PbPb = AliceChargedParticleEfficiency(csystem='PbPb')
+    effi_pp = AliceChargedParticleEfficiency(csystem='pp')
+    effi_PbPb = AliceChargedParticleEfficiency(csystem='PbPb')
 
-	for iev in tqdm.tqdm(range(args.nev)):
-		if not pythia.next():
-			continue
+    for iev in tqdm.tqdm(range(args.nev)):
+        if not pythia.next():
+            continue
 
-		parts_pythia = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
-		parts = parts_selector(parts_pythia)
-		_tmp = [hpart_gen.Fill(p.pt()) for p in parts]
-		_tmp = [heffi_pp.Fill(p.pt()) for p in effi_pp.apply_efficiency(parts)]
-		_tmp = [heffi_PbPb.Fill(p.pt()) for p in effi_PbPb.apply_efficiency(parts)]
-		continue
+        parts_pythia = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged])
+        parts = parts_selector(parts_pythia)
+        _tmp = [hpart_gen.Fill(p.pt()) for p in parts]
+        _tmp = [heffi_pp.Fill(p.pt()) for p in effi_pp.apply_efficiency(parts)]
+        _tmp = [heffi_PbPb.Fill(p.pt()) for p in effi_PbPb.apply_efficiency(parts)]
+        continue
 
-	pythia.stat()
-	heffi_pp.Sumw2()
-	heffi_pp.Divide(hpart_gen)
-	heffi_PbPb.Sumw2()
-	heffi_PbPb.Divide(hpart_gen)
-	outf.Write()
-	outf.Close()
-	print('[i] written', outf.GetName())
+    pythia.stat()
+    heffi_pp.Sumw2()
+    heffi_pp.Divide(hpart_gen)
+    heffi_PbPb.Sumw2()
+    heffi_PbPb.Divide(hpart_gen)
+    outf.Write()
+    outf.Close()
+    print('[i] written', outf.GetName())
 
 if __name__ == '__main__':
-	main()
+    main()
