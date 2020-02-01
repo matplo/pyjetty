@@ -65,7 +65,7 @@ class AliceChargedParticleEfficiency(MPBase):
         elif pt < 15:
             return self.effi_param3
         # else: valid at least for 15 <= pt <= 50 GeV
-        return -0.002 * pT + self.effi_param4
+        return -0.002 * pt + self.effi_param4
 
 def main():
     parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
