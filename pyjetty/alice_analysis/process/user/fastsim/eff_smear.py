@@ -15,8 +15,6 @@ import argparse
 import time
 import pandas as pd
 import numpy as np
-#import fastjet as fj
-#import fjext
 
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.cstoy import alice_efficiency
@@ -57,6 +55,11 @@ class eff_smear:
 
         # ------------------------------------------------------------------------
 
+        # Build truth-level histogram of track pT multiplicity
+        print("Building truth-level track pT histogram...")
+        self.hist_list.append( ("truth_pt", self.build_pt_hist()) )
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
         # Apply eta cut at the end of the TPC
         self.df_fjparticles = self.apply_eta_cut(self.df_fjparticles)
         print('--- {} seconds ---'.format(time.time() - start_time))
@@ -67,6 +70,11 @@ class eff_smear:
 
         # Apply pT smearing
         self.df_fjparticles = self.apply_pt_smear(self.df_fjparticles)
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
+        # Build truth-level histogram of track pT multiplicity
+        print("Building simulation-level track pT histogram...")
+        self.hist_list.append( ("fastsim_pt", self.build_pt_hist()) )
         print('--- {} seconds ---'.format(time.time() - start_time))
 
         # ------------------------------------------------------------------------
@@ -95,7 +103,7 @@ class eff_smear:
 
         # Initialize a list of histograms to be written to file
         self.hist_list = []
-        
+
     #---------------------------------------------------------------
     # Apply eta cuts
     #---------------------------------------------------------------
@@ -104,6 +112,13 @@ class eff_smear:
         print("%i out of %i total truth tracks deleted after eta cut." % \
               (self.nTracks_truth - len(df), self.nTracks_truth))
         return df
+
+    #---------------------------------------------------------------
+    # Build histogram of pT values and return it
+    #---------------------------------------------------------------
+    def build_pt_hist(self):
+        bins = np.concatenate((np.arange(0, 5, 0.1), np.arange(5, 20, 1), np.arange(20, 52, 2)))
+        return np.histogram(self.df_fjparticles["ParticlePt"], bins=bins)
 
     #---------------------------------------------------------------
     # Apply efficiency cuts
@@ -135,7 +150,7 @@ class eff_smear:
                                   np.arange(20, 50, 2), np.arange(50, 95, 5)))
         dif_bins = np.arange(0, 0.5, .001)
         pt_smearing_dists = np.histogram2d(true_pt, pt_dif, bins=[pt_bins, dif_bins])
-        self.hist_list.append(pt_smearing_dists)
+        self.hist_list.append( ("pt_smearing", pt_smearing_dists) )
 
         return df
 

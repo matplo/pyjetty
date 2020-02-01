@@ -112,6 +112,7 @@ class process_io(common_base.common_base):
   #---------------------------------------------------------------
   # Opposite operation as load_dataframe above. Takes a dataframe
   # with the same formatting and saves to class's output_file.
+  # histograms is list of tuples: [ ("title", np.histogram), ... ]
   #---------------------------------------------------------------
   def save_dataframe(self, df, filename, histograms=[]):
 
@@ -133,8 +134,8 @@ class process_io(common_base.common_base):
                          "ParticlePhi": df["ParticlePhi"] } )
 
       # Write histograms to file too, if any are passed
-      for i, h in enumerate(histograms):
-        f["h%i" % i] = h
+      for title, h in histograms:
+        f[title] = h
 
   #---------------------------------------------------------------
   # Transform the track dataframe into a SeriesGroupBy object
