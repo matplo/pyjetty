@@ -6,9 +6,12 @@
   
   Authors: James Mulligan
            Mateusz Ploskon
+           Ezra Lesser
 """
 
 from __future__ import print_function
+
+import os   # for creating file on output
 
 # Data analysis and plotting
 import uproot
@@ -28,12 +31,15 @@ class process_io(common_base.common_base):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input_file='', track_tree_name='tree_Particle', **kwargs):
+  def __init__(self, input_file='', output_dir='', track_tree_name='tree_Particle', **kwargs):
     super(process_io, self).__init__(**kwargs)
     self.input_file = input_file
+    self.output_dir = output_dir
+    if self.output_dir[-1] != '/':
+      self.output_dir += '/'
     self.track_tree_name = track_tree_name
     self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
-    self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej']
+    self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
     self.reset_dataframes()
   
   #---------------------------------------------------------------
@@ -102,6 +108,33 @@ class process_io(common_base.common_base):
     # Merge event info into track tree
     self.track_df = pandas.merge(self.track_df_orig, self.event_df, on=['run_number', 'ev_id'])
     return self.track_df
+
+  #---------------------------------------------------------------
+  # Opposite operation as load_dataframe above. Takes a dataframe
+  # with the same formatting and saves to class's output_file.
+  #---------------------------------------------------------------
+  def save_dataframe(self, df, filename, histograms=[]):
+
+    # Create output directory if it does not already exist
+    if not os.path.exists(self.output_dir):
+      os.makedirs(self.output_dir)
+
+    # Open output directory and (re)create rootfile
+    with uproot.recreate(self.output_dir + filename) as f:
+
+      branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
+                    "ParticleEta": float, "ParticlePhi": float}
+      # Subdirectories not yet implemented in uproot
+      #title = "PWGHF_TreeCreator/tree_Particle"
+      title = "tree_Particle"
+      f[title] = uproot.newtree(branchdict, title=title)
+      f[title].extend( { "run_number": df["run_number"], "ev_id": df["ev_id"], 
+                         "ParticlePt": df["ParticlePt"], "ParticleEta": df["ParticleEta"],
+                         "ParticlePhi": df["ParticlePhi"] } )
+
+      # Write histograms to file too, if any are passed
+      for h in histograms:
+        f[h.name] = h
 
   #---------------------------------------------------------------
   # Transform the track dataframe into a SeriesGroupBy object

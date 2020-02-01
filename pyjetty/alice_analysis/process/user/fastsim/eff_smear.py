@@ -71,7 +71,12 @@ class eff_smear:
 
         # ------------------------------------------------------------------------
 
+        # Write data to file
+
         print(self.df_fjparticles)
+        print("Writing fast simulation to ROOT TTree...")
+        self.io.save_dataframe(self.df_fjparticles, "AnalysisResultsFastSim.root")
+        print('--- {} seconds ---'.format(time.time() - start_time))
 
 
     #---------------------------------------------------------------
@@ -80,9 +85,9 @@ class eff_smear:
     def init_df(self):
         # Use IO helper class to convert truth-level ROOT TTree into
         # a SeriesGroupBy object of fastjet particles per event
-        io_truth = process_io.process_io(input_file=self.input_file, 
+        self.io = process_io.process_io(input_file=self.input_file, output_dir=self.output_dir,
                                          track_tree_name='tree_Particle_gen')
-        self.df_fjparticles = io_truth.load_dataframe()
+        self.df_fjparticles = self.io.load_dataframe()
         #self.df_fjparticles = io_truth.load_data(group_by_evid=False)  # Get particle info in fj format (slow)
         self.nTracks_truth = len(self.df_fjparticles)
         print("DataFrame loaded from data.")
