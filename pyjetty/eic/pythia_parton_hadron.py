@@ -24,6 +24,7 @@ def main():
 	# could use --py-seed
 	parser.add_argument('--user-seed', help='pythia seed', default=1111, type=int)
 	parser.add_argument('--output', default="output.root", type=str)
+	parser.add_argument('--beta', help='sd beta', default=0, type=float)
 	args = parser.parse_args()
 
 	if args.user_seed < 0:
@@ -54,7 +55,7 @@ def main():
 	pwarning('max eta for partons set to', max_eta_parton)
 	parts_selector_p = fj.SelectorAbsEtaMax(max_eta_parton)
 
-	outf = ROOT.TFile(args.output, 'recreate')
+	outf = ROOT.TFile(args.output.replace('.root', '_beta{}.root'.format(args.beta)), 'recreate')
 	outf.cd()
 	t = ROOT.TTree('t', 't')
 	tw = RTreeWriter(tree=t)
@@ -93,10 +94,10 @@ def main():
 
 		# parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
 		jets_p = fj.sorted_by_pt(jet_def(parts_pythia_p))
-		jets_h = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_h)))
+		jets_h = fj.sorted_by_pt(jet_def(parts_pythia_h))
 		jets_ch_h = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_hch)))
 
-		sd = fjcontrib.SoftDrop(0, 0.1, 1.0)
+		sd = fjcontrib.SoftDrop(args.beta, 0.1, jet_R0)
 
 		for i,jchh in enumerate(jets_ch_h):
 			# match hadron (full) jet

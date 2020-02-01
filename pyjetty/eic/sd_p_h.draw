@@ -1,0 +1,62 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=20 < p_{T}^{h#pm} < 40 GeV/c, SD #beta=0
+#normalize self
+#xrange 0, 0.5
+#miny 0
+#maxy 7
+#x z_{g}
+#y 1/N_{jet} dN/dz_{g}
+output_beta0.0_h.root 		:histogram_p_zg :p  : title=parton level
+output_beta0.0_h.root 		:histogram_h_zg :p  : title=hadron level
+output_beta0.0_h.root 		:histogram_ch_zg :p  : title=charged h. level
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=20 < p_{T}^{h#pm} < 40 GeV/c, SD #beta=0
+#normalize self
+#xrange 0, 1.1
+#miny 0
+#maxy 7
+#x #theta_{g}
+#y 1/N_{jet} dN/d#theta_{g}
+output_beta0.0_h.root 		:histogram_p_thg :p  : title=parton level
+output_beta0.0_h.root 		:histogram_h_thg :p  : title=hadron level
+output_beta0.0_h.root 		:histogram_ch_thg :p  : title=charged h. level
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=20 < p_{T}^{h#pm} < 40 GeV/c, SD #beta=2
+#normalize self
+#xrange 0, 0.5
+#miny 0
+#maxy 7
+#x z_{g}
+#y 1/N_{jet} dN/dz_{g}
+output_beta2.0_h.root 		:histogram_p_zg :p  : title=parton level
+output_beta2.0_h.root 		:histogram_h_zg :p  : title=hadron level
+output_beta2.0_h.root 		:histogram_ch_zg :p  : title=charged h. level
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=20 < p_{T}^{h#pm} < 40 GeV/c, SD #beta=2
+#normalize self
+#xrange 0, 1.1
+#miny 0
+#maxy 7
+#x #theta_{g}
+#y 1/N_{jet} dN/d#theta_{g}
+output_beta2.0_h.root 		:histogram_p_thg :p  : title=parton level
+output_beta2.0_h.root 		:histogram_h_thg :p  : title=hadron level
+output_beta2.0_h.root 		:histogram_ch_thg :p  : title=charged h. level
+
