@@ -75,7 +75,7 @@ class eff_smear:
 
         print(self.df_fjparticles)
         print("Writing fast simulation to ROOT TTree...")
-        self.io.save_dataframe(self.df_fjparticles, "AnalysisResultsFastSim.root")
+        self.io.save_dataframe(self.df_fjparticles, "AnalysisResultsFastSim.root", self.hist_list)
         print('--- {} seconds ---'.format(time.time() - start_time))
 
 
@@ -92,6 +92,9 @@ class eff_smear:
         self.nTracks_truth = len(self.df_fjparticles)
         print("DataFrame loaded from data.")
         print(self.df_fjparticles)
+
+        # Initialize a list of histograms to be written to file
+        self.hist_list = []
         
     #---------------------------------------------------------------
     # Apply eta cuts
@@ -118,12 +121,22 @@ class eff_smear:
     # Apply pt smearing
     #---------------------------------------------------------------
     def apply_pt_smear(self, df):
-        smeared_pt = [ np.random.normal(pt, sigma_pt(pt)) for pt in df["ParticlePt"] ]
+        true_pt = df["ParticlePt"]
+        smeared_pt = [ np.random.normal(pt, sigma_pt(pt)) for pt in true_pt ]
         df = pd.DataFrame({"run_number": df["run_number"], "ev_id": df["ev_id"], 
                            "ParticlePt": smeared_pt, "ParticleEta": df["ParticleEta"], 
                            "ParticlePhi": df["ParticlePhi"], "z_vtx_reco": df["z_vtx_reco"],
                            "is_ev_rej": df["is_ev_rej"]})
         print("pT has been smeared for all tracks.")
+
+        # Create histogram to verify pt smearing distribution
+        pt_dif = [ (pt_smear - pt_true) / pt_true for pt_smear, pt_true in zip(smeared_pt, true_pt) ]
+        pt_bins = np.concatenate((np.arange(0, 1, 0.1), np.arange(1, 10, .5), np.arange(10, 20, 1),
+                                  np.arange(20, 50, 2), np.arange(50, 95, 5)))
+        dif_bins = np.arange(0, 0.5, .001)
+        pt_smearing_dists = np.histogram2d(true_pt, pt_dif, bins=[pt_bins, dif_bins])
+        self.hist_list.append(pt_smearing_dists)
+
         return df
 
 ##################################################################

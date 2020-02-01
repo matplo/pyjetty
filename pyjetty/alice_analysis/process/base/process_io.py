@@ -133,8 +133,8 @@ class process_io(common_base.common_base):
                          "ParticlePhi": df["ParticlePhi"] } )
 
       # Write histograms to file too, if any are passed
-      for h in histograms:
-        f[h.name] = h
+      for i, h in enumerate(histograms):
+        f["h%i" % i] = h
 
   #---------------------------------------------------------------
   # Transform the track dataframe into a SeriesGroupBy object
