@@ -14,11 +14,22 @@ import os
 import argparse
 import time
 import pandas as pd
+import numpy as np
 #import fastjet as fj
 #import fjext
 
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.cstoy import alice_efficiency
+
+
+# Approximated fit for MC calculated (LHC18b8) pT resolution
+def sigma_pt(pt):
+    if pt < 1:
+        return pt * (-0.035 * pt + 0.04)
+    elif pt < 60:
+        return pt * (0.00085 * pt + 0.00415)
+    # else: approximately valid for at least pt < 90 GeV
+    return pt * (0.0015 * pt - 0.035)
 
 
 #################################################################################
@@ -46,9 +57,22 @@ class eff_smear:
 
         # ------------------------------------------------------------------------
 
-        # Applying efficiency cuts and pT smearing
-        self.apply_eff_smear(self.df_fjparticles)
+        # Apply eta cut at the end of the TPC
+        self.df_fjparticles = self.apply_eta_cut(self.df_fjparticles)
         print('--- {} seconds ---'.format(time.time() - start_time))
+
+        # Apply efficiency cut
+        self.df_fjparticles = self.apply_eff_cut(self.df_fjparticles)
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
+        # Apply pT smearing
+        self.df_fjparticles = self.apply_pt_smear(self.df_fjparticles)
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
+        # ------------------------------------------------------------------------
+
+        print(self.df_fjparticles)
+
 
     #---------------------------------------------------------------
     # Initialize dataframe from input data
@@ -56,34 +80,46 @@ class eff_smear:
     def init_df(self):
         # Use IO helper class to convert truth-level ROOT TTree into
         # a SeriesGroupBy object of fastjet particles per event
-        io_truth = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+        io_truth = process_io.process_io(input_file=self.input_file, 
+                                         track_tree_name='tree_Particle_gen')
         self.df_fjparticles = io_truth.load_dataframe()
         #self.df_fjparticles = io_truth.load_data(group_by_evid=False)  # Get particle info in fj format (slow)
         self.nTracks_truth = len(self.df_fjparticles)
+        print("DataFrame loaded from data.")
+        print(self.df_fjparticles)
         
+    #---------------------------------------------------------------
+    # Apply eta cuts
+    #---------------------------------------------------------------
+    def apply_eta_cut(self, df):
+        df = df[df["ParticleEta"].map(abs) < 0.9]
+        print("%i out of %i total truth tracks deleted after eta cut." % \
+              (self.nTracks_truth - len(df), self.nTracks_truth))
+        return df
 
     #---------------------------------------------------------------
-    # Apply fast simulation procedure
+    # Apply efficiency cuts
     #---------------------------------------------------------------
-    def apply_eff_smear(self, df):
-        print(df, len(df))
+    def apply_eff_cut(self, df):
+
         # Apply efficiency cut for fastjet particles
         eff_smearer = alice_efficiency.AliceChargedParticleEfficiency()
         df = df[df["ParticlePt"].map(lambda x: eff_smearer.pass_eff_cut(x))]
-        '''
-        for fj_particles_truth, fj_particles_fs in \
-            zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth']):
+        print("%i out of %i total truth tracks deleted after efficiency cut." % \
+              (self.nTracks_truth - len(df), self.nTracks_truth))
+        return df
 
-            # Check that the entries exist appropriately
-            # (need to check how this can happen -- but it is only a tiny fraction of events)
-            if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
-                print('fj_particles type mismatch -- skipping event')
-                return
-
-        '''
-        print(df)
-        print(len(df), type(df))
-
+    #---------------------------------------------------------------
+    # Apply pt smearing
+    #---------------------------------------------------------------
+    def apply_pt_smear(self, df):
+        smeared_pt = [ np.random.normal(pt, sigma_pt(pt)) for pt in df["ParticlePt"] ]
+        df = pd.DataFrame({"run_number": df["run_number"], "ev_id": df["ev_id"], 
+                           "ParticlePt": smeared_pt, "ParticleEta": df["ParticleEta"], 
+                           "ParticlePhi": df["ParticlePhi"], "z_vtx_reco": df["z_vtx_reco"],
+                           "is_ev_rej": df["is_ev_rej"]})
+        print("pT has been smeared for all tracks.")
+        return df
 
 ##################################################################
 if __name__ == "__main__":
