@@ -29,12 +29,18 @@ class AliceChargedParticleEfficiency(MPBase):
     def __init__(self, **kwargs):
         self.configure_from_args(csystem='pp')
         super(AliceChargedParticleEfficiency, self).__init__(**kwargs)
-        if self.csystem == 'pp':
-            self.effi_1GeV = 0.73
-            self.effi_1GeVup = 0.83
-        elif self.csystem == 'PbPb':
-            self.effi_1GeV = 0.73 - 0.02
-            self.effi_1GeVup = 0.83 - 0.02
+        # assume self.csystem == 'pp':
+        self.effi_param1 = 0.83
+        self.effi_param2 = 0.795
+        self.effi_param3 = 0.865
+        self.effi_param4 = 0.895
+        if self.csystem == 'PbPb':
+            shift = 0.02
+            self.effi_param1 -= shift
+            self.effi_param2 -= shift
+            self.effi_param3 -= shift
+            self.effi_param4 -= shift
+            
 
     def apply_efficiency(self, particles):
         output = []
@@ -44,17 +50,22 @@ class AliceChargedParticleEfficiency(MPBase):
         return output
 
     def pass_eff_cut(self, pt):
-        if pt < 0.15:
+        if random.random() > self.effi(pt):
             return False
-        elif pt < 1:
-            if random.random() > self.effi_1GeV:
-                return False
-            return True
-        else:  # pt >= 1
-            if random.random() > self.effi_1GeVup:
-                return False
-            return True
+        return True
 
+    # Some rough piecewise linear functions (made by eye) to describe eff distribution
+    def effi(self, pt):
+        if pt < 0.15:
+            return 0
+        elif pt < 1:
+            return self.effi_param1 * pt
+        elif pt < 2:
+            return 0.035 * pt + self.effi_param2
+        elif pt < 15:
+            return self.effi_param3
+        # else: valid at least for 15 <= pt <= 50 GeV
+        return -0.002 * pT + self.effi_param4
 
 def main():
     parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
