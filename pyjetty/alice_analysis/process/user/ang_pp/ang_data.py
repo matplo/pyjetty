@@ -57,7 +57,7 @@ class process_ang_data(process_base.process_base):
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object
     # of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
