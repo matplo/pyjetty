@@ -8,7 +8,7 @@
 #SBATCH --mail-user=elesser@berkeley.edu --mail-type=ALL
 #SBATCH --output=/storage/u/alice/AnalysisResults/ang/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/u/alice/AnalysisResults/fs_LHC18b8/38173/LHC18b8/146/files.txt'
+FILE_PATHS='/rstorage/u/alice/AnalysisResults/fs_LHC18b8/31873/LHC18b8/146/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
