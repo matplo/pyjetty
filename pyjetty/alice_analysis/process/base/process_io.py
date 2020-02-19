@@ -132,6 +132,7 @@ class process_io(common_base.common_base):
       title = self.track_tree_name
       branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
                     "ParticleEta": float, "ParticlePhi": float}
+      print("Length of track tree: %i" % len(df))
       f[title] = uproot.newtree(branchdict, title=title)
       f[title].extend( { "run_number": df["run_number"], "ev_id": df["ev_id"], 
                          "ParticlePt": df["ParticlePt"], "ParticleEta": df["ParticleEta"],
@@ -140,6 +141,15 @@ class process_io(common_base.common_base):
       # Create tree with event char
       title = self.event_tree_name
       branchdict = {"is_ev_rej": int, "run_number": int, "ev_id": int, "z_vtx_reco": float}
+
+      # Condense dataframe for each event
+      for col in list(df.columns):
+        if col in branchdict.keys():
+          continue
+        df = df.drop(col, axis=1)
+      df = df.drop_duplicates()
+
+      print("Length of event tree: %i" % len(df))
       f[title] = uproot.newtree(branchdict, title=title)
       f[title].extend( { "is_ev_rej": df["is_ev_rej"], "run_number": df["run_number"],
                          "ev_id": df["ev_id"], "z_vtx_reco": df["z_vtx_reco"] } )
