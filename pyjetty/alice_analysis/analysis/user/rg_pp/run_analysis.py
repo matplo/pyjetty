@@ -1036,11 +1036,13 @@ class run_analysis(common_base.common_base):
         g = getattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
         
         # Get correction
-        h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
-      
-        # Apply correction
-        self.utils.multiply_tgraph(g, h_correction)
-      
+        apply_nll_correction = False
+        if apply_nll_correction:
+          h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
+        
+          # Apply correction
+          self.utils.multiply_tgraph(g, h_correction)
+        
         g.SetLineColor(color)
         g.SetLineColorAlpha(color, 0.5)
         g.SetLineWidth(4)

@@ -734,8 +734,8 @@ class roounfold_obs(analysis_base.analysis_base):
   ###################################################################################################
   # Plot kinematic efficiency
   # The kinematic efficiency is the ratio:
-  #   Numerator: 2D truth-level projection [pt-true, obs-true] using no cut on det-level
-  #   Denominator: 2D truth-level projection [pt-true, obs-true] using [pt-det, obs-det] cut on det-level
+  #   Numerator: 2D truth-level projection [pt-true, obs-true] using [pt-det, obs-det] cut on det-level
+  #   Denominator: 2D truth-level projection [pt-true, obs-true] using no cut on det-level
   ###################################################################################################
   def plot_kinematic_efficiency(self, jetR, obs_label, obs_setting):
     
