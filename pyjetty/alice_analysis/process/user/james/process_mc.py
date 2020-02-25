@@ -44,13 +44,13 @@ from pyjetty.mputils import CEventSubtractor
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class process_rg_mc(process_base.process_base):
+class ProcessMC(process_base.ProcessBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(process_rg_mc, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(ProcessMC, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
     
     # Initialize configuration
     self.initialize_config()
@@ -58,7 +58,7 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
-  def process_rg_mc(self):
+  def process_mc(self):
     
     start_time = time.time()
     
@@ -67,7 +67,7 @@ class process_rg_mc(process_base.process_base):
     # Use IO helper class to convert detector-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io_det = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io_det = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle')
     df_fjparticles_det = io_det.load_data(reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
@@ -77,7 +77,7 @@ class process_rg_mc(process_base.process_base):
 
     # Use IO helper class to convert truth-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
-    io_truth = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+    io_truth = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle_gen')
     df_fjparticles_truth = io_truth.load_data()
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
@@ -96,7 +96,7 @@ class process_rg_mc(process_base.process_base):
     
     # Set up the Pb-Pb embedding object
     if not self.is_pp:
-        self.process_io_emb = process_io_emb.process_io_emb(self.emb_file_list, track_tree_name='tree_Particle')
+        self.process_io_emb = process_io_emb.ProcessIO_Emb(self.emb_file_list, track_tree_name='tree_Particle')
     
     # ------------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ class process_rg_mc(process_base.process_base):
     
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.save_output_objects(self)
+    process_base.ProcessBase.save_output_objects(self)
     
     print('--- {} seconds ---'.format(time.time() - start_time))
   
@@ -125,7 +125,7 @@ class process_rg_mc(process_base.process_base):
   def initialize_config(self):
     
     # Call base class initialization
-    process_base.process_base.initialize_config(self)
+    process_base.ProcessBase.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -139,24 +139,29 @@ class process_rg_mc(process_base.process_base):
     if 'mc_fraction_threshold' in config:
       self.mc_fraction_threshold = config['mc_fraction_threshold']
     
-    # Retrieve list of SD grooming settings
-    sd_config_dict = config['SoftDrop']
-    sd_config_list = list(sd_config_dict.keys())
-    self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
-
     if self.do_constituent_subtraction:
         self.is_pp = False
         self.emb_file_list = config['emb_file_list']
     else:
         self.is_pp = True
         
+    # Check if SoftDrop analysis is activated
+    self.do_softdrop = False
+    if 'SoftDrop' in config:
+        print('zg/rg analysis activated')
+        self.do_softdrop = True
+        sd_config_dict = config['SoftDrop']
+        sd_config_list = list(sd_config_dict.keys())
+        self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
+           
     # Check if sub-jet analysis is activated
     self.do_subjets = False
     if 'Subjet' in config:
       print('Subjet analysis activated')
       self.do_subjets = True
-      self.subjet_R = config['Subjet']['subjet_R']
-      
+      obs_config_dict = config['Subjet']
+      obs_config_list = list(obs_config_dict.keys())
+      self.subjet_R = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
       self.subjet_def = {}
       for subjetR in self.subjet_R:
         self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
@@ -166,7 +171,9 @@ class process_rg_mc(process_base.process_base):
     if 'JetAxis' in config:
       print('Jet axis analysis activated')
       self.do_jet_axes = True
-      self.axis_list = config['JetAxis']['axis_list']
+      obs_config_dict = config['JetAxis']
+      obs_config_list = list(obs_config_dict.keys())
+      self.axis_list = [obs_config_dict[name]['axis'] for name in obs_config_list]
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -1038,5 +1045,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = process_rg_mc(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
-  analysis.process_rg_mc()
+  analysis = ProcessMC(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis.process_mc()

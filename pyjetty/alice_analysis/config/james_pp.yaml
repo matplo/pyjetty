@@ -1,6 +1,6 @@
 # Analysis parameters
 #observables: ['theta_g', 'zg', 'subjet_z']
-observables: ['subjet_z']
+observables: ['theta_g', 'zg']
 debug_level: 0
 write_tree_output: False
 

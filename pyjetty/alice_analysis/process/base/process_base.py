@@ -24,13 +24,13 @@ from pyjetty.alice_analysis.process.base import jet_info
 from pyjetty.mputils import treewriter
 
 ################################################################
-class process_base(common_base.common_base):
+class ProcessBase(common_base.CommonBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(process_base, self).__init__(**kwargs)
+    super(ProcessBase, self).__init__(**kwargs)
     self.input_file = input_file
     self.config_file = config_file
     self.output_dir = output_dir
@@ -44,7 +44,7 @@ class process_base(common_base.common_base):
       os.makedirs(self.output_dir)
 
     # Initialize utils class
-    self.utils = process_utils.process_utils()
+    self.utils = process_utils.ProcessUtils()
   
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -100,7 +100,7 @@ class process_base(common_base.common_base):
     if jet.has_user_info():
       jet_user_info = jet.python_info()
     else:
-      jet_user_info = jet_info.jet_info()
+      jet_user_info = jet_info.JetInfo()
       
     jet_user_info.matching_candidates.append(jet_match)
     if deltaR < jet_user_info.closest_jet_deltaR:

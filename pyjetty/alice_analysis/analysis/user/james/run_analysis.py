@@ -18,17 +18,17 @@ import roounfold_obs
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class run_analysis(common_base.common_base):
+class RunAnalysis(common_base.CommonBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, config_file='', **kwargs):
-    super(run_analysis, self).__init__(**kwargs)
+    super(RunAnalysis, self).__init__(**kwargs)
     self.config_file = config_file
     
     # Initialize utils class
-    self.utils = analysis_utils_obs.analysis_utils_obs()
+    self.utils = analysis_utils_obs.AnalysisUtils_Obs()
     
     # Initialize yaml config
     self.initialize_config()
@@ -1421,5 +1421,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = run_analysis(config_file = args.configFile)
+  analysis = RunAnalysis(config_file = args.configFile)
   analysis.run_analysis()

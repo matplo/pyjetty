@@ -92,7 +92,7 @@ class eff_smear:
     def init_df(self):
         # Use IO helper class to convert truth-level ROOT TTree into
         # a SeriesGroupBy object of fastjet particles per event
-        self.io = process_io.process_io(input_file=self.input_file, output_dir=self.output_dir,
+        self.io = process_io.ProcessIO(input_file=self.input_file, output_dir=self.output_dir,
                                         tree_dir='PWGHF_TreeCreator',
                                         track_tree_name='tree_Particle_gen')
         self.df_fjparticles = self.io.load_dataframe()

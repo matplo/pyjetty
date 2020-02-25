@@ -25,13 +25,13 @@ from pyjetty.alice_analysis.process.base import common_base
 from pyjetty.alice_analysis.process.base import process_io
 
 ################################################################
-class process_io_emb(common_base.common_base):
+class ProcessIO_Emb(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, file_list='PbPb_file_list.txt', track_tree_name='tree_Particle', **kwargs):
-    super(process_io_emb, self).__init__(**kwargs)
+    super(ProcessIO_Emb, self).__init__(**kwargs)
     
     self.file_list = file_list
     self.track_tree_name = track_tree_name
@@ -70,7 +70,7 @@ class process_io_emb(common_base.common_base):
     input_file = random.choice(self.list_of_files)
     print('Opening Pb-Pb file: {}'.format(input_file))
 
-    io = process_io.process_io(input_file=input_file, track_tree_name=self.track_tree_name)
+    io = process_io.ProcessIO(input_file=input_file, track_tree_name=self.track_tree_name)
     self.current_file_df = io.load_data(offset_indices=True)
     self.current_file_nevents = len(self.current_file_df.index)
     self.current_event_index = 0

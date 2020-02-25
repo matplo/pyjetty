@@ -26,14 +26,14 @@ ROOT.gROOT.SetBatch(True)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 ################################################################
-class roounfold_obs(analysis_base.analysis_base):
+class Roounfold_Obs(analysis_base.AnalysisBase):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, power_law_offset=0., **kwargs):
     
-    super(roounfold_obs, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
+    super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
     self.utils = analysis_utils_obs.analysis_utils_obs()
     
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
@@ -1350,5 +1350,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = roounfold_obs(observable=args.observable, input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat, rebin_response=True, truncation=False, binning=False, power_law_offset=0.)
+  analysis = Roounfold_Obs(observable=args.observable, input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat, rebin_response=True, truncation=False, binning=False, power_law_offset=0.)
   analysis.roounfold_obs()
