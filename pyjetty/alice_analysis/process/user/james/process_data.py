@@ -194,13 +194,34 @@ class ProcessData(process_base.ProcessBase):
           setattr(self, name, h)
       
       if self.do_jet_axes:
-        for axis in self.axis_list:
         
-          name = 'hJetAxisDeltaR_JetPt_Standard_{}_R{}'.format(axis, jetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
-          h.GetXaxis().SetTitle('p_{T,ch jet}')
-          h.GetYaxis().SetTitle('#Delta R')
-          setattr(self, name, h)
+        if 'WTA' in self.axis_list:
+            name = 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('#Delta R')
+            setattr(self, name, h)
+    
+        if 'SD' in self.axis_list:
+        
+            for sd_setting in self.sd_settings:
+              
+              zcut = sd_setting[0]
+              beta = sd_setting[1]
+              sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+        
+              name = 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#Delta R')
+              setattr(self, name, h)
+              
+              if 'WTA' in self.axis_list:
+                name = 'hJetAxisDeltaR_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)
+                h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+                h.GetXaxis().SetTitle('p_{T,ch jet}')
+                h.GetYaxis().SetTitle('#Delta R')
+                setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -246,7 +267,7 @@ class ProcessData(process_base.ProcessBase):
     cs = fj.ClusterSequence(fj_particles, jet_def)
     jets = fj.sorted_by_pt(cs.inclusive_jets())
     jets_selected = jet_selector(jets)
-
+    
     # Loop through jets and fill non-SD histograms
     jetR = jet_def.R()
     result = [self.analyze_accepted_jets(jet, jetR) for jet in jets_selected]
@@ -311,7 +332,16 @@ class ProcessData(process_base.ProcessBase):
       
     # Fill jet axis difference
     if self.do_jet_axes:
-      self.fill_jet_axis_histograms(jet, jet_sd, jetR)
+    
+        # Recluster with WTA (with larger jet R)
+        jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+        jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
+        if self.debug_level > 2:
+            print('WTA jet definition is:', jet_def)
+        reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
+        jet_wta = reclusterer_wta.result(jet)
+
+        self.fill_jet_axis_histograms(jet, jet_sd, jet_wta, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill histograms
@@ -359,17 +389,19 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill jet axis histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_histograms(self, jet, jet_sd, jetR):
+  def fill_jet_axis_histograms(self, jet, jet_sd, jet_wta, jetR, sd_label):
 
-    for axis in self.axis_list:
-      
-      if axis == 'SD':
+    if 'SD' in self.axis_list:
         deltaR = jet.delta_R(jet_sd)
+        getattr(self, 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
+        
+    if 'WTA' in self.axis_list:
+        deltaR = jet.delta_R(jet_wta)
+        getattr(self, 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet.pt(), deltaR)
       
-      elif axis == 'WTA':
-        deltaR = jet.delta_R(self.utils.get_leading_constituent(jet))
-      
-      getattr(self, 'hJetAxisDeltaR_JetPt_Standard_{}_R{}'.format(axis, jetR)).Fill(jet.pt(), deltaR)
+    if 'WTA' in self.axis_list and 'SD' in self.axis_list:
+        deltaR = jet_sd.delta_R(jet_wta)
+        getattr(self, 'hJetAxisDeltaR_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
           
   #---------------------------------------------------------------
   # Fill tree

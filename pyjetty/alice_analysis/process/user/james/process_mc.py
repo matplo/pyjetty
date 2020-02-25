@@ -404,32 +404,69 @@ class ProcessMC(process_base.ProcessBase):
             setattr(self, name, h)
       
       if self.do_jet_axes:
-        for axis in self.axis_list:
         
-          name = 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
-          setattr(self, name, h)
-          
-          # Create THn of response for jet axis deltaR
-          dim = 4;
-          title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
-          nbins = [100, 60, 200, 40]
-          min = [0., 0., 0., 0.]
-          max = [100., 300., jetR, jetR]
-
-          name = 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)
-          nbins = (nbins)
-          xmin = (min)
-          xmax = (max)
-          nbins_array = array('i', nbins)
-          xmin_array = array('d', xmin)
-          xmax_array = array('d', xmax)
-          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-          for i in range(0, dim):
-            h.GetAxis(i).SetTitle(title[i])
+        if 'WTA' in self.axis_list:
+        
+            name = 'hJetAxisResidual_JetPt_Standard_WTA_R{}'.format(jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
             setattr(self, name, h)
+            
+            # Create THn of response for jet axis deltaR
+            dim = 4;
+            title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
+            nbins = [100, 60, 200, 40]
+            min = [0., 0., 0., 0.]
+            max = [100., 300., jetR, jetR]
+
+            name = 'hResponse_JetPt_JetAxisDeltaR_Standard_WTA_R{}'.format(jetR)
+            nbins = (nbins)
+            xmin = (min)
+            xmax = (max)
+            nbins_array = array('i', nbins)
+            xmin_array = array('d', xmin)
+            xmax_array = array('d', xmax)
+            h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+            for i in range(0, dim):
+              h.GetAxis(i).SetTitle(title[i])
+              setattr(self, name, h)
+    
+        if 'SD' in self.axis_list:
+        
+            for sd_setting in self.sd_settings:
+              
+              zcut = sd_setting[0]
+              beta = sd_setting[1]
+              sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+              
+              name = 'hJetAxisResidual_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+              h.GetXaxis().SetTitle('p_{T,truth}')
+              h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+              setattr(self, name, h)
+              
+              # Create THn of response for jet axis deltaR
+              name = 'hResponse_JetPt_JetAxisDeltaR_Standard_SD{}_R{}'.format(sd_label, jetR)
+              h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+              for i in range(0, dim):
+                h.GetAxis(i).SetTitle(title[i])
+                setattr(self, name, h)
+              
+              if 'WTA' in self.axis_list:
+              
+                  name = 'hJetAxisResidual_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)
+                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+                  h.GetXaxis().SetTitle('p_{T,truth}')
+                  h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+                  setattr(self, name, h)
+                  
+                  # Create THn of response for jet axis deltaR
+                  name = 'hResponse_JetPt_JetAxisDeltaR_SD{}_WTA_R{}'.format(sd_label, jetR)
+                  h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+                  for i in range(0, dim):
+                    h.GetAxis(i).SetTitle(title[i])
+                    setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -743,30 +780,61 @@ class ProcessMC(process_base.ProcessBase):
           
         # Fill jet axis difference
         if self.do_jet_axes:
-          self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR)
+        
+            # Recluster with WTA (with larger jet R)
+            jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+            jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
+            if self.debug_level > 2:
+                print('WTA jet definition is:', jet_def)
+            reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
+            jet_det_wta = reclusterer_wta.result(jet_det)
+            jet_truth_wta = reclusterer_wta.result(jet_truth)
+        
+            self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR):
+  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_label):
           
-    for axis in self.axis_list:
-      
-      if axis == 'SD':
-        deltaR_det = jet_det.delta_R(jet_det_sd)
-        deltaR_truth = jet_truth.delta_R(jet_truth_sd)
-      
-      elif axis == 'WTA':
-        deltaR_det = jet_det.delta_R(self.utils.get_leading_constituent(jet_det))
-        deltaR_truth = jet_truth.delta_R(self.utils.get_leading_constituent(jet_truth))
-         
-      x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
-      x_array = array('d', x)
-      getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)).Fill(x_array)
-      
-      if deltaR_truth > 1e-5:
-        axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-        getattr(self, 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)).Fill(jet_truth.pt(), axis_resolution)
+    if 'WTA' in self.axis_list:
+    
+        deltaR_det = jet_det.delta_R(jet_det_wta)
+        deltaR_truth = jet_truth.delta_R(jet_truth_wta)
+        
+        x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+        x_array = array('d', x)
+        getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_WTA_R{}'.format(jetR)).Fill(x_array)
+        
+        if deltaR_truth > 1e-5:
+          axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+          getattr(self, 'hJetAxisResidual_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet_truth.pt(), axis_resolution)
+
+    if 'SD' in self.axis_list:
+          
+          deltaR_det = jet_det.delta_R(jet_det_sd)
+          deltaR_truth = jet_truth.delta_R(jet_truth_sd)
+          
+          x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+          x_array = array('d', x)
+          getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(x_array)
+          
+          if deltaR_truth > 1e-5:
+            axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+            getattr(self, 'hJetAxisResidual_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
+            
+          if 'WTA' in self.axis_list:
+          
+              deltaR_det = jet_det_sd.delta_R(jet_det_wta)
+              deltaR_truth = jet_truth_sd.delta_R(jet_truth_wta)
+              
+              x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+              x_array = array('d', x)
+              getattr(self, 'hResponse_JetPt_JetAxisDeltaR_SD{}_WTA_R{}'.format(sd_label, jetR)).Fill(x_array)
+              
+              if deltaR_truth > 1e-5:
+                axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+                getattr(self, 'hJetAxisResidual_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
 
   #---------------------------------------------------------------
   # Fill response histograms
