@@ -25,12 +25,12 @@ parser.add_argument("-o", "--outputDir", action="store", type=str, metavar="outp
 args = parser.parse_args()
 
 print('Configuring...')
-print('inputFile: \'{0}\''.format(args.inputDir))
-print('ouputDir: \'{0}\"'.format(args.outputDir))
+print('inputDir: "{0}"'.format(args.inputDir))
+print('ouputDir: "{0}"'.format(args.outputDir))
 
-# If invalid inputFile is given, exit
+# If invalid inputDir is given, exit
 if not os.path.exists(args.inputDir):
-    print('File \"{0}\" does not exist! Exiting!'.format(args.inputDir))
+    print('File "{0}" does not exist! Exiting!'.format(args.inputDir))
     sys.exit(0)
 
 data_dir = args.inputDir

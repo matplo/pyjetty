@@ -386,7 +386,8 @@ class analysis_utils(common_base.common_base):
   #---------------------------------------------------------------
   # Plot and save a 1D histogram
   #---------------------------------------------------------------
-  def plot_hist(self, h, outputFilename, drawOptions = '', setLogy = False, setLogz = False, text = ''):
+  def plot_hist(self, h, outputFilename, drawOptions = '', setLogy = False,
+                setLogz = False, text = ''):
     
     self.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -395,7 +396,7 @@ class analysis_utils(common_base.common_base):
     h.SetLineWidth(1)
     h.SetLineStyle(1)
     
-    c = ROOT.TCanvas("c","c: hist",600,450)
+    c = ROOT.TCanvas("c","c: hist",1800,1350)
     c.cd()
     ROOT.gPad.SetLeftMargin(0.15)
     ROOT.gPad.SetBottomMargin(0.15)

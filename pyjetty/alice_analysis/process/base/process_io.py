@@ -119,7 +119,7 @@ class process_io(common_base.common_base):
   # with the same formatting and saves to class's output_file.
   # histograms is list of tuples: [ ("title", np.histogram), ... ]
   #---------------------------------------------------------------
-  def save_dataframe(self, df, filename, histograms=[]):
+  def save_dataframe(self, filename, df, df_true=None, histograms=[]):
 
     # Create output directory if it does not already exist
     if not os.path.exists(self.output_dir):
@@ -128,11 +128,22 @@ class process_io(common_base.common_base):
     # Open output directory and (re)create rootfile
     with uproot.recreate(self.output_dir + filename) as f:
 
-      # Create tree with particle info
-      title = self.track_tree_name
+      if isinstance(df_true, pandas.DataFrame):
+        # Create tree with truth particle info
+        title = 'tree_Particle_gen'
+        branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
+                      "ParticleEta": float, "ParticlePhi": float}
+        print("Length of truth track tree: %i" % len(df))
+        f[title] = uproot.newtree(branchdict, title=title)
+        f[title].extend( { "run_number": df["run_number"], "ev_id": df["ev_id"], 
+                           "ParticlePt": df["ParticlePt"], "ParticleEta": df["ParticleEta"],
+                           "ParticlePhi": df["ParticlePhi"] } )
+
+      # Create tree with detector-level particle info
+      title = 'tree_Particle'
       branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
                     "ParticleEta": float, "ParticlePhi": float}
-      print("Length of track tree: %i" % len(df))
+      print("Length of detector-level track tree: %i" % len(df))
       f[title] = uproot.newtree(branchdict, title=title)
       f[title].extend( { "run_number": df["run_number"], "ev_id": df["ev_id"], 
                          "ParticlePt": df["ParticlePt"], "ParticleEta": df["ParticleEta"],

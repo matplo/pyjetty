@@ -121,7 +121,7 @@ class roounfold_ang(analysis_base.analysis_base):
         name_thn = 'hResponse_JetpT_lambda_%sScaled' % conf
         name_thn_rebinned = 'hResponse_JetpT_lambda_%s_rebinned' % conf
         name_roounfold = 'roounfold_response_%s' % conf
-        name_data = 'hLambda_JetpT_%s' % conf
+        name_data = 'hLambda_JetpT_%sScaled' % conf
         name_data_rebinned = '%s_rebinned' % name_data
         setattr(self, 'name_roounfold_%s' % conf, name_roounfold)
         setattr(self, 'name_thn_%s' % conf, name_thn)
@@ -221,6 +221,9 @@ class roounfold_ang(analysis_base.analysis_base):
     hDataProj.Scale(1., "width")
     outputFilename = os.path.join(self.output_dir, 'hData_proj_%s%s' % (label, self.file_format))
     self.utils.plot_hist(hDataProj, outputFilename)
+
+    # Plot ratios of the det-level MC vs data
+    self.plot_mc_data_ratios(hData_PerBin, jetR, label)
 
     # Plot various slices of the response matrix (from the THn)
     self.plot_RM_slices(jetR, label)
@@ -745,6 +748,23 @@ class roounfold_ang(analysis_base.analysis_base):
     outputFilename = os.path.join(self.output_dir, 'hKinematicEfficiency_%s%s' % (label, self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
+
+
+  #################################################################################################
+  # Plot ratios of the det-level MC vs data, both rebinned
+  #################################################################################################
+  def plot_mc_data_ratios(self, hData_PerBin, jetR, label):
+
+    output_dir_ratios = os.path.joinn(self.output_dir, 'ratios')
+    if not os.path.isdir(output_dir_ratios):
+      os.makedirs(output_dir_ratios)
+
+    hResponse_PerBin = getattr(self, getattr(self, 'name_thn_rebinned_%s' % conf)).Projection(3,2)
+
+    # TODO - finish/redo this
+    # prob better to just run a new MC job with the 2D lambda vs pT plot of interest
+    # rebin both
+    # plot both on one plot with ratio plot underneath
 
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)

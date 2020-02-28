@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /home/ezra/pyjetty/pyjetty/alice_analysis
-python process/user/ang_pp/ang_data.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+python process/user/ang_pp/ang_fs.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /storage/u/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/ang/${JOB_ID}

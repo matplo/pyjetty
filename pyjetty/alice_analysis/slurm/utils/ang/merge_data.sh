@@ -2,10 +2,10 @@
 #
 # Script to merge output ROOT files
 
-JOB_ID=30873
+JOB_ID=34077
 
 # First, merge all output files on each hiccup
-HICCUPS="1 6 7 8 9 10 12 13"
+HICCUPS="1 6 7 8 9 10 12"
 for HICCUP in $HICCUPS
 do
   FILE_DIR="/remote_storage/hiccup$HICCUP/u/alice/AnalysisResults/ang/$JOB_ID"
