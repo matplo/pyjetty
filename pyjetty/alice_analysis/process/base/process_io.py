@@ -119,7 +119,7 @@ class process_io(common_base.common_base):
   # with the same formatting and saves to class's output_file.
   # histograms is list of tuples: [ ("title", np.histogram), ... ]
   #---------------------------------------------------------------
-  def save_dataframe(self, filename, df, df_true=None, histograms=[]):
+  def save_dataframe(self, filename, df, df_true=False, histograms=[]):
 
     # Create output directory if it does not already exist
     if not os.path.exists(self.output_dir):
@@ -128,16 +128,18 @@ class process_io(common_base.common_base):
     # Open output directory and (re)create rootfile
     with uproot.recreate(self.output_dir + filename) as f:
 
-      if isinstance(df_true, pandas.DataFrame):
+      if df_true:
         # Create tree with truth particle info
         title = 'tree_Particle_gen'
         branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
                       "ParticleEta": float, "ParticlePhi": float}
-        print("Length of truth track tree: %i" % len(df))
+        print("Length of truth track tree: %i" % len(self.track_df))
         f[title] = uproot.newtree(branchdict, title=title)
-        f[title].extend( { "run_number": df["run_number"], "ev_id": df["ev_id"], 
-                           "ParticlePt": df["ParticlePt"], "ParticleEta": df["ParticleEta"],
-                           "ParticlePhi": df["ParticlePhi"] } )
+        f[title].extend( { "run_number": self.track_df["run_number"],
+                           "ev_id": self.track_df["ev_id"], 
+                           "ParticlePt": self.track_df["ParticlePt"],
+                           "ParticleEta": self.track_df["ParticleEta"],
+                           "ParticlePhi": self.track_df["ParticlePhi"] } )
 
       # Create tree with detector-level particle info
       title = 'tree_Particle'
@@ -152,18 +154,14 @@ class process_io(common_base.common_base):
       # Create tree with event char
       title = self.event_tree_name
       branchdict = {"is_ev_rej": int, "run_number": int, "ev_id": int, "z_vtx_reco": float}
-
-      # Condense dataframe for each event
-      for col in list(df.columns):
-        if col in branchdict.keys():
-          continue
-        df = df.drop(col, axis=1)
-      df = df.drop_duplicates()
-
-      print("Length of event tree: %i" % len(df))
       f[title] = uproot.newtree(branchdict, title=title)
-      f[title].extend( { "is_ev_rej": df["is_ev_rej"], "run_number": df["run_number"],
-                         "ev_id": df["ev_id"], "z_vtx_reco": df["z_vtx_reco"] } )
+      f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
+                        "run_number": self.event_df_orig["run_number"], 
+                        "ev_id": self.event_df_orig["ev_id"],
+                        "z_vtx_reco": self.event_df_orig["z_vtx_reco"] } )
+        
+      # Write hNevents histogram: number of accepted events at detector level
+      f["hNevents"] = ( np.array([ 0, df["ev_id"].nunique() ]), np.array([ -0.5, 0.5, 1.5 ]) )
 
       # Write histograms to file too, if any are passed
       for title, h in histograms:

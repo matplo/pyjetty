@@ -68,12 +68,17 @@ class eff_smear:
         self.df_fjparticles = self.apply_eff_cut(self.df_fjparticles)
         print('--- {} seconds ---'.format(time.time() - start_time))
 
+        # Build truth-level histogram of track pT multiplicity after efficiency cuts
+        print("Building truth-level track pT histogram after efficiency cuts...")
+        self.hist_list.append( ("truth_pt_eff_cuts", self.build_pt_hist()) )
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
         # Apply pT smearing
         self.df_fjparticles = self.apply_pt_smear(self.df_fjparticles)
         print('--- {} seconds ---'.format(time.time() - start_time))
 
         # Build truth-level histogram of track pT multiplicity
-        print("Building simulation-level track pT histogram...")
+        print("Building detector-level track pT histogram...")
         self.hist_list.append( ("fastsim_pt", self.build_pt_hist()) )
         print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -83,7 +88,7 @@ class eff_smear:
         print(self.df_fjparticles)
         print("Writing fast simulation to ROOT TTree...")
         self.io.save_dataframe("AnalysisResultsFastSim.root", self.df_fjparticles,
-                               df_true=self.df_fjparticles_tru, histograms=self.hist_list)
+                               df_true=True, histograms=self.hist_list)
         print('--- {} seconds ---'.format(time.time() - start_time))
 
 
@@ -96,8 +101,7 @@ class eff_smear:
         self.io = process_io.process_io(input_file=self.input_file, output_dir=self.output_dir,
                                         tree_dir='PWGHF_TreeCreator',
                                         track_tree_name='tree_Particle_gen')
-        self.df_fjparticles_tru = self.io.load_dataframe()  # for keeping original truth level
-        self.df_fjparticles = self.df_fjparticles_tru.copy(deep=True)  # for creating det level
+        self.df_fjparticles = self.io.load_dataframe()
         self.nTracks_truth = len(self.df_fjparticles)
         print("DataFrame loaded from data.")
         print(self.df_fjparticles)
