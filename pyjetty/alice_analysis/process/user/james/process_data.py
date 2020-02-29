@@ -40,25 +40,25 @@ from pyjetty.mputils import CEventSubtractor
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class process_rg_data(process_base.process_base):
+class ProcessData(process_base.ProcessBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(process_rg_data, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(ProcessData, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
     self.initialize_config()
 
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
-  def process_rg_data(self):
+  def process_data(self):
     
     self.start_time = time.time()
 
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
-    io = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle')
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
@@ -80,7 +80,7 @@ class process_rg_data(process_base.process_base):
 
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.save_output_objects(self)
+    process_base.ProcessBase.save_output_objects(self)
 
     print('--- {} seconds ---'.format(time.time() - self.start_time))
 
@@ -90,7 +90,7 @@ class process_rg_data(process_base.process_base):
   def initialize_config(self):
     
     # Call base class initialization
-    process_base.process_base.initialize_config(self)
+    process_base.ProcessBase.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -99,23 +99,28 @@ class process_rg_data(process_base.process_base):
     # Write tree output (default is to write only histograms)
     self.write_tree_output = config['write_tree_output']
     
-    # Retrieve list of SD grooming settings
-    sd_config_dict = config['SoftDrop']
-    sd_config_list = list(sd_config_dict.keys())
-    self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
-    
     if self.do_constituent_subtraction:
         self.is_pp = False
     else:
         self.is_pp = True
-        
+       
+    # Check if SoftDrop analysis is activated
+    self.do_softdrop = False
+    if 'SoftDrop' in config:
+        print('zg/rg analysis activated')
+        self.do_softdrop = True
+        sd_config_dict = config['SoftDrop']
+        sd_config_list = list(sd_config_dict.keys())
+        self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
+           
     # Check if sub-jet analysis is activated
     self.do_subjets = False
     if 'Subjet' in config:
       print('Subjet analysis activated')
       self.do_subjets = True
-      self.subjet_R = config['Subjet']['subjet_R']
-      
+      obs_config_dict = config['Subjet']
+      obs_config_list = list(obs_config_dict.keys())
+      self.subjet_R = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
       self.subjet_def = {}
       for subjetR in self.subjet_R:
         self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
@@ -125,8 +130,10 @@ class process_rg_data(process_base.process_base):
     if 'JetAxis' in config:
       print('Jet axis analysis activated')
       self.do_jet_axes = True
-      self.axis_list = config['JetAxis']['axis_list']
-  
+      obs_config_dict = config['JetAxis']
+      obs_config_list = list(obs_config_dict.keys())
+      self.axis_list = [obs_config_dict[name]['axis'] for name in obs_config_list]
+
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
@@ -140,42 +147,43 @@ class process_rg_data(process_base.process_base):
     
     if not self.is_pp:
         self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
-
+        
     for jetR in self.jetR_list:
       
       name = 'hZ_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
       
-      for sd_setting in self.sd_settings:
-        
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        
-        if self.write_tree_output:
+      if self.do_softdrop:
+          for sd_setting in self.sd_settings:
+            
+            zcut = sd_setting[0]
+            beta = sd_setting[1]
+            sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+            
+            if self.write_tree_output:
 
-          # Initialize tree to write out event variables
-          tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-          t = ROOT.TTree(tree_name, tree_name)
-          tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-          tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
-          setattr(self, tree_writer_name, tree_writer)
+              # Initialize tree to write out event variables
+              tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+              t = ROOT.TTree(tree_name, tree_name)
+              tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
+              tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
+              setattr(self, tree_writer_name, tree_writer)
 
-        else:
-          
-          name = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
-          h.GetXaxis().SetTitle('p_{T,ch jet}')
-          h.GetYaxis().SetTitle('#theta_{g,ch}')
-          setattr(self, name, h)
-          
-          name = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-          h.GetXaxis().SetTitle('p_{T,ch jet}')
-          h.GetYaxis().SetTitle('z_{g,ch}')
-          setattr(self, name, h)
-          
+            else:
+              
+              name = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#theta_{g,ch}')
+              setattr(self, name, h)
+              
+              name = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('z_{g,ch}')
+              setattr(self, name, h)
+              
       if self.do_subjets:
         for subjetR in self.subjet_R:
         
@@ -186,13 +194,34 @@ class process_rg_data(process_base.process_base):
           setattr(self, name, h)
       
       if self.do_jet_axes:
-        for axis in self.axis_list:
         
-          name = 'hJetAxisDeltaR_JetPt_Standard_{}_R{}'.format(axis, jetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
-          h.GetXaxis().SetTitle('p_{T,ch jet}')
-          h.GetYaxis().SetTitle('#Delta R')
-          setattr(self, name, h)
+        if 'WTA' in self.axis_list:
+            name = 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('#Delta R')
+            setattr(self, name, h)
+    
+        if 'SD' in self.axis_list:
+        
+            for sd_setting in self.sd_settings:
+              
+              zcut = sd_setting[0]
+              beta = sd_setting[1]
+              sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+        
+              name = 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#Delta R')
+              setattr(self, name, h)
+              
+              if 'WTA' in self.axis_list:
+                name = 'hJetAxisDeltaR_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)
+                h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+                h.GetXaxis().SetTitle('p_{T,ch jet}')
+                h.GetYaxis().SetTitle('#Delta R')
+                setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -238,13 +267,14 @@ class process_rg_data(process_base.process_base):
     cs = fj.ClusterSequence(fj_particles, jet_def)
     jets = fj.sorted_by_pt(cs.inclusive_jets())
     jets_selected = jet_selector(jets)
-
+    
     # Loop through jets and fill non-SD histograms
     jetR = jet_def.R()
     result = [self.analyze_accepted_jets(jet, jetR) for jet in jets_selected]
           
     # Loop through SD settings and fill SD histograms
-    result = [[self.analyze_softdrop_jet(sd_setting, jet, jetR) for sd_setting in self.sd_settings] for jet in jets_selected]
+    if self.do_softdrop:
+        result = [[self.analyze_softdrop_jet(sd_setting, jet, jetR) for sd_setting in self.sd_settings] for jet in jets_selected]
     
   #---------------------------------------------------------------
   # Fill histograms
@@ -302,7 +332,16 @@ class process_rg_data(process_base.process_base):
       
     # Fill jet axis difference
     if self.do_jet_axes:
-      self.fill_jet_axis_histograms(jet, jet_sd, jetR)
+    
+        # Recluster with WTA (with larger jet R)
+        jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+        jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
+        if self.debug_level > 2:
+            print('WTA jet definition is:', jet_def)
+        reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
+        jet_wta = reclusterer_wta.result(jet)
+
+        self.fill_jet_axis_histograms(jet, jet_sd, jet_wta, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill histograms
@@ -350,17 +389,19 @@ class process_rg_data(process_base.process_base):
   #---------------------------------------------------------------
   # Fill jet axis histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_histograms(self, jet, jet_sd, jetR):
+  def fill_jet_axis_histograms(self, jet, jet_sd, jet_wta, jetR, sd_label):
 
-    for axis in self.axis_list:
-      
-      if axis == 'SD':
+    if 'SD' in self.axis_list:
         deltaR = jet.delta_R(jet_sd)
+        getattr(self, 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
+        
+    if 'WTA' in self.axis_list:
+        deltaR = jet.delta_R(jet_wta)
+        getattr(self, 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet.pt(), deltaR)
       
-      elif axis == 'WTA':
-        deltaR = jet.delta_R(self.utils.get_leading_constituent(jet))
-      
-      getattr(self, 'hJetAxisDeltaR_JetPt_Standard_{}_R{}'.format(axis, jetR)).Fill(jet.pt(), deltaR)
+    if 'WTA' in self.axis_list and 'SD' in self.axis_list:
+        deltaR = jet_sd.delta_R(jet_wta)
+        getattr(self, 'hJetAxisDeltaR_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
           
   #---------------------------------------------------------------
   # Fill tree
@@ -427,5 +468,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = process_rg_data(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
-  analysis.process_rg_data()
+  analysis = ProcessData(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis.process_data()

@@ -38,7 +38,7 @@ from pyjetty.alice_analysis.process.user.ang_pp.helpers import deltaR, lambda_be
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class process_ang_data(process_base.process_base):
+class process_ang_data(process_base.ProcessBase):
 
   #---------------------------------------------------------------
   # Constructor
@@ -57,7 +57,7 @@ class process_ang_data(process_base.process_base):
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object
     # of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+    io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle_gen')
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
@@ -74,7 +74,7 @@ class process_ang_data(process_base.process_base):
 
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.save_output_objects(self)
+    process_base.ProcessBase.save_output_objects(self)
 
     print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -84,7 +84,7 @@ class process_ang_data(process_base.process_base):
   def initialize_config(self):
     
     # Call base class initialization
-    process_base.process_base.initialize_config(self)
+    process_base.ProcessBase.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:

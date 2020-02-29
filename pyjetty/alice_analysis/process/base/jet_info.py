@@ -12,13 +12,13 @@ from __future__ import print_function
 from pyjetty.alice_analysis.process.base import common_base
 
 ################################################################
-class jet_info(common_base.common_base):
+class JetInfo(common_base.CommonBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
-    super(jet_info, self).__init__(**kwargs)
+    super(JetInfo, self).__init__(**kwargs)
 
     # Store the matching candidates
     self.matching_candidates = []

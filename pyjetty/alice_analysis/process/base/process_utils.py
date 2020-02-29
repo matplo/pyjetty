@@ -27,13 +27,13 @@ import fjext
 from pyjetty.alice_analysis.process.base import common_base
 
 ################################################################
-class process_utils(common_base.common_base):
+class ProcessUtils(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
-    super(process_utils, self).__init__(**kwargs)
+    super(ProcessUtils, self).__init__(**kwargs)
   
   #---------------------------------------------------------------
   # Check if det-jet passes acceptance criteria

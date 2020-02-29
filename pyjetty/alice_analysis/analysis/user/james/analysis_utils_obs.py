@@ -24,13 +24,13 @@ import ROOT
 from pyjetty.alice_analysis.analysis.base import analysis_utils
 
 ################################################################
-class analysis_utils_obs(analysis_utils.analysis_utils):
+class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
-    super(analysis_utils_obs, self).__init__(**kwargs)
+    super(AnalysisUtils_Obs, self).__init__(**kwargs)
 
   #---------------------------------------------------------------
   # Get observable label

@@ -26,7 +26,7 @@ ROOT.gROOT.SetBatch(True)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 ################################################################
-class roounfold_ang(analysis_base.analysis_base):
+class roounfold_ang(analysis_base.AnalysisBase):
 
   #---------------------------------------------------------------
   # Constructor

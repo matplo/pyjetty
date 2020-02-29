@@ -44,13 +44,13 @@ from pyjetty.mputils import CEventSubtractor
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class process_rg_mc(process_base.process_base):
+class ProcessMC(process_base.ProcessBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(process_rg_mc, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(ProcessMC, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
     
     # Initialize configuration
     self.initialize_config()
@@ -58,7 +58,7 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
-  def process_rg_mc(self):
+  def process_mc(self):
     
     start_time = time.time()
     
@@ -67,7 +67,7 @@ class process_rg_mc(process_base.process_base):
     # Use IO helper class to convert detector-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io_det = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io_det = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle')
     df_fjparticles_det = io_det.load_data(reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
@@ -77,7 +77,7 @@ class process_rg_mc(process_base.process_base):
 
     # Use IO helper class to convert truth-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
-    io_truth = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+    io_truth = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle_gen')
     df_fjparticles_truth = io_truth.load_data()
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
@@ -96,7 +96,7 @@ class process_rg_mc(process_base.process_base):
     
     # Set up the Pb-Pb embedding object
     if not self.is_pp:
-        self.process_io_emb = process_io_emb.process_io_emb(self.emb_file_list, track_tree_name='tree_Particle')
+        self.process_io_emb = process_io_emb.ProcessIO_Emb(self.emb_file_list, track_tree_name='tree_Particle')
     
     # ------------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ class process_rg_mc(process_base.process_base):
     
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.save_output_objects(self)
+    process_base.ProcessBase.save_output_objects(self)
     
     print('--- {} seconds ---'.format(time.time() - start_time))
   
@@ -125,7 +125,7 @@ class process_rg_mc(process_base.process_base):
   def initialize_config(self):
     
     # Call base class initialization
-    process_base.process_base.initialize_config(self)
+    process_base.ProcessBase.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -139,24 +139,29 @@ class process_rg_mc(process_base.process_base):
     if 'mc_fraction_threshold' in config:
       self.mc_fraction_threshold = config['mc_fraction_threshold']
     
-    # Retrieve list of SD grooming settings
-    sd_config_dict = config['SoftDrop']
-    sd_config_list = list(sd_config_dict.keys())
-    self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
-
     if self.do_constituent_subtraction:
         self.is_pp = False
         self.emb_file_list = config['emb_file_list']
     else:
         self.is_pp = True
         
+    # Check if SoftDrop analysis is activated
+    self.do_softdrop = False
+    if 'SoftDrop' in config:
+        print('zg/rg analysis activated')
+        self.do_softdrop = True
+        sd_config_dict = config['SoftDrop']
+        sd_config_list = list(sd_config_dict.keys())
+        self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
+           
     # Check if sub-jet analysis is activated
     self.do_subjets = False
     if 'Subjet' in config:
       print('Subjet analysis activated')
       self.do_subjets = True
-      self.subjet_R = config['Subjet']['subjet_R']
-      
+      obs_config_dict = config['Subjet']
+      obs_config_list = list(obs_config_dict.keys())
+      self.subjet_R = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
       self.subjet_def = {}
       for subjetR in self.subjet_R:
         self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
@@ -166,7 +171,9 @@ class process_rg_mc(process_base.process_base):
     if 'JetAxis' in config:
       print('Jet axis analysis activated')
       self.do_jet_axes = True
-      self.axis_list = config['JetAxis']['axis_list']
+      obs_config_dict = config['JetAxis']
+      obs_config_list = list(obs_config_dict.keys())
+      self.axis_list = [obs_config_dict[name]['axis'] for name in obs_config_list]
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -397,32 +404,69 @@ class process_rg_mc(process_base.process_base):
             setattr(self, name, h)
       
       if self.do_jet_axes:
-        for axis in self.axis_list:
         
-          name = 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
-          setattr(self, name, h)
-          
-          # Create THn of response for jet axis deltaR
-          dim = 4;
-          title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
-          nbins = [100, 60, 200, 40]
-          min = [0., 0., 0., 0.]
-          max = [100., 300., jetR, jetR]
-
-          name = 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)
-          nbins = (nbins)
-          xmin = (min)
-          xmax = (max)
-          nbins_array = array('i', nbins)
-          xmin_array = array('d', xmin)
-          xmax_array = array('d', xmax)
-          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-          for i in range(0, dim):
-            h.GetAxis(i).SetTitle(title[i])
+        if 'WTA' in self.axis_list:
+        
+            name = 'hJetAxisResidual_JetPt_Standard_WTA_R{}'.format(jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
             setattr(self, name, h)
+            
+            # Create THn of response for jet axis deltaR
+            dim = 4;
+            title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
+            nbins = [100, 60, 200, 40]
+            min = [0., 0., 0., 0.]
+            max = [100., 300., jetR, jetR]
+
+            name = 'hResponse_JetPt_JetAxisDeltaR_Standard_WTA_R{}'.format(jetR)
+            nbins = (nbins)
+            xmin = (min)
+            xmax = (max)
+            nbins_array = array('i', nbins)
+            xmin_array = array('d', xmin)
+            xmax_array = array('d', xmax)
+            h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+            for i in range(0, dim):
+              h.GetAxis(i).SetTitle(title[i])
+              setattr(self, name, h)
+    
+        if 'SD' in self.axis_list:
+        
+            for sd_setting in self.sd_settings:
+              
+              zcut = sd_setting[0]
+              beta = sd_setting[1]
+              sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+              
+              name = 'hJetAxisResidual_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+              h.GetXaxis().SetTitle('p_{T,truth}')
+              h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+              setattr(self, name, h)
+              
+              # Create THn of response for jet axis deltaR
+              name = 'hResponse_JetPt_JetAxisDeltaR_Standard_SD{}_R{}'.format(sd_label, jetR)
+              h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+              for i in range(0, dim):
+                h.GetAxis(i).SetTitle(title[i])
+                setattr(self, name, h)
+              
+              if 'WTA' in self.axis_list:
+              
+                  name = 'hJetAxisResidual_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)
+                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+                  h.GetXaxis().SetTitle('p_{T,truth}')
+                  h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+                  setattr(self, name, h)
+                  
+                  # Create THn of response for jet axis deltaR
+                  name = 'hResponse_JetPt_JetAxisDeltaR_SD{}_WTA_R{}'.format(sd_label, jetR)
+                  h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+                  for i in range(0, dim):
+                    h.GetAxis(i).SetTitle(title[i])
+                    setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -736,30 +780,61 @@ class process_rg_mc(process_base.process_base):
           
         # Fill jet axis difference
         if self.do_jet_axes:
-          self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR)
+        
+            # Recluster with WTA (with larger jet R)
+            jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+            jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
+            if self.debug_level > 2:
+                print('WTA jet definition is:', jet_def)
+            reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
+            jet_det_wta = reclusterer_wta.result(jet_det)
+            jet_truth_wta = reclusterer_wta.result(jet_truth)
+        
+            self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_label)
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR):
+  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_label):
           
-    for axis in self.axis_list:
-      
-      if axis == 'SD':
-        deltaR_det = jet_det.delta_R(jet_det_sd)
-        deltaR_truth = jet_truth.delta_R(jet_truth_sd)
-      
-      elif axis == 'WTA':
-        deltaR_det = jet_det.delta_R(self.utils.get_leading_constituent(jet_det))
-        deltaR_truth = jet_truth.delta_R(self.utils.get_leading_constituent(jet_truth))
-         
-      x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
-      x_array = array('d', x)
-      getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)).Fill(x_array)
-      
-      if deltaR_truth > 1e-5:
-        axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-        getattr(self, 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)).Fill(jet_truth.pt(), axis_resolution)
+    if 'WTA' in self.axis_list:
+    
+        deltaR_det = jet_det.delta_R(jet_det_wta)
+        deltaR_truth = jet_truth.delta_R(jet_truth_wta)
+        
+        x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+        x_array = array('d', x)
+        getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_WTA_R{}'.format(jetR)).Fill(x_array)
+        
+        if deltaR_truth > 1e-5:
+          axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+          getattr(self, 'hJetAxisResidual_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet_truth.pt(), axis_resolution)
+
+    if 'SD' in self.axis_list:
+          
+          deltaR_det = jet_det.delta_R(jet_det_sd)
+          deltaR_truth = jet_truth.delta_R(jet_truth_sd)
+          
+          x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+          x_array = array('d', x)
+          getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(x_array)
+          
+          if deltaR_truth > 1e-5:
+            axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+            getattr(self, 'hJetAxisResidual_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
+            
+          if 'WTA' in self.axis_list:
+          
+              deltaR_det = jet_det_sd.delta_R(jet_det_wta)
+              deltaR_truth = jet_truth_sd.delta_R(jet_truth_wta)
+              
+              x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+              x_array = array('d', x)
+              getattr(self, 'hResponse_JetPt_JetAxisDeltaR_SD{}_WTA_R{}'.format(sd_label, jetR)).Fill(x_array)
+              
+              if deltaR_truth > 1e-5:
+                axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+                getattr(self, 'hJetAxisResidual_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
 
   #---------------------------------------------------------------
   # Fill response histograms
@@ -1038,5 +1113,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = process_rg_mc(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
-  analysis.process_rg_mc()
+  analysis = ProcessMC(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis.process_mc()

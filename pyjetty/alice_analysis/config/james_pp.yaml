@@ -1,6 +1,6 @@
 # Analysis parameters
 #observables: ['theta_g', 'zg', 'subjet_z']
-observables: ['subjet_z']
+observables: ['theta_g', 'zg']
 debug_level: 0
 write_tree_output: False
 
@@ -119,7 +119,7 @@ SoftDrop:
 file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_31173'
 
-do_unfolding: True
+do_unfolding: False
 force_rebin: False
 do_systematics: False
 do_plot_final_result: False
@@ -135,15 +135,16 @@ systematics_list:
   - kBinning
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/30973/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/31173/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/24309/AnalysisResultsFinal.root'
 
-trkeff_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/30973/AnalysisResultsFinal.root'
-trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/31173/AnalysisResultsFinal.root'
+trkeff_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/24509/AnalysisResultsFinal.root'
 
 # Theory comparisons
-fPythia: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
+fPythia: '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
 
 fNLL: ''
-fNPcorrection_numerator: '/Users/jamesmulligan/alidock/theta_g/Pythia_new/pythia.root'
-fNPcorrection_denominator: '/Users/jamesmulligan/alidock/theta_g/NP_correction/Full_hadOFF_mpiOFF_isrOFF/default_output.root'
+fNPcorrection_numerator: '/Users/jamesmulligan/Analysis_theta_g/NP_correction/Full_hadON_mpiON_isrON/default_output.root'
+fNPcorrection_denominator: '/Users/jamesmulligan/Analysis_theta_g/NP_correction/Full_hadOFF_mpiOFF_isrOFF/default_output.root'
+

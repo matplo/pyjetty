@@ -26,24 +26,24 @@ import fjext
 from pyjetty.alice_analysis.process.base import common_base
 
 ################################################################
-class process_io(common_base.common_base):
+class ProcessIO(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input_file='', output_dir='', tree_dir='', 
-               track_tree_name='tree_Particle', event_tree_name='tree_event_char', **kwargs):
-    super(process_io, self).__init__(**kwargs)
+  def __init__(self, input_file='', tree_dir='PWGHF_TreeCreator',
+               track_tree_name='tree_Particle', event_tree_name='tree_event_char', output_dir='', **kwargs):
+    super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
-    if len(output_dir) and output_dir[-1] != '/':
-      self.output_dir += '/'
     self.tree_dir = tree_dir
     if len(tree_dir) and tree_dir[-1] != '/':
       self.tree_dir += '/'
     self.track_tree_name = track_tree_name
     self.event_tree_name = event_tree_name
     self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
+    if len(output_dir) and output_dir[-1] != '/':
+      self.output_dir += '/'
     self.reset_dataframes()
   
   #---------------------------------------------------------------
@@ -71,7 +71,6 @@ class process_io(common_base.common_base):
     print('Convert ROOT trees to pandas dataframes...')
     print('    track_tree_name = {}'.format(self.track_tree_name))
 
-    
     self.track_df = self.load_dataframe()
     
     if self.reject_tracks_fraction > 1e-3:
@@ -94,20 +93,20 @@ class process_io(common_base.common_base):
   def load_dataframe(self):
 
     # Load event tree into dataframe, and apply event selection
-    tree_name = self.tree_dir + self.event_tree_name
-    self.event_tree = uproot.open(self.input_file)[tree_name]
+    event_tree_name = self.tree_dir + self.event_tree_name
+    self.event_tree = uproot.open(self.input_file)[event_tree_name]
     if not self.event_tree:
-      print('Tree {} not found in file {}'.format(tree_name, self.input_file))
+      print('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
     self.event_df_orig = self.event_tree.pandas.df(self.event_columns)
     self.event_df_orig.reset_index(drop=True)
     self.event_df = self.event_df_orig.query('is_ev_rej == 0')
     self.event_df.reset_index(drop=True)
 
     # Load track tree into dataframe
-    tree_name = self.tree_dir + self.track_tree_name
-    self.track_tree = uproot.open(self.input_file)[tree_name]
+    track_tree_name = self.tree_dir + self.track_tree_name
+    self.track_tree = uproot.open(self.input_file)[track_tree_name]
     if not self.track_tree:
-      print('Tree {} not found in file {}'.format(tree_name, self.input_file))
+      print('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
     self.track_df_orig = self.track_tree.pandas.df()
 
     # Merge event info into track tree

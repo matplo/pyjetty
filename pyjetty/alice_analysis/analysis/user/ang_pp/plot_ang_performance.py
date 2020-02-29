@@ -33,7 +33,7 @@ ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptTitle(0)
 
 ################################################################
-class plot_ang_performance(common_base.common_base):
+class plot_ang_performance(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Constructor

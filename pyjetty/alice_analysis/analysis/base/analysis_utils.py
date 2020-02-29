@@ -24,13 +24,13 @@ import ROOT
 from pyjetty.alice_analysis.analysis.base import common_base
 
 ################################################################
-class analysis_utils(common_base.common_base):
+class AnalysisUtils(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
-    super(analysis_utils, self).__init__(**kwargs)
+    super(AnalysisUtils, self).__init__(**kwargs)
 
   #---------------------------------------------------------------
   # Rebin 2D (pt, my_observable) histogram according to specified binnings
