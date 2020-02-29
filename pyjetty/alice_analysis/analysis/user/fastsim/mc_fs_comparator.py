@@ -8,6 +8,7 @@ Ezra Lesser (elesser@berkeley.edu)
 from __future__ import print_function
 
 import os
+import sys
 import argparse
 import yaml
 from array import *
@@ -17,7 +18,7 @@ from pyjetty.alice_analysis.analysis.base import analysis_base, analysis_utils
 
 
 ################################################################
-class mc_fs_comparator(analysis_base.analysis_base):
+class mc_fs_comparator(analysis_base.AnalysisBase):
 
     ################################################################
     # Analysis class constructor
@@ -55,6 +56,7 @@ class mc_fs_comparator(analysis_base.analysis_base):
                 # Rebin histograms for comparions
                 name = "hLambda_JetpT_det_%sScaled" % label
                 h_mc = self.f_mc.Get(name)
+                print("self.utils", self.utils)
                 h_mc_rebinned = self.utils.rebin_data(h_mc, h_mc.GetName()+'_mc', len(pt_bins)-1, 
                                                       array('d', pt_bins), len(ang_bins)-1,
                                                       array('d', ang_bins))

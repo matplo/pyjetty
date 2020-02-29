@@ -44,7 +44,7 @@ class AnalysisBase(common_base.CommonBase):
       os.makedirs(self.output_dir)
 
     # Initialize utils class
-    self.utils = analysis_utils.analysis_utils()
+    self.utils = analysis_utils.AnalysisUtils()
   
   #---------------------------------------------------------------
   # Initialize config file into class members
