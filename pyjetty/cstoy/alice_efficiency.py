@@ -30,8 +30,8 @@ class AliceChargedParticleEfficiency(MPBase):
         self.configure_from_args(csystem='pp')
         super(AliceChargedParticleEfficiency, self).__init__(**kwargs)
         # assume self.csystem == 'pp':
-        self.effi_param1 = 0.83
-        self.effi_param2 = 0.795
+        self.effi_param1 = 0.65
+        self.effi_param2 = 0.812
         self.effi_param3 = 0.865
         self.effi_param4 = 0.895
         if self.csystem == 'PbPb':
@@ -58,10 +58,10 @@ class AliceChargedParticleEfficiency(MPBase):
     def effi(self, pt):
         if pt < 0.15:
             return 0
-        elif pt < 1:
-            return self.effi_param1 * pt
+        elif pt < 0.5:
+            return 0.35 * pt + self.effi_param1
         elif pt < 2:
-            return 0.035 * pt + self.effi_param2
+            return 8/300 * pt + self.effi_param2
         elif pt < 15:
             return self.effi_param3
         # else: valid at least for 15 <= pt <= 50 GeV
