@@ -11,6 +11,7 @@ Some code taken from processing script by James Mulligan
 from __future__ import print_function, division
 
 import os
+import sys
 import argparse
 import time
 import pandas as pd
@@ -122,7 +123,9 @@ class eff_smear:
     # Build histogram of pT values and return it
     #---------------------------------------------------------------
     def build_pt_hist(self):
-        bins = np.concatenate((np.arange(0, 5, 0.1), np.arange(5, 20, 1), np.arange(20, 52, 2)))
+        bins = np.concatenate((np.arange(0, 0.3, 0.05), np.arange(0.3, 1, 0.1), np.arange(1, 3, 0.2), 
+                               np.arange(3, 10, 0.5), np.arange(10, 20, 1),
+                               np.arange(20, 50, 2), np.arange(50, 155, 5)))
         return np.histogram(self.df_fjparticles["ParticlePt"], bins=bins)
 
     #---------------------------------------------------------------
@@ -153,7 +156,7 @@ class eff_smear:
         pt_dif = [ (pt_smear - pt_true) / pt_true for pt_smear, pt_true in zip(smeared_pt, true_pt) ]
         pt_bins = np.concatenate((np.arange(0, 1, 0.1), np.arange(1, 10, .5), np.arange(10, 20, 1),
                                   np.arange(20, 50, 2), np.arange(50, 95, 5)))
-        dif_bins = np.arange(0, 0.5, .001)
+        dif_bins = np.arange(-0.5, 0.5, .001)
         pt_smearing_dists = np.histogram2d(true_pt, pt_dif, bins=[pt_bins, dif_bins])
         self.hist_list.append( ("pt_smearing", pt_smearing_dists) )
 
