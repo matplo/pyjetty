@@ -34,7 +34,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, power_law_offset=0., **kwargs):
     
     super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
-    self.utils = analysis_utils_obs.analysis_utils_obs()
+    self.utils = analysis_utils_obs.AnalysisUtils_Obs()
     
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
@@ -77,7 +77,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   def initialize_config(self):
     
     # Call base class initialization
-    analysis_base.analysis_base.initialize_config(self)
+    analysis_base.AnalysisBase.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:

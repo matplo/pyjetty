@@ -202,7 +202,7 @@ class RunAnalysis(common_base.CommonBase):
           
           self.plot_final_result_overlay(observable, jetR)
 
-          self.plot_NPcorrection(observable, jetR)
+          #self.plot_NPcorrection(observable, jetR)
       
   #----------------------------------------------------------------------
   def perform_unfolding(self, observable):
@@ -210,37 +210,37 @@ class RunAnalysis(common_base.CommonBase):
     
     # Main result
     output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
-    analysis_main = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
+    analysis_main = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
     analysis_main.roounfold_obs()
 
     # Tracking efficiency variation
     if 'kTrackEff' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
-      analysis_trkeff = roounfold_obs.roounfold_obs(observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
+      analysis_trkeff = roounfold_obs.Roounfold_Obs(observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
       analysis_trkeff.roounfold_obs()
 
     # Prior variation 1
     if 'kPrior1' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
-      analysis_prior1 = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
+      analysis_prior1 = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
       analysis_prior1.roounfold_obs()
     
     # Prior variation 2
     if 'kPrior2' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
-      analysis_prior2 = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
+      analysis_prior2 = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
       analysis_prior2.roounfold_obs()
 
     # Truncation variation
     if 'kTruncation' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
-      analysis_truncation = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
+      analysis_truncation = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
       analysis_truncation.roounfold_obs()
         
     # Binning variation
     if 'kBinning' in self.systematics_list:
       output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
-      analysis_binning = roounfold_obs.roounfold_obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
+      analysis_binning = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
       analysis_binning.roounfold_obs()
 
   #----------------------------------------------------------------------
@@ -352,7 +352,7 @@ class RunAnalysis(common_base.CommonBase):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.compute_obs_observable_systematic(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
+      self.compute_obs_systematic(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
   def get_obs_observable_distribution(self, jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth):
@@ -378,7 +378,7 @@ class RunAnalysis(common_base.CommonBase):
     return h
 
   #----------------------------------------------------------------------
-  def compute_obs_observable_systematic(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
+  def compute_obs_systematic(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
     
     #------------------------------------
     # Get 1D histograms
@@ -515,6 +515,7 @@ class RunAnalysis(common_base.CommonBase):
       #self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
     
     # Trk eff
+    hSystematic_TrkEff = None
     if 'kTrackEff' in self.systematics_list:
       name = 'hSystematic_{}_TrkEff_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_TrkEff = hMain.Clone()
@@ -580,34 +581,35 @@ class RunAnalysis(common_base.CommonBase):
     self.utils.setup_legend(leg,0.04)
 
     for i, h in enumerate(h_list):
-      if i == 0:
-        h.SetMarkerStyle(20)
-        label = 'Reg. param'
-      if i == 1:
-        h.SetMarkerStyle(21)
-        label = 'Prior1'
-      if i == 2:
-        h.SetMarkerStyle(22)
-        label = 'Prior2'
-      if i == 3:
-        h.SetMarkerStyle(23)
-        label = 'Truncation'
-      if i == 4:
-        h.SetMarkerStyle(33)
-        label = 'Binning'
-      if i == 5:
-        h.SetMarkerStyle(34)
-        label = 'Tracking efficiency'
-      
-      h.SetMarkerSize(1.5)
-      h.SetMarkerColor(600-5+i)
-      h.SetLineStyle(1)
-      h.SetLineWidth(2)
-      h.SetLineColor(600-5+i)
+      if h:
+        if i == 0:
+          h.SetMarkerStyle(20)
+          label = 'Reg. param'
+        if i == 1:
+          h.SetMarkerStyle(21)
+          label = 'Prior1'
+        if i == 2:
+          h.SetMarkerStyle(22)
+          label = 'Prior2'
+        if i == 3:
+          h.SetMarkerStyle(23)
+          label = 'Truncation'
+        if i == 4:
+          h.SetMarkerStyle(33)
+          label = 'Binning'
+        if i == 5:
+          h.SetMarkerStyle(34)
+          label = 'Tracking efficiency'
+        
+        h.SetMarkerSize(1.5)
+        h.SetMarkerColor(600-5+i)
+        h.SetLineStyle(1)
+        h.SetLineWidth(2)
+        h.SetLineColor(600-5+i)
 
-      h.DrawCopy('P X0 same')
+        h.DrawCopy('P X0 same')
 
-      leg.AddEntry(h, label, 'Pe')
+        leg.AddEntry(h, label, 'Pe')
 
     h_total.SetLineStyle(1)
     h_total.SetLineColor(1)
@@ -650,13 +652,20 @@ class RunAnalysis(common_base.CommonBase):
     h_new = h1.Clone()
     h_new.SetName('{}_new'.format(h1.GetName()))
     
+    value1 = value2 = value3 = value4 = value5 = value6 = 0.
     for i in range(1, h_new.GetNbinsX()+1):
-      value1 = h1.GetBinContent(i)
-      value2 = h2.GetBinContent(i)
-      value3 = h3.GetBinContent(i)
-      value4 = h4.GetBinContent(i)
-      value5 = h5.GetBinContent(i)
-      value6 = h6.GetBinContent(i)
+      if h1:
+        value1 = h1.GetBinContent(i)
+      if h2:
+        value2 = h2.GetBinContent(i)
+      if h3:
+        value3 = h3.GetBinContent(i)
+      if h4:
+        value4 = h4.GetBinContent(i)
+      if h5:
+        value5 = h5.GetBinContent(i)
+      if h6:
+        value6 = h6.GetBinContent(i)
 
       new_value = math.sqrt(value1*value1 + value2*value2  + value3*value3  + value4*value4  + value5*value5  + value6*value6)
     
@@ -679,7 +688,7 @@ class RunAnalysis(common_base.CommonBase):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.get_NPcorrection(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
+      #self.get_NPcorrection(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
       
       self.plot_observable(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
       self.plot_observable(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
@@ -1191,8 +1200,8 @@ class RunAnalysis(common_base.CommonBase):
 
     if plot_pythia:
     
-      plot_pythia_from_response = False
-      plot_pythia_from_mateusz = True
+      plot_pythia_from_response = True
+      plot_pythia_from_mateusz = False
       if plot_pythia_from_response:
         hPythia = self.get_pythia_from_response(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
         n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)

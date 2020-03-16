@@ -140,7 +140,7 @@ SoftDrop:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_31173'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_40084'
 
 do_unfolding: False
 force_rebin: False
@@ -153,13 +153,13 @@ systematics_list:
   - kMain
 #  - kTrackEff
   - kPrior1
-  - kPrior2
-  - kTruncation
-  - kBinning
+#  - kPrior2
+#  - kTruncation
+#  - kBinning
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/24309/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/40084/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/40175/AnalysisResultsFinal.root'
 
 trkeff_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
 trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/24509/AnalysisResultsFinal.root'
