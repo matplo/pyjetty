@@ -1,28 +1,38 @@
 #! /bin/bash
-#
+
 # Script to merge output ROOT files
-JOB_ID=31173
+JOB_ID=40175
 OUTPUT_DIR="/remote_storage/hiccup6/u/alice/AnalysisResults/$JOB_ID"
 
+# command line arguments
+if [ "$1" != "" ]; then
+  MERGE_JOB_ID=$1
+  echo "Merge Job ID: $MERGE_JOB_ID"
+else
+  echo "Wrong command line arguments"
+fi
+
+if [ "$2" != "" ]; then
+  BIN=$2
+  echo "Bin: $BIN"
+else
+  echo "Wrong command line arguments"
+fi
+
+# Load modules
+module use /software/users/james/heppy/modules
+module load heppy/main_python
+module use /software/users/james/pyjetty/modules
+module load pyjetty/main_python
+module list
+
 # Merge all output files from each pt-hat bin
-NBINS=20
-for BIN in $(seq 1 $NBINS);
-do
+FILE_DIR_BASE=/rstorage/u/alice/AnalysisResults/$JOB_ID
+FILES=$( find ${FILE_DIR_BASE}/LHC18b8/146/child_*/TrainOutput/*/${BIN} -name "*.root" )
 
-    # First, merge all output files on each hiccup
-    HICCUPS="1 6 7 8 9 10 12 13"
-    for HICCUP in $HICCUPS
-    do
-	FILE_DIR_BASE="/remote_storage/hiccup$HICCUP/u/alice/AnalysisResults/$JOB_ID"
-	FILES=$( find $FILE_DIR_BASE/LHC18b8/146/child_*/TrainOutput/*/$BIN -name "*.root" )
+OUT_DIR_BASE=/storage/u/alice/AnalysisResults/$JOB_ID
+mkdir -p ${OUT_DIR_BASE}/Stage0/${BIN}
+hadd -f -j 10 ${OUT_DIR_BASE}/Stage0/${BIN}/AnalysisResults.root $FILES
 
-	mkdir -p $FILE_DIR_BASE/Stage0/$BIN
-	hadd -f $FILE_DIR_BASE/Stage0/$BIN/AnalysisResults_hiccup$HICCUP.root $FILES
-    done
-
-    # Then, merge each hiccup output file together into a final output file (for each bin)
-    OUTPUT_DIR="/remote_storage/hiccup6/u/alice/AnalysisResults/$JOB_ID/Stage1/$BIN"
-    mkdir -p $OUTPUT_DIR
-    hadd -f $OUTPUT_DIR/AnalysisResults.root /remote_storage/hiccup*/u/alice/AnalysisResults/$JOB_ID/Stage0/$BIN/*.root
-
-done
+# Move stdout to appropriate folder
+mv /storage/u/alice/AnalysisResults/slurm-${MERGE_JOB_ID}_${BIN}.out /storage/u/alice/AnalysisResults/${JOB_ID}/
