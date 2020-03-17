@@ -75,7 +75,7 @@ class RunAnalysis(common_base.CommonBase):
         self.obs_config_list = list(self.obs_config_dict.keys())
         self.obs_settings = [self.obs_config_dict[name]['subjet_R'] for name in self.obs_config_list]
         xtitle = '#it{z}'
-        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}}'
+        ytitle = '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
       setattr(self, 'xtitle_{}'.format(observable), xtitle)
       setattr(self, 'ytitle_{}'.format(observable), ytitle)
 
@@ -194,15 +194,17 @@ class RunAnalysis(common_base.CommonBase):
           if self.do_plot_final_result:
             self.plot_final_result(observable, jetR, obs_label, obs_setting)
             
-            self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 20., 40.)
-            self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 40., 60.)
-            self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 60., 80.)
+            if observable == 'theta_g' or observable == 'zg':
+                self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 20., 40.)
+                self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 40., 60.)
+                self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 60., 80.)
 
         if self.do_plot_final_result:
           
-          self.plot_final_result_overlay(observable, jetR)
+          if observable == 'theta_g' or observable == 'zg':
+            self.plot_final_result_overlay(observable, jetR)
 
-          #self.plot_NPcorrection(observable, jetR)
+            #self.plot_NPcorrection(observable, jetR)
       
   #----------------------------------------------------------------------
   def perform_unfolding(self, observable):
@@ -277,10 +279,11 @@ class RunAnalysis(common_base.CommonBase):
     setattr(self, name, hMain)
     
     # Tagging rate histogram
-    name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
-    hTaggingFractions = fMain.Get(name)
-    hTaggingFractions.SetDirectory(0)
-    setattr(self, name, hTaggingFractions)
+    if observable == 'theta_g' or observable == 'zg':
+        name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
+        hTaggingFractions = fMain.Get(name)
+        hTaggingFractions.SetDirectory(0)
+        setattr(self, name, hTaggingFractions)
 
     # Regularization parameter +2
     name = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final+2)
@@ -355,7 +358,7 @@ class RunAnalysis(common_base.CommonBase):
       self.compute_obs_systematic(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
-  def get_obs_observable_distribution(self, jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth):
+  def get_obs_distribution(self, jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth):
   
     h2D = getattr(self, name2D)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
@@ -363,11 +366,14 @@ class RunAnalysis(common_base.CommonBase):
     h.SetName(name1D)
     h.SetDirectory(0)
     
-    name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
-    hTaggingFrac = getattr(self, name)
-    x = (min_pt_truth + max_pt_truth)/2.
-    fraction_tagged =  hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
-    setattr(self, '{}_fraction_tagged'.format(name1D), fraction_tagged)
+    if observable == 'theta_g' or observable == 'zg':
+        name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
+        hTaggingFrac = getattr(self, name)
+        x = (min_pt_truth + max_pt_truth)/2.
+        fraction_tagged =  hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
+        setattr(self, '{}_fraction_tagged'.format(name1D), fraction_tagged)
+    else:
+        fraction_tagged = 1.
 
     n_jets_tagged = h.Integral(1, h.GetNbinsX())
     n_jets_inclusive = n_jets_tagged/fraction_tagged
@@ -389,47 +395,47 @@ class RunAnalysis(common_base.CommonBase):
     # Get main histogram
     name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final)
     name1D = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    hMain = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    hMain = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get reg param +2
     name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final+2)
     name1D = 'hRegParam1_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    hRegParam1 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    hRegParam1 = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get reg param -2
     name2D = 'hUnfolded_{}_R{}_{}_{}'.format(observable, jetR, obs_label, reg_param_final-2)
     name1D = 'hRegParam2_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    hRegParam2 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+    hRegParam2 = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
     if 'kTrackEff' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      hTrkEff = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      hTrkEff = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior1
     if 'kPrior1' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      hPrior1 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      hPrior1 = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior2
     if 'kPrior2' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_prior2'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hPrior2_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      hPrior2 = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      hPrior2 = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get truncation
     if 'kTruncation' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_truncation'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hTruncation_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      hTruncation = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      hTruncation = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get binning
     if 'kBinning' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_binning'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hBinning_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      hBinning = self.get_obs_observable_distribution(jetR, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
+      hBinning = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     #------------------------------------
     # Compute systematics
@@ -691,7 +697,7 @@ class RunAnalysis(common_base.CommonBase):
       #self.get_NPcorrection(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
       
       self.plot_observable(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
-      self.plot_observable(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
+      #self.plot_observable(observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
 
   #----------------------------------------------------------------------
   def get_NPcorrection(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
@@ -1185,8 +1191,10 @@ class RunAnalysis(common_base.CommonBase):
     truth_bin_array = self.truth_bin_array(observable, obs_label)
     if observable == 'theta_g':
       ymax = 5.
-    if observable == 'zg':
+    elif observable == 'zg':
       ymax = 12.
+    else:
+      ymax = 10.
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
     xtitle = getattr(self, 'xtitle_{}'.format(observable))
@@ -1244,7 +1252,8 @@ class RunAnalysis(common_base.CommonBase):
     h_sys.DrawCopy('E2 same')
     
     name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+    if observable == 'theta_g' or observable == 'zg':
+        fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = getattr(self, name)
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
@@ -1281,14 +1290,17 @@ class RunAnalysis(common_base.CommonBase):
     text_latex.SetNDC()
     if observable == 'theta_g' or observable == 'zg':
       text = '#it{z}_{cut} = ' + str(obs_setting[0]) + '  #beta = ' + str(obs_setting[1])
+    elif observable == 'subjet_z':
+      text = 'R_{subjet} = ' + str(obs_setting)
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.59, text)
     
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text_latex.SetTextSize(0.04)
-    text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-    text_latex.DrawLatex(0.57, 0.52, text)
+    if observable == 'theta_g' or observable == 'zg':
+        text_latex = ROOT.TLatex()
+        text_latex.SetNDC()
+        text_latex.SetTextSize(0.04)
+        text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
+        text_latex.DrawLatex(0.57, 0.52, text)
     
     if plot_pythia:
       text_latex = ROOT.TLatex()
