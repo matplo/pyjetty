@@ -79,6 +79,16 @@ class ProcessUtils(common_base.CommonBase):
     return leading_particle
 
   #---------------------------------------------------------------
+  # Get formatted Soft Drop label from sd_setting = [zcut, beta]
+  #---------------------------------------------------------------
+  def sd_label(self, sd_setting):
+  
+      zcut = sd_setting[0]
+      beta = sd_setting[1]
+      sd_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
+      return sd_label
+
+  #---------------------------------------------------------------
   # Remove periods from a label
   #---------------------------------------------------------------
   def remove_periods(self, text):

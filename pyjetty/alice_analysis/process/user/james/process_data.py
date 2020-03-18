@@ -33,7 +33,6 @@ import fjext
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import process_base
-from pyjetty.mputils import treewriter
 from pyjetty.mputils import CEventSubtractor
 
 # Prevent ROOT from stealing focus when plotting
@@ -96,44 +95,56 @@ class ProcessData(process_base.ProcessBase):
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     
-    # Write tree output (default is to write only histograms)
-    self.write_tree_output = config['write_tree_output']
-    
     if self.do_constituent_subtraction:
         self.is_pp = False
     else:
         self.is_pp = True
        
-    # Check if SoftDrop analysis is activated
-    self.do_softdrop = False
-    if 'SoftDrop' in config:
-        print('zg/rg analysis activated')
-        self.do_softdrop = True
-        sd_config_dict = config['SoftDrop']
-        sd_config_list = list(sd_config_dict.keys())
-        self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
-           
-    # Check if sub-jet analysis is activated
-    self.do_subjets = False
-    if 'Subjet' in config:
-      print('Subjet analysis activated')
-      self.do_subjets = True
-      obs_config_dict = config['Subjet']
-      obs_config_list = list(obs_config_dict.keys())
-      self.subjet_R = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
-      self.subjet_def = {}
-      for subjetR in self.subjet_R:
-        self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+    self.observable_list = config['process_observables']
     
-    # Check if jet axis analysis is activated
-    self.do_jet_axes = False
-    if 'JetAxis' in config:
-      print('Jet axis analysis activated')
-      self.do_jet_axes = True
-      obs_config_dict = config['JetAxis']
-      obs_config_list = list(obs_config_dict.keys())
-      self.axis_list = [obs_config_dict[name]['axis'] for name in obs_config_list]
+    # Create dictionaries to store SD settings and observable settings for each observable
+    # Each dictionary entry stores a list of subconfiguration parameters
+    #   The SD list stores a list of SD settings [zcut, beta]
+    #   The observable list stores a the observable setting, e.g. subjetR
+    self.obs_sd_settings = {}
+    self.obs_settings = {}
+    
+    for observable in self.observable_list:
+        
+      self.obs_sd_settings[observable] = []
+      self.obs_settings[observable] = []
 
+      # Fill SD settings
+      obs_config_dict = config[observable]
+      for config_key, subconfig in obs_config_dict.items():
+        if 'SoftDrop' in subconfig:
+          sd_dict = obs_config_dict[config_key]['SoftDrop']
+          self.obs_sd_settings[observable].append([sd_dict['zcut'], sd_dict['beta']])
+        else:
+          self.obs_sd_settings[observable].append(None)
+      
+      # Fill observable settings
+      if observable == 'subjet_z':
+        obs_config_dict = config[observable]
+        obs_config_list = list(obs_config_dict.keys())
+        self.obs_settings[observable] = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
+        self.subjet_def = {}
+        for subjetR in self.obs_settings[observable]:
+          self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+          
+      if observable == 'jet_axis':
+        obs_config_dict = config[observable]
+        obs_config_list = list(obs_config_dict.keys())
+        self.obs_settings[observable] = [obs_config_dict[name]['axis'] for name in obs_config_list]
+        
+    # Construct set of unique SD settings
+    self.sd_settings = []
+    lists = [self.obs_sd_settings[obs] for obs in self.observable_list]
+    for observable in lists:
+      for setting in observable:
+        if setting not in self.sd_settings and setting != None:
+          self.sd_settings.append(setting)
+    
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
@@ -154,74 +165,52 @@ class ProcessData(process_base.ProcessBase):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
       
-      if self.do_softdrop:
-          for sd_setting in self.sd_settings:
-            
-            zcut = sd_setting[0]
-            beta = sd_setting[1]
-            sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-            
-            if self.write_tree_output:
+      for observable in self.observable_list:
 
-              # Initialize tree to write out event variables
-              tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-              t = ROOT.TTree(tree_name, tree_name)
-              tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-              tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
-              setattr(self, tree_writer_name, tree_writer)
-
+        if observable == 'theta_g':
+        
+          for sd_setting in self.obs_sd_settings[observable]:
+            sd_label = self.utils.sd_label(sd_setting)
+            name = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('#theta_{g,ch}')
+            setattr(self, name, h)
+            
+        if observable == 'zg':
+        
+          for sd_setting in self.obs_sd_settings[observable]:
+            sd_label = self.utils.sd_label(sd_setting)
+            name = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('z_{g,ch}')
+            setattr(self, name, h)
+              
+        if observable == 'subjet_z':
+        
+          for subjetR in self.obs_settings[observable]:
+            name = 'hSubjetZ_JetPt_R{}_{}'.format(jetR, subjetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('z_{subjet}')
+            setattr(self, name, h)
+            
+        if observable == 'jet_axis':
+              
+          for i, axes in enumerate(self.obs_settings[observable]):
+          
+            sd_setting = self.obs_sd_settings[observable][i]
+            if sd_setting:
+              sd_label = self.utils.sd_label(sd_setting)
             else:
-              
-              name = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.5)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('#theta_{g,ch}')
-              setattr(self, name, h)
-              
-              name = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('z_{g,ch}')
-              setattr(self, name, h)
-              
-      if self.do_subjets:
-        for subjetR in self.subjet_R:
-        
-          name = 'hSubjetZ_JetPt_R{}_{}'.format(jetR, subjetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-          h.GetXaxis().SetTitle('p_{T,ch jet}')
-          h.GetYaxis().SetTitle('z_{subjet}')
-          setattr(self, name, h)
-      
-      if self.do_jet_axes:
-        
-        if 'WTA' in self.axis_list:
-            name = 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)
+              sd_label = ''
+            
+            name = 'hJetAxisDeltaR_JetPt_{}{}_R{}'.format(axes, sd_label, jetR)
             h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#Delta R')
             setattr(self, name, h)
-    
-        if 'SD' in self.axis_list:
-        
-            for sd_setting in self.sd_settings:
-              
-              zcut = sd_setting[0]
-              beta = sd_setting[1]
-              sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        
-              name = 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('#Delta R')
-              setattr(self, name, h)
-              
-              if 'WTA' in self.axis_list:
-                name = 'hJetAxisDeltaR_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)
-                h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
-                h.GetXaxis().SetTitle('p_{T,ch jet}')
-                h.GetYaxis().SetTitle('#Delta R')
-                setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -273,7 +262,7 @@ class ProcessData(process_base.ProcessBase):
     result = [self.analyze_accepted_jets(jet, jetR) for jet in jets_selected]
           
     # Loop through SD settings and fill SD histograms
-    if self.do_softdrop:
+    if len(self.sd_settings) > 0:
         result = [[self.analyze_softdrop_jet(sd_setting, jet, jetR) for sd_setting in self.sd_settings] for jet in jets_selected]
     
   #---------------------------------------------------------------
@@ -289,11 +278,10 @@ class ProcessData(process_base.ProcessBase):
       return
       
     # Find subjets
-    if self.do_subjets:
-      result = [self.analyze_subjets(jet, jetR, subjetR) for subjetR in self.subjet_R]
+    if 'subjet_z' in self.observable_list:
+      result = [self.analyze_subjets(jet, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
     
-    if not self.write_tree_output:
-      self.fill_jet_histograms(jet, jetR)
+    self.fill_jet_histograms(jet, jetR)
       
   #---------------------------------------------------------------
   # Fill histograms
@@ -302,7 +290,7 @@ class ProcessData(process_base.ProcessBase):
     
     zcut = sd_setting[0]
     beta = sd_setting[1]
-    sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+    sd_label = self.utils.sd_label(sd_setting)
     
     sd = fjcontrib.SoftDrop(beta, zcut, jetR)
     jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
@@ -311,8 +299,6 @@ class ProcessData(process_base.ProcessBase):
     setattr(self, 'sd_R{}_{}'.format(jetR, sd_label), sd)
     if self.debug_level > 2:
       print('SoftDrop groomer is: {}'.format(sd.description()))
-
-    #sd = getattr(self, 'sd_R{}_{}'.format(jetR, sd_label))
     
     if self.debug_level > 1:
       print('SD -- jet: {} with pt={}'.format(jet, jet.pt()))
@@ -324,15 +310,12 @@ class ProcessData(process_base.ProcessBase):
     # Perform SoftDrop grooming
     jet_sd = sd.result(jet)
     
-    # Fill tree or histograms (as requested)
-    if self.write_tree_output:
-      self.fill_tree(jet, jet_sd, jetR, sd_label)
-    else:
-      self.fill_softdrop_histograms(jet_sd, jet, jetR, sd_label)
+    # Fill histograms
+    self.fill_softdrop_histograms(jet_sd, jet, jetR, sd_setting, sd_label)
       
     # Fill jet axis difference
-    if self.do_jet_axes:
-    
+    if 'jet_axis' in self.observable_list:
+
         # Recluster with WTA (with larger jet R)
         jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
         jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
@@ -341,7 +324,7 @@ class ProcessData(process_base.ProcessBase):
         reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
         jet_wta = reclusterer_wta.result(jet)
 
-        self.fill_jet_axis_histograms(jet, jet_sd, jet_wta, jetR, sd_label)
+        self.fill_jet_axis_histograms(jet, jet_sd, jet_wta, jetR, sd_setting, sd_label)
 
   #---------------------------------------------------------------
   # Fill histograms
@@ -368,7 +351,7 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill soft drop histograms
   #---------------------------------------------------------------
-  def fill_softdrop_histograms(self, jet_sd, jet, jetR, sd_label):
+  def fill_softdrop_histograms(self, jet_sd, jet, jetR, sd_setting, sd_label):
     
     if self.debug_level > 1:
       print('Filling SD histograms...')
@@ -380,8 +363,10 @@ class ProcessData(process_base.ProcessBase):
     theta_g = sd_info.dR / jetR
     zg = sd_info.z
 
-    getattr(self, 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
-    getattr(self, 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
+    if sd_setting in self.obs_sd_settings['theta_g']:
+      getattr(self, 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
+    if sd_setting in self.obs_sd_settings['zg']:
+      getattr(self, 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
 
     if self.debug_level > 1:
       print('Done.')
@@ -389,40 +374,24 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill jet axis histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_histograms(self, jet, jet_sd, jet_wta, jetR, sd_label):
+  def fill_jet_axis_histograms(self, jet, jet_sd, jet_wta, jetR, sd_setting, sd_label):
 
-    if 'SD' in self.axis_list:
-        deltaR = jet.delta_R(jet_sd)
-        getattr(self, 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
-        
-    if 'WTA' in self.axis_list:
-        deltaR = jet.delta_R(jet_wta)
-        getattr(self, 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet.pt(), deltaR)
-      
-    if 'WTA' in self.axis_list and 'SD' in self.axis_list:
-        deltaR = jet_sd.delta_R(jet_wta)
-        getattr(self, 'hJetAxisDeltaR_JetPt_SD{}_WTA_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
+    for axis in self.obs_settings['jet_axis']:
+
+      if axis == 'Standard_SD':
+        if sd_setting in self.obs_sd_settings['jet_axis']:
+          deltaR = jet.delta_R(jet_sd)
+          getattr(self, 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
           
-  #---------------------------------------------------------------
-  # Fill tree
-  #---------------------------------------------------------------
-  def fill_tree(self, jet, jet_sd, jetR, sd_label):
-  
-    name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-    tree_writer = getattr(self, name)
-  
-    # Jet variables
-    jet_pt = jet.pt()
-    tree_writer.fill_branch('jet_pt', jet_pt)
-    tree_writer.fill_branch('jet_m', jet.m())
-    
-    # SD jet variables
-    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
-    tree_writer.fill_branch('theta_g', sd_info.dR / jetR)
-    tree_writer.fill_branch('zg',sd_info.z)
-    tree_writer.fill_branch('mg', jet_sd.m())
-  
-    tree_writer.fill_tree()
+      if axis == 'Standard_WTA':
+        if sd_setting == self.sd_settings[0]:
+          deltaR = jet.delta_R(jet_wta)
+          getattr(self, 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet.pt(), deltaR)
+        
+      if axis == 'WTA_SD':
+        if sd_setting in self.obs_sd_settings['jet_axis']:
+          deltaR = jet_sd.delta_R(jet_wta)
+          getattr(self, 'hJetAxisDeltaR_JetPt_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
 
   #---------------------------------------------------------------
   # Fill track histograms.
