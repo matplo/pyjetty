@@ -201,7 +201,7 @@ class ProcessData(process_base.ProcessBase):
             else:
               sd_label = ''
             
-            name = 'h_{}_JetPt_{}{}_R{}'.format(observable, axes, sd_label, jetR)
+            name = 'h_{}_JetPt_R{}_{}{}'.format(observable, axes, sd_label, jetR)
             h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#Delta R')
@@ -376,17 +376,17 @@ class ProcessData(process_base.ProcessBase):
       if axis == 'Standard_SD':
         if sd_setting in self.obs_sd_settings['jet_axis']:
           deltaR = jet.delta_R(jet_sd)
-          getattr(self, 'h_jet_axis_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_R{}_Standard_SD{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
           
       if axis == 'Standard_WTA':
         if sd_setting == self.sd_settings[0]:
           deltaR = jet.delta_R(jet_wta)
-          getattr(self, 'h_jet_axis_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_R{}_Standard_WTA'.format(jetR)).Fill(jet.pt(), deltaR)
         
       if axis == 'WTA_SD':
         if sd_setting in self.obs_sd_settings['jet_axis']:
           deltaR = jet_sd.delta_R(jet_wta)
-          getattr(self, 'h_jet_axis_JetPt_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_R{}_WTA_SD{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
 
   #---------------------------------------------------------------
   # Fill track histograms.
