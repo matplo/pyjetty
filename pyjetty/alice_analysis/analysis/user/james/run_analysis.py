@@ -45,7 +45,7 @@ class RunAnalysis(common_base.CommonBase):
       config = yaml.safe_load(stream)
     
     # Set list of observables
-    self.observables = config['observables']
+    self.observable = config['analysis_observable'][0]
     
     # Set which analysis steps to perform
     self.do_unfolding = config['do_unfolding']
@@ -54,57 +54,33 @@ class RunAnalysis(common_base.CommonBase):
     self.force_rebin_response=config['force_rebin']
     
     self.jetR_list = config['jetR']
-    
-    for observable in self.observables:
-    
-      # Retrieve list of observable settings
-      if observable == 'theta_g':
-        self.obs_config_dict = config['SoftDrop']
-        self.obs_config_list = list(self.obs_config_dict.keys())
-        self.obs_settings = [[self.obs_config_dict[name]['zcut'], self.obs_config_dict[name]['beta']] for name in self.obs_config_list]
-        xtitle = '#theta_{g}'
-        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
-      elif observable == 'zg':
-        self.obs_config_dict = config['SoftDrop']
-        self.obs_config_list = list(self.obs_config_dict.keys())
-        self.obs_settings = [[self.obs_config_dict[name]['zcut'], self.obs_config_dict[name]['beta']] for name in self.obs_config_list]
-        xtitle = '#it{z}_{g}'
-        ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
-      elif observable == 'subjet_z':
-        self.obs_config_dict = config['Subjet']
-        self.obs_config_list = list(self.obs_config_dict.keys())
-        self.obs_settings = [self.obs_config_dict[name]['subjet_R'] for name in self.obs_config_list]
-        xtitle = '#it{z}'
-        ytitle = '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
-      setattr(self, 'xtitle_{}'.format(observable), xtitle)
-      setattr(self, 'ytitle_{}'.format(observable), ytitle)
 
-      # Retrieve histogram binnings for each observable setting
-      for i, obs_setting in enumerate(self.obs_settings):
+    # Get the sub-configs to unfold
+    self.obs_config_dict = config[self.observable]
+    self.obs_subconfig_list = list(self.obs_config_dict.keys())
+    self.sd_settings = self.utils.sd_settings(self.obs_config_dict)
+    self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
+    setattr(self, 'xtitle_{}'.format(self.observable), self.utils.xtitle(self.observable))
+    setattr(self, 'ytitle_{}'.format(self.observable), self.utils.ytitle(self.observable))
+
+    # Retrieve histogram binnings for each observable setting
+    for i, _ in enumerate(self.obs_subconfig_list):
+
+      config_name = self.obs_subconfig_list[i]
+      obs_label = self.utils.obs_label(self.observable, self.obs_settings[i], self.sd_settings[i])
       
-        config_name = self.obs_config_list[i]
-        obs_label = self.utils.obs_label(observable, obs_setting)
-
-        pt_bins_truth = (self.obs_config_dict[config_name]['pt_bins_truth'])
-        n_pt_bins_truth = len(pt_bins_truth) - 1
-        setattr(self, 'n_pt_bins_truth_{}'.format(obs_label), n_pt_bins_truth)
-        truth_pt_bin_array = array('d',pt_bins_truth)
-        setattr(self, 'truth_pt_bin_array_{}'.format(obs_label), truth_pt_bin_array)
-          
-        if observable == 'theta_g':
-          prefix = 'rg'
-        elif observable == 'zg':
-          prefix = 'zg'
-        else:
-          prefix = 'obs'
-        truth_bins_name = '{}_bins_truth'.format(prefix)
-        
-        obs_bins_truth = (self.obs_config_dict[config_name][truth_bins_name])
-        n_obs_bins_truth = len(obs_bins_truth) - 1
-        setattr(self, 'n_{}_bins_truth_{}'.format(prefix, obs_label), n_obs_bins_truth)
-        truth_obs_bin_array = array('d',obs_bins_truth)
-        setattr(self, 'truth_{}_bin_array_{}'.format(prefix, obs_label), truth_obs_bin_array)
-        
+      pt_bins_truth = (self.obs_config_dict[config_name]['pt_bins_truth'])
+      n_pt_bins_truth = len(pt_bins_truth) - 1
+      setattr(self, 'n_pt_bins_truth_{}'.format(obs_label), n_pt_bins_truth)
+      truth_pt_bin_array = array('d',pt_bins_truth)
+      setattr(self, 'truth_pt_bin_array_{}'.format(obs_label), truth_pt_bin_array)
+      
+      obs_bins_truth = (self.obs_config_dict[config_name]['obs_bins_truth'])
+      n_obs_bins_truth = len(obs_bins_truth) - 1
+      setattr(self, 'n_obs_bins_truth_{}'.format(obs_label), n_obs_bins_truth)
+      truth_obs_bin_array = array('d',obs_bins_truth)
+      setattr(self, 'truth_obs_bin_array_{}'.format(obs_label), truth_obs_bin_array)
+      
     # List of systematic variations to perform
     self.systematics_list = config['systematics_list']
     
@@ -119,8 +95,7 @@ class RunAnalysis(common_base.CommonBase):
     # Create output dirs
     self.file_format = config['file_format']
     self.output_dir = config['output_dir']
-    for observable in self.observables:
-      self.create_output_dirs(observable)
+    self.create_output_dirs(self.observable)
 
     # Theory comparisons
     self.fPythia_name = config['fPythia']
@@ -176,73 +151,74 @@ class RunAnalysis(common_base.CommonBase):
   # Main processing function
   #---------------------------------------------------------------
   def run_analysis(self):
-
-    for observable in self.observables:
     
-      if self.do_unfolding:
-        self.perform_unfolding(observable)
-      
-      for jetR in self.jetR_list:
-        
-        for obs_setting in self.obs_settings:
-          
-          obs_label = self.utils.obs_label(observable, obs_setting)
-          
-          if self.do_systematics:
-            self.compute_systematics(observable, jetR, obs_label, obs_setting)
+    if self.do_unfolding:
+      self.perform_unfolding()
+    
+    for jetR in self.jetR_list:
+    
+      # Loop through subconfigurations to unfold
+      for i, _ in enumerate(self.obs_config_list):
 
-          if self.do_plot_final_result:
-            self.plot_final_result(observable, jetR, obs_label, obs_setting)
-            
-            if observable == 'theta_g' or observable == 'zg':
-                self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 20., 40.)
-                self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 40., 60.)
-                self.get_nll_tgraph(observable, jetR, obs_label, obs_setting, 60., 80.)
+        obs_setting = self.obs_settings[i]
+        sd_setting = self.sd_settings[i]
+        obs_label = self.utils.obs_label(self.observable, obs_setting, sd_setting)
+
+        if self.do_systematics:
+          self.compute_systematics(jetR, obs_label, obs_setting, sd_setting)
 
         if self.do_plot_final_result:
+          self.plot_final_result(jetR, obs_label, obs_setting, sd_setting)
           
-          if observable == 'theta_g' or observable == 'zg':
-            self.plot_final_result_overlay(observable, jetR)
+          if self.observable == 'theta_g' or self.observable == 'zg':
+              self.get_nll_tgraph(jetR, obs_label, obs_setting, sd_setting, 20., 40.)
+              self.get_nll_tgraph(jetR, obs_label, obs_setting, sd_setting, 40., 60.)
+              self.get_nll_tgraph(jetR, obs_label, obs_setting, sd_setting, 60., 80.)
 
-            #self.plot_NPcorrection(observable, jetR)
-      
+      if self.do_plot_final_result:
+        
+        if self.observable == 'theta_g' or self.observable == 'zg':
+          self.plot_final_result_overlay(jetR)
+
+          #self.plot_NPcorrection(jetR)
+    
   #----------------------------------------------------------------------
-  def perform_unfolding(self, observable):
-    print('Perform unfolding for all systematic variations: {} ...'.format(observable))
+  def perform_unfolding(self):
+    print('Perform unfolding for all systematic variations: {} ...'.format(self.observable))
     
     # Main result
-    output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
-    analysis_main = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
+    output_dir = getattr(self, 'output_dir_main_{}'.format(self.observable))
+    analysis_main = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
     analysis_main.roounfold_obs()
 
     # Tracking efficiency variation
     if 'kTrackEff' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_trkeff_{}'.format(observable))
-      analysis_trkeff = roounfold_obs.Roounfold_Obs(observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
+      output_dir = getattr(self, 'output_dir_trkeff_{}'.format(self.observable))
+      analysis_trkeff = roounfold_obs.Roounfold_Obs(self.observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
       analysis_trkeff.roounfold_obs()
 
     # Prior variation 1
     if 'kPrior1' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior1_{}'.format(observable))
-      analysis_prior1 = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
+      output_dir = getattr(self, 'output_dir_prior1_{}'.format(self.observable))
+      analysis_prior1 = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
       analysis_prior1.roounfold_obs()
     
     # Prior variation 2
     if 'kPrior2' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior2_{}'.format(observable))
-      analysis_prior2 = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
+      output_dir = getattr(self, 'output_dir_prior2_{}'.format(self.observable))
+      analysis_prior2 = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
       analysis_prior2.roounfold_obs()
 
     # Truncation variation
     if 'kTruncation' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_truncation_{}'.format(observable))
-      analysis_truncation = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
+      output_dir = getattr(self, 'output_dir_truncation_{}'.format(self.observable))
+      analysis_truncation = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
       analysis_truncation.roounfold_obs()
         
     # Binning variation
     if 'kBinning' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_binning_{}'.format(observable))
-      analysis_binning = roounfold_obs.Roounfold_Obs(observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
+      output_dir = getattr(self, 'output_dir_binning_{}'.format(self.observable))
+      analysis_binning = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
       analysis_binning.roounfold_obs()
 
   #----------------------------------------------------------------------
@@ -263,11 +239,11 @@ class RunAnalysis(common_base.CommonBase):
     return rebin_response
 
   #----------------------------------------------------------------------
-  def compute_systematics(self, observable, jetR, obs_label, obs_setting):
-    print('Compute systematics for {}: R = {}, {} ...'.format(observable, jetR, obs_label))
+  def compute_systematics(self, jetR, obs_label, obs_setting, sd_setting):
+    print('Compute systematics for {}: R = {}, {} , {}...'.format(self.observable, jetR, obs_label, sd_setting))
 
     # Get main result
-    output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_main_{}'.format(self.observable))
     path_main = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
     fMain = ROOT.TFile(path_main, 'READ')
     

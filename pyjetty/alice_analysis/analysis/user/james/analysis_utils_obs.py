@@ -33,40 +33,133 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     super(AnalysisUtils_Obs, self).__init__(**kwargs)
 
   #---------------------------------------------------------------
-  # Get observable label
+  # Get SD settings (i.e. list that stores a list of SD settings [zcut, beta])
+  # from observable config block
   #---------------------------------------------------------------
-  def obs_label(self, observable, obs_setting):
+  def sd_settings(self, obs_config_dict):
+  
+    sd_settings = []
+    for config_key, subconfig in obs_config_dict.items():
+      if 'SoftDrop' in subconfig:
+        sd_dict = obs_config_dict[config_key]['SoftDrop']
+        sd_settings.append([sd_dict['zcut'], sd_dict['beta']])
+      else:
+        sd_settings.append(None)
+        
+    return sd_settings
+    
+  #---------------------------------------------------------------
+  # Get observable settings (i.e. list that stores the observable setting, e.g. subjetR)
+  # from observable config block
+  #---------------------------------------------------------------
+  def obs_settings(self, observable, obs_config_dict, obs_subconfig_list):
+  
+    if observable == 'subjet_z':
+      obs_settings = [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
+    elif observable == 'jet_axis':
+      obs_settings = [obs_config_dict[name]['axis'] for name in obs_subconfig_list]
+    else:
+      obs_settings = [None for _ in obs_subconfig_list]
+      
+    return obs_settings
+  
+  #---------------------------------------------------------------
+  # Get formatted label from obs_setting and sd_setting
+  #---------------------------------------------------------------
+  def obs_label(self, observable, obs_setting, sd_setting):
+
+    obs_label = ''
+    if obs_setting:
+      obs_label += '{}'.format(obs_setting)
+    if sd_setting:
+      obs_label += '{}'.format(self.sd_label(sd_setting))
+    return obs_label
+
+  #---------------------------------------------------------------
+  # Get formatted Soft Drop label from sd_setting = [zcut, beta]
+  #---------------------------------------------------------------
+  def sd_label(self, sd_setting):
+  
+      zcut = sd_setting[0]
+      beta = sd_setting[1]
+      sd_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
+      return sd_label
+      
+  #---------------------------------------------------------------
+  # Set x-axis label
+  #---------------------------------------------------------------
+  def xtitle(self, observable):
   
     if observable == 'theta_g':
-      zcut = obs_setting[0]
-      beta = obs_setting[1]
-      obs_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
-      
+      xtitle = '#theta_{g}'
     elif observable == 'zg':
-      zcut = obs_setting[0]
-      beta = obs_setting[1]
-      obs_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
-
+      xtitle = '#it{z}_{g}'
     elif observable == 'subjet_z':
-      obs_label = '{}'.format(obs_setting)
+      xtitle = '#it{z}'
+    elif observable == 'jet_axis':
+      xtitle = '#it{#Delta R}'
       
-    return obs_label
+    return xtitle
+
+  #---------------------------------------------------------------
+  # Set y-axis label
+  #---------------------------------------------------------------
+  def ytitle(self, observable):
+  
+    if observable == 'theta_g':
+      ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+    elif observable == 'zg':
+      ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
+    elif observable == 'subjet_z':
+      ytitle = '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
+    elif observable == 'jet_axis':
+      ytitle = '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#Delta R}'
+      
+    return ytitle
+    
+  #---------------------------------------------------------------
+  # Get name of response THn
+  #---------------------------------------------------------------
+  def name_thn(self, observable, jetR, obs_label):
+  
+    #return 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
+    return 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, obs_label)
+
+  #---------------------------------------------------------------
+  # Get name of response THn, rebinned
+  #---------------------------------------------------------------
+  def name_thn_rebinned(self, observable, jetR, obs_label):
+  
+    return 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(observable, jetR, obs_label)
+  
+  #---------------------------------------------------------------
+  # Get name of 2D data histogram
+  #---------------------------------------------------------------
+  def name_data(self, observable, jetR, obs_label):
+  
+    return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
+  
+  #---------------------------------------------------------------
+  # Get name of 2D data histogram, rebinned
+  #---------------------------------------------------------------
+  def name_data_rebinned(self, observable, jetR, obs_label):
+  
+    return 'h_{}_JetPt_R{}_{}_rebinned'.format(observable, jetR, obs_label)
 
   #---------------------------------------------------------------
   # Get regularization parameter
   #---------------------------------------------------------------
-  def get_reg_param(self, obs_settings, obs_config_list, obs_config_dict, obs_label, observable, jetR):
+  def get_reg_param(self, obs_settings, sd_settings, obs_subconfig_list, obs_config_dict, obs_label, observable, jetR):
     
-    for i, obs_setting in enumerate(obs_settings):
+    for i, _ in enumerate(obs_subconfig_list):
+    
+      obs_setting = obs_settings[i]
+      sd_setting = sd_settings[i]
       
-      if self.obs_label(observable, obs_setting) == obs_label:
+      if self.obs_label(observable, obs_setting, sd_setting) == obs_label:
         
-        config_name = obs_config_list[i]
-        
-        if observable == 'theta_g' or observable == 'zg':
-          reg_param = obs_config_dict[config_name]['reg_param'][observable][jetR]
-        else:
-          reg_param = obs_config_dict[config_name]['reg_param'][jetR]
+        config_name = obs_subconfig_list[i]
+        reg_param = obs_config_dict[config_name]['reg_param'][jetR]
         #print('reg_param for {} {} jetR={}: {}'.format(obs_label, observable, jetR, reg_param))
           
         return reg_param
