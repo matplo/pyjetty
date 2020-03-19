@@ -111,10 +111,8 @@ class ProcessData(process_base.ProcessBase):
     
     for observable in self.observable_list:
         
-      self.obs_sd_settings[observable] = []
-      self.obs_settings[observable] = []
-
       # Fill SD settings
+      self.obs_sd_settings[observable] = []
       obs_config_dict = config[observable]
       for config_key, subconfig in obs_config_dict.items():
         if 'SoftDrop' in subconfig:
@@ -124,17 +122,14 @@ class ProcessData(process_base.ProcessBase):
           self.obs_sd_settings[observable].append(None)
       
       # Fill observable settings
+      self.obs_settings[observable] = []
+      obs_config_list = list(obs_config_dict.keys())
       if observable == 'subjet_z':
-        obs_config_dict = config[observable]
-        obs_config_list = list(obs_config_dict.keys())
         self.obs_settings[observable] = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
         self.subjet_def = {}
         for subjetR in self.obs_settings[observable]:
           self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
-          
       if observable == 'jet_axis':
-        obs_config_dict = config[observable]
-        obs_config_list = list(obs_config_dict.keys())
         self.obs_settings[observable] = [obs_config_dict[name]['axis'] for name in obs_config_list]
         
     # Construct set of unique SD settings
@@ -171,7 +166,7 @@ class ProcessData(process_base.ProcessBase):
         
           for sd_setting in self.obs_sd_settings[observable]:
             sd_label = self.utils.sd_label(sd_setting)
-            name = 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)
+            name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
             h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#theta_{g,ch}')
@@ -181,7 +176,7 @@ class ProcessData(process_base.ProcessBase):
         
           for sd_setting in self.obs_sd_settings[observable]:
             sd_label = self.utils.sd_label(sd_setting)
-            name = 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)
+            name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
             h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('z_{g,ch}')
@@ -190,7 +185,7 @@ class ProcessData(process_base.ProcessBase):
         if observable == 'subjet_z':
         
           for subjetR in self.obs_settings[observable]:
-            name = 'hSubjetZ_JetPt_R{}_{}'.format(jetR, subjetR)
+            name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, subjetR)
             h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('z_{subjet}')
@@ -206,7 +201,7 @@ class ProcessData(process_base.ProcessBase):
             else:
               sd_label = ''
             
-            name = 'hJetAxisDeltaR_JetPt_{}{}_R{}'.format(axes, sd_label, jetR)
+            name = 'h_{}_JetPt_{}{}_R{}'.format(observable, axes, sd_label, jetR)
             h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#Delta R')
@@ -346,7 +341,7 @@ class ProcessData(process_base.ProcessBase):
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
     for subjet in subjets:
       z = subjet.pt() / jet.pt()
-      getattr(self, 'hSubjetZ_JetPt_R{}_{}'.format(jetR, subjetR)).Fill(jet.pt(), z)
+      getattr(self, 'h_subjet_z_JetPt_R{}_{}'.format(jetR, subjetR)).Fill(jet.pt(), z)
 
   #---------------------------------------------------------------
   # Fill soft drop histograms
@@ -364,9 +359,9 @@ class ProcessData(process_base.ProcessBase):
     zg = sd_info.z
 
     if sd_setting in self.obs_sd_settings['theta_g']:
-      getattr(self, 'hThetaG_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
+      getattr(self, 'h_theta_g_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
     if sd_setting in self.obs_sd_settings['zg']:
-      getattr(self, 'hZg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
+      getattr(self, 'h_zg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
 
     if self.debug_level > 1:
       print('Done.')
@@ -381,17 +376,17 @@ class ProcessData(process_base.ProcessBase):
       if axis == 'Standard_SD':
         if sd_setting in self.obs_sd_settings['jet_axis']:
           deltaR = jet.delta_R(jet_sd)
-          getattr(self, 'hJetAxisDeltaR_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
           
       if axis == 'Standard_WTA':
         if sd_setting == self.sd_settings[0]:
           deltaR = jet.delta_R(jet_wta)
-          getattr(self, 'hJetAxisDeltaR_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet.pt(), deltaR)
         
       if axis == 'WTA_SD':
         if sd_setting in self.obs_sd_settings['jet_axis']:
           deltaR = jet_sd.delta_R(jet_wta)
-          getattr(self, 'hJetAxisDeltaR_JetPt_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(jet.pt(), deltaR)
 
   #---------------------------------------------------------------
   # Fill track histograms.

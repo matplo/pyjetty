@@ -151,11 +151,9 @@ class ProcessMC(process_base.ProcessBase):
     self.obs_settings = {}
     
     for observable in self.observable_list:
-        
-      self.obs_sd_settings[observable] = []
-      self.obs_settings[observable] = []
-
+      
       # Fill SD settings
+      self.obs_sd_settings[observable] = []
       obs_config_dict = config[observable]
       for config_key, subconfig in obs_config_dict.items():
         if 'SoftDrop' in subconfig:
@@ -165,17 +163,15 @@ class ProcessMC(process_base.ProcessBase):
           self.obs_sd_settings[observable].append(None)
       
       # Fill observable settings
+      self.obs_settings[observable] = []
+      obs_config_dict = config[observable]
+      obs_config_list = list(obs_config_dict.keys())
       if observable == 'subjet_z':
-        obs_config_dict = config[observable]
-        obs_config_list = list(obs_config_dict.keys())
         self.obs_settings[observable] = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
         self.subjet_def = {}
         for subjetR in self.obs_settings[observable]:
           self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
-          
       if observable == 'jet_axis':
-        obs_config_dict = config[observable]
-        obs_config_list = list(obs_config_dict.keys())
         self.obs_settings[observable] = [obs_config_dict[name]['axis'] for name in obs_config_list]
          
     # Construct set of unique SD settings
@@ -317,7 +313,7 @@ class ProcessMC(process_base.ProcessBase):
             nbins = [100, 60, 100, 20]
             min = [0., 0., 0., 0.]
             max = [100., 300., 1., 1.]
-            name = 'hResponse_JetPt_ThetaG_R{}_{}'.format(jetR, sd_label)
+            name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, sd_label)
             nbins = (nbins)
             xmin = (min)
             xmax = (max)
@@ -352,7 +348,7 @@ class ProcessMC(process_base.ProcessBase):
             nbins = [100, 60, 50, 10]
             min = [0., 0., 0., 0.]
             max = [100., 300., 0.5, 0.5]
-            name = 'hResponse_JetPt_zg_R{}_{}'.format(jetR, sd_label)
+            name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, sd_label)
             nbins = (nbins)
             xmin = (min)
             xmax = (max)
@@ -396,7 +392,7 @@ class ProcessMC(process_base.ProcessBase):
             nbins = [100, 60, 100, 25]
             min = [0., 0., 0., 0.]
             max = [100., 300., 1., 1.]
-            name = 'hResponse_JetPt_SubjetZ_R{}_{}'.format(jetR, subjetR)
+            name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
             nbins = (nbins)
             xmin = (min)
             xmax = (max)
@@ -430,7 +426,7 @@ class ProcessMC(process_base.ProcessBase):
             nbins = [100, 60, 200, 40]
             min = [0., 0., 0., 0.]
             max = [100., 300., jetR, jetR]
-            name = 'hResponse_JetPt_JetAxisDeltaR_{}{}_R{}'.format(axes, sd_label, jetR)
+            name = 'hResponse_JetPt_{}_{}{}_R{}'.format(observable, axes, sd_label, jetR)
             nbins = (nbins)
             xmin = (min)
             xmax = (max)
@@ -697,7 +693,7 @@ class ProcessMC(process_base.ProcessBase):
 
           x = ([jet_det.pt(), jet_truth.pt(), z_det, z_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_SubjetZ_R{}_{}'.format(jetR, subjetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_subjet_z_R{}_{}'.format(jetR, subjetR)).Fill(x_array)
 
           if z_truth > 1e-5:
             z_resolution = (z_det - z_truth) / z_truth
@@ -771,7 +767,7 @@ class ProcessMC(process_base.ProcessBase):
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
@@ -785,7 +781,7 @@ class ProcessMC(process_base.ProcessBase):
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_WTA_R{}'.format(jetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_Standard_WTA_R{}'.format(jetR)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
@@ -799,7 +795,7 @@ class ProcessMC(process_base.ProcessBase):
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_JetAxisDeltaR_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
@@ -822,7 +818,7 @@ class ProcessMC(process_base.ProcessBase):
 
       x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth])
       x_array = array('d', x)
-      getattr(self, 'hResponse_JetPt_ThetaG_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
+      getattr(self, 'hResponse_JetPt_theta_g_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
       
       theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
       getattr(self, 'hThetaG_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
