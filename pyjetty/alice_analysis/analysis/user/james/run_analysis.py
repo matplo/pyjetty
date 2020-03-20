@@ -57,11 +57,11 @@ class RunAnalysis(common_base.CommonBase):
 
     # Get the sub-configs to unfold
     self.obs_config_dict = config[self.observable]
-    self.obs_subconfig_list = list(self.obs_config_dict.keys())
+    self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
     self.sd_settings = self.utils.sd_settings(self.obs_config_dict)
     self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
-    setattr(self, 'xtitle_{}'.format(self.observable), self.utils.xtitle(self.observable))
-    setattr(self, 'ytitle_{}'.format(self.observable), self.utils.ytitle(self.observable))
+    setattr(self, 'xtitle_{}'.format(self.observable), self.obs_config_dict['common_settings']['xtitle'])
+    setattr(self, 'ytitle_{}'.format(self.observable), self.obs_config_dict['common_settings']['ytitle'])
 
     # Retrieve histogram binnings for each observable setting
     for i, _ in enumerate(self.obs_subconfig_list):

@@ -123,7 +123,8 @@ class ProcessData(process_base.ProcessBase):
       
       # Fill observable settings
       self.obs_settings[observable] = []
-      obs_config_list = list(obs_config_dict.keys())
+      obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+
       if observable == 'subjet_z':
         self.obs_settings[observable] = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
         self.subjet_def = {}

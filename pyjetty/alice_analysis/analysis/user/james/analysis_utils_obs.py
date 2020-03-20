@@ -33,6 +33,21 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     super(AnalysisUtils_Obs, self).__init__(**kwargs)
 
   #---------------------------------------------------------------
+  # Get observable settings (i.e. list that stores the observable setting, e.g. subjetR)
+  # from observable config block
+  #---------------------------------------------------------------
+  def obs_settings(self, observable, obs_config_dict, obs_subconfig_list):
+  
+    if observable == 'subjet_z':
+      obs_settings = [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
+    elif observable == 'jet_axis':
+      obs_settings = [obs_config_dict[name]['axis'] for name in obs_subconfig_list]
+    else:
+      obs_settings = [None for _ in obs_subconfig_list]
+      
+    return obs_settings
+
+  #---------------------------------------------------------------
   # Get SD settings (i.e. list that stores a list of SD settings [zcut, beta])
   # from observable config block
   #---------------------------------------------------------------
@@ -47,21 +62,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
         sd_settings.append(None)
         
     return sd_settings
-    
-  #---------------------------------------------------------------
-  # Get observable settings (i.e. list that stores the observable setting, e.g. subjetR)
-  # from observable config block
-  #---------------------------------------------------------------
-  def obs_settings(self, observable, obs_config_dict, obs_subconfig_list):
-  
-    if observable == 'subjet_z':
-      obs_settings = [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
-    elif observable == 'jet_axis':
-      obs_settings = [obs_config_dict[name]['axis'] for name in obs_subconfig_list]
-    else:
-      obs_settings = [None for _ in obs_subconfig_list]
-      
-    return obs_settings
   
   #---------------------------------------------------------------
   # Get formatted label from obs_setting and sd_setting
@@ -84,38 +84,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       beta = sd_setting[1]
       sd_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
       return sd_label
-      
-  #---------------------------------------------------------------
-  # Set x-axis label
-  #---------------------------------------------------------------
-  def xtitle(self, observable):
-  
-    if observable == 'theta_g':
-      xtitle = '#theta_{g}'
-    elif observable == 'zg':
-      xtitle = '#it{z}_{g}'
-    elif observable == 'subjet_z':
-      xtitle = '#it{z}'
-    elif observable == 'jet_axis':
-      xtitle = '#it{#Delta R}'
-      
-    return xtitle
-
-  #---------------------------------------------------------------
-  # Set y-axis label
-  #---------------------------------------------------------------
-  def ytitle(self, observable):
-  
-    if observable == 'theta_g':
-      ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
-    elif observable == 'zg':
-      ytitle = '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
-    elif observable == 'subjet_z':
-      ytitle = '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
-    elif observable == 'jet_axis':
-      ytitle = '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#Delta R}'
-      
-    return ytitle
     
   #---------------------------------------------------------------
   # Get name of response THn
