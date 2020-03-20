@@ -60,8 +60,11 @@ class RunAnalysis(common_base.CommonBase):
     self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
     self.sd_settings = self.utils.sd_settings(self.obs_config_dict)
     self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
-    setattr(self, 'xtitle_{}'.format(self.observable), self.obs_config_dict['common_settings']['xtitle'])
-    setattr(self, 'ytitle_{}'.format(self.observable), self.obs_config_dict['common_settings']['ytitle'])
+    setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
+    setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
+    setattr(self, 'xmin', self.obs_config_dict['common_settings']['xmin'])
+    setattr(self, 'xmax', self.obs_config_dict['common_settings']['xmax'])
+    setattr(self, 'ymax', self.obs_config_dict['common_settings']['ymax'])
 
     # Retrieve histogram binnings for each observable setting
     for i, _ in enumerate(self.obs_subconfig_list):
@@ -551,8 +554,7 @@ class RunAnalysis(common_base.CommonBase):
     
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    xtitle = getattr(self, 'xtitle_{}'.format(observable))
-    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
     myBlankHisto.SetMaximum(1.5*h_total.GetMaximum())
@@ -616,7 +618,7 @@ class RunAnalysis(common_base.CommonBase):
     text_latex.SetNDC()
     if observable == 'theta_g' or observable == 'zg':
       text = 'z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    text_latex.DrawLatex(0.25, 0.71, text)
+      text_latex.DrawLatex(0.25, 0.71, text)
 
     output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
     outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
@@ -767,21 +769,14 @@ class RunAnalysis(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
 
-    if observable == 'theta_g':
-      xmin = 0.
-      xmax = 1.
-      ymax = 5.
-    if observable == 'zg':
-      xmin = 0.
-      xmax = 0.5
-      ymax = 5.
+    xmin = getattr(self, 'xmin')
+    xmax = getattr(self, 'xmax')
+    ymax = getattr(self, 'ymax')
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
-    xtitle = getattr(self, 'xtitle_{}'.format(observable))
-    ytitle = 'Correction'
-    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(ytitle)
+    myBlankHisto.SetYTitle('Correction')
     myBlankHisto.SetMaximum(ymax)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
@@ -846,8 +841,8 @@ class RunAnalysis(common_base.CommonBase):
     text_latex.SetNDC()
     if observable == 'theta_g' or observable == 'zg':
       text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(obs_setting[0])
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.69, text)
+      text_latex.SetTextSize(0.045)
+      text_latex.DrawLatex(0.25, 0.69, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -867,25 +862,19 @@ class RunAnalysis(common_base.CommonBase):
   def plot_final_result_overlay(self, jetR):
   
     # Plot overlay of different beta, for fixed pt bin
-    if self.observable == 'theta_g':
-      ymin_ratio = 0.
-      ymax_ratio = 2.8
-    if self.observable == 'zg':
-      ymin_ratio = 0.3
-      ymax_ratio = 1.6
-  
+
     # Plot PYTHIA
-    self.plot_observable_overlay_beta(jetR, 20., 40., plot_pythia=True, plot_nll = False, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
-    self.plot_observable_overlay_beta(jetR, 40., 60., plot_pythia=True, plot_nll = False, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
-    self.plot_observable_overlay_beta(jetR, 60., 80., plot_pythia=True, plot_nll = False, plot_ratio = True, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(jetR, 20., 40., plot_pythia=True, plot_nll = False, plot_ratio = True)
+    self.plot_observable_overlay_beta(jetR, 40., 60., plot_pythia=True, plot_nll = False, plot_ratio = True)
+    self.plot_observable_overlay_beta(jetR, 60., 80., plot_pythia=True, plot_nll = False, plot_ratio = True)
   
     # Plot NLL
-    self.plot_observable_overlay_beta(jetR, 20., 40., plot_pythia=False, plot_nll = True, plot_ratio = False, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
-    self.plot_observable_overlay_beta(jetR, 40., 60., plot_pythia=False, plot_nll = True, plot_ratio = False, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
-    self.plot_observable_overlay_beta(jetR, 60., 80., plot_pythia=False, plot_nll = True, plot_ratio = False, ymin_ratio=ymin_ratio, ymax_ratio=ymax_ratio)
+    self.plot_observable_overlay_beta(jetR, 20., 40., plot_pythia=False, plot_nll = True, plot_ratio = False)
+    self.plot_observable_overlay_beta(jetR, 40., 60., plot_pythia=False, plot_nll = True, plot_ratio = False)
+    self.plot_observable_overlay_beta(jetR, 60., 80., plot_pythia=False, plot_nll = True, plot_ratio = False)
 
   #----------------------------------------------------------------------
-  def plot_observable_overlay_beta(self, jetR, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False, ymin_ratio=0., ymax_ratio=2.):
+  def plot_observable_overlay_beta(self, jetR, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False):
     
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
     if plot_ratio:
@@ -908,22 +897,16 @@ class RunAnalysis(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
     
-    if self.observable == 'theta_g':
-      xmin = 0.
-      xmax = 1.
-      ymax = 4.
-      if plot_nll:
-        ymax = 5
-    if self.observable == 'zg':
-      xmin = 0.
-      xmax = 0.5
-      ymax = 11.
-      if plot_nll:
-        ymax = 20
+    xmin = getattr(self, 'xmin')
+    xmax = getattr(self, 'xmax')
+    ymax = getattr(self, 'ymax')
+    ymin_ratio = getattr(self, 'ymin_ratio')
+    ymax_ratio = getattr(self, 'ymax_ratio')
+    xtitle = getattr(self, 'xtitle')
+    ytitle = getattr(self, 'ytitle')
+
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
-    xtitle = getattr(self, 'xtitle_{}'.format(self.observable))
-    ytitle = getattr(self, 'ytitle_{}'.format(self.observable))
     myBlankHisto.SetXTitle(xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(ytitle)
@@ -1165,19 +1148,15 @@ class RunAnalysis(common_base.CommonBase):
     myPad.Draw()
     myPad.cd()
     
+    ymax = getattr(self, 'ymax')
+    xtitle = getattr(self, 'xtitle')
+    ytitle = getattr(self, 'ytitle')
+    
     n_obs_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
-    if observable == 'theta_g':
-      ymax = 5.
-    elif observable == 'zg':
-      ymax = 12.
-    else:
-      ymax = 10.
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    xtitle = getattr(self, 'xtitle_{}'.format(observable))
-    ytitle = getattr(self, 'ytitle_{}'.format(observable))
-    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.SetXTitle( xtitle )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(ytitle)
     myBlankHisto.SetMaximum(ymax)

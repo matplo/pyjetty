@@ -55,6 +55,8 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   
     sd_settings = []
     for config_key, subconfig in obs_config_dict.items():
+      if config_key == 'common_settings':
+        continue
       if 'SoftDrop' in subconfig:
         sd_dict = obs_config_dict[config_key]['SoftDrop']
         sd_settings.append([sd_dict['zcut'], sd_dict['beta']])

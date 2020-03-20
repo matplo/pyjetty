@@ -20,6 +20,11 @@ debug_level: 0
 theta_g:
 
   common_settings:
+    xmin: 0.
+    xmax: 1.
+    ymax: 5.
+    ymin_ratio: 0.
+    ymax_ratio: 2.8
     xtitle: '#theta_{g}'
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
 
@@ -92,6 +97,11 @@ theta_g:
 zg:
 
   common_settings:
+    xmin: 0.
+    xmax: 0.5
+    ymax: 12.
+    ymin_ratio: 0.3
+    ymax_ratio: 1.6
     xtitle: '#it{z}_{g}'
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
 
@@ -164,6 +174,11 @@ zg:
 subjet_z:
 
   common_settings:
+    xmin: 0.
+    xmax: 1.
+    ymax: 10.
+    ymin_ratio: 0.3
+    ymax_ratio: 1.6
     xtitle: '#it{z}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
 
@@ -193,6 +208,11 @@ subjet_z:
 jet_axis:
 
   common_settings:
+    xmin: 0.
+    xmax: 0.4
+    ymax: 10.
+    ymin_ratio: 0.3
+    ymax_ratio: 1.6
     xtitle: '#it{#Delta R}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#Delta R}'
 
