@@ -66,7 +66,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get formatted label from obs_setting and sd_setting
   #---------------------------------------------------------------
-  def obs_label(self, observable, obs_setting, sd_setting):
+  def obs_label(self, obs_setting, sd_setting):
 
     obs_label = ''
     if obs_setting:
@@ -122,29 +122,40 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   def name_thn(self, observable, jetR, obs_label):
   
-    #return 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
-    return 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, obs_label)
+    if observable == 'jet_axis':
+      return 'hResponse_JetPt_{}_{}_R{}Scaled'.format(observable, obs_label, jetR)
+    else:
+      return 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
 
   #---------------------------------------------------------------
   # Get name of response THn, rebinned
   #---------------------------------------------------------------
   def name_thn_rebinned(self, observable, jetR, obs_label):
   
-    return 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(observable, jetR, obs_label)
+    if observable == 'jet_axis':
+      return 'hResponse_JetPt_{}_{}_R{}_rebinned'.format(observable, obs_label, jetR)
+    else:
+      return 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(observable, jetR, obs_label)
   
   #---------------------------------------------------------------
   # Get name of 2D data histogram
   #---------------------------------------------------------------
   def name_data(self, observable, jetR, obs_label):
   
-    return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
+    if observable == 'jet_axis':
+      return 'h_{}_JetPt_{}_R{}'.format(observable, obs_label, jetR)
+    else:
+      return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
   
   #---------------------------------------------------------------
   # Get name of 2D data histogram, rebinned
   #---------------------------------------------------------------
   def name_data_rebinned(self, observable, jetR, obs_label):
   
-    return 'h_{}_JetPt_R{}_{}_rebinned'.format(observable, jetR, obs_label)
+    if observable == 'jet_axis':
+      return 'h_{}_JetPt_{}_R{}_rebinned'.format(observable, obs_label, jetR)
+    else:
+      return 'h_{}_JetPt_R{}_{}_rebinned'.format(observable, jetR, obs_label)
 
   #---------------------------------------------------------------
   # Get regularization parameter
@@ -156,7 +167,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       obs_setting = obs_settings[i]
       sd_setting = sd_settings[i]
       
-      if self.obs_label(observable, obs_setting, sd_setting) == obs_label:
+      if self.obs_label(obs_setting, sd_setting) == obs_label:
         
         config_name = obs_subconfig_list[i]
         reg_param = obs_config_dict[config_name]['reg_param'][jetR]

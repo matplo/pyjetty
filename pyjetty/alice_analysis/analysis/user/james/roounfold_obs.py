@@ -54,7 +54,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     
         obs_setting = self.obs_settings[i]
         sd_setting = self.sd_settings[i]
-        obs_label = self.utils.obs_label(self.observable, obs_setting, sd_setting)
+        obs_label = self.utils.obs_label(obs_setting, sd_setting)
         
         fResult_name = os.path.join(self.output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
         setattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label), fResult_name)
@@ -74,7 +74,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     
         obs_setting = self.obs_settings[i]
         sd_setting = self.sd_settings[i]
-        obs_label = self.utils.obs_label(self.observable, obs_setting, sd_setting)
+        obs_label = self.utils.obs_label(obs_setting, sd_setting)
         self.unfoldSingleOutputList(jetR, obs_label, obs_setting, sd_setting)
 
   #---------------------------------------------------------------
@@ -103,7 +103,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       for i, _ in enumerate(self.obs_subconfig_list):
       
         config_name = self.obs_subconfig_list[i]
-        obs_label = self.utils.obs_label(self.observable, self.obs_settings[i], self.sd_settings[i])
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.sd_settings[i])
 
         pt_det_bins_name = 'pt_bins_det'
         if self.truncation:
@@ -169,7 +169,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     
       for i, _ in enumerate(self.obs_subconfig_list):
       
-        obs_label = self.utils.obs_label(self.observable, self.obs_settings[i], self.sd_settings[i])
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.sd_settings[i])
 
         name_thn = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
@@ -686,6 +686,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
     elif self.observable == 'subjet_z':
       text = 'R = ' + str(jetR) + '   R_{subjet} = ' + str(obs_setting)
+    elif self.observable == 'jet_axis':
+      text = '#Delta R_{{ {} }}'.format(obs_setting)
     text_latex.DrawLatex(0.25, 0.75, text)
 
     outputFilename = os.path.join(self.output_dir, 'hUnfoldedPt_{}_R{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), obs_label, self.file_format))
