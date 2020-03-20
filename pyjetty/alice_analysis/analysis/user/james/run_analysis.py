@@ -45,7 +45,7 @@ class RunAnalysis(common_base.CommonBase):
       config = yaml.safe_load(stream)
     
     # Set list of observables
-    self.observable = config['analysis_observable'][0]
+    self.observable = config['analysis_observable']
     
     # Set which analysis steps to perform
     self.do_unfolding = config['do_unfolding']
@@ -53,9 +53,8 @@ class RunAnalysis(common_base.CommonBase):
     self.do_plot_final_result = config['do_plot_final_result']
     self.force_rebin_response=config['force_rebin']
     
-    self.jetR_list = config['jetR']
-
     # Get the sub-configs to unfold
+    self.jetR_list = config['jetR']
     self.obs_config_dict = config[self.observable]
     self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
     self.sd_settings = self.utils.sd_settings(self.obs_config_dict)
@@ -65,6 +64,8 @@ class RunAnalysis(common_base.CommonBase):
     setattr(self, 'xmin', self.obs_config_dict['common_settings']['xmin'])
     setattr(self, 'xmax', self.obs_config_dict['common_settings']['xmax'])
     setattr(self, 'ymax', self.obs_config_dict['common_settings']['ymax'])
+    setattr(self, 'ymin_ratio', self.obs_config_dict['common_settings']['ymin_ratio'])
+    setattr(self, 'ymax_ratio', self.obs_config_dict['common_settings']['ymax_ratio'])
 
     # Retrieve histogram binnings for each observable setting
     for i, _ in enumerate(self.obs_subconfig_list):
@@ -91,14 +92,14 @@ class RunAnalysis(common_base.CommonBase):
     self.main_data = config['main_data']
     self.main_response = config['main_response']
     
-    if 'kTrackEff' in self.systematics_list:
+    if 'trkeff' in self.systematics_list:
       self.trkeff_data = config['trkeff_data']
       self.trkeff_response = config['trkeff_response']
           
     # Create output dirs
     self.file_format = config['file_format']
     self.output_dir = config['output_dir']
-    self.create_output_dirs(self.observable)
+    self.create_output_dirs()
 
     # Theory comparisons
     self.fPythia_name = config['fPythia']
@@ -109,42 +110,32 @@ class RunAnalysis(common_base.CommonBase):
   #---------------------------------------------------------------
   # Create a set of output directories for a given observable
   #---------------------------------------------------------------
-  def create_output_dirs(self, observable):
+  def create_output_dirs(self):
     
-    output_dir = os.path.join(self.output_dir, observable)
+    output_dir = os.path.join(self.output_dir, self.observable)
     if not os.path.exists(output_dir):
       os.makedirs(output_dir)
 
-    self.create_output_subdir(observable, output_dir, 'main')
-      
-    if 'kTrackEff' in self.systematics_list:
-      self.create_output_subdir(observable, output_dir, 'trkeff')
-    if 'kPrior1' in self.systematics_list:
-      self.create_output_subdir(observable, output_dir, 'prior1')
-    if 'kPrior2' in self.systematics_list:
-      self.create_output_subdir(observable, output_dir, 'prior2')
-    if 'kTruncation' in self.systematics_list:
-      self.create_output_subdir(observable, output_dir, 'truncation')
-    if 'kBinning' in self.systematics_list:
-      self.create_output_subdir(observable, output_dir, 'binning')
+    for systematic in self.systematics_list:
+      self.create_output_subdir(output_dir, systematic)
 
     if self.do_systematics:
-      output_dir_systematics = self.create_output_subdir(observable, output_dir, 'systematics')
+      output_dir_systematics = self.create_output_subdir(output_dir, 'systematics')
       sys_root_filename = os.path.join(output_dir_systematics, 'fSystematics.root')
       fSystematics = ROOT.TFile(sys_root_filename, 'RECREATE')
   
     if self.do_plot_final_result:
-      output_dir_final = self.create_output_subdir(observable, output_dir, 'final_results')
+      output_dir_final = self.create_output_subdir(output_dir, 'final_results')
       final_result_root_file = os.path.join(output_dir_final, 'fFinalResults.root')
       fFinalResults = ROOT.TFile(final_result_root_file, 'RECREATE')
 
   #---------------------------------------------------------------
   # Create a single output subdirectory
   #---------------------------------------------------------------
-  def create_output_subdir(self, observable, output_dir, name):
+  def create_output_subdir(self, output_dir, name):
     
     output_subdir = os.path.join(output_dir, name)
-    setattr(self, 'output_dir_{}_{}'.format(name, observable), output_subdir)
+    setattr(self, 'output_dir_{}'.format(name), output_subdir)
     if not os.path.isdir(output_subdir):
       os.makedirs(output_subdir)
 
@@ -189,41 +180,30 @@ class RunAnalysis(common_base.CommonBase):
   def perform_unfolding(self):
     print('Perform unfolding for all systematic variations: {} ...'.format(self.observable))
     
-    # Main result
-    output_dir = getattr(self, 'output_dir_main_{}'.format(self.observable))
-    analysis_main = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
-    analysis_main.roounfold_obs()
-
-    # Tracking efficiency variation
-    if 'kTrackEff' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_trkeff_{}'.format(self.observable))
-      analysis_trkeff = roounfold_obs.Roounfold_Obs(self.observable, self.trkeff_data, self.trkeff_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir))
-      analysis_trkeff.roounfold_obs()
-
-    # Prior variation 1
-    if 'kPrior1' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior1_{}'.format(self.observable))
-      analysis_prior1 = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=0.5)
-      analysis_prior1.roounfold_obs()
+    for systematic in self.systematics_list:
     
-    # Prior variation 2
-    if 'kPrior2' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior2_{}'.format(self.observable))
-      analysis_prior2 = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=-0.5)
-      analysis_prior2.roounfold_obs()
-
-    # Truncation variation
-    if 'kTruncation' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_truncation_{}'.format(self.observable))
-      analysis_truncation = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), truncation=True)
-      analysis_truncation.roounfold_obs()
-        
-    # Binning variation
-    if 'kBinning' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_binning_{}'.format(self.observable))
-      analysis_binning = roounfold_obs.Roounfold_Obs(self.observable, self.main_data, self.main_response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), binning=True)
-      analysis_binning.roounfold_obs()
-
+      output_dir = getattr(self, 'output_dir_{}'.format(systematic))
+      data = self.main_data
+      response = self.main_response
+      power_law_offset = 0.
+      truncation = False
+      binning = False
+    
+      if systematic == 'trkeff':
+        data = self.trkeff_data
+        response = self.trkeff_response
+      if systematic == 'prior1':
+        power_law_offset = 0.5
+      if systematic == 'prior2':
+        power_law_offset = -0.5
+      if systematic == 'truncation':
+        truncation = True
+      if systematic == 'binning':
+        binning = True
+      
+      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=power_law_offset, truncation=truncation, binning=binning)
+      analysis.roounfold_obs()
+    
   #----------------------------------------------------------------------
   def check_rebin_response(self, output_dir):
     
@@ -246,7 +226,7 @@ class RunAnalysis(common_base.CommonBase):
     print('Compute systematics for {}: R = {}, {} , {}...'.format(self.observable, jetR, obs_label, sd_setting))
 
     # Get main result
-    output_dir = getattr(self, 'output_dir_main_{}'.format(self.observable))
+    output_dir = getattr(self, 'output_dir_main')
     path_main = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
     fMain = ROOT.TFile(path_main, 'READ')
     
@@ -439,7 +419,7 @@ class RunAnalysis(common_base.CommonBase):
     hSystematic_RegParam = self.build_average(hSystematic_RegParam1, hSystematic_RegParam2)
     setattr(self, name, hSystematic_RegParam)
     
-    output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_systematics')
     outputFilename = os.path.join(output_dir, 'hSystematic_RegParam_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_RegParam, outputFilename, 'P E')
     
@@ -453,7 +433,7 @@ class RunAnalysis(common_base.CommonBase):
       self.change_to_per(hSystematic_Prior1)
       setattr(self, name, hSystematic_Prior1)
       
-      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      output_dir = getattr(self, 'output_dir_systematics')
       outputFilename = os.path.join(output_dir, 'hSystematic_Prior1_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior1, outputFilename, 'P E')
 
@@ -467,7 +447,7 @@ class RunAnalysis(common_base.CommonBase):
       self.change_to_per(hSystematic_Prior2)
       setattr(self, name, hSystematic_Prior2)
       
-      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      output_dir = getattr(self, 'output_dir_systematics')
       outputFilename = os.path.join(output_dir, 'hSystematic_Prior2_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Prior2, outputFilename, 'P E')
 
@@ -481,7 +461,7 @@ class RunAnalysis(common_base.CommonBase):
       self.change_to_per(hSystematic_Truncation)
       setattr(self, name, hSystematic_Truncation)
       
-      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      output_dir = getattr(self, 'output_dir_systematics')
       outputFilename = os.path.join(output_dir, 'hSystematic_Truncation_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Truncation, outputFilename, 'P E')
     
@@ -495,7 +475,7 @@ class RunAnalysis(common_base.CommonBase):
       self.change_to_per(hSystematic_Binning)
       setattr(self, name, hSystematic_Binning)
       
-      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      output_dir = getattr(self, 'output_dir_systematics')
       outputFilename = os.path.join(output_dir, 'hSystematic_Binning_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_Binning, outputFilename, 'P E')
     
@@ -509,13 +489,13 @@ class RunAnalysis(common_base.CommonBase):
       self.change_to_per(hSystematic_TrkEff)
       setattr(self, name, hSystematic_TrkEff)
       
-      output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+      output_dir = getattr(self, 'output_dir_systematics')
       outputFilename = os.path.join(output_dir, 'hSystematic_TrkEff_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
       #self.utils.plot_hist(hSystematic_TrkEff, outputFilename, 'P E')
 
     # Add uncertainties in quadrature
     hSystematic_Total = self.add_in_quadrature(hSystematic_RegParam, hSystematic_Prior1, hSystematic_Prior2, hSystematic_Truncation, hSystematic_Binning, hSystematic_TrkEff)
-    output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_systematics')
     outputFilename = os.path.join(output_dir, 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     #self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
@@ -620,7 +600,7 @@ class RunAnalysis(common_base.CommonBase):
       text = 'z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
       text_latex.DrawLatex(0.25, 0.71, text)
 
-    output_dir = getattr(self, 'output_dir_systematics_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_systematics')
     outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
@@ -706,7 +686,7 @@ class RunAnalysis(common_base.CommonBase):
     hNumerator.SetName('hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
     setattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth), hNumerator)
       
-    #output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
+    #output_dir = getattr(self, 'output_dir_final_results')
     #outputFilename = os.path.join(output_dir, 'hNPcorrection_{}_{}_{}-{}.pdf'.format(observable, obs_label, min_pt_truth, max_pt_truth))
     #self.utils.plot_hist(hNumerator, outputFilename)
 
@@ -853,7 +833,7 @@ class RunAnalysis(common_base.CommonBase):
     myLegend.Draw()
     
     name = 'hNPcorrection_{}_R{}_{}-{}{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_final_results')
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
@@ -1127,7 +1107,7 @@ class RunAnalysis(common_base.CommonBase):
       name = 'h_{}_R{}_{}-{}_Pythia{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_nll:
       name = 'h_{}_R{}_{}-{}_NLL{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results_{}'.format(self.observable))
+    output_dir = getattr(self, 'output_dir_final_results')
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
@@ -1280,7 +1260,7 @@ class RunAnalysis(common_base.CommonBase):
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
       name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_final_results')
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
@@ -1292,11 +1272,10 @@ class RunAnalysis(common_base.CommonBase):
       h.Write()
       fFinalResults.Close()
 
-
   #----------------------------------------------------------------------
   def get_pythia_from_response(self, observable, jetR, obs_label, min_pt_truth, max_pt_truth):
   
-    output_dir = getattr(self, 'output_dir_main_{}'.format(observable))
+    output_dir = getattr(self, 'output_dir_main')
     file = os.path.join(output_dir, 'response.root')
     f = ROOT.TFile(file, 'READ')
 

@@ -66,7 +66,7 @@ theta_g:
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
       0.4: 5
-      
+  
   config4:
     SoftDrop:
       zcut: 0.2
@@ -79,7 +79,7 @@ theta_g:
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
       0.4: 5
-      
+  
   config5:
     SoftDrop:
       zcut: 0.3
@@ -260,22 +260,23 @@ jet_axis:
 
 file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_41084'
+roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
-analysis_observable: ['subjet_z']
-do_unfolding: False
+analysis_observable: 'subjet_z'
+do_unfolding: True
 force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 
 # List of which systematics to perform
-# Options: [kMain, kTrackEff, kPrior1, kPrior2, kTruncation, kBinning]
+# Options: [main, trkeff, prior1, prior2, truncation, binning]
 systematics_list:
-  - kMain
-  - kTrackEff
-  - kPrior1
-  - kPrior2
-  - kTruncation
-  - kBinning
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/41084/AnalysisResultsFinal.root'
