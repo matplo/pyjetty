@@ -426,7 +426,7 @@ class ProcessMC(process_base.ProcessBase):
             nbins = [100, 60, 200, 40]
             min = [0., 0., 0., 0.]
             max = [100., 300., jetR, jetR]
-            name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, axes, sd_label, jetR)
+            name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
             nbins = (nbins)
             xmin = (min)
             xmax = (max)
@@ -767,7 +767,7 @@ class ProcessMC(process_base.ProcessBase):
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_jet_axis_R{}_Standard_SD{}'.format(sd_label, jetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_Standard_SD{}'.format(jetR, sd_label)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
@@ -781,7 +781,7 @@ class ProcessMC(process_base.ProcessBase):
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_jet_axis_Standard_WTA_R{}'.format(jetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_Standard_WTA'.format(jetR)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
@@ -795,7 +795,7 @@ class ProcessMC(process_base.ProcessBase):
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_jet_axis_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_WTA_SD{}'.format(jetR, sd_label)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
