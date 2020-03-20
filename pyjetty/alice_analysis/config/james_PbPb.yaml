@@ -11,7 +11,6 @@
 # The analysis step is intended to run for a single observable block
 
 process_observables: ['theta_g', 'zg', 'subjet_z', 'jet_axis']
-analysis_observable: ['subjet_z']
 jetR: [0.2, 0.3, 0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
@@ -120,7 +119,7 @@ subjet_z:
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_truth: [0., 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
@@ -131,7 +130,7 @@ subjet_z:
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_truth: [0., 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
@@ -145,9 +144,9 @@ jet_axis:
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    obs_bins_truth: [0., 0.02, 0.05, 0.1, 0.15, 0.2, 0.4]
+    obs_bins_det: [0., 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
+    obs_bins_det_sys_binning: [0., 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
     reg_param:
       0.4: 3
       
@@ -159,9 +158,9 @@ jet_axis:
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    obs_bins_truth: [0., 0.02, 0.05, 0.1, 0.15, 0.2, 0.4]
+    obs_bins_det: [0., 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
+    obs_bins_det_sys_binning: [0., 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
     reg_param:
       0.4: 3
       
@@ -173,9 +172,9 @@ jet_axis:
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    obs_bins_truth: [0., 0.02, 0.05, 0.1, 0.15, 0.2, 0.4]
+    obs_bins_det: [0., 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
+    obs_bins_det_sys_binning: [0., 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
     reg_param:
       0.4: 3
 
@@ -184,21 +183,23 @@ jet_axis:
 
 file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_41084'
+roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
+analysis_observable: 'subjet_z'
 do_unfolding: False
 force_rebin: False
 do_systematics: False
 do_plot_final_result: False
 
 # List of which systematics to perform
-# Options: [kMain, kTrackEff, kPrior1, kPrior2, kTruncation, kBinning]
+# Options: [main, trkeff, prior1, prior2, truncation, binning]
 systematics_list:
-  - kMain
-#  - kTrackEff
-  - kPrior1
-#  - kPrior2
-#  - kTruncation
-#  - kBinning
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/40593/AnalysisResultsFinal.root'
