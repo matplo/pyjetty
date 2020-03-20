@@ -228,7 +228,19 @@ class ProcessMC(process_base.ProcessBase):
           name = 'hDeltaR_combined_ppdet_R{}'.format(jetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
-      
+          
+          if 'subjet_z' in self.observable_list:
+          
+            for subjetR in self.obs_settings['subjet_z']:
+          
+              name = 'hSubjetDeltaR_combined_ppdet_R{}_{}'.format(jetR, subjetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              setattr(self, name, h)
+              
+              name = 'hSubjetDeltaR_ppdet_pptrue_R{}_{}'.format(jetR, subjetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              setattr(self, name, h)
+              
       name = 'hZ_Truth_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
@@ -653,12 +665,12 @@ class ProcessMC(process_base.ProcessBase):
                 
         if 'subjet_z' in self.observable_list:
 
-          result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
+          result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, jet_pp_det, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
         
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
   #---------------------------------------------------------------
-  def fill_subjet_matching_histograms(self, jet_det, jet_truth, jetR, subjetR):
+  def fill_subjet_matching_histograms(self, jet_det, jet_truth, jet_pp_det, jetR, subjetR):
   
     # Find subjets
     cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
@@ -666,6 +678,10 @@ class ProcessMC(process_base.ProcessBase):
 
     cs_subjet_truth = fj.ClusterSequence(jet_truth.constituents(), self.subjet_def[subjetR])
     subjets_truth = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
+    
+    if not self.is_pp:
+      cs_subjet_det_pp = fj.ClusterSequence(jet_pp_det.constituents(), self.subjet_def[subjetR])
+      subjets_det_pp = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
 
     # Loop through subjets and set subjet matching candidates for each subjet in user_info
     if self.is_pp:
@@ -673,7 +689,7 @@ class ProcessMC(process_base.ProcessBase):
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
         [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hSubjetDeltaR_combined_ppdet_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
-        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hSubjetDeltaR_ppdet_pptrue_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets]
+        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hSubjetDeltaR_ppdet_pptrue_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets_det_pp]
       
     # Loop through subjets and set accepted matches
     if self.is_pp:

@@ -82,7 +82,7 @@ class ProcessBase(common_base.CommonBase):
     # Fill histogram of matching distance of all candidates
     deltaR = jet1.delta_R(jet2)
     if hname:
-      getattr(self, hname).Fill(jet1.pt(), deltaR)
+      getattr(self, hname.format(jetR)).Fill(jet1.pt(), deltaR)
   
     # Add a matching candidate to the list if it is within the geometrical cut
     if deltaR < self.jet_matching_distance*jetR:
