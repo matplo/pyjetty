@@ -93,7 +93,6 @@ class RunAnalysis(common_base.CommonBase):
     self.main_response = config['main_response']
     
     if 'trkeff' in self.systematics_list:
-      self.trkeff_data = config['trkeff_data']
       self.trkeff_response = config['trkeff_response']
           
     # Create output dirs
@@ -190,7 +189,6 @@ class RunAnalysis(common_base.CommonBase):
       binning = False
     
       if systematic == 'trkeff':
-        data = self.trkeff_data
         response = self.trkeff_response
       if systematic == 'prior1':
         power_law_offset = 0.5

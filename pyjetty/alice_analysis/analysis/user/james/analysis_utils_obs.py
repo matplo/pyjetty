@@ -92,9 +92,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   def name_thn(self, observable, jetR, obs_label):
   
-    if observable == 'jet_axis':
-      return 'hResponse_JetPt_{}_{}_R{}Scaled'.format(observable, obs_label, jetR)
-    else:
       return 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
 
   #---------------------------------------------------------------
@@ -102,9 +99,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   def name_thn_rebinned(self, observable, jetR, obs_label):
   
-    if observable == 'jet_axis':
-      return 'hResponse_JetPt_{}_{}_R{}_rebinned'.format(observable, obs_label, jetR)
-    else:
       return 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(observable, jetR, obs_label)
   
   #---------------------------------------------------------------
@@ -112,9 +106,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   def name_data(self, observable, jetR, obs_label):
   
-    if observable == 'jet_axis':
-      return 'h_{}_JetPt_{}_R{}'.format(observable, obs_label, jetR)
-    else:
       return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
   
   #---------------------------------------------------------------
@@ -122,9 +113,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   def name_data_rebinned(self, observable, jetR, obs_label):
   
-    if observable == 'jet_axis':
-      return 'h_{}_JetPt_{}_R{}_rebinned'.format(observable, obs_label, jetR)
-    else:
       return 'h_{}_JetPt_R{}_{}_rebinned'.format(observable, jetR, obs_label)
 
   #---------------------------------------------------------------

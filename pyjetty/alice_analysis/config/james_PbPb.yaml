@@ -204,8 +204,6 @@ systematics_list:
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/40593/AnalysisResultsFinal.root'
 main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/40664/AnalysisResultsFinal.root'
-
-trkeff_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/40593/AnalysisResultsFinal.root'
 trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/40972/AnalysisResultsFinal.root'
 
 # Theory comparisons
