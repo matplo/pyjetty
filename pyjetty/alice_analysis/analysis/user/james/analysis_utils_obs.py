@@ -29,8 +29,10 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, **kwargs):
+  def __init__(self, observable='', **kwargs):
     super(AnalysisUtils_Obs, self).__init__(**kwargs)
+    
+    self.observable = observable
 
   #---------------------------------------------------------------
   # Get observable settings (i.e. list that stores the observable setting, e.g. subjetR)
@@ -46,6 +48,30 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       obs_settings = [None for _ in obs_subconfig_list]
       
     return obs_settings
+
+  #---------------------------------------------------------------
+  # Compute scale factor to vary prior of observable
+  #
+  # Note that prior_variation_parameter is the parameter used to scale both
+  # the pt prior (assumed to be a change to the power law exponent) and the observable prior,
+  # and is typically taken to be +/- 0.5.
+  #
+  # This function overrides the virtual function in analysis_utils.py
+  #---------------------------------------------------------------
+  def prior_scale_factor_obs(self, obs_true, prior_variation_parameter):
+  
+    if self.observable == 'zg':
+      scale_factor = math.pow(obs_true, prior_variation_parameter)
+    elif self.observable == 'theta_g':
+      scale_factor = (1 + obs_true)
+    elif self.observable == 'subjet_z':
+      scale_factor = (1 + obs_true)
+    elif self.observable == 'jet_axis':
+      scale_factor = (1 + obs_true)
+    else:
+      raise ValueError('No observable is defined in prior_scale_factor_obs()!')
+      
+    return scale_factor
 
   #---------------------------------------------------------------
   # Get SD settings (i.e. list that stores a list of SD settings [zcut, beta])

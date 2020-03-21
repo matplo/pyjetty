@@ -25,10 +25,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, power_law_offset=0., **kwargs):
+  def __init__(self, observable='', input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', rebin_response=False, truncation=False, binning=False, prior_variation_parameter=0., **kwargs):
     
     super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file, output_dir, file_format, **kwargs)
-    self.utils = analysis_utils_obs.AnalysisUtils_Obs()
+    self.utils = analysis_utils_obs.AnalysisUtils_Obs(observable)
     
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
@@ -36,7 +36,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.rebin_response = rebin_response
     self.truncation = truncation
     self.binning = binning
-    self.power_law_offset = power_law_offset
+    self.prior_variation_parameter = prior_variation_parameter
     
     self.initialize_config()
   
@@ -191,7 +191,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         if rebin_response:
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
           label = 'R{}_{}'.format(jetR, obs_label)
-          self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, label, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array, self.observable, self.power_law_offset)
+          self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, label, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array, n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array, self.observable, self.prior_variation_parameter)
           
         # Also re-bin the data histogram
         hData = self.fData.Get(name_data)
@@ -1326,5 +1326,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = Roounfold_Obs(observable=args.observable, input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat, rebin_response=True, truncation=False, binning=False, power_law_offset=0.)
+  analysis = Roounfold_Obs(observable=args.observable, input_file_data = args.inputFileData, input_file_response = args.inputFileResponse, config_file = args.configFile, output_dir = args.outputDir, file_format = args.imageFormat, rebin_response=True, truncation=False, binning=False, prior_variation_parameter=0.)
   analysis.roounfold_obs()

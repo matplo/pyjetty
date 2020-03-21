@@ -94,6 +94,11 @@ class RunAnalysis(common_base.CommonBase):
     
     if 'trkeff' in self.systematics_list:
       self.trkeff_response = config['trkeff_response']
+      
+    if 'prior1' in self.systematics_list:
+      self.prior1_variation_parameter = config['prior1_variation_parameter']
+    if 'prior2' in self.systematics_list:
+      self.prior2_variation_parameter = config['prior2_variation_parameter']
           
     # Create output dirs
     self.file_format = config['file_format']
@@ -101,10 +106,13 @@ class RunAnalysis(common_base.CommonBase):
     self.create_output_dirs()
 
     # Theory comparisons
-    self.fPythia_name = config['fPythia']
-    self.fNLL = config['fNLL']
-    self.fNPcorrection_numerator = config['fNPcorrection_numerator']
-    self.fNPcorrection_denominator = config['fNPcorrection_denominator']
+    if 'fPythia' in config:
+      self.fPythia_name = config['fPythia']
+    if 'fNLL' in config:
+      self.fNLL = config['fNLL']
+    if 'fNPcorrection_numerator' in config and 'fNPcorrection_denominator' in config:
+      self.fNPcorrection_numerator = config['fNPcorrection_numerator']
+      self.fNPcorrection_denominator = config['fNPcorrection_denominator']
 
   #---------------------------------------------------------------
   # Create a set of output directories for a given observable
@@ -184,22 +192,22 @@ class RunAnalysis(common_base.CommonBase):
       output_dir = getattr(self, 'output_dir_{}'.format(systematic))
       data = self.main_data
       response = self.main_response
-      power_law_offset = 0.
+      prior_variation_parameter = 0.
       truncation = False
       binning = False
     
       if systematic == 'trkeff':
         response = self.trkeff_response
       if systematic == 'prior1':
-        power_law_offset = 0.5
+        prior_variation_parameter = self.prior1_variation_parameter
       if systematic == 'prior2':
-        power_law_offset = -0.5
+        prior_variation_parameter = self.prior2_variation_parameter
       if systematic == 'truncation':
         truncation = True
       if systematic == 'binning':
         binning = True
       
-      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), power_law_offset=power_law_offset, truncation=truncation, binning=binning)
+      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), prior_variation_parameter=prior_variation_parameter, truncation=truncation, binning=binning)
       analysis.roounfold_obs()
     
   #----------------------------------------------------------------------

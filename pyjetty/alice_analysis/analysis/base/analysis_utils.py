@@ -40,6 +40,8 @@ class AnalysisUtils(common_base.CommonBase):
     # Create empty TH2 with appropriate binning
     name = "%s_rebinned" % name_data
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
+    
+    #  Check whether sumw2 has been previously set, just for our info
     if h.GetSumw2() is 0:
       print('sumw2 not set')
     else:
@@ -55,12 +57,16 @@ class AnalysisUtils(common_base.CommonBase):
         content = hData.GetBinContent(bin_x, bin_y)
         h.Fill(x, y, content)
           
+    # We need to manually set the uncertainties, since sumw2 does the wrong thing in this case
+    # Specifically: We fill the rebinned histo from several separate weighted fills, so sumw2
+    # gives sqrt(a^2+b^2) where we simply want counting uncertainties of sqrt(a+b).
     for bin in range(0, h.GetNcells()+1):
       content = h.GetBinContent(bin)
       old_uncertainty = h.GetBinError(bin)
       new_uncertainty = math.sqrt(content)
       h.SetBinError(bin, new_uncertainty)
     
+    # We want to make sure sumw2 is set after rebinning, since we will scale etc. this histogram
     if h.GetSumw2() is 0:
       h.Sumw2()
     return h
@@ -72,7 +78,7 @@ class AnalysisUtils(common_base.CommonBase):
   def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, label,
                      n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array,
                      n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array,
-                     observable, power_law_offset=0.):
+                     observable, prior_variation_parameter=0.):
   
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, 
@@ -92,13 +98,13 @@ class AnalysisUtils(common_base.CommonBase):
     
     # Loop through THn and fill rebinned THn
     self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, 
-                           observable, power_law_offset)
+                           observable, prior_variation_parameter)
   
   #---------------------------------------------------------------
   # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
   #---------------------------------------------------------------
   def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, 
-                        observable, power_law_offset=0.):
+                        observable, prior_variation_parameter=0.):
     
     # I don't find any global bin index implementation, so I manually loop through axes 
     # (including under/over-flow)...
@@ -119,16 +125,15 @@ class AnalysisUtils(common_base.CommonBase):
             content = thn.GetBinContent(global_bin)
             
             # Impose a custom prior, if desired
-            if math.fabs(power_law_offset) > 1e-3 :
-              #print('Scaling prior by power_law_offset={}'.format(power_law_offset))
+            if math.fabs(prior_variation_parameter) > 1e-3 :
+              #print('Scaling prior by prior_variation_parameter={}'.format(prior_variation_parameter))
               if pt_true > 0. and obs_true > 0.:
 
-                scale_factor = math.pow(pt_true, power_law_offset)
+                # Scale number of counts according to variation of pt prior
+                scale_factor = math.pow(pt_true, prior_variation_parameter)
                 
-                if observable == 'zg':
-                  scale_factor *= math.pow(obs_true, power_law_offset)
-                elif observable == 'theta_g':
-                  scale_factor *= (1 + obs_true)
+                # Scale number of counts according to variation of observable prior
+                scale_factor *= self.prior_scale_factor_obs(obs_true, prior_variation_parameter)
 
                 content = content*scale_factor
           
@@ -145,6 +150,13 @@ class AnalysisUtils(common_base.CommonBase):
     roounfold_response.Write()
     f.Close()
     print('done')
+
+  #---------------------------------------------------------------
+  # Compute scale factor to vary prior of observable
+  # This should be implemented in analysis_utils_obs.py
+  #---------------------------------------------------------------
+  def prior_scale_factor_obs(self, obs_true, prior_variation_parameter):
+    raise NotImplementedError('Must define prior_scale_factor() in analysis_utils_obs.py!')
 
   #---------------------------------------------------------------
   # Create an empty THn according to specified binnings
