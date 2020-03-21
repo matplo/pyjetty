@@ -200,6 +200,10 @@ systematics_list:
   - prior2
   - truncation
   - binning
+  
+# Prior variation parameters
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/40593/AnalysisResultsFinal.root'

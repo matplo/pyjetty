@@ -229,7 +229,7 @@ class RunAnalysis(common_base.CommonBase):
 
   #----------------------------------------------------------------------
   def compute_systematics(self, jetR, obs_label, obs_setting, sd_setting):
-    print('Compute systematics for {}: R = {}, {} , {}...'.format(self.observable, jetR, obs_label, sd_setting))
+    print('Compute systematics for {}: R = {}, subobs = {} , SD = {}...'.format(self.observable, jetR, obs_label, sd_setting))
 
     # Get main result
     output_dir = getattr(self, 'output_dir_main')
@@ -263,8 +263,8 @@ class RunAnalysis(common_base.CommonBase):
     setattr(self, name, hRegParam2)
     
     # Get trkeff result
-    if 'kTrackEff' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_trkeff_{}'.format(self.observable))
+    if 'trk_eff' in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_trkeff')
       path_trkeff = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fTrkEff = ROOT.TFile(path_trkeff, 'READ')
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final)
@@ -273,8 +273,8 @@ class RunAnalysis(common_base.CommonBase):
       setattr(self, '{}_trkeff'.format(name), hTrkEff)
     
     # Get prior result
-    if 'kPrior1' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior1_{}'.format(self.observable))
+    if 'prior1' in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_prior1')
       path_prior1 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fPrior1 = ROOT.TFile(path_prior1, 'READ')
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final)
@@ -283,8 +283,8 @@ class RunAnalysis(common_base.CommonBase):
       setattr(self, '{}_prior1'.format(name), hPrior1)
     
     # Get prior result
-    if 'kPrior2' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_prior2_{}'.format(self.observable))
+    if 'prior2' in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_prior2')
       path_prior2 = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fPrior2 = ROOT.TFile(path_prior2, 'READ')
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final)
@@ -293,8 +293,8 @@ class RunAnalysis(common_base.CommonBase):
       setattr(self, '{}_prior2'.format(name), hPrior2)
     
     # Get truncation result
-    if 'kTruncation' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_truncation_{}'.format(self.observable))
+    if 'truncation' in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_truncation')
       path_truncation = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fTruncation = ROOT.TFile(path_truncation, 'READ')
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final)
@@ -303,8 +303,8 @@ class RunAnalysis(common_base.CommonBase):
       setattr(self, '{}_truncation'.format(name), hTruncation)
     
     # Get binning result
-    if 'kBinning' in self.systematics_list:
-      output_dir = getattr(self, 'output_dir_binning_{}'.format(self.observable))
+    if 'binning' in self.systematics_list:
+      output_dir = getattr(self, 'output_dir_binning_{}')
       path_binning = os.path.join(output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
       fBinning = ROOT.TFile(path_binning, 'READ')
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final)
@@ -373,31 +373,31 @@ class RunAnalysis(common_base.CommonBase):
     hRegParam2 = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
 
     # Get trk eff
-    if 'kTrackEff' in self.systematics_list:
+    if 'trkeff' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_trkeff'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hTrkEff_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hTrkEff = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior1
-    if 'kPrior1' in self.systematics_list:
+    if 'prior1' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_prior1'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hPrior1_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hPrior1 = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get prior2
-    if 'kPrior2' in self.systematics_list:
+    if 'prior2' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_prior2'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hPrior2_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hPrior2 = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get truncation
-    if 'kTruncation' in self.systematics_list:
+    if 'truncation' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_truncation'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hTruncation_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hTruncation = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
     
     # Get binning
-    if 'kBinning' in self.systematics_list:
+    if 'binning' in self.systematics_list:
       name2D = 'hUnfolded_{}_R{}_{}_{}_binning'.format(observable, jetR, obs_label, reg_param_final)
       name1D = 'hBinning_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hBinning = self.get_obs_distribution(jetR, observable, obs_label, name2D, name1D, min_pt_truth, max_pt_truth)
@@ -431,7 +431,7 @@ class RunAnalysis(common_base.CommonBase):
     
     # Prior 1
     hSystematic_Prior1 = None
-    if 'kPrior1' in self.systematics_list:
+    if 'prior1' in self.systematics_list:
       name = 'hSystematic_{}_Prior1_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Prior1 = hMain.Clone()
       hSystematic_Prior1.SetName(name)
@@ -445,7 +445,7 @@ class RunAnalysis(common_base.CommonBase):
 
     # Prior 2
     hSystematic_Prior2 = None
-    if 'kPrior2' in self.systematics_list:
+    if 'prior2' in self.systematics_list:
       name = 'hSystematic_{}_Prior2_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Prior2 = hMain.Clone()
       hSystematic_Prior2.SetName(name)
@@ -459,7 +459,7 @@ class RunAnalysis(common_base.CommonBase):
 
     # Truncation
     hSystematic_Truncation = None
-    if 'kTruncation' in self.systematics_list:
+    if 'truncation' in self.systematics_list:
       name = 'hSystematic_{}_Truncation_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Truncation = hMain.Clone()
       hSystematic_Truncation.SetName(name)
@@ -473,7 +473,7 @@ class RunAnalysis(common_base.CommonBase):
     
     # Binning
     hSystematic_Binning = None
-    if 'kBinning' in self.systematics_list:
+    if 'binning' in self.systematics_list:
       name = 'hSystematic_{}_Binning_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_Binning = hMain.Clone()
       hSystematic_Binning.SetName(name)
@@ -487,7 +487,7 @@ class RunAnalysis(common_base.CommonBase):
     
     # Trk eff
     hSystematic_TrkEff = None
-    if 'kTrackEff' in self.systematics_list:
+    if 'trkeff' in self.systematics_list:
       name = 'hSystematic_{}_TrkEff_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       hSystematic_TrkEff = hMain.Clone()
       hSystematic_TrkEff.SetName(name)
