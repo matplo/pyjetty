@@ -88,24 +88,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     return scale_factor
 
   #---------------------------------------------------------------
-  # Get SD settings (i.e. list that stores a list of SD settings [zcut, beta])
-  # from observable config block
-  #---------------------------------------------------------------
-  def sd_settings(self, obs_config_dict):
-  
-    sd_settings = []
-    for config_key, subconfig in obs_config_dict.items():
-      if config_key == 'common_settings':
-        continue
-      if 'SoftDrop' in subconfig:
-        sd_dict = obs_config_dict[config_key]['SoftDrop']
-        sd_settings.append([sd_dict['zcut'], sd_dict['beta']])
-      else:
-        sd_settings.append(None)
-        
-    return sd_settings
-  
-  #---------------------------------------------------------------
   # Get label from obs_setting and sd_setting
   #---------------------------------------------------------------
   def obs_label(self, obs_setting, sd_setting):
@@ -117,16 +99,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       obs_label += '{}'.format(self.sd_label(sd_setting))
     return obs_label
 
-  #---------------------------------------------------------------
-  # Get Soft Drop label from sd_setting = [zcut, beta]
-  #---------------------------------------------------------------
-  def sd_label(self, sd_setting):
-  
-      zcut = sd_setting[0]
-      beta = sd_setting[1]
-      sd_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
-      return sd_label
-      
   #---------------------------------------------------------------
   # Get formatted Soft Drop label from sd_setting = [zcut, beta]
   #---------------------------------------------------------------

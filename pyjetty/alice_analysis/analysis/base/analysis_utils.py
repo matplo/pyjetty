@@ -21,10 +21,10 @@ from array import *
 import ROOT
 
 # Base class
-from pyjetty.alice_analysis.analysis.base import common_base
+from pyjetty.alice_analysis.analysis.base import common_utils
 
 ################################################################
-class AnalysisUtils(common_base.CommonBase):
+class AnalysisUtils(common_utils.CommonUtils):
   
   #---------------------------------------------------------------
   # Constructor
@@ -355,14 +355,6 @@ class AnalysisUtils(common_base.CommonBase):
       else:
         h.SetBinContent(bin, new_content)
         h.SetBinError(bin, new_error_up)
-  
-  #---------------------------------------------------------------
-  # Remove periods from a label
-  #---------------------------------------------------------------
-  def remove_periods(self, text):
-  
-    string = str(text)
-    return string.replace('.', '')
   
   #---------------------------------------------------------------
   # Set legend parameters
