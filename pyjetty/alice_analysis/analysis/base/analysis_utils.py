@@ -231,6 +231,30 @@ class AnalysisUtils(common_base.CommonBase):
       print('Response {} doesn\'t exist -- create it...'.format(response_path))
     
     return rebin_response
+    
+  #----------------------------------------------------------------------
+  # Normalize response matrix: Normalize the truth projection to 1.
+  #----------------------------------------------------------------------
+  def normalize_response_matrix(self, hResponseMatrix):
+    
+    # Make projection onto true axis (y-axis), and scale appropriately
+    # Do exclude under and overflow bins
+    hTruthProjectionBefore = hResponseMatrix.ProjectionY('{}_py'.format(hResponseMatrix.GetName()),1,hResponseMatrix.GetNbinsX())
+    hTruthProjectionBefore.SetName('hTruthProjectionBefore')
+    
+    # Loop through truth-level bins, and apply normalization factor to all bins.
+    nBinsY = hResponseMatrix.GetNbinsY() # truth
+    nBinsX = hResponseMatrix.GetNbinsX() # det
+    for truthBin in range(1,nBinsY+1):
+      normalizationFactor = hTruthProjectionBefore.GetBinContent(truthBin)
+      if normalizationFactor > 0:
+        truthBinCenter = hTruthProjectionBefore.GetXaxis().GetBinCenter(truthBin)
+        
+        for detBin in range(1,nBinsX+1):
+          binContent = hResponseMatrix.GetBinContent(detBin, truthBin)
+          hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
+
+    return hResponseMatrix
 
   #----------------------------------------------------------------------
   # Add two histograms in quadrature

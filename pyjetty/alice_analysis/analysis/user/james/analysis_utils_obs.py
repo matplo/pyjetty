@@ -48,6 +48,20 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       obs_settings = [None for _ in obs_subconfig_list]
       
     return obs_settings
+    
+  #---------------------------------------------------------------
+  # Get subobservable label (e.g. formatted label for subjetR)
+  #---------------------------------------------------------------
+  def formatted_subobs_label(self, observable):
+  
+    if observable == 'subjet_z':
+      label = '#it{R}_{subjet}'
+    elif observable == 'jet_axis':
+      label = '#Delta #it{R}_{axis}'
+    else:
+      label = None
+      
+    return label
 
   #---------------------------------------------------------------
   # Compute scale factor to vary prior of observable
@@ -92,7 +106,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     return sd_settings
   
   #---------------------------------------------------------------
-  # Get formatted label from obs_setting and sd_setting
+  # Get label from obs_setting and sd_setting
   #---------------------------------------------------------------
   def obs_label(self, obs_setting, sd_setting):
 
@@ -104,7 +118,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     return obs_label
 
   #---------------------------------------------------------------
-  # Get formatted Soft Drop label from sd_setting = [zcut, beta]
+  # Get Soft Drop label from sd_setting = [zcut, beta]
   #---------------------------------------------------------------
   def sd_label(self, sd_setting):
   
@@ -112,6 +126,14 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       beta = sd_setting[1]
       sd_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
       return sd_label
+      
+  #---------------------------------------------------------------
+  # Get formatted Soft Drop label from sd_setting = [zcut, beta]
+  #---------------------------------------------------------------
+  def formatted_sd_label(self, sd_setting):
+
+    text = 'z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
+    return text
     
   #---------------------------------------------------------------
   # Get name of response THn
@@ -161,3 +183,34 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       
       else:
         continue
+        
+  #---------------------------------------------------------------
+  # Compute SD tagging rate, based on MC correction
+  #---------------------------------------------------------------
+  def tagging_rate(self, jetR, min_pt_truth, max_pt_truth, hData2D, hMC_Det2D, hMC_Truth2D):
+
+    hData2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hData = hData2D.ProjectionY()
+    n_jets_inclusive = hData.Integral(0, hData.GetNbinsX()+1)
+    n_jets_tagged = hData.Integral(1, hData.GetNbinsX())
+    fraction_tagged_data =  n_jets_tagged/n_jets_inclusive
+    #print('fraction_tagged_data: {}'.format(fraction_tagged_data))
+
+    hMC_Det2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hMC_Det = hMC_Det2D.ProjectionY()
+    n_jets_inclusive = hMC_Det.Integral(0, hMC_Det.GetNbinsX()+1)
+    n_jets_tagged = hMC_Det.Integral(1, hMC_Det.GetNbinsX())
+    fraction_tagged_mc_det =  n_jets_tagged/n_jets_inclusive
+    #print('fraction_tagged_mc_det: {}'.format(fraction_tagged_mc_det))
+    
+    hMC_Truth2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+    hMC_Truth = hMC_Truth2D.ProjectionY()
+    n_jets_inclusive = hMC_Truth.Integral(0, hMC_Truth.GetNbinsX()+1)
+    n_jets_tagged = hMC_Truth.Integral(1, hMC_Truth.GetNbinsX())
+    fraction_tagged_mc_truth =  n_jets_tagged/n_jets_inclusive
+    #print('fraction_tagged_mc_truth: {}'.format(fraction_tagged_mc_truth))
+
+    fraction_tagged = fraction_tagged_data * fraction_tagged_mc_truth / fraction_tagged_mc_det
+    #print('fraction_tagged: {}'.format(fraction_tagged))
+
+    return fraction_tagged

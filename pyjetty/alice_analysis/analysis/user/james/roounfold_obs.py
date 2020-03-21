@@ -33,14 +33,13 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.fData = ROOT.TFile(self.input_file_data, 'READ')
     self.fResponse = ROOT.TFile(self.input_file_response, 'READ')
     self.observable = observable
-    self.rebin_response = rebin_response
     self.truncation = truncation
     self.binning = binning
     self.prior_variation_parameter = prior_variation_parameter
     
     self.initialize_config()
   
-    self.get_responses(self.rebin_response)
+    self.get_responses(rebin_response)
     
     # Create output files to store results
     for jetR in self.jetR_list:
@@ -72,7 +71,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         obs_setting = self.obs_settings[i]
         sd_setting = self.sd_settings[i]
         obs_label = self.utils.obs_label(obs_setting, sd_setting)
-        self.unfoldSingleOutputList(jetR, obs_label, obs_setting, sd_setting)
+        self.unfold_single_setting(jetR, obs_label, obs_setting, sd_setting)
 
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -224,34 +223,28 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         os.makedirs(output_dir)
 
   ###################################################################################################
-  # Unfold jet spectrum from a single output list
+  # Unfold jet substructure observable for a single setting
   ###################################################################################################
-  def unfoldSingleOutputList(self, jetR, obs_label, obs_setting, sd_setting):
+  def unfold_single_setting(self, jetR, obs_label, obs_setting, sd_setting):
 
     print('jetR = {}, {}'.format(jetR, obs_label))
     
-    # Get data jet spectrum
+    # Plot data 2D histogram
     name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
     hData_PerBin = getattr(self, name)
-    hData_PerBin.GetXaxis().SetRangeUser(0., 100.)
+    hData_PerBin.GetXaxis().SetTitle('#it{p}_{T,jet}')
+    hData_PerBin.GetYaxis().SetTitle(self.xtitle)
     output_dir = getattr(self, 'output_dir_Data')
     outputFilename = os.path.join(output_dir, 'hData_R{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, self.file_format))
     self.utils.plot_hist(hData_PerBin, outputFilename, 'colz', False, True)
     
-    hDataProj = hData_PerBin.ProjectionY()
-    hDataProj.SetName('{}_{}'.format(hDataProj.GetName(), 'proj'))
-    outputFilename = os.path.join(output_dir, 'hData_proj_R{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, self.file_format))
-    self.utils.plot_hist(hDataProj, outputFilename)
-    
     # Plot various slices of the response matrix (from the THn)
     self.plot_RM_slices(jetR, obs_label)
     
-    # Plot the kinematic efficiency from the response THn
+    # Plot the kinematic efficiency from the response THn, and save it as an attribute
     self.plot_kinematic_efficiency(jetR, obs_label, obs_setting, sd_setting)
-    # Can either pass this to the RooUnfoldResponse object, or else can apply it afterward
-    # (Need to think...)
     
-    # Get MC-det and MC-truth 2D projections for unfolding closure test
+    # Get MC-det and MC-truth 2D projections for (i) SD tagging rate bin-by-bin correction, and (ii) unfolding closure test
     name = 'hMC_Det_R{}_{}'.format(jetR, obs_label)
     hMC_Det = self.get_MCdet2D(jetR, obs_label)
     setattr(self, name, hMC_Det)
@@ -261,7 +254,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     setattr(self, name, hMC_Truth)
     
     # Compute SD tagging rate
-    if self.observable == 'theta_g' or self.observable == 'zg':
+    if sd_setting:
       self.compute_tagging_rate(jetR, obs_label)
 
     # Unfold spectrum
@@ -304,7 +297,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
     
-      fraction_tagged = self.get_tagging_rate(jetR, min_pt_truth, max_pt_truth, hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
+      fraction_tagged = self.utils.tagging_rate(jetR, min_pt_truth, max_pt_truth, hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
 
       x = (min_pt_truth + max_pt_truth)/2.
       bin = h.FindBin(x)
@@ -314,37 +307,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
     h.Write()
     fResult.Close()
-
-  #################################################################################################
-  # Compute SD tagging rate, based on MC correction
-  #################################################################################################
-  def get_tagging_rate(self, jetR, min_pt_truth, max_pt_truth, hData2D, hMC_Det2D, hMC_Truth2D):
-
-    hData2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hData = hData2D.ProjectionY()
-    n_jets_inclusive = hData.Integral(0, hData.GetNbinsX()+1)
-    n_jets_tagged = hData.Integral(1, hData.GetNbinsX())
-    fraction_tagged_data =  n_jets_tagged/n_jets_inclusive
-    #print('fraction_tagged_data: {}'.format(fraction_tagged_data))
-
-    hMC_Det2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hMC_Det = hMC_Det2D.ProjectionY()
-    n_jets_inclusive = hMC_Det.Integral(0, hMC_Det.GetNbinsX()+1)
-    n_jets_tagged = hMC_Det.Integral(1, hMC_Det.GetNbinsX())
-    fraction_tagged_mc_det =  n_jets_tagged/n_jets_inclusive
-    #print('fraction_tagged_mc_det: {}'.format(fraction_tagged_mc_det))
-    
-    hMC_Truth2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-    hMC_Truth = hMC_Truth2D.ProjectionY()
-    n_jets_inclusive = hMC_Truth.Integral(0, hMC_Truth.GetNbinsX()+1)
-    n_jets_tagged = hMC_Truth.Integral(1, hMC_Truth.GetNbinsX())
-    fraction_tagged_mc_truth =  n_jets_tagged/n_jets_inclusive
-    #print('fraction_tagged_mc_truth: {}'.format(fraction_tagged_mc_truth))
-
-    fraction_tagged = fraction_tagged_data * fraction_tagged_mc_truth / fraction_tagged_mc_det
-    #print('fraction_tagged: {}'.format(fraction_tagged))
-
-    return fraction_tagged
 
   #################################################################################################
   # Unfold jet spectrum
@@ -742,6 +704,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hNumerator.SetName('{}_Numerator'.format(hNumerator.GetName()))
 
     hKinematicEfficiency = hNumerator.Clone()
+    hKinematicEfficiency.GetYaxis().SetTitle(self.xtitle)
     hKinematicEfficiency.SetName('hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
     hKinematicEfficiency.Divide(hDenominator)
     for bin in range(0, hKinematicEfficiency.GetNcells()+1):
@@ -758,7 +721,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, obs_label, obs_setting, sd_setting)
 
   #################################################################################################
-  # Unfold jet spectrum
+  # Plot kinematic efficiency projections for various pt slices
   #################################################################################################
   def plot_kinematic_efficiency_projections(self, hKinematicEfficiency2D, jetR, obs_label, obs_setting, sd_setting):
     
@@ -835,14 +798,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR)
+    text = '#it{R} = ' + str(jetR)
     text_latex.DrawLatex(0.3, 0.85, text)
     
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = 'z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    text_latex.DrawLatex(0.3, 0.75, text)
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.3, 0.78, text)
+    
+    if sd_setting:
+      text = self.utils.formatted_sd_label(sd_setting)
+      text_latex.DrawLatex(0.3, 0.71, text)
     
     line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
     line.SetLineColor(920+2)
@@ -871,12 +837,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
       
-      self.plot_Obs_Response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse)
+      self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse)
 
   #################################################################################################
   # Plot 2D observable response for a fixed range of pt-truth
   #################################################################################################
-  def plot_Obs_Response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse):
+  def plot_obs_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse):
     
     hResponse4D = hResponse.Clone()
     hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
@@ -890,37 +856,13 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hResponse_Obs = hResponse4D.Projection(3,2)
     hResponse_Obs.SetName('hResponse_Obs_R{}_{}_{}_{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth)))
     
-    hResponse_Obs_Normalized = self.normalizeResponseMatrix(hResponse_Obs)
+    hResponse_Obs_Normalized = self.utils.normalize_response_matrix(hResponse_Obs)
     
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)
     
     output_dir = getattr(self, 'output_dir_RM')
     outputFilename = os.path.join(output_dir, '{}{}'.format(hResponse_Obs.GetName(), self.file_format))
     self.utils.plot_hist(hResponse_Obs_Normalized, outputFilename, 'colz', False, True, text)
-
-  ################################################################################################
-  # Normalize response matrix
-  # Normalize the truth projection to 1
-  ################################################################################################
-  def normalizeResponseMatrix(self, hResponseMatrix):
-    
-    # Make projection onto true axis (y-axis), and scale appropriately
-    hTruthProjectionBefore = hResponseMatrix.ProjectionY('{}_py'.format(hResponseMatrix.GetName()),1,hResponseMatrix.GetNbinsX()) # Do exclude under and overflow bins
-    hTruthProjectionBefore.SetName("hTruthProjectionBefore")
-    
-    # Loop through truth-level bins, and apply normalization factor to all bins.
-    nBinsY = hResponseMatrix.GetNbinsY() # truth
-    nBinsX = hResponseMatrix.GetNbinsX() # det
-    for truthBin in range(1,nBinsY+1):
-      normalizationFactor = hTruthProjectionBefore.GetBinContent(truthBin)
-      if normalizationFactor > 0:
-        truthBinCenter = hTruthProjectionBefore.GetXaxis().GetBinCenter(truthBin)
-        
-        for detBin in range(1,nBinsX+1):
-          binContent = hResponseMatrix.GetBinContent(detBin, truthBin)
-          hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
-
-    return hResponseMatrix
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum
