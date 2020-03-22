@@ -26,20 +26,24 @@ import fjext
 from pyjetty.alice_analysis.process.base import common_base
 
 ################################################################
-class process_io(common_base.common_base):
+class ProcessIO(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input_file='', output_dir='', track_tree_name='tree_Particle', **kwargs):
-    super(process_io, self).__init__(**kwargs)
+  def __init__(self, input_file='', tree_dir='PWGHF_TreeCreator',
+               track_tree_name='tree_Particle', event_tree_name='tree_event_char', output_dir='', **kwargs):
+    super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
-    if self.output_dir[-1] != '/':
-      self.output_dir += '/'
+    self.tree_dir = tree_dir
+    if len(tree_dir) and tree_dir[-1] != '/':
+      self.tree_dir += '/'
     self.track_tree_name = track_tree_name
-    self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
+    self.event_tree_name = event_tree_name
     self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
+    if len(output_dir) and output_dir[-1] != '/':
+      self.output_dir += '/'
     self.reset_dataframes()
   
   #---------------------------------------------------------------
@@ -67,7 +71,6 @@ class process_io(common_base.common_base):
     print('Convert ROOT trees to pandas dataframes...')
     print('    track_tree_name = {}'.format(self.track_tree_name))
 
-    
     self.track_df = self.load_dataframe()
     
     if self.reject_tracks_fraction > 1e-3:
@@ -88,21 +91,22 @@ class process_io(common_base.common_base):
   #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   #---------------------------------------------------------------
   def load_dataframe(self):
-    
+
     # Load event tree into dataframe, and apply event selection
-    self.event_tree = uproot.open(self.input_file)[self.event_tree_name]
+    event_tree_name = self.tree_dir + self.event_tree_name
+    self.event_tree = uproot.open(self.input_file)[event_tree_name]
     if not self.event_tree:
-      print('Tree {} not found in file {}'.format(self.event_tree_name, self.input_file))
+      print('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
     self.event_df_orig = self.event_tree.pandas.df(self.event_columns)
     self.event_df_orig.reset_index(drop=True)
     self.event_df = self.event_df_orig.query('is_ev_rej == 0')
     self.event_df.reset_index(drop=True)
 
     # Load track tree into dataframe
-    self.track_tree_name = 'PWGHF_TreeCreator/{}'.format(self.track_tree_name)
-    self.track_tree = uproot.open(self.input_file)[self.track_tree_name]
+    track_tree_name = self.tree_dir + self.track_tree_name
+    self.track_tree = uproot.open(self.input_file)[track_tree_name]
     if not self.track_tree:
-      print('Tree {} not found in file {}'.format(self.track_tree_name, self.input_file))
+      print('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
     self.track_df_orig = self.track_tree.pandas.df()
 
     # Merge event info into track tree
@@ -112,8 +116,9 @@ class process_io(common_base.common_base):
   #---------------------------------------------------------------
   # Opposite operation as load_dataframe above. Takes a dataframe
   # with the same formatting and saves to class's output_file.
+  # histograms is list of tuples: [ ("title", np.histogram), ... ]
   #---------------------------------------------------------------
-  def save_dataframe(self, df, filename, histograms=[]):
+  def save_dataframe(self, filename, df, df_true=False, histograms=[]):
 
     # Create output directory if it does not already exist
     if not os.path.exists(self.output_dir):
@@ -122,19 +127,44 @@ class process_io(common_base.common_base):
     # Open output directory and (re)create rootfile
     with uproot.recreate(self.output_dir + filename) as f:
 
+      if df_true:
+        # Create tree with truth particle info
+        title = 'tree_Particle_gen'
+        branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
+                      "ParticleEta": float, "ParticlePhi": float}
+        print("Length of truth track tree: %i" % len(self.track_df))
+        f[title] = uproot.newtree(branchdict, title=title)
+        f[title].extend( { "run_number": self.track_df["run_number"],
+                           "ev_id": self.track_df["ev_id"], 
+                           "ParticlePt": self.track_df["ParticlePt"],
+                           "ParticleEta": self.track_df["ParticleEta"],
+                           "ParticlePhi": self.track_df["ParticlePhi"] } )
+
+      # Create tree with detector-level particle info
+      title = 'tree_Particle'
       branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
                     "ParticleEta": float, "ParticlePhi": float}
-      # Subdirectories not yet implemented in uproot
-      #title = "PWGHF_TreeCreator/tree_Particle"
-      title = "tree_Particle"
+      print("Length of detector-level track tree: %i" % len(df))
       f[title] = uproot.newtree(branchdict, title=title)
       f[title].extend( { "run_number": df["run_number"], "ev_id": df["ev_id"], 
                          "ParticlePt": df["ParticlePt"], "ParticleEta": df["ParticleEta"],
                          "ParticlePhi": df["ParticlePhi"] } )
 
+      # Create tree with event char
+      title = self.event_tree_name
+      branchdict = {"is_ev_rej": int, "run_number": int, "ev_id": int, "z_vtx_reco": float}
+      f[title] = uproot.newtree(branchdict, title=title)
+      f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
+                        "run_number": self.event_df_orig["run_number"], 
+                        "ev_id": self.event_df_orig["ev_id"],
+                        "z_vtx_reco": self.event_df_orig["z_vtx_reco"] } )
+        
+      # Write hNevents histogram: number of accepted events at detector level
+      f["hNevents"] = ( np.array([ 0, df["ev_id"].nunique() ]), np.array([ -0.5, 0.5, 1.5 ]) )
+
       # Write histograms to file too, if any are passed
-      for i, h in enumerate(histograms):
-        f["h%i" % i] = h
+      for title, h in histograms:
+        f[title] = h
 
   #---------------------------------------------------------------
   # Transform the track dataframe into a SeriesGroupBy object

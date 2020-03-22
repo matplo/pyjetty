@@ -7,6 +7,7 @@ import fastjet as fj
 import tqdm
 import argparse
 import os
+import sys
 import numpy as np
 
 from heppy.pythiautils import configuration as pyconf
@@ -18,6 +19,7 @@ import numpy as np
 import array
 import copy
 import random
+import ROOT
 
 from pyjetty.mputils import logbins
 from pyjetty.mputils import MPBase
@@ -30,17 +32,22 @@ class AliceChargedParticleEfficiency(MPBase):
         self.configure_from_args(csystem='pp')
         super(AliceChargedParticleEfficiency, self).__init__(**kwargs)
         # assume self.csystem == 'pp':
-        self.effi_param1 = 0.83
-        self.effi_param2 = 0.795
-        self.effi_param3 = 0.865
-        self.effi_param4 = 0.895
+        tr_eff_f_name = __file__.replace("alice_efficiency.py", "tr_eff.root")
+        self.tr_eff_f = ROOT.TFile.Open(tr_eff_f_name, "READ")
+        self.tr_eff = ROOT.TGraph(self.tr_eff_f.Get("tr_eff"))
+
         if self.csystem == 'PbPb':
-            shift = 0.02
-            self.effi_param1 -= shift
-            self.effi_param2 -= shift
-            self.effi_param3 -= shift
-            self.effi_param4 -= shift
-            
+            # Tracking efficiency approximately 2% better in PbPb
+            shifter = ROOT.TF1("PbPb_shifter", "x+0.02", 0, 150)
+            self.tr_eff.Apply(shifter)
+
+        # Better linear extrapolation than the ROOT TGraph provides for pT > 150 GeV/c
+        x0 = 10
+        y0 = self.tr_eff.Eval(x0)
+        x1 = 150
+        y1 = self.tr_eff.Eval(x1)
+        self.m = (y1 - y0) / (x1 - x0)
+        self.b = y1 - self.m * x1
 
     def apply_efficiency(self, particles):
         output = []
@@ -50,22 +57,20 @@ class AliceChargedParticleEfficiency(MPBase):
         return output
 
     def pass_eff_cut(self, pt):
-        if random.random() > self.effi(pt):
+        if pt > 150 and random.random() > self.lg_pt_eff(pt):
+            return False
+        elif random.random() > self.tr_eff.Eval(pt):
             return False
         return True
 
-    # Some rough piecewise linear functions (made by eye) to describe eff distribution
-    def effi(self, pt):
-        if pt < 0.15:
-            return 0
-        elif pt < 1:
-            return self.effi_param1 * pt
-        elif pt < 2:
-            return 0.035 * pt + self.effi_param2
-        elif pt < 15:
-            return self.effi_param3
-        # else: valid at least for 15 <= pt <= 50 GeV
-        return -0.002 * pT + self.effi_param4
+    def lg_pt_eff(self, pt):
+        lg_pt_eff = self.m * pt + self.b
+        if lg_pt_eff > 0:
+            return lg_pt_eff
+        return 0
+
+    def __del__(self):
+        self.tr_eff_f.Close()
 
 def main():
     parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))

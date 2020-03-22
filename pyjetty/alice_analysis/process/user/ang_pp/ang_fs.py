@@ -61,7 +61,7 @@ class process_ang_mc(process_base.ProcessBase):
     # Use IO helper class to convert detector-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io_det = process_io.ProcessIO(input_file=self.input_file, tree_dir="PWGHF_TreeCreator",
+    io_det = process_io.ProcessIO(input_file=self.input_file, tree_dir="",
                                    track_tree_name="tree_Particle", event_tree_name="tree_event_char")
     df_fjparticles_det = io_det.load_data(self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
@@ -72,7 +72,7 @@ class process_ang_mc(process_base.ProcessBase):
 
     # Use IO helper class to convert truth-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
-    io_truth = process_io.ProcessIO(input_file=self.input_file, tree_dir="PWGHF_TreeCreator",
+    io_truth = process_io.ProcessIO(input_file=self.input_file, tree_dir="",
                                      track_tree_name="tree_Particle_gen", 
                                      event_tree_name="tree_event_char")
     df_fjparticles_truth = io_truth.load_data()

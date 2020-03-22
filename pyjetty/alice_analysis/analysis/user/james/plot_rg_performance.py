@@ -33,13 +33,13 @@ ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetOptTitle(0)
 
 ################################################################
-class plot_rg_performance(common_base.common_base):
+class PlotRgPerformance(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, mc_file = '', data_file = '', config_file = '', output_dir = '', **kwargs):
-    super(plot_rg_performance, self).__init__(**kwargs)
+    super(PlotRgPerformance, self).__init__(**kwargs)
     self.fMC = ROOT.TFile(mc_file, 'READ')
     if data_file:
         self.fData = ROOT.TFile(data_file, 'READ')
@@ -1146,5 +1146,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = plot_rg_performance(mc_file = args.mcFile, data_file = args.dataFile, config_file = args.configFile, output_dir = args.outputDir)
+  analysis = PlotRgPerformance(mc_file = args.mcFile, data_file = args.dataFile, config_file = args.configFile, output_dir = args.outputDir)
   analysis.plot_rg_performance()

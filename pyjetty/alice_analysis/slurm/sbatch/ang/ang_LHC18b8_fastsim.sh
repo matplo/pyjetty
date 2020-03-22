@@ -27,24 +27,24 @@ else
 fi
 
 # Define output path from relevant sub-path of input file
-OUTPUT_PREFIX="AnalysisResults/$JOB_ID"
-# Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
+OUTPUT_PREFIX="AnalysisResults/ang/$JOB_ID"
+# Note: depends on file structure of input file -- need to edit appropriately for each dataset
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f8-13)
 #echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
-#echo "Output dir: $OUTPUT_DIR"
 mkdir -p $OUTPUT_DIR
+echo "Output dir: $OUTPUT_DIR"
 
 # Load modules
-module use /software/users/james/heppy/modules
+module use /home/ezra/heppy/modules
 module load heppy/main_python
-module use /software/users/james/pyjetty/modules
+module use /home/ezra/pyjetty/modules
 module load pyjetty/main_python
 module list
 
 # Run python script via pipenv
-cd /software/users/james/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/james/process_mc.py -c config/james_pp_trkeff.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+cd /home/ezra/pyjetty/pyjetty/alice_analysis
+python process/user/ang_pp/ang_fs.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
-mv /storage/u/alice/AnalysisResults/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/${JOB_ID}/
+mv /storage/u/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/ang/${JOB_ID}

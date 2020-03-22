@@ -37,20 +37,19 @@ from pyjetty.alice_analysis.process.base import process_io_emb
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import jet_info
 from pyjetty.alice_analysis.process.base import process_base
-from pyjetty.mputils import treewriter
 from pyjetty.mputils import CEventSubtractor
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class process_rg_mc(process_base.process_base):
+class ProcessMC(process_base.ProcessBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-    super(process_rg_mc, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(ProcessMC, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
     
     # Initialize configuration
     self.initialize_config()
@@ -58,7 +57,7 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
-  def process_rg_mc(self):
+  def process_mc(self):
     
     start_time = time.time()
     
@@ -67,7 +66,7 @@ class process_rg_mc(process_base.process_base):
     # Use IO helper class to convert detector-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io_det = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle')
+    io_det = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle')
     df_fjparticles_det = io_det.load_data(reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
@@ -77,7 +76,7 @@ class process_rg_mc(process_base.process_base):
 
     # Use IO helper class to convert truth-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
-    io_truth = process_io.process_io(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+    io_truth = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle_gen')
     df_fjparticles_truth = io_truth.load_data()
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
@@ -96,7 +95,7 @@ class process_rg_mc(process_base.process_base):
     
     # Set up the Pb-Pb embedding object
     if not self.is_pp:
-        self.process_io_emb = process_io_emb.process_io_emb(self.emb_file_list, track_tree_name='tree_Particle')
+        self.process_io_emb = process_io_emb.ProcessIO_Emb(self.emb_file_list, track_tree_name='tree_Particle')
     
     # ------------------------------------------------------------------------
 
@@ -115,7 +114,7 @@ class process_rg_mc(process_base.process_base):
     
     # Plot histograms
     print('Save histograms...')
-    process_base.process_base.save_output_objects(self)
+    process_base.ProcessBase.save_output_objects(self)
     
     print('--- {} seconds ---'.format(time.time() - start_time))
   
@@ -125,48 +124,64 @@ class process_rg_mc(process_base.process_base):
   def initialize_config(self):
     
     # Call base class initialization
-    process_base.process_base.initialize_config(self)
+    process_base.ProcessBase.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
-    
-    # Write tree output (default is to write only histograms)
-    self.write_tree_output = config['write_tree_output']
-
+      
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
     if 'mc_fraction_threshold' in config:
       self.mc_fraction_threshold = config['mc_fraction_threshold']
     
-    # Retrieve list of SD grooming settings
-    sd_config_dict = config['SoftDrop']
-    sd_config_list = list(sd_config_dict.keys())
-    self.sd_settings = [[sd_config_dict[name]['zcut'], sd_config_dict[name]['beta']] for name in sd_config_list]
-
     if self.do_constituent_subtraction:
         self.is_pp = False
         self.emb_file_list = config['emb_file_list']
     else:
         self.is_pp = True
-        
-    # Check if sub-jet analysis is activated
-    self.do_subjets = False
-    if 'Subjet' in config:
-      print('Subjet analysis activated')
-      self.do_subjets = True
-      self.subjet_R = config['Subjet']['subjet_R']
-      
-      self.subjet_def = {}
-      for subjetR in self.subjet_R:
-        self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+     
+    self.observable_list = config['process_observables']
     
-    # Check if jet axis analysis is activated
-    self.do_jet_axes = False
-    if 'JetAxis' in config:
-      print('Jet axis analysis activated')
-      self.do_jet_axes = True
-      self.axis_list = config['JetAxis']['axis_list']
+    # Create dictionaries to store SD settings and observable settings for each observable
+    # Each dictionary entry stores a list of subconfiguration parameters
+    #   The SD list stores a list of SD settings [zcut, beta]
+    #   The observable list stores a the observable setting, e.g. subjetR
+    self.obs_sd_settings = {}
+    self.obs_settings = {}
+    
+    for observable in self.observable_list:
+      
+      # Fill SD settings
+      self.obs_sd_settings[observable] = []
+      obs_config_dict = config[observable]
+      for config_key, subconfig in obs_config_dict.items():
+        if 'SoftDrop' in subconfig:
+          sd_dict = obs_config_dict[config_key]['SoftDrop']
+          self.obs_sd_settings[observable].append([sd_dict['zcut'], sd_dict['beta']])
+        else:
+          self.obs_sd_settings[observable].append(None)
+      
+      # Fill observable settings
+      self.obs_settings[observable] = []
+      obs_config_dict = config[observable]
+      obs_config_list =  [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+     
+      if observable == 'subjet_z':
+        self.obs_settings[observable] = [obs_config_dict[name]['subjet_R'] for name in obs_config_list]
+        self.subjet_def = {}
+        for subjetR in self.obs_settings[observable]:
+          self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+      if observable == 'jet_axis':
+        self.obs_settings[observable] = [obs_config_dict[name]['axis'] for name in obs_config_list]
+         
+    # Construct set of unique SD settings
+    self.sd_settings = []
+    lists = [self.obs_sd_settings[obs] for obs in self.observable_list]
+    for observable in lists:
+      for setting in observable:
+        if setting not in self.sd_settings and setting != None:
+          self.sd_settings.append(setting)
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -213,7 +228,19 @@ class process_rg_mc(process_base.process_base):
           name = 'hDeltaR_combined_ppdet_R{}'.format(jetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
-      
+          
+          if 'subjet_z' in self.observable_list:
+          
+            for subjetR in self.obs_settings['subjet_z']:
+          
+              name = 'hSubjetDeltaR_combined_ppdet_R{}_{}'.format(jetR, subjetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              setattr(self, name, h)
+              
+              name = 'hSubjetDeltaR_ppdet_pptrue_R{}_{}'.format(jetR, subjetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              setattr(self, name, h)
+              
       name = 'hZ_Truth_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
@@ -221,42 +248,13 @@ class process_rg_mc(process_base.process_base):
       name = 'hZ_Det_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
+            
+      name = 'hJetPt_Truth_R{}'.format(jetR)
+      h = ROOT.TH1F(name, name, 300, 0, 300)
+      setattr(self, name, h)
       
-      if not self.write_tree_output:
-      
-        name = 'hJetPt_Truth_R{}'.format(jetR)
-        h = ROOT.TH1F(name, name, 300, 0, 300)
-        setattr(self, name, h)
-
-      for sd_setting in self.sd_settings:
-        
-        zcut = sd_setting[0]
-        beta = sd_setting[1]
-        sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-        
-        name = 'hThetaG_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-        h.GetXaxis().SetTitle('p_{T,truth}')
-        h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
-        setattr(self, name, h)
-        
-        name = 'hZg_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-        h.GetXaxis().SetTitle('p_{T,truth}')
-        h.GetYaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
-        setattr(self, name, h)
-        
-        name = 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)
-        h = ROOT.TH2F(name, name, 300, 0, 300, int(3*jetR*100), -3*jetR, 3*jetR)
-        h.GetXaxis().SetTitle('p_{T,truth}')
-        h.GetYaxis().SetTitle('#theta_{g,det}-#theta_{g,truth}')
-        setattr(self, name, h)
-        
-        name = 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, -0.5, 0.5)
-        h.GetXaxis().SetTitle('p_{T,truth}')
-        h.GetYaxis().SetTitle('z_{g,det}-z_{g,truth}')
-        setattr(self, name, h)
+      for sd_setting in self.obs_sd_settings['theta_g']:
+        sd_label = self.utils.sd_label(sd_setting)
         
         if not self.is_pp:
         
@@ -314,115 +312,144 @@ class process_rg_mc(process_base.process_base):
             h.GetYaxis().SetTitle('N_subleading_pp_det')
             h.GetZaxis().SetTitle('N_leading_pp_det')
             setattr(self, name, h)
-
-        if  self.write_tree_output:
-
-          # Initialize tree to write out event variables
-          tree_name = 't_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-          t = ROOT.TTree(tree_name, tree_name)
-          tree_writer_name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-          tree_writer = treewriter.RTreeWriter(tree=t, tree_name=tree_name, name=tree_writer_name, file_name=None)
-          setattr(self, tree_writer_name, tree_writer)
-            
-        else:
           
-          # Create THn of response for theta_g
-          dim = 4;
-          title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-          nbins = [100, 60, 130, 26]
-          min = [0., 0., 0., 0.]
-          max = [100., 300., 1.3, 1.3]
+      for observable in self.observable_list:
 
-          name = 'hResponse_JetPt_ThetaG_R{}_{}'.format(jetR, sd_label)
-          nbins = (nbins)
-          xmin = (min)
-          xmax = (max)
-          nbins_array = array('i', nbins)
-          xmin_array = array('d', xmin)
-          xmax_array = array('d', xmax)
-          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-          for i in range(0, dim):
-            h.GetAxis(i).SetTitle(title[i])
+        if observable == 'theta_g':
+
+          for sd_setting in self.obs_sd_settings[observable]:
+
+            # Create THn of response for theta_g
+            sd_label = self.utils.sd_label(sd_setting)
+            dim = 4;
+            title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
+            nbins = [100, 60, 100, 20]
+            min = [0., 0., 0., 0.]
+            max = [100., 300., 1., 1.]
+            name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, sd_label)
+            nbins = (nbins)
+            xmin = (min)
+            xmax = (max)
+            nbins_array = array('i', nbins)
+            xmin_array = array('d', xmin)
+            xmax_array = array('d', xmax)
+            h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+            for i in range(0, dim):
+              h.GetAxis(i).SetTitle(title[i])
+            setattr(self, name, h)
+            
+            name = 'hThetaG_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
+            setattr(self, name, h)
+            
+            name = 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, int(3*jetR*100), -3*jetR, 3*jetR)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#theta_{g,det}-#theta_{g,truth}')
+            setattr(self, name, h)
+            
+        if observable == 'zg':
+
+          for sd_setting in self.obs_sd_settings[observable]:
+          
+            # Create THn of response for z_g
+            sd_label = self.utils.sd_label(sd_setting)
+            dim = 4;
+            title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
+            nbins = [100, 60, 50, 10]
+            min = [0., 0., 0., 0.]
+            max = [100., 300., 0.5, 0.5]
+            name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, sd_label)
+            nbins = (nbins)
+            xmin = (min)
+            xmax = (max)
+            nbins_array = array('i', nbins)
+            xmin_array = array('d', xmin)
+            xmax_array = array('d', xmax)
+            h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+            for i in range(0, dim):
+              h.GetAxis(i).SetTitle(title[i])
+            setattr(self, name, h)
+            
+            name = 'hZg_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
+            setattr(self, name, h)
+
+            name = 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, -0.5, 0.5)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('z_{g,det}-z_{g,truth}')
             setattr(self, name, h)
               
-          # Create THn of response for z_g
-          dim = 4;
-          title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-          nbins = [100, 60, 50, 10]
-          min = [0., 0., 0., 0.]
-          max = [100., 300., 0.5, 0.5]
+        if observable == 'subjet_z':
 
-          name = 'hResponse_JetPt_zg_R{}_{}'.format(jetR, sd_label)
-          nbins = (nbins)
-          xmin = (min)
-          xmax = (max)
-          nbins_array = array('i', nbins)
-          xmin_array = array('d', xmin)
-          xmax_array = array('d', xmax)
-          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-          for i in range(0, dim):
-            h.GetAxis(i).SetTitle(title[i])
+          for subjetR in self.obs_settings[observable]:
+            
+            name = 'hSubjetDeltaR_All_R{}_{}'.format(jetR, subjetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+            setattr(self, name, h)
+          
+            name = 'hSubjetZResidual_JetPt_R{}_{}'.format(jetR, subjetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1.0, 1.0)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
             setattr(self, name, h)
             
-      if self.do_subjets:
-        for subjetR in self.subjet_R:
-        
-          name = 'hSubjetDeltaR_All_R{}_{}'.format(jetR, subjetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-          setattr(self, name, h)
-        
-          name = 'hSubjetZResidual_JetPt_R{}_{}'.format(jetR, subjetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, -0.5, 0.5)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
-          setattr(self, name, h)
+            # Create THn of response for subjet z
+            dim = 4;
+            title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
+            nbins = [100, 60, 100, 25]
+            min = [0., 0., 0., 0.]
+            max = [100., 300., 1., 1.]
+            name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
+            nbins = (nbins)
+            xmin = (min)
+            xmax = (max)
+            nbins_array = array('i', nbins)
+            xmin_array = array('d', xmin)
+            xmax_array = array('d', xmax)
+            h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+            for i in range(0, dim):
+              h.GetAxis(i).SetTitle(title[i])
+              setattr(self, name, h)
+            
+        if observable == 'jet_axis':
+              
+          for i, axes in enumerate(self.obs_settings[observable]):
           
-          # Create THn of response for subjet z
-          dim = 4;
-          title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
-          nbins = [100, 60, 100, 25]
-          min = [0., 0., 0., 0.]
-          max = [100., 300., 1., 1.]
-
-          name = 'hResponse_JetPt_SubjetZ_R{}_{}'.format(jetR, subjetR)
-          nbins = (nbins)
-          xmin = (min)
-          xmax = (max)
-          nbins_array = array('i', nbins)
-          xmin_array = array('d', xmin)
-          xmax_array = array('d', xmax)
-          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-          for i in range(0, dim):
-            h.GetAxis(i).SetTitle(title[i])
+            sd_setting = self.obs_sd_settings[observable][i]
+            if sd_setting:
+              sd_label = self.utils.sd_label(sd_setting)
+            else:
+              sd_label = ''
+            
+            name = 'hJetAxisResidual_JetPt_{}{}_R{}'.format(axes, sd_label, jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
             setattr(self, name, h)
-      
-      if self.do_jet_axes:
-        for axis in self.axis_list:
-        
-          name = 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
-          setattr(self, name, h)
-          
-          # Create THn of response for jet axis deltaR
-          dim = 4;
-          title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
-          nbins = [100, 60, 200, 40]
-          min = [0., 0., 0., 0.]
-          max = [100., 300., jetR, jetR]
 
-          name = 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)
-          nbins = (nbins)
-          xmin = (min)
-          xmax = (max)
-          nbins_array = array('i', nbins)
-          xmin_array = array('d', xmin)
-          xmax_array = array('d', xmax)
-          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-          for i in range(0, dim):
-            h.GetAxis(i).SetTitle(title[i])
-            setattr(self, name, h)
+            # Create THn of response for jet axis deltaR
+            dim = 4;
+            title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
+            nbins = [100, 60, 200, 40]
+            min = [0., 0., 0., 0.]
+            max = [100., 300., jetR, jetR]
+            name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
+            nbins = (nbins)
+            xmin = (min)
+            xmax = (max)
+            nbins_array = array('i', nbins)
+            xmin_array = array('d', xmin)
+            xmax_array = array('d', xmax)
+            h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+            for i in range(0, dim):
+              h.GetAxis(i).SetTitle(title[i])
+              setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -550,17 +577,7 @@ class process_rg_mc(process_base.process_base):
     # Loop through jets and fill response if both det and truth jets are unique match
     for sd_setting in self.sd_settings:
 
-      # Get tree writer
-      tree_writer = None
-      if self.write_tree_output:
-        name = 'tree_writer_R{}_{}'.format(self.utils.remove_periods(jetR), sd_label)
-        tree_writer = getattr(self, name)
-
-      result = [self.fill_jet_matches(sd_setting, jet_det, jetR, tree_writer) for jet_det in jets_det_selected]
-
-      # Fill the tree
-      if self.write_tree_output:
-        tree_writer.fill_tree()
+      result = [self.fill_jet_matches(sd_setting, jet_det, jetR) for jet_det in jets_det_selected]
 
   #---------------------------------------------------------------
   # Fill some background histograms
@@ -646,14 +663,14 @@ class process_rg_mc(process_base.process_base):
                 delta_pt = (jet_pt_det_ungroomed - jet_pp_det_pt)
                 getattr(self, 'hDeltaPt_emb_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, delta_pt)
                 
-        if self.do_subjets:
-        
-          result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, jetR, subjetR) for subjetR in self.subjet_R]
+        if 'subjet_z' in self.observable_list:
+
+          result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, jet_pp_det, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
         
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
   #---------------------------------------------------------------
-  def fill_subjet_matching_histograms(self, jet_det, jet_truth, jetR, subjetR):
+  def fill_subjet_matching_histograms(self, jet_det, jet_truth, jet_pp_det, jetR, subjetR):
   
     # Find subjets
     cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
@@ -661,6 +678,10 @@ class process_rg_mc(process_base.process_base):
 
     cs_subjet_truth = fj.ClusterSequence(jet_truth.constituents(), self.subjet_def[subjetR])
     subjets_truth = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
+    
+    if not self.is_pp:
+      cs_subjet_det_pp = fj.ClusterSequence(jet_pp_det.constituents(), self.subjet_def[subjetR])
+      subjets_det_pp = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
 
     # Loop through subjets and set subjet matching candidates for each subjet in user_info
     if self.is_pp:
@@ -668,7 +689,7 @@ class process_rg_mc(process_base.process_base):
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
         [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hSubjetDeltaR_combined_ppdet_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
-        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hSubjetDeltaR_ppdet_pptrue_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets]
+        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hSubjetDeltaR_ppdet_pptrue_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets_det_pp]
       
     # Loop through subjets and set accepted matches
     if self.is_pp:
@@ -689,7 +710,7 @@ class process_rg_mc(process_base.process_base):
 
           x = ([jet_det.pt(), jet_truth.pt(), z_det, z_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_SubjetZ_R{}_{}'.format(jetR, subjetR)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_subjet_z_R{}_{}'.format(jetR, subjetR)).Fill(x_array)
 
           if z_truth > 1e-5:
             z_resolution = (z_det - z_truth) / z_truth
@@ -698,11 +719,11 @@ class process_rg_mc(process_base.process_base):
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
-  def fill_jet_matches(self, sd_setting, jet_det, jetR, tree_writer):
+  def fill_jet_matches(self, sd_setting, jet_det, jetR):
             
     zcut = sd_setting[0]
     beta = sd_setting[1]
-    sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+    sd_label = self.utils.sd_label(sd_setting)
     
     # Define SoftDrop settings
     # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
@@ -729,42 +750,78 @@ class process_rg_mc(process_base.process_base):
         jet_det_sd = sd.result(jet_det)
         jet_truth_sd = sd.result(jet_truth)
       
-        self.fill_sd_response(tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label)
+        self.fill_sd_response(jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_setting, sd_label)
         
-        if not self.is_pp:
+        if not self.is_pp and sd_setting in self.obs_sd_settings['theta_g']:
           self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_sd, sd, jet_pt_truth_ungroomed, jetR, sd_label)
           
         # Fill jet axis difference
-        if self.do_jet_axes:
-          self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR)
+        if 'jet_axis' in self.observable_list:
+
+            # Recluster with WTA (with larger jet R)
+            jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+            jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
+            if self.debug_level > 2:
+                print('WTA jet definition is:', jet_def)
+            reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
+            jet_det_wta = reclusterer_wta.result(jet_det)
+            jet_truth_wta = reclusterer_wta.result(jet_truth)
+        
+            self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_setting, sd_label)
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jetR):
+  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_setting, sd_label):
+  
+    for axis in self.obs_settings['jet_axis']:
+
+      if axis == 'Standard_SD':
+        if sd_setting in self.obs_sd_settings['jet_axis']:
+
+          deltaR_det = jet_det.delta_R(jet_det_sd)
+          deltaR_truth = jet_truth.delta_R(jet_truth_sd)
           
-    for axis in self.axis_list:
-      
-      if axis == 'SD':
-        deltaR_det = jet_det.delta_R(jet_det_sd)
-        deltaR_truth = jet_truth.delta_R(jet_truth_sd)
-      
-      elif axis == 'WTA':
-        deltaR_det = jet_det.delta_R(self.utils.get_leading_constituent(jet_det))
-        deltaR_truth = jet_truth.delta_R(self.utils.get_leading_constituent(jet_truth))
-         
-      x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
-      x_array = array('d', x)
-      getattr(self, 'hResponse_JetPt_JetAxisDeltaR_Standard_{}_R{}'.format(axis, jetR)).Fill(x_array)
-      
-      if deltaR_truth > 1e-5:
-        axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-        getattr(self, 'hJetAxisResidual_JetPt_Standard_{}_R{}'.format(axis, jetR)).Fill(jet_truth.pt(), axis_resolution)
+          x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+          x_array = array('d', x)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_Standard_SD{}'.format(jetR, sd_label)).Fill(x_array)
+          
+          if deltaR_truth > 1e-5:
+            axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+            getattr(self, 'hJetAxisResidual_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
+          
+      if axis == 'Standard_WTA':
+        if sd_setting == self.sd_settings[0]:
+
+          deltaR_det = jet_det.delta_R(jet_det_wta)
+          deltaR_truth = jet_truth.delta_R(jet_truth_wta)
+          
+          x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+          x_array = array('d', x)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_Standard_WTA'.format(jetR)).Fill(x_array)
+          
+          if deltaR_truth > 1e-5:
+            axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+            getattr(self, 'hJetAxisResidual_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet_truth.pt(), axis_resolution)
+        
+      if axis == 'WTA_SD':
+        if sd_setting in self.obs_sd_settings['jet_axis']:
+
+          deltaR_det = jet_det_sd.delta_R(jet_det_wta)
+          deltaR_truth = jet_truth_sd.delta_R(jet_truth_wta)
+          
+          x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
+          x_array = array('d', x)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_WTA_SD{}'.format(jetR, sd_label)).Fill(x_array)
+          
+          if deltaR_truth > 1e-5:
+            axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
+            getattr(self, 'hJetAxisResidual_JetPt_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_sd_response(self, tree_writer, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_label):
+  def fill_sd_response(self, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_setting, sd_label):
     
     # Get various SoftDrop info
     theta_g_det = self.theta_g(jet_det_sd, jetR)
@@ -773,35 +830,30 @@ class process_rg_mc(process_base.process_base):
     zg_det = self.zg(jet_det_sd)
     zg_truth = self.zg(jet_truth_sd)
     
-    # Fill tree or histograms
-    if self.write_tree_output:
-      tree_writer.fill_branch('jet_pt_det_ungroomed', jet_pt_det_ungroomed)
-      tree_writer.fill_branch('jet_pt_truth_ungroomed', jet_pt_truth_ungroomed)
-      tree_writer.fill_branch('theta_g_det', theta_g_det)
-      tree_writer.fill_branch('theta_g_truth', theta_g_truth)
-      tree_writer.fill_branch('zg_det', zg_det)
-      tree_writer.fill_branch('zg_truth', zg_truth)
-    else:
+    # Fill histograms
+    if sd_setting in self.obs_sd_settings['theta_g']:
+
       x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth])
       x_array = array('d', x)
-      getattr(self, 'hResponse_JetPt_ThetaG_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
+      getattr(self, 'hResponse_JetPt_theta_g_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
+      
+      theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
+      getattr(self, 'hThetaG_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
+      
+      theta_g_resolution = theta_g_det - theta_g_truth
+      getattr(self, 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
+        
+    if sd_setting in self.obs_sd_settings['zg']:
 
       x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth])
       x_array = array('d', x)
       getattr(self, 'hResponse_JetPt_zg_R{}_{}'.format(jetR, sd_label)).Fill(x_array)
 
-    # Fill response histograms
-    theta_g_resolution = (theta_g_det - theta_g_truth) / theta_g_truth
-    getattr(self, 'hThetaG_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
-    
-    theta_g_resolution = theta_g_det - theta_g_truth
-    getattr(self, 'hThetaGResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, theta_g_resolution)
-      
-    zg_resolution = (zg_det - zg_truth) / zg_truth
-    getattr(self, 'hZg_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
+      zg_resolution = (zg_det - zg_truth) / zg_truth
+      getattr(self, 'hZg_RelativeResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
 
-    zg_resolution = zg_det - zg_truth
-    getattr(self, 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
+      zg_resolution = zg_det - zg_truth
+      getattr(self, 'hZgResidual_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_truth_ungroomed, zg_resolution)
 
   #---------------------------------------------------------------
   # Do prong-matching
@@ -1038,5 +1090,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = process_rg_mc(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
-  analysis.process_rg_mc()
+  analysis = ProcessMC(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis.process_mc()

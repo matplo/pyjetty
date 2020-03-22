@@ -21,16 +21,16 @@ from array import *
 import ROOT
 
 # Base class
-from pyjetty.alice_analysis.analysis.base import common_base
+from pyjetty.alice_analysis.analysis.base import common_utils
 
 ################################################################
-class analysis_utils(common_base.common_base):
+class AnalysisUtils(common_utils.CommonUtils):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
-    super(analysis_utils, self).__init__(**kwargs)
+    super(AnalysisUtils, self).__init__(**kwargs)
 
   #---------------------------------------------------------------
   # Rebin 2D (pt, my_observable) histogram according to specified binnings
@@ -40,6 +40,8 @@ class analysis_utils(common_base.common_base):
     # Create empty TH2 with appropriate binning
     name = "%s_rebinned" % name_data
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
+    
+    #  Check whether sumw2 has been previously set, just for our info
     if h.GetSumw2() is 0:
       print('sumw2 not set')
     else:
@@ -55,12 +57,16 @@ class analysis_utils(common_base.common_base):
         content = hData.GetBinContent(bin_x, bin_y)
         h.Fill(x, y, content)
           
+    # We need to manually set the uncertainties, since sumw2 does the wrong thing in this case
+    # Specifically: We fill the rebinned histo from several separate weighted fills, so sumw2
+    # gives sqrt(a^2+b^2) where we simply want counting uncertainties of sqrt(a+b).
     for bin in range(0, h.GetNcells()+1):
       content = h.GetBinContent(bin)
       old_uncertainty = h.GetBinError(bin)
       new_uncertainty = math.sqrt(content)
       h.SetBinError(bin, new_uncertainty)
     
+    # We want to make sure sumw2 is set after rebinning, since we will scale etc. this histogram
     if h.GetSumw2() is 0:
       h.Sumw2()
     return h
@@ -72,7 +78,7 @@ class analysis_utils(common_base.common_base):
   def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, label,
                      n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array,
                      n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array,
-                     observable, power_law_offset=0.):
+                     observable, prior_variation_parameter=0.):
   
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, 
@@ -92,13 +98,13 @@ class analysis_utils(common_base.common_base):
     
     # Loop through THn and fill rebinned THn
     self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, 
-                           observable, power_law_offset)
+                           observable, prior_variation_parameter)
   
   #---------------------------------------------------------------
   # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
   #---------------------------------------------------------------
   def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, 
-                        observable, power_law_offset=0.):
+                        observable, prior_variation_parameter=0.):
     
     # I don't find any global bin index implementation, so I manually loop through axes 
     # (including under/over-flow)...
@@ -119,16 +125,15 @@ class analysis_utils(common_base.common_base):
             content = thn.GetBinContent(global_bin)
             
             # Impose a custom prior, if desired
-            if math.fabs(power_law_offset) > 1e-3 :
-              #print('Scaling prior by power_law_offset={}'.format(power_law_offset))
+            if math.fabs(prior_variation_parameter) > 1e-3 :
+              #print('Scaling prior by prior_variation_parameter={}'.format(prior_variation_parameter))
               if pt_true > 0. and obs_true > 0.:
 
-                scale_factor = math.pow(pt_true, power_law_offset)
+                # Scale number of counts according to variation of pt prior
+                scale_factor = math.pow(pt_true, prior_variation_parameter)
                 
-                if observable == 'zg':
-                  scale_factor *= math.pow(obs_true, power_law_offset)
-                elif observable == 'theta_g':
-                  scale_factor *= (1 + obs_true)
+                # Scale number of counts according to variation of observable prior
+                scale_factor *= self.prior_scale_factor_obs(obs_true, prior_variation_parameter)
 
                 content = content*scale_factor
           
@@ -145,6 +150,13 @@ class analysis_utils(common_base.common_base):
     roounfold_response.Write()
     f.Close()
     print('done')
+
+  #---------------------------------------------------------------
+  # Compute scale factor to vary prior of observable
+  # This should be implemented in analysis_utils_obs.py
+  #---------------------------------------------------------------
+  def prior_scale_factor_obs(self, obs_true, prior_variation_parameter):
+    raise NotImplementedError('Must define prior_scale_factor() in analysis_utils_obs.py!')
 
   #---------------------------------------------------------------
   # Create an empty THn according to specified binnings
@@ -219,6 +231,30 @@ class analysis_utils(common_base.common_base):
       print('Response {} doesn\'t exist -- create it...'.format(response_path))
     
     return rebin_response
+    
+  #----------------------------------------------------------------------
+  # Normalize response matrix: Normalize the truth projection to 1.
+  #----------------------------------------------------------------------
+  def normalize_response_matrix(self, hResponseMatrix):
+    
+    # Make projection onto true axis (y-axis), and scale appropriately
+    # Do exclude under and overflow bins
+    hTruthProjectionBefore = hResponseMatrix.ProjectionY('{}_py'.format(hResponseMatrix.GetName()),1,hResponseMatrix.GetNbinsX())
+    hTruthProjectionBefore.SetName('hTruthProjectionBefore')
+    
+    # Loop through truth-level bins, and apply normalization factor to all bins.
+    nBinsY = hResponseMatrix.GetNbinsY() # truth
+    nBinsX = hResponseMatrix.GetNbinsX() # det
+    for truthBin in range(1,nBinsY+1):
+      normalizationFactor = hTruthProjectionBefore.GetBinContent(truthBin)
+      if normalizationFactor > 0:
+        truthBinCenter = hTruthProjectionBefore.GetXaxis().GetBinCenter(truthBin)
+        
+        for detBin in range(1,nBinsX+1):
+          binContent = hResponseMatrix.GetBinContent(detBin, truthBin)
+          hResponseMatrix.SetBinContent(detBin, truthBin, binContent/normalizationFactor)
+
+    return hResponseMatrix
 
   #----------------------------------------------------------------------
   # Add two histograms in quadrature
@@ -321,14 +357,6 @@ class analysis_utils(common_base.common_base):
         h.SetBinError(bin, new_error_up)
   
   #---------------------------------------------------------------
-  # Remove periods from a label
-  #---------------------------------------------------------------
-  def remove_periods(self, text):
-  
-    string = str(text)
-    return string.replace('.', '')
-  
-  #---------------------------------------------------------------
   # Set legend parameters
   #---------------------------------------------------------------
   def setup_legend(self, leg, textSize):
@@ -386,7 +414,8 @@ class analysis_utils(common_base.common_base):
   #---------------------------------------------------------------
   # Plot and save a 1D histogram
   #---------------------------------------------------------------
-  def plot_hist(self, h, outputFilename, drawOptions = '', setLogy = False, setLogz = False, text = ''):
+  def plot_hist(self, h, outputFilename, drawOptions = '', setLogy = False,
+                setLogz = False, text = ''):
     
     self.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -395,7 +424,7 @@ class analysis_utils(common_base.common_base):
     h.SetLineWidth(1)
     h.SetLineStyle(1)
     
-    c = ROOT.TCanvas("c","c: hist",600,450)
+    c = ROOT.TCanvas("c","c: hist",1800,1350)
     c.cd()
     ROOT.gPad.SetLeftMargin(0.15)
     ROOT.gPad.SetBottomMargin(0.15)

@@ -11,12 +11,11 @@ Some code taken from processing script by James Mulligan
 from __future__ import print_function, division
 
 import os
+import sys
 import argparse
 import time
 import pandas as pd
 import numpy as np
-#import fastjet as fj
-#import fjext
 
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.cstoy import alice_efficiency
@@ -57,6 +56,11 @@ class eff_smear:
 
         # ------------------------------------------------------------------------
 
+        # Build truth-level histogram of track pT multiplicity
+        print("Building truth-level track pT histogram...")
+        self.hist_list.append( ("truth_pt", self.build_pt_hist()) )
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
         # Apply eta cut at the end of the TPC
         self.df_fjparticles = self.apply_eta_cut(self.df_fjparticles)
         print('--- {} seconds ---'.format(time.time() - start_time))
@@ -65,17 +69,27 @@ class eff_smear:
         self.df_fjparticles = self.apply_eff_cut(self.df_fjparticles)
         print('--- {} seconds ---'.format(time.time() - start_time))
 
+        # Build truth-level histogram of track pT multiplicity after efficiency cuts
+        print("Building truth-level track pT histogram after efficiency cuts...")
+        self.hist_list.append( ("truth_pt_eff_cuts", self.build_pt_hist()) )
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
         # Apply pT smearing
         self.df_fjparticles = self.apply_pt_smear(self.df_fjparticles)
+        print('--- {} seconds ---'.format(time.time() - start_time))
+
+        # Build truth-level histogram of track pT multiplicity
+        print("Building detector-level track pT histogram...")
+        self.hist_list.append( ("fastsim_pt", self.build_pt_hist()) )
         print('--- {} seconds ---'.format(time.time() - start_time))
 
         # ------------------------------------------------------------------------
 
         # Write data to file
-
         print(self.df_fjparticles)
         print("Writing fast simulation to ROOT TTree...")
-        self.io.save_dataframe(self.df_fjparticles, "AnalysisResultsFastSim.root", self.hist_list)
+        self.io.save_dataframe("AnalysisResultsFastSim.root", self.df_fjparticles,
+                               df_true=True, histograms=self.hist_list)
         print('--- {} seconds ---'.format(time.time() - start_time))
 
 
@@ -85,17 +99,17 @@ class eff_smear:
     def init_df(self):
         # Use IO helper class to convert truth-level ROOT TTree into
         # a SeriesGroupBy object of fastjet particles per event
-        self.io = process_io.process_io(input_file=self.input_file, output_dir=self.output_dir,
-                                         track_tree_name='tree_Particle_gen')
+        self.io = process_io.ProcessIO(input_file=self.input_file, output_dir=self.output_dir,
+                                        tree_dir='PWGHF_TreeCreator',
+                                        track_tree_name='tree_Particle_gen')
         self.df_fjparticles = self.io.load_dataframe()
-        #self.df_fjparticles = io_truth.load_data(group_by_evid=False)  # Get particle info in fj format (slow)
         self.nTracks_truth = len(self.df_fjparticles)
         print("DataFrame loaded from data.")
         print(self.df_fjparticles)
 
         # Initialize a list of histograms to be written to file
         self.hist_list = []
-        
+
     #---------------------------------------------------------------
     # Apply eta cuts
     #---------------------------------------------------------------
@@ -104,6 +118,15 @@ class eff_smear:
         print("%i out of %i total truth tracks deleted after eta cut." % \
               (self.nTracks_truth - len(df), self.nTracks_truth))
         return df
+
+    #---------------------------------------------------------------
+    # Build histogram of pT values and return it
+    #---------------------------------------------------------------
+    def build_pt_hist(self):
+        bins = np.concatenate((np.arange(0, 0.3, 0.05), np.arange(0.3, 1, 0.1), np.arange(1, 3, 0.2), 
+                               np.arange(3, 10, 0.5), np.arange(10, 20, 1),
+                               np.arange(20, 50, 2), np.arange(50, 155, 5)))
+        return np.histogram(self.df_fjparticles["ParticlePt"], bins=bins)
 
     #---------------------------------------------------------------
     # Apply efficiency cuts
@@ -133,9 +156,9 @@ class eff_smear:
         pt_dif = [ (pt_smear - pt_true) / pt_true for pt_smear, pt_true in zip(smeared_pt, true_pt) ]
         pt_bins = np.concatenate((np.arange(0, 1, 0.1), np.arange(1, 10, .5), np.arange(10, 20, 1),
                                   np.arange(20, 50, 2), np.arange(50, 95, 5)))
-        dif_bins = np.arange(0, 0.5, .001)
+        dif_bins = np.arange(-0.5, 0.5, .001)
         pt_smearing_dists = np.histogram2d(true_pt, pt_dif, bins=[pt_bins, dif_bins])
-        self.hist_list.append(pt_smearing_dists)
+        self.hist_list.append( ("pt_smearing", pt_smearing_dists) )
 
         return df
 

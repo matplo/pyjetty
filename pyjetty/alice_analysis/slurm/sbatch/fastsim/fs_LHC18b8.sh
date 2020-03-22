@@ -27,7 +27,7 @@ else
 fi
 
 # Define output path from relevant sub-path of input file
-OUTPUT_PREFIX="AnalysisResults/fs_LHC18b8/$JOB_ID"
+OUTPUT_PREFIX="AnalysisResults/fastsim/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
 #echo $OUTPUT_SUFFIX
@@ -47,4 +47,4 @@ cd /home/ezra/pyjetty/pyjetty/alice_analysis
 python process/user/fastsim/eff_smear.py -i $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
-mv /storage/u/alice/AnalysisResults/fs_LHC18b8/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/fs_LHC18b8/${JOB_ID}
+mv /storage/u/alice/AnalysisResults/fastsim/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/fastsim/${JOB_ID}

@@ -24,13 +24,13 @@ from pyjetty.alice_analysis.analysis.base import analysis_utils
 #import analysis_utils
 
 ################################################################
-class analysis_base(common_base.common_base):
+class AnalysisBase(common_base.CommonBase):
 
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file_data='', input_file_response='', config_file='', output_dir='', file_format='', **kwargs):
-    super(analysis_base, self).__init__(**kwargs)
+    super(AnalysisBase, self).__init__(**kwargs)
     self.input_file_data = input_file_data
     self.input_file_response = input_file_response
     self.config_file = config_file
@@ -44,7 +44,7 @@ class analysis_base(common_base.common_base):
       os.makedirs(self.output_dir)
 
     # Initialize utils class
-    self.utils = analysis_utils.analysis_utils()
+    self.utils = analysis_utils.AnalysisUtils()
   
   #---------------------------------------------------------------
   # Initialize config file into class members

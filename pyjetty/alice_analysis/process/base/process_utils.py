@@ -24,16 +24,16 @@ import fastjet as fj
 import fjext
 
 # Base class
-from pyjetty.alice_analysis.process.base import common_base
+from pyjetty.alice_analysis.process.base import common_utils
 
 ################################################################
-class process_utils(common_base.common_base):
+class ProcessUtils(common_utils.CommonUtils):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
-    super(process_utils, self).__init__(**kwargs)
+    super(ProcessUtils, self).__init__(**kwargs)
   
   #---------------------------------------------------------------
   # Check if det-jet passes acceptance criteria
@@ -77,11 +77,3 @@ class process_utils(common_base.common_base):
         leading_particle = particle
       
     return leading_particle
-
-  #---------------------------------------------------------------
-  # Remove periods from a label
-  #---------------------------------------------------------------
-  def remove_periods(self, text):
-    
-    string = str(text)
-    return string.replace('.', '')

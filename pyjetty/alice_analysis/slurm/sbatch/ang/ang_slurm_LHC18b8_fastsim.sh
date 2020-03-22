@@ -1,14 +1,14 @@
 #! /bin/bash
 
-#SBATCH --job-name="fastsim_mc"
+#SBATCH --job-name="fs_ang_mc"
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-90
 #SBATCH --mail-user=elesser@berkeley.edu --mail-type=ALL
-#SBATCH --output=/storage/u/alice/AnalysisResults/fastsim/slurm-%A_%a.out
+#SBATCH --output=/storage/u/alice/AnalysisResults/ang/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/u/alice/LHC18b8/146/files.txt'
+FILE_PATHS='/rstorage/u/alice/AnalysisResults/fastsim/35478/LHC18b8/146/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
@@ -30,5 +30,5 @@ echo "STOP=$STOP"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun fs_LHC18b8.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+  srun ang_LHC18b8_fastsim.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done

@@ -28,13 +28,13 @@ from pyjetty.alice_analysis.analysis.base import analysis_utils
 from pyjetty.mputils import treereader
 
 ################################################################
-class tree_utils(analysis_utils.analysis_utils):
+class TreeUtils(analysis_utils.AnalysisUtils):
   
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, **kwargs):
-    super(tree_utils, self).__init__(**kwargs)
+    super(TreeUtils, self).__init__(**kwargs)
 
   #---------------------------------------------------------------
   # Construct 2D (pt, obs) histogram according to specified binnings
