@@ -153,15 +153,9 @@ class ProcessMC(process_base.ProcessBase):
     for observable in self.observable_list:
       
       # Fill SD settings
-      self.obs_sd_settings[observable] = []
       obs_config_dict = config[observable]
-      for config_key, subconfig in obs_config_dict.items():
-        if 'SoftDrop' in subconfig:
-          sd_dict = obs_config_dict[config_key]['SoftDrop']
-          self.obs_sd_settings[observable].append([sd_dict['zcut'], sd_dict['beta']])
-        else:
-          self.obs_sd_settings[observable].append(None)
-      
+      self.obs_sd_settings[observable] = self.utils.sd_settings(obs_config_dict)
+
       # Fill observable settings
       self.obs_settings[observable] = []
       obs_config_dict = config[observable]
