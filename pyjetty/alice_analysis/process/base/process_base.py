@@ -16,7 +16,12 @@ import time
 # Data analysis and plotting
 import ROOT
 import yaml
+import numpy as np
 from array import *
+
+# Fastjet via python (from external library heppy)
+import fastjet as fj
+import fjcontrib
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import common_base
@@ -92,6 +97,29 @@ class ProcessBase(common_base.CommonBase):
       h.GetAxis(i).SetTitle(title[i])
     setattr(self, name, h)
 
+  #---------------------------------------------------------------
+  # Return Lund coordinates [log(1/deltaR), log(1/kt)] of a SD jet
+  #---------------------------------------------------------------
+  def lund_coordinates_SD(self, jet_sd):
+
+    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
+    dR = sd_info.dR
+    z = sd_info.z
+    pt = jet_sd.pt()
+    kt = z*dR*pt
+    
+    return [ROOT.TMath.Log(1/dR), ROOT.TMath.Log(kt)]
+    
+  #---------------------------------------------------------------
+  # Return Lund coordinates [log(1/deltaR), log(1/kt)] of a DG jet
+  #---------------------------------------------------------------
+  def lund_coordinates_DG(self, jet_dg):
+
+    dR = jet_dg.Delta()
+    kt = jet_dg.kt()
+    
+    return [np.log(1/dR), np.log(kt)]
+    
   #---------------------------------------------------------------
   # Compare two jets and store matching candidates in user_info
   #---------------------------------------------------------------

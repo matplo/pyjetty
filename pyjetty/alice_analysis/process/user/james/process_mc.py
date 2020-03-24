@@ -334,6 +334,17 @@ class ProcessMC(process_base.ProcessBase):
             name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
             self.create_thn(name, title, dim, nbins, min, max)
 
+      # Plot some Lund planes
+      for sd_setting in self.sd_settings:
+        if sd_setting:
+          sd_label = self.utils.sd_label(sd_setting)
+          self.create_lund_histograms(jetR, sd_label)
+                    
+      for dg_setting in self.dg_settings:
+        if dg_setting:
+          dg_label = 'dg{}'.format(dg_setting)
+          self.create_lund_histograms(jetR, dg_label)
+
       # Create prong matching histograms
       for sd_setting in self.obs_sd_settings['theta_g']:
         if sd_setting:
@@ -346,6 +357,17 @@ class ProcessMC(process_base.ProcessBase):
           dg_label = 'dg{}'.format(dg_setting)
           if not self.is_pp:
             self.create_prong_matching_histograms(jetR, dg_label)
+
+  #---------------------------------------------------------------
+  # Create Lund plane histograms
+  #---------------------------------------------------------------
+  def create_lund_histograms(self, jetR, grooming_label):
+  
+    name = 'hLundPlane_R{}_{}'.format(jetR, grooming_label)
+    h = ROOT.TH2F(name, name, 140, 0, 7, 100, -4., 6.)
+    h.GetXaxis().SetTitle('log(1/ #DeltaR)')
+    h.GetYaxis().SetTitle('log(k_{t})')
+    setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Create theta_g response histograms
@@ -812,9 +834,9 @@ class ProcessMC(process_base.ProcessBase):
           
         jet_det_dg = dy_groomer.result(jet_det, dg_setting)
         jet_truth_dg = dy_groomer.result(jet_truth, dg_setting)
-      
+              
         self.fill_dg_response(jet_det_dg, jet_truth_dg, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, dg_setting)
-        
+          
         if not self.is_pp and dg_setting in self.obs_dg_settings['theta_g']:
           self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg, dy_groomer, jet_pt_truth_ungroomed, jetR, dg_setting, type = 'DG')
 
@@ -872,6 +894,7 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   def fill_sd_response(self, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_setting, sd_label):
     
+    # Fill responses
     observable = 'theta_g'
     theta_g_det = self.theta_g(jet_det_sd, jetR)
     theta_g_truth = self.theta_g(jet_truth_sd, jetR)
@@ -882,6 +905,12 @@ class ProcessMC(process_base.ProcessBase):
     zg_truth = self.zg(jet_truth_sd)
     self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, sd_setting, self.obs_sd_settings['zg'], sd_label)
     
+    # Fill Lund planes
+    lund_coords = self.lund_coordinates_SD(jet_truth_sd)
+    name = 'hLundPlane_R{}_{}'.format(jetR, sd_label)
+    if jet_pt_truth_ungroomed > 100.:
+      getattr(self, name).Fill(lund_coords[0], lund_coords[1])
+    
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
@@ -889,6 +918,7 @@ class ProcessMC(process_base.ProcessBase):
     
     dg_label = 'dg{}'.format(dg_setting)
     
+    # Fill responses
     observable = 'theta_g'
     theta_g_det = jet_det_dg.Delta()/jetR
     theta_g_truth = jet_truth_dg.Delta()/jetR
@@ -898,6 +928,12 @@ class ProcessMC(process_base.ProcessBase):
     zg_det = jet_det_dg.z()
     zg_truth = jet_truth_dg.z()
     self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, dg_setting, self.obs_dg_settings['zg'], dg_label)
+    
+    # Fill Lund planes
+    lund_coords = self.lund_coordinates_DG(jet_truth_dg)
+    name = 'hLundPlane_R{}_dg{}'.format(jetR, dg_setting)
+    if jet_pt_truth_ungroomed > 100.:
+      getattr(self, name).Fill(lund_coords[0], lund_coords[1])
     
   #---------------------------------------------------------------
   # Fill response histograms
