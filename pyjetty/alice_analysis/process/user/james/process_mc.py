@@ -351,11 +351,11 @@ class ProcessMC(process_base.ProcessBase):
 
           for subjetR in self.obs_settings[observable]:
             
-            name = 'hSubjetDeltaR_All_R{}_{}'.format(jetR, subjetR)
+            name = 'hDeltaR_All_{}_R{}_{}'.format(observable, jetR, subjetR)
             h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
             setattr(self, name, h)
           
-            name = 'hSubjetZResidual_JetPt_R{}_{}'.format(jetR, subjetR)
+            name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
             h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1.0, 1.0)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
@@ -380,7 +380,7 @@ class ProcessMC(process_base.ProcessBase):
             else:
               sd_label = ''
             
-            name = 'hJetAxisResidual_JetPt_{}{}_R{}'.format(axes, sd_label, jetR)
+            name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
             h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
@@ -684,7 +684,7 @@ class ProcessMC(process_base.ProcessBase):
 
     # Loop through subjets and set subjet matching candidates for each subjet in user_info
     if self.is_pp:
-        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hSubjetDeltaR_All_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
+        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hDeltaR_All_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
         [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hDeltaR_combined_ppdet_subjet_z_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
@@ -713,7 +713,7 @@ class ProcessMC(process_base.ProcessBase):
 
           if z_truth > 1e-5:
             z_resolution = (z_det - z_truth) / z_truth
-            getattr(self, 'hSubjetZResidual_JetPt_R{}_{}'.format(jetR, subjetR)).Fill(jet_truth.pt(), z_resolution)
+            getattr(self, 'hResidual_JetPt_{}_R{}_{}'.format('subjet_z', jetR, subjetR)).Fill(jet_truth.pt(), z_resolution)
 
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
@@ -819,7 +819,7 @@ class ProcessMC(process_base.ProcessBase):
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-            getattr(self, 'hJetAxisResidual_JetPt_Standard_SD{}_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
+            getattr(self, 'hResidual_JetPt_{}_R{}_Standard_SD{}'.format('jet_axis', jetR, sd_label)).Fill(jet_truth.pt(), axis_resolution)
           
       if axis == 'Standard_WTA':
         if sd_setting == self.sd_settings[0]:
@@ -833,7 +833,7 @@ class ProcessMC(process_base.ProcessBase):
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-            getattr(self, 'hJetAxisResidual_JetPt_Standard_WTA_R{}'.format(jetR)).Fill(jet_truth.pt(), axis_resolution)
+            getattr(self, 'hResidual_JetPt_{}_R{}_Standard_WTA'.format('jet_axis', jetR)).Fill(jet_truth.pt(), axis_resolution)
         
       if axis == 'WTA_SD':
         if sd_setting in self.obs_sd_settings['jet_axis']:
@@ -847,7 +847,7 @@ class ProcessMC(process_base.ProcessBase):
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-            getattr(self, 'hJetAxisResidual_JetPt_WTA_SD{}_R{}'.format(sd_label, jetR)).Fill(jet_truth.pt(), axis_resolution)
+            getattr(self, 'hResidual_JetPt_{}_R{}_WTA_SD{}'.format('jet_axis', jetR, sd_label)).Fill(jet_truth.pt(), axis_resolution)
 
   #---------------------------------------------------------------
   # Fill response histograms
