@@ -102,21 +102,20 @@ class ProcessData(process_base.ProcessBase):
        
     self.observable_list = config['process_observables']
     
-    # Create dictionaries to store SD settings and observable settings for each observable
+    # Create dictionaries to store grooming settings and observable settings for each observable
     # Each dictionary entry stores a list of subconfiguration parameters
-    #   The SD list stores a list of SD settings [zcut, beta]
     #   The observable list stores a the observable setting, e.g. subjetR
-    self.obs_sd_settings = {}
+    #   The SD list stores a list of SD settings [zcut, beta]
+    #   The DG list stores a list of dynamical grooming settings
     self.obs_settings = {}
+    self.obs_sd_settings = {}
+    self.obs_dg_settings = {}
     
     for observable in self.observable_list:
         
-      # Fill SD settings
-      obs_config_dict = config[observable]
-      self.obs_sd_settings[observable] = self.utils.sd_settings(obs_config_dict)
-      
       # Fill observable settings
       self.obs_settings[observable] = []
+      obs_config_dict = config[observable]
       obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
 
       if observable == 'subjet_z':
@@ -127,14 +126,28 @@ class ProcessData(process_base.ProcessBase):
       if observable == 'jet_axis':
         self.obs_settings[observable] = [obs_config_dict[name]['axis'] for name in obs_config_list]
         
+      # Fill SD settings
+      self.obs_sd_settings[observable] = self.utils.sd_settings(obs_config_dict)
+      
+      # Fill dynamical grooming settings
+      self.obs_dg_settings[observable] = self.utils.dg_settings(obs_config_dict)
+        
     # Construct set of unique SD settings
     self.sd_settings = []
-    lists = [self.obs_sd_settings[obs] for obs in self.observable_list]
-    for observable in lists:
+    lists_sd = [self.obs_sd_settings[obs] for obs in self.observable_list]
+    for observable in lists_sd:
       for setting in observable:
         if setting not in self.sd_settings and setting != None:
           self.sd_settings.append(setting)
-    
+              
+    # Construct set of unique DG settings
+    self.dg_settings = []
+    lists_dg = [self.obs_dg_settings[obs] for obs in self.observable_list]
+    for observable in lists_dg:
+      for setting in observable:
+        if setting not in self.dg_settings and setting != None:
+          self.dg_settings.append(setting)
+  
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
@@ -160,23 +173,40 @@ class ProcessData(process_base.ProcessBase):
         if observable == 'theta_g':
         
           for sd_setting in self.obs_sd_settings[observable]:
-            sd_label = self.utils.sd_label(sd_setting)
-            name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
-            h.GetXaxis().SetTitle('p_{T,ch jet}')
-            h.GetYaxis().SetTitle('#theta_{g,ch}')
-            setattr(self, name, h)
+            if sd_setting:
+              sd_label = self.utils.sd_label(sd_setting)
+              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#theta_{g,ch}')
+              setattr(self, name, h)
+            
+          for dg_setting in self.obs_dg_settings[observable]:
+            if dg_setting:
+              name = 'h_{}_JetPt_R{}_dg{}'.format(observable, jetR, dg_setting)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#theta_{g,ch}')
+              setattr(self, name, h)
             
         if observable == 'zg':
         
           for sd_setting in self.obs_sd_settings[observable]:
-            sd_label = self.utils.sd_label(sd_setting)
-            name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
-            h.GetXaxis().SetTitle('p_{T,ch jet}')
-            h.GetYaxis().SetTitle('z_{g,ch}')
-            setattr(self, name, h)
+            if sd_setting:
+              sd_label = self.utils.sd_label(sd_setting)
+              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('z_{g,ch}')
+              setattr(self, name, h)
               
+          for dg_setting in self.obs_dg_settings[observable]:
+            if dg_setting:
+              name = 'h_{}_JetPt_R{}_dg{}'.format(observable, jetR, dg_setting)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('z_{g,ch}')
+              setattr(self, name, h)
         if observable == 'subjet_z':
         
           for subjetR in self.obs_settings[observable]:
@@ -254,6 +284,10 @@ class ProcessData(process_base.ProcessBase):
     # Loop through SD settings and fill SD histograms
     if len(self.sd_settings) > 0:
         result = [[self.analyze_softdrop_jet(sd_setting, jet, jetR) for sd_setting in self.sd_settings] for jet in jets_selected]
+        
+    # Loop through DG settings and fill DG histograms
+    if len(self.dg_settings) > 0:
+        result = [[self.analyze_dg_jet(dg_setting, jet, jetR) for dg_setting in self.dg_settings] for jet in jets_selected]
     
   #---------------------------------------------------------------
   # Fill histograms
@@ -319,6 +353,27 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
+  def analyze_dg_jet(self, dg_setting, jet, jetR):
+    
+    jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+    dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
+    
+    if self.debug_level > 2:
+      print('Dynamical groomer is: {}'.format(dy_groomer.description()))
+
+    # Check additional acceptance criteria
+    if not self.utils.is_det_jet_accepted(jet):
+      return
+
+    # Perform Dynamical grooming
+    jet_dg = dy_groomer.result(jet, dg_setting)
+    
+    # Fill histograms
+    self.fill_dg_histograms(jet_dg, jet, jetR, dg_setting)
+            
+  #---------------------------------------------------------------
+  # Fill histograms
+  #---------------------------------------------------------------
   def fill_jet_histograms(self, jet, jetR):
     
     jet_pt = jet.pt()
@@ -357,6 +412,30 @@ class ProcessData(process_base.ProcessBase):
       getattr(self, 'h_theta_g_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
     if sd_setting in self.obs_sd_settings['zg']:
       getattr(self, 'h_zg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
+
+    if self.debug_level > 1:
+      print('Done.')
+    
+  #---------------------------------------------------------------
+  # Fill DG histograms
+  #---------------------------------------------------------------
+  def fill_dg_histograms(self, jet_dg, jet, jetR, dg_setting):
+    
+    if self.debug_level > 1:
+      print('Filling DG histograms...')
+    
+    jet_pt_ungroomed = jet.pt()
+
+    # DG jet variables
+    # (https://phab.hepforge.org/source/fastjetsvn/browse/contrib/contribs/LundPlane/tags/1.0.3/LundGenerator.hh)
+    dR = jet_dg.Delta()
+    theta_g = dR / jetR
+    zg = jet_dg.z()
+
+    if dg_setting in self.obs_dg_settings['theta_g']:
+      getattr(self, 'h_theta_g_JetPt_R{}_dg{}'.format(jetR, dg_setting)).Fill(jet_pt_ungroomed, theta_g)
+    if dg_setting in self.obs_dg_settings['zg']:
+      getattr(self, 'h_zg_JetPt_R{}_dg{}'.format(jetR, dg_setting)).Fill(jet_pt_ungroomed, zg)
 
     if self.debug_level > 1:
       print('Done.')

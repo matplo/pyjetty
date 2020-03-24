@@ -16,6 +16,7 @@ import time
 # Data analysis and plotting
 import ROOT
 import yaml
+from array import *
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import common_base
@@ -73,6 +74,23 @@ class ProcessBase(common_base.CommonBase):
       self.ghost_area = constituent_subtractor['ghost_area']
     else:
       print('Constituent subtractor is disabled.')
+
+  #---------------------------------------------------------------
+  # Create thn and set as class attribute from name, dim
+  #   and lists of nbins, xmin, xmax.
+  #---------------------------------------------------------------
+  def create_thn(self, name, title, dim, nbins, xmin, xmax):
+    
+    nbins_arr = (nbins)
+    xmin_arr = (min)
+    xmax_arr = (max)
+    nbins_array = array('i', nbins)
+    xmin_array = array('d', xmin)
+    xmax_array = array('d', xmax)
+    h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+    for i in range(0, dim):
+      h.GetAxis(i).SetTitle(title[i])
+    setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Compare two jets and store matching candidates in user_info

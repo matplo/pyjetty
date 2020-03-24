@@ -61,6 +61,24 @@ class CommonUtils(common_base.CommonBase):
       beta = sd_setting[1]
       sd_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
       return sd_label
+      
+  #---------------------------------------------------------------
+  # Get Dynamical Grooming settings (i.e. list that stores DG settings)
+  # from observable config block
+  #---------------------------------------------------------------
+  def dg_settings(self, obs_config_dict):
+  
+    dg_settings = []
+    for config_key, subconfig in obs_config_dict.items():
+      if config_key == 'common_settings':
+        continue
+      if 'DynamicalGrooming' in subconfig:
+        dg_dict = obs_config_dict[config_key]['DynamicalGrooming']
+        dg_settings.append(dg_dict['a'])
+      else:
+        dg_settings.append(None)
+        
+    return dg_settings
 
   #---------------------------------------------------------------
   # Remove periods from a label
