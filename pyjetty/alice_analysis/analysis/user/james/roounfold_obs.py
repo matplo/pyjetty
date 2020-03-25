@@ -96,6 +96,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
       setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
       setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
+      setattr(self, 'ymax', self.obs_config_dict['common_settings']['ymax'])
 
       # Retrieve histogram binnings for each observable setting
       for i, _ in enumerate(self.obs_subconfig_list):
@@ -146,7 +147,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           setattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label), name_data_rebinned)
           setattr(self, 'name_roounfold_R{}_{}'.format(jetR, obs_label), name_roounfold)
             
-      self.regularizationParamName = 'n_iter'
+      self.reg_param_name = 'n_iter'
       self.errorType = ROOT.RooUnfold.kCovToy
 
   #---------------------------------------------------------------
@@ -215,7 +216,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #---------------------------------------------------------------
   def create_output_dirs(self):
     
-    dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt', 'Unfolded_ratio', 'Unfolded_uncertainties', 'StatisticalClosureTest', 'Refolding']
+    dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt', 'Unfolded_ratio', 'Unfolded_uncertainties', 'Test_StatisticalClosure', 'Test_Refolding']
     for dir in dirs:
       output_dir = os.path.join(self.output_dir, dir)
       setattr(self, 'output_dir_{}'.format(dir), output_dir)
@@ -260,7 +261,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     # Unfold spectrum
     if hData_PerBin and hMC_Det and hMC_Truth:
       
-      self.unfoldJetSpectrum(jetR, obs_label, obs_setting, sd_setting)
+      self.unfold_observable(jetR, obs_label, obs_setting, sd_setting)
+      self.unfolding_checks(jetR, obs_label, obs_setting, sd_setting)
 
   #################################################################################################
   # Compute SD tagging rate, based on MC correction
@@ -311,42 +313,31 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Unfold jet spectrum
   #################################################################################################
-  def unfoldJetSpectrum(self, jetR, obs_label, obs_setting, sd_setting):
+  def unfold_observable(self, jetR, obs_label, obs_setting, sd_setting):
     
-    self.utils.set_plotting_options()
-    ROOT.gROOT.ForceStyle()
-    
-    # Create canvas to superpose iterations on one plot, to examine convergence
-    c1 = ROOT.TCanvas('c1_{}_{}'.format(jetR, obs_label),'c1_{}_{}: histos'.format(jetR, obs_label),600,450)
-    c1.cd()
-    c1.SetLogy()
-    ROOT.gPad.SetLeftMargin(0.15)
-    leg = ROOT.TLegend(0.6,0.5,0.88,0.83,"{} Unfolding".format(type))
-    leg.SetFillColor(10)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
-    leg.SetTextSize(0.04)
-    
-    # Loop over values of regularization parameter
+    # Get response and data to unfold
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
 
     name_data = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
     hData = getattr(self, name_data)
 
+    # Write unfolded results to a ROOT file
     fResult_name = getattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label))
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
     
+    # Select final regularization parameter
     reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
     
+    # Loop over values of regularization parameter
     for i in range(1, reg_param_final + 3):
       
       # Set up the Bayesian unfolding object
-      unfoldBayes = ROOT.RooUnfoldBayes(response, hData, i)
+      unfold_bayes = ROOT.RooUnfoldBayes(response, hData, i)
       #unfoldBayes.SetNToys(1000)
       
       # Perform the unfolding
-      print('Unfolding with {} = {}'.format(self.regularizationParamName, i))
-      hUnfolded = unfoldBayes.Hreco(self.errorType) # Produces the truth distribution, with errors, PerBin (will scale by bin width below, after refolding checks)
+      print('Unfolding with {} = {}'.format(self.reg_param_name, i))
+      hUnfolded = unfold_bayes.Hreco(self.errorType) # Produces the truth distribution, with errors, PerBin (will scale by bin width below, after refolding checks)
       
       # Save unfolded solution as class member
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)
@@ -362,38 +353,21 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       hUnfolded.Write()
       
       # Plot Pearson correlation coeffs for each k, to get a measure of the correlation between the bins
-      covarianceMatrix = unfoldBayes.Ereco(self.errorType) # Get the covariance matrix
+      covarianceMatrix = unfold_bayes.Ereco(self.errorType) # Get the covariance matrix
       #plotCorrelationCoefficients(covarianceMatrix, i, output_dir, file_format)
       
     fResult.Close()
     print('Done unfolding')
-      
-    self.plot_unfolded_observable(jetR, obs_label, obs_setting, sd_setting)
 
+    # Plot unfolded results
+    self.utils.set_plotting_options()
+    ROOT.gROOT.ForceStyle()
+    
+    self.plot_unfolded_observable(jetR, obs_label, obs_setting, sd_setting)
     self.plot_unfolded_pt(jetR, obs_label, obs_setting, sd_setting)
 
-    #--------------------------------------------------------------
-    
-    # Smear MC truth spectrum according to the error bars on the measured spectrum, for closure test
-    
-    name_data = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
-    hData = getattr(self, name_data)
-    hMC_Det = getattr(self, 'hMC_Det_R{}_{}'.format(jetR, obs_label))
-
-    measuredErrors = self.getMeasuredErrors(hData)
-    self.smearSpectrum(hMC_Det, measuredErrors)
-
-    # Loop over values of regularization parameter to do unfolding checks
-    for i in range(1, reg_param_final + 3):
-      
-      # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
-      self.plot_refolding_test(i, jetR, obs_label, obs_setting, sd_setting)
-
-      # Unfold the smeared det-level result with response, and compare to truth-level MC.
-      self.plot_closure_test(i, jetR, obs_label, obs_setting, sd_setting)
-
   #################################################################################################
-  # Plot various slices of the response matrix (from the THn)
+  # Plot unfolded observable for various pt slices
   #################################################################################################
   def plot_unfolded_observable(self, jetR, obs_label, obs_setting, sd_setting):
     
@@ -409,7 +383,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, option = 'uncertainties')
 
   #################################################################################################
-  # Plot various slices of the response matrix (from the THn)
+  # Plot observable for a single pt slicee
   #################################################################################################
   def plot_observable(self, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, option = ''):
 
@@ -436,7 +410,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(self.ytitle)
-    myBlankHisto.SetMaximum(4)
+    myBlankHisto.SetMaximum(getattr(self, 'ymax'))
     myBlankHisto.SetMinimum(0.)
     if option == 'ratio':
       myBlankHisto.SetMaximum(1.2)
@@ -508,7 +482,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       else:
         h.DrawCopy('PE X0 same')
       
-      label = '{} = {}'.format(self.regularizationParamName, i)
+      label = '{} = {}'.format(self.reg_param_name, i)
       leg.AddEntry(h, label, 'Pe')
 
     leg.Draw()
@@ -523,14 +497,22 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
-    text_latex.DrawLatex(0.25, 0.85, text)
-
+    text_latex.DrawLatex(0.35, 0.85, text)
+    
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    text_latex.DrawLatex(0.25, 0.75, text)
+    text = '#it{R} = ' + str(jetR)
+    text_latex.DrawLatex(0.35, 0.78, text)
     
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.35, 0.71, text)
+    
+    if sd_setting:
+      text = self.utils.formatted_sd_label(sd_setting)
+      text_latex.DrawLatex(0.35, 0.64, text)
+
     if option == 'ratio':
       output_dir = getattr(self, 'output_dir_Unfolded_ratio')
     elif option == 'uncertainties':
@@ -574,7 +556,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     return h
 
   #################################################################################################
-  # Plot various slices of the response matrix (from the THn)
+  # Get unfolded pt in 1D
   #################################################################################################
   def plot_unfolded_pt(self, jetR, obs_label, obs_setting, sd_setting):
     
@@ -653,20 +635,24 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       
       h.DrawCopy('PE X0 same')
       
-      label = '{} = {}'.format(self.regularizationParamName, i)
+      label = '{} = {}'.format(self.reg_param_name, i)
       leg.AddEntry(h, label, 'Pe')
     
     leg.Draw()
-
+    
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    elif self.observable == 'subjet_z':
-      text = 'R = ' + str(jetR) + '   R_{subjet} = ' + str(obs_setting)
-    elif self.observable == 'jet_axis':
-      text = '#Delta R_{{ {} }}'.format(obs_setting)
-    text_latex.DrawLatex(0.25, 0.75, text)
+    text = '#it{R} = ' + str(jetR)
+    text_latex.DrawLatex(0.35, 0.85, text)
+    
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.35, 0.78, text)
+    
+    if sd_setting:
+      text = self.utils.formatted_sd_label(sd_setting)
+      text_latex.DrawLatex(0.35, 0.71, text)
 
     output_dir = getattr(self, 'output_dir_Unfolded_pt')
     outputFilename = os.path.join(output_dir, 'hUnfoldedPt_{}_R{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), obs_label, self.file_format))
@@ -865,14 +851,37 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.utils.plot_hist(hResponse_Obs_Normalized, outputFilename, 'colz', False, True, text)
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum
+  # Perform refolding test and statistical closure test
+  #################################################################################################
+  def unfolding_checks(self, jetR, obs_label, obs_setting, sd_setting):
+         
+    # Smear MC truth spectrum according to the error bars on the measured spectrum, for closure test
+    name_data = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
+    hData = getattr(self, name_data)
+    hMC_Det = getattr(self, 'hMC_Det_R{}_{}'.format(jetR, obs_label))
+
+    measuredErrors = self.getMeasuredErrors(hData)
+    self.smearSpectrum(hMC_Det, measuredErrors)
+
+    # Loop over values of regularization parameter to do unfolding checks
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    for i in range(1, reg_param_final + 3):
+      
+      # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+      self.plot_refolding_test(i, jetR, obs_label, obs_setting, sd_setting)
+
+      # Unfold the smeared det-level result with response, and compare to truth-level MC.
+      self.plot_closure_test(i, jetR, obs_label, obs_setting, sd_setting)
+
+  #################################################################################################
+  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
   def plot_refolding_test(self, i, jetR, obs_label, obs_setting, sd_setting):
         
     hUnfolded = getattr(self, 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i))
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
     
-    hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment)
+    hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at this point)
     
     n_pt_bins_det = getattr(self, 'n_pt_bins_det_{}'.format(obs_label))
     det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
@@ -885,7 +894,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.plot_pt_refolded_slice(hFoldedTruth, i, jetR, obs_label, obs_setting, sd_setting, det_pt_bin_array[2], det_pt_bin_array[-1])
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot refolding test, for a given pt slice
   #################################################################################################
   def plot_obs_refolded_slice(self, hFoldedTruth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_det, max_pt_det):
     
@@ -900,15 +909,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hData_obs.SetName('hData_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i, min_pt_det, max_pt_det))
     
     legendTitle = ''
-    h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
-    output_dir = getattr(self, 'output_dir_Refolding')
+    output_dir = getattr(self, 'output_dir_Test_Refolding')
     outputFilename = os.path.join(output_dir, 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_det), int(max_pt_det), i, self.file_format))
-    self.plot_obs_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot refolding test, for pt dimension
   #################################################################################################
   def plot_pt_refolded_slice(self, hFoldedTruth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_det, max_pt_det):
     
@@ -923,15 +932,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hData_pt.SetName('hData_pt_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i, min_pt_det, max_pt_det))
     
     legendTitle = ''
-    h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
-    output_dir = getattr(self, 'output_dir_Refolding')
+    output_dir = getattr(self, 'output_dir_Test_Refolding')
     outputFilename = os.path.join(output_dir, 'hFoldedTruth_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, i, self.file_format))
-    self.plot_obs_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
-  # Closure test
+  # Statistical closure test: Smear data, then unfold and compare to original truth
   #################################################################################################
   def plot_closure_test(self, i, jetR, obs_label, obs_setting, sd_setting):
 
@@ -941,7 +950,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMC_Truth = getattr(self, 'hMC_Truth_R{}_{}'.format(jetR, obs_label))
     
     unfold2 = ROOT.RooUnfoldBayes(response, hMC_Det, i)
-    hUnfolded2 = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin d
+    hUnfolded2 = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin
 
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
@@ -955,7 +964,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, truth_pt_bin_array[1], truth_pt_bin_array[-4])
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot closure test, for a given pt slice
   #################################################################################################
   def plot_obs_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth):
     
@@ -968,15 +977,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMCTruth_obs.SetName('hMCTruth_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i, min_pt_truth, max_pt_truth))
     
     legendTitle = ''
-    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    output_dir = getattr(self, 'output_dir_StatisticalClosureTest')
+    output_dir = getattr(self, 'output_dir_Test_StatisticalClosure')
     outputFilename = os.path.join(output_dir, 'hClosure_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), i, self.file_format))
-    self.plot_obs_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot closure test, for pt dimension
   #################################################################################################
   def plot_pt_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth):
   
@@ -989,12 +998,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMCTruth_pt.SetName('hMCTruth_pt_R{}_{}_{}_'.format(jetR, obs_label, i))
     
     legendTitle = ''
-    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    output_dir = getattr(self, 'output_dir_StatisticalClosureTest')
+    output_dir = getattr(self, 'output_dir_Test_StatisticalClosure')
     outputFilename = os.path.join(output_dir, 'hClosure_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, i, self.file_format))
-    self.plot_obs_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Get errors from measured spectrum, stored as dictionary {bin:error}
@@ -1072,7 +1081,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Plot spectra and ratio of h (and h3, if supplied) to h2
   #################################################################################################
-  def plot_obs_obs_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, obs_label, obs_setting, sd_setting, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
+  def plot_obs_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, obs_label, obs_setting, sd_setting, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -1100,17 +1109,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h.GetYaxis().SetTitle(yAxisTitle)
     
     h.GetYaxis().SetTitleSize(0.06)
-    if self.observable == 'theta_g':
-      if '_pt_' in outputFilename:
-        h.GetYaxis().SetRangeUser(1e-4, 10.)
-      else:
-        h.GetYaxis().SetRangeUser(0., 3.)
+    if '_pt_' in outputFilename:
+      h.GetYaxis().SetRangeUser(1e-4, 10.)
+    else:
+      h.GetYaxis().SetRangeUser(0., getattr(self, 'ymax'))
 
-    if self.observable == 'zg':
-      if '_pt_' in outputFilename:
-        h.GetYaxis().SetRangeUser(1e-4, 10.)
-      else:
-        h.GetYaxis().SetRangeUser(0., 8.)
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
     xAxisTitle = self.xtitle
@@ -1202,17 +1205,20 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       text_latex.SetNDC()
       text = str(min_pt_det) + ' < #it{p}_{T,ch jet} < ' + str(max_pt_det)
       text_latex.DrawLatex(0.25, 0.85, text)
-
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'R = ' + str(jetR)
-    text_latex.DrawLatex(0.25, 0.75, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = 'z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    text_latex.DrawLatex(0.25, 0.65, text)
+    text = '#it{R} = ' + str(jetR)
+    text_latex.DrawLatex(0.25, 0.78, text)
+    
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.25, 0.71, text)
+    
+    if sd_setting:
+      text = self.utils.formatted_sd_label(sd_setting)
+      text_latex.DrawLatex(0.25, 0.64, text)
 
     c.SaveAs(outputFilename)
     c.Close()
