@@ -1,5 +1,28 @@
 #! /usr/bin/env python
 
+'''
+This class steers analysis of generic jet substructure analyses which require 2D unfolding.
+
+To use this class, the following should be done:
+
+  - Produce a histogram of the data, with name h_[obs]_JetPt_R[R]_[subobs]_[SD]
+    The SD part is optional, and should be labeled zcut01_B0 — from CommonUtils::sd_label([zcut, beta])
+    For example: h_subjet_z_JetPt_R0.4_0.1
+    For example: h_subjet_z_JetPt_R0.4_0.1_zcut01_B0
+    
+  - Produce a histogram of the response, with name hResponse_JetPt_[obs]_R[R]_[subobs]_[SD]
+  
+  - Specify a configuration file, see examples in the config/ directory
+  
+  - Implement a user analysis class inheriting from this one, such as in james/run_analysis_james.py
+    You should implement the functions plot_single_result() and plot_all_results(), see example for details.
+    
+  - You also should modify a few observable-specific functions at the top of substructure/analysis_utils_obs.py
+  
+  
+Author: James Mulligan (james.mulligan@berkeley.edu)
+'''
+
 import sys
 import os
 import argparse
@@ -11,8 +34,8 @@ import ROOT
 import yaml
 
 from pyjetty.alice_analysis.analysis.base import common_base
-from pyjetty.alice_analysis.analysis.user.james import analysis_utils_obs
-from pyjetty.alice_analysis.analysis.user.james import roounfold_obs
+from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
+from pyjetty.alice_analysis.analysis.user.substructure import roounfold_obs
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)

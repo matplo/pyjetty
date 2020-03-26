@@ -10,7 +10,7 @@ import ROOT
 import yaml
 
 # Analysis utilities
-from pyjetty.alice_analysis.analysis.user.james import analysis_utils_obs
+from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
 from pyjetty.alice_analysis.analysis.base import analysis_base
 
 # Prevent ROOT from stealing focus when plotting

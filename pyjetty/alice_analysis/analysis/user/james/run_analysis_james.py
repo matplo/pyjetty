@@ -8,7 +8,7 @@ import numpy
 import ROOT
 import yaml
 
-from pyjetty.alice_analysis.analysis.user.james import run_analysis
+from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
