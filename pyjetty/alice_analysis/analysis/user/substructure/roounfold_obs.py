@@ -97,6 +97,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
       setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
       setattr(self, 'ymax', self.obs_config_dict['common_settings']['ymax'])
+      setattr(self, 'pt_bins_reported', self.obs_config_dict['common_settings']['pt_bins_reported'])
 
       # Retrieve histogram binnings for each observable setting
       for i, _ in enumerate(self.obs_subconfig_list):
@@ -295,9 +296,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMC_Truth.SetName('{}_tagging'.format(hMC_Truth.GetName()))
     
     # Compute the tagging fraction for each pt bin
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
     
       fraction_tagged = self.utils.tagging_rate(jetR, min_pt_truth, max_pt_truth, hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
 
@@ -371,12 +372,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   def plot_unfolded_observable(self, jetR, obs_label, obs_setting, sd_setting):
     
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
       self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth)
       self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, option = 'ratio')
@@ -741,11 +739,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
     self.utils.setup_legend(leg,0.04)
     
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
       hKinematicEfficiency2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
       h = hKinematicEfficiency2D.ProjectionY()
@@ -952,11 +948,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     unfold2 = ROOT.RooUnfoldBayes(response, hMC_Det, i)
     hUnfolded2 = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin
 
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
       self.plot_obs_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth)
 

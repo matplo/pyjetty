@@ -83,12 +83,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     ROOT.gROOT.ForceStyle()
 
     # Loop through pt slices, and compute systematics for each 1D theta_g distribution
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
       #self.get_NPcorrection(self.observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
       

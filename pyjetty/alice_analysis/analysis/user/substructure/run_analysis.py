@@ -97,6 +97,7 @@ class RunAnalysis(common_base.CommonBase):
     setattr(self, 'ymax', self.obs_config_dict['common_settings']['ymax'])
     setattr(self, 'ymin_ratio', self.obs_config_dict['common_settings']['ymin_ratio'])
     setattr(self, 'ymax_ratio', self.obs_config_dict['common_settings']['ymax_ratio'])
+    setattr(self, 'pt_bins_reported', self.obs_config_dict['common_settings']['pt_bins_reported'])
 
     # Retrieve histogram binnings for each observable setting
     for i, _ in enumerate(self.obs_subconfig_list):
@@ -260,12 +261,9 @@ class RunAnalysis(common_base.CommonBase):
     self.load_2D_observables(jetR, obs_label, obs_setting, sd_setting, reg_param_final)
     
     # Loop through pt slices, and compute systematics for each 1D observable distribution
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
       # Load 1D unfolded results for each pt slice into attributes
       self.load_1D_observables(jetR, obs_label, obs_setting, sd_setting, reg_param_final, min_pt_truth, max_pt_truth)

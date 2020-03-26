@@ -27,6 +27,7 @@ theta_g:
     ymax_ratio: 2.8
     xtitle: '#theta_{g}'
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+    pt_bins_reported: [20, 40, 60, 80]
 
   config1:
     SoftDrop:
@@ -140,6 +141,7 @@ zg:
     ymax_ratio: 1.6
     xtitle: '#it{z}_{g}'
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
+    pt_bins_reported: [20, 40, 60, 80]
 
   config1:
     SoftDrop:
@@ -253,6 +255,7 @@ subjet_z:
     ymax_ratio: 1.6
     xtitle: '#it{z}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
+    pt_bins_reported: [20, 40, 60, 80]
 
   config1:
     subjet_R: 0.1
@@ -287,6 +290,7 @@ jet_axis:
     ymax_ratio: 1.6
     xtitle: '#it{#Delta R}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#Delta R}'
+    pt_bins_reported: [20, 40, 60, 80]
 
   config1:
     axis: 'Standard_WTA'
