@@ -12,7 +12,7 @@ NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 7 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 100 + 1 ))
+FILES_PER_JOB=$(( $NFILES / 140 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 
 STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))
