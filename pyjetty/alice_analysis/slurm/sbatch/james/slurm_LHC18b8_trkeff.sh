@@ -1,13 +1,13 @@
 #! /bin/bash
 
-#SBATCH --job-name=rgtest
+#SBATCH --job-name=james18b8trk
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-100
-#SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/AnalysisResults/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/u/alice/LHC18qr/147-148/files.txt'
+FILE_PATHS='/rstorage/alice/data/LHC18b8/146/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
@@ -29,5 +29,5 @@ echo "STOP=$STOP"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun process_rg_LHC18qr.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+  srun process_rg_LHC18b8_trkeff.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done

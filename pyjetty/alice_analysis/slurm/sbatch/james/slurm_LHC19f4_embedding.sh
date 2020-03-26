@@ -1,13 +1,13 @@
 #! /bin/bash
 
-#SBATCH --job-name=rgtest
+#SBATCH --job-name=james19f4emb
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-100
-#SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
+#SBATCH --output=/storage/alice/AnalysisResults/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/u/alice/LHC19f4/183/files.txt'
+FILE_PATHS='/rstorage/alice/data/LHC19f4/183/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
