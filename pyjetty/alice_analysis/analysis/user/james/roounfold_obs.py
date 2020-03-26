@@ -326,7 +326,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
     
     # Select final regularization parameter
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
     
     # Loop over values of regularization parameter
     for i in range(1, reg_param_final + 3):
@@ -425,7 +425,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -590,7 +590,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
     
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -864,7 +864,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.smearSpectrum(hMC_Det, measuredErrors)
 
     # Loop over values of regularization parameter to do unfolding checks
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
     for i in range(1, reg_param_final + 3):
       
       # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)

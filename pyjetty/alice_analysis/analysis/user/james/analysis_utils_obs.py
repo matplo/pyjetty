@@ -146,7 +146,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get regularization parameter
   #---------------------------------------------------------------
-  def get_reg_param(self, obs_settings, sd_settings, obs_subconfig_list, obs_config_dict, obs_label, observable, jetR):
+  def get_reg_param(self, obs_settings, sd_settings, obs_subconfig_list, obs_config_dict, obs_label, jetR):
     
     for i, _ in enumerate(obs_subconfig_list):
     
@@ -157,7 +157,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
         
         config_name = obs_subconfig_list[i]
         reg_param = obs_config_dict[config_name]['reg_param'][jetR]
-        #print('reg_param for {} {} jetR={}: {}'.format(obs_label, observable, jetR, reg_param))
           
         return reg_param
       
