@@ -5,7 +5,7 @@
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-140
-#SBATCH --output=/storage/alice/AnalysisResults/james/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
 FILE_PATHS='/rstorage/alice/data/LHC19f4/183/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
