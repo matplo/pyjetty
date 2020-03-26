@@ -3,17 +3,12 @@
 import sys
 import os
 import argparse
-import itertools
 from array import *
 import numpy
-import math
 import ROOT
 import yaml
 
-from pyjetty.alice_analysis.analysis.base import common_base
-import analysis_utils_obs
-import roounfold_obs
-import run_analysis
+from pyjetty.alice_analysis.analysis.user.james import run_analysis
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)

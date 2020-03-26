@@ -11,8 +11,8 @@ import ROOT
 import yaml
 
 from pyjetty.alice_analysis.analysis.base import common_base
-import analysis_utils_obs
-import roounfold_obs
+from pyjetty.alice_analysis.analysis.user.james import analysis_utils_obs
+from pyjetty.alice_analysis.analysis.user.james import roounfold_obs
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -32,8 +32,6 @@ class RunAnalysis(common_base.CommonBase):
     
     # Initialize yaml config
     self.initialize_config()
-
-    print(self)
   
   #---------------------------------------------------------------
   # Initialize config file into class members
