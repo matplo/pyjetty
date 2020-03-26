@@ -539,8 +539,8 @@ class RunAnalysis(common_base.CommonBase):
       
       #self.get_NPcorrection(self.observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
       
-      self.plot_observable(self.observable, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
-      #self.plot_observable(self.observable, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
+      self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
+      #self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
 
   #----------------------------------------------------------------------
   def get_NPcorrection(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
@@ -998,7 +998,7 @@ class RunAnalysis(common_base.CommonBase):
     c.Close()
   
   #----------------------------------------------------------------------
-  def plot_observable(self, observable, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
+  def plot_observable(self, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
     
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -1033,7 +1033,7 @@ class RunAnalysis(common_base.CommonBase):
       plot_pythia_from_response = True
       plot_pythia_from_mateusz = False
       if plot_pythia_from_response:
-        hPythia = self.get_pythia_from_response(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+        hPythia = self.get_pythia_from_response(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
         n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
         n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_bin_array[0]), hPythia.GetNbinsX())
         fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
@@ -1049,7 +1049,7 @@ class RunAnalysis(common_base.CommonBase):
       if plot_pythia_from_mateusz:
         fPythia_name = '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
         fPythia = ROOT.TFile(fPythia_name, 'READ')
-        hname = 'histogram_h_{}_B{}_{}-{}'.format(observable, obs_setting[1], int(min_pt_truth), int(max_pt_truth))
+        hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_setting[1], int(min_pt_truth), int(max_pt_truth))
         hPythia2 = fPythia.Get(hname)
 
         n_jets_inclusive2 = hPythia2.Integral(0, hPythia2.GetNbinsX()+1)
@@ -1065,7 +1065,7 @@ class RunAnalysis(common_base.CommonBase):
         hPythia2.Draw('E2 same')
     
     color = 600-6
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h_sys.SetLineColor(0)
     h_sys.SetFillColor(color)
     h_sys.SetFillColorAlpha(color, 0.3)
@@ -1073,9 +1073,9 @@ class RunAnalysis(common_base.CommonBase):
     h_sys.SetLineWidth(0)
     h_sys.DrawCopy('E2 same')
     
-    name = 'hMain_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    if observable == 'theta_g' or observable == 'zg':
-        fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+    name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    if sd_setting:
+      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = getattr(self, name)
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
@@ -1098,40 +1098,39 @@ class RunAnalysis(common_base.CommonBase):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'R = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.73, text)
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.66, text)
     
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    if observable == 'theta_g' or observable == 'zg':
-      text = '#it{z}_{cut} = ' + str(sd_setting[0]) + '  #beta = ' + str(sd_setting[1])
-    elif observable == 'subjet_z':
-      text = 'R_{subjet} = ' + str(obs_setting)
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.57, 0.59, text)
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.57, 0.59, text)
     
-    if observable == 'theta_g' or observable == 'zg':
-        text_latex = ROOT.TLatex()
-        text_latex.SetNDC()
-        text_latex.SetTextSize(0.04)
-        text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-        text_latex.DrawLatex(0.57, 0.52, text)
-    
-    if plot_pythia:
+    if sd_setting:
+      text = self.utils.formatted_sd_label(sd_setting)
+      text_latex.DrawLatex(0.57, 0.52, text)
+      
       text_latex = ROOT.TLatex()
       text_latex.SetNDC()
       text_latex.SetTextSize(0.04)
-      text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
-      text_latex.DrawLatex(0.57, 0.52, text)
+      text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
+      text_latex.DrawLatex(0.57, 0.45, text)
+    
+      if plot_pythia:
+        text_latex = ROOT.TLatex()
+        text_latex.SetNDC()
+        text_latex.SetTextSize(0.04)
+        text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+        text_latex.DrawLatex(0.57, 0.38, text)
 
-    myLegend = ROOT.TLegend(0.25,0.7,0.5,0.85)
+    myLegend = ROOT.TLegend(0.27,0.7,0.5,0.85)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
