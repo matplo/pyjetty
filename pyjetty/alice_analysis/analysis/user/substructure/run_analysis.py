@@ -15,10 +15,18 @@ To use this class, the following should be done:
   - Specify a configuration file, see examples in the config/ directory
   
   - Implement a user analysis class inheriting from this one, such as in james/run_analysis_james.py
-    You should implement the functions plot_single_result() and plot_all_results(), see example for details.
+    You should implement the following functions:
+      - plot_single_result()
+      - plot_all_results()
+      - plot_performance() (optional)
+    See the example for details.
     
   - You also should modify a few observable-specific functions at the top of substructure/analysis_utils_obs.py
   
+Then, you should run your analysis with:
+
+  python run_analysis_user.py /path/to/my/config.yaml
+
   
 Author: James Mulligan (james.mulligan@berkeley.edu)
 '''
@@ -74,6 +82,7 @@ class RunAnalysis(common_base.CommonBase):
     self.do_systematics = config['do_systematics']
     self.do_plot_final_result = config['do_plot_final_result']
     self.force_rebin_response=config['force_rebin']
+    self.do_plot_performance = config['do_plot_performance']
     
     # Get the sub-configs to unfold
     self.jetR_list = config['jetR']
@@ -135,6 +144,9 @@ class RunAnalysis(common_base.CommonBase):
     output_dir = os.path.join(self.output_dir, self.observable)
     if not os.path.exists(output_dir):
       os.makedirs(output_dir)
+      
+    if self.do_plot_performance:
+      self.create_output_subdir(output_dir, 'performance')
 
     for systematic in self.systematics_list:
       self.create_output_subdir(output_dir, systematic)
@@ -191,6 +203,10 @@ class RunAnalysis(common_base.CommonBase):
       # Plot final results for all subconfigs
       if self.do_plot_final_result:
         self.plot_all_results(jetR, obs_label, obs_setting, sd_setting) # You must implement this
+   
+    # Plot additional performance plots
+    if self.do_plot_performance:
+      self.plot_performance() # You must implement this
    
   #----------------------------------------------------------------------
   def perform_unfolding(self):
@@ -574,12 +590,20 @@ class RunAnalysis(common_base.CommonBase):
     raise NotImplementedError('You must implement plot_single_result()!')
 
   #----------------------------------------------------------------------
-  # This function is called once after all subconfigurations have been looped over
+  # This function is called once after all subconfigurations have been looped over, for each R
   # You must implement this
   #----------------------------------------------------------------------
   def plot_all_results(jetR, obs_label, obs_setting, sd_setting):
 
     raise NotImplementedError('You must implement plot_all_results()!')
+      
+  #----------------------------------------------------------------------
+  # This function is called once after all subconfigurations and jetR have been looped over
+  # You must implement this
+  #----------------------------------------------------------------------
+  def plot_performance(self):
+
+    raise NotImplementedError('You must implement plot_performance()!')
       
   #---------------------------------------------------------------
   # Get n_bins_truth

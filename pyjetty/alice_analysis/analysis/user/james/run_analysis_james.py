@@ -59,7 +59,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
   
   #---------------------------------------------------------------
-  # This function is called once after all subconfigurations have been looped over
+  # This function is called once after all subconfigurations have been looped over, for each R
   #---------------------------------------------------------------
   def plot_all_results(self, jetR, obs_label, obs_setting, sd_setting):
   
@@ -67,6 +67,13 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.plot_final_result_overlay(jetR)
 
       #self.plot_NPcorrection(jetR)
+  
+  #----------------------------------------------------------------------
+  # This function is called once after all subconfigurations and jetR have been looped over
+  #----------------------------------------------------------------------
+  def plot_performance(self):
+  
+    print('Plotting performance plots...')
   
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, sd_setting):

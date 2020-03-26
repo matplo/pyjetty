@@ -339,6 +339,7 @@ do_unfolding: False
 force_rebin: False
 do_systematics: True
 do_plot_final_result: True
+do_plot_performance: True
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
