@@ -46,6 +46,7 @@ class RunAnalysis(common_base.CommonBase):
     
     # Set list of observables
     self.observable = config['analysis_observable']
+    self.debug_level = config['debug_level']
     
     # Set which analysis steps to perform
     self.do_unfolding = config['do_unfolding']
@@ -352,10 +353,10 @@ class RunAnalysis(common_base.CommonBase):
         setattr(self, name, hSystematic_RegParam2_ratio)
     
         name = 'hSystematic_{}_RegParam_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-        h_systematic_ratio = self.build_average(hSystematic_RegParam1, hSystematic_RegParam2)
+        h_systematic_ratio = self.build_average(hSystematic_RegParam1_ratio, hSystematic_RegParam2_ratio)
         setattr(self, name, h_systematic_ratio)
         
-      if self.debug_level > 0
+      if self.debug_level > 0:
         output_dir = getattr(self, 'output_dir_systematics')
         outputFilename = os.path.join(output_dir, 'hSystematic_{}_R{}_{}_{}-{}{}'.format(systematic, self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
         self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
