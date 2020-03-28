@@ -204,7 +204,10 @@ class ProcessMC(process_base.ProcessBase):
     if not self.is_pp:
         self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
 
-    for jetR in self.jetR_list:
+  #---------------------------------------------------------------
+  # Initialize histograms
+  #---------------------------------------------------------------
+  def initialize_output_objects_R(self, jetR):
       
       name = 'hJES_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
@@ -493,6 +496,8 @@ class ProcessMC(process_base.ProcessBase):
     print()
     
     for jetR in self.jetR_list:
+    
+      self.initialize_output_objects_R(jetR)
       
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
@@ -954,8 +959,9 @@ class ProcessMC(process_base.ProcessBase):
       x_array = array('d', x)
       getattr(self, 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)).Fill(x_array)
       
-      obs_resolution = (obs_det - obs_truth) / obs_truth
-      getattr(self, 'hRelativeResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)).Fill(jet_pt_truth_ungroomed, obs_resolution)
+      if obs_truth > 1e-5:
+        obs_resolution = (obs_det - obs_truth) / obs_truth
+        getattr(self, 'hRelativeResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)).Fill(jet_pt_truth_ungroomed, obs_resolution)
       
       obs_resolution = obs_det - obs_truth
       getattr(self, 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)).Fill(jet_pt_truth_ungroomed, obs_resolution)
