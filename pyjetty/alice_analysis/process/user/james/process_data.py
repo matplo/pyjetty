@@ -76,7 +76,7 @@ class ProcessData(process_base.ProcessBase):
     # Find jets and fill histograms
     print('Analyze events...')
     self.analyzeEvents()
-
+    
     # Plot histograms
     print('Save histograms...')
     process_base.ProcessBase.save_output_objects(self)
@@ -160,7 +160,7 @@ class ProcessData(process_base.ProcessBase):
     self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
     
     if not self.is_pp:
-        self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
+      self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
         
     for jetR in self.jetR_list:
       
@@ -259,6 +259,9 @@ class ProcessData(process_base.ProcessBase):
       
       # Use list comprehension to do jet-finding and fill histograms
       result = [self.analyzeJets(fj_particles, jet_def, jet_selector) for fj_particles in self.df_fjparticles]
+      
+      print('Save thn...')
+      process_base.ProcessBase.save_thn_objects(self)
         
   #---------------------------------------------------------------
   # Analyze jets of a given event.

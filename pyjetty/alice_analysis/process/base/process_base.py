@@ -48,6 +48,11 @@ class ProcessBase(common_base.CommonBase):
     if not os.path.exists(self.output_dir):
       #os.makedirs(self.output_dir, 775)
       os.makedirs(self.output_dir)
+      
+    # Create output file
+    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
+    fout = ROOT.TFile(outputfilename, 'recreate')
+    fout.Close()
 
     # Initialize utils class
     self.utils = process_utils.ProcessUtils()
@@ -302,8 +307,9 @@ class ProcessBase(common_base.CommonBase):
   def save_output_objects(self):
     
     outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
-    fout = ROOT.TFile(outputfilename, 'recreate')
+    fout = ROOT.TFile(outputfilename, 'update')
     fout.cd()
+    
     for attr in dir(self):
       
       obj = getattr(self, attr)
@@ -317,4 +323,23 @@ class ProcessBase(common_base.CommonBase):
       if isinstance(obj, types):
         obj.Write()
   
+    fout.Close()
+
+  #---------------------------------------------------------------
+  # Save all THn, and remove them as class attributes (to clear memory)
+  #---------------------------------------------------------------
+  def save_thn_objects(self):
+    
+    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
+    fout = ROOT.TFile(outputfilename, 'update')
+    fout.cd()
+    
+    for attr in dir(self):
+      
+      obj = getattr(self, attr)
+      
+      if isinstance(obj, ROOT.THnBase):
+        obj.Write()
+        delattr(self, attr)
+
     fout.Close()

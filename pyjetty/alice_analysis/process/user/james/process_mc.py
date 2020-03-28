@@ -505,6 +505,9 @@ class ProcessMC(process_base.ProcessBase):
       # Then can use list comprehension to iterate over the groupby and do jet-finding
       # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
       result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+      
+      print('Save thn...')
+      process_base.ProcessBase.save_thn_objects(self)
 
   #---------------------------------------------------------------
   # Fill track histograms.
