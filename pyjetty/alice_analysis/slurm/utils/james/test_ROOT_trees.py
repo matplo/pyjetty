@@ -20,7 +20,7 @@ import ROOT
 import uproot
 
 #-----------------------------------------------------------------
-def test_ROOT_trees(file_list):
+def test_ROOT_trees(file_list, n, index, output_dir):
 
     tree_dir = 'PWGHF_TreeCreator'
     event_tree_name = 'tree_event_char'
@@ -30,15 +30,27 @@ def test_ROOT_trees(file_list):
       tree_dir += '/'
 
     # Loop through files in the file list, and write problematic file to files_to_remove.txt
-    with open(file_list,  'r') as f, open('files_passed.txt', 'w') as f_passed, open('files_failed.txt', 'w') as f_failed:
+    outfile_passed = os.path.join(output_dir, 'files_passed_{}.txt'.format(index))
+    outfile_failed = os.path.join(output_dir, 'files_failed_{}.txt'.format(index))
+    with open(file_list,  'r') as f, open(outfile_passed, 'w') as f_passed, open(outfile_failed, 'w') as f_failed:
         lines = f.read().splitlines()
 
         print('printing out all files that are missing event tree or track tree...')
         print('')
 
         nfiles = len(lines)
+        nfiles_per_process = int(nfiles / n + 1)
+        i_min = (index-1) * nfiles_per_process
+        i_max = i_min + nfiles_per_process
+        print('nfiles: {}'.format(nfiles))
+        print('nfiles_per_process: {}'.format(nfiles_per_process))
+        print('i_min: {}'.format(i_min))
+        print('i_max: {}'.format(i_max))
         for i, file_name in enumerate(lines):
 
+            if i < i_min or i >= i_max:
+                continue
+                
             if i % 10 == 0:
                 print('{} / {}'.format(i, nfiles))
 
@@ -82,16 +94,31 @@ if __name__ == '__main__':
                       type=str, metavar='file_list',
                       default='files.txt',
                       help='Path of file list')
-  
+  parser.add_argument('-n', '--n', action='store',
+                      type=int, metavar='n',
+                      default='1',
+                      help='total number of parallel processes')
+  parser.add_argument('-i', '--index', action='store',
+                      type=int, metavar='index',
+                      default='1',
+                      help='index of current process')
+  parser.add_argument('-o', '--outputDir', action='store',
+                      type=str, metavar='outputDir',
+                      default='./TestOutput',
+                      help='Output directory for output to be written to')
+
+ 
   # Parse the arguments
   args = parser.parse_args()
   
   print('Configuring...')
   print('file list to check: \'{0}\''.format(args.file_list))
+  print('Write output file lists to: {}'.format(args.outputDir))
+  print('process {} of {}'.format(args.index, args.n))
 
   # If invalid file list is given, exit
   if not os.path.exists(args.file_list):
     print('File \"{0}\" does not exist! Exiting!'.format(args.file_list))
     sys.exit(0)
   
-  test_ROOT_trees(file_list = args.file_list)
+  test_ROOT_trees(file_list = args.file_list, n = args.n, index = args.index, output_dir = args.outputDir)
