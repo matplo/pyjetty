@@ -17,6 +17,7 @@ import sys
 import argparse
 
 import ROOT
+import uproot
 
 #-----------------------------------------------------------------
 def test_ROOT_trees(file_list):
@@ -53,10 +54,12 @@ def test_ROOT_trees(file_list):
                 print('file is empty: {}'.format(file_name))
                 f_failed.write('{}\n'.format(file_name))
                 continue
+            file.Close()
                 
             # Check for event tree
+            file_dir = uproot.open(file_name)
             event_tree_path = tree_dir + event_tree_name
-            event_tree = file.Get(event_tree_path)
+            event_tree = file_dir[event_tree_path]
             if not event_tree:
                 print(file_name)
                 f_failed.write('{}\n'.format(file_name))
@@ -64,7 +67,7 @@ def test_ROOT_trees(file_list):
             
             # Check for track tree
             track_tree_path = tree_dir + track_tree_name
-            track_tree = file.Get(track_tree_path)
+            track_tree = file_dir[track_tree_path]
             if not track_tree:
                 print(file_name)
                 f_failed.write('{}\n'.format(file_name))
