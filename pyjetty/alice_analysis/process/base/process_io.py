@@ -12,6 +12,7 @@
 from __future__ import print_function
 
 import os   # for creating file on output
+import sys
 
 # Data analysis and plotting
 import uproot
