@@ -306,7 +306,7 @@ class ProcessMC(process_base.ProcessBase):
             # Create THn of response for subjet z
             dim = 4;
             title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
-            nbins = [150, 30, 100, 50]
+            nbins = [30, 30, 100, 50]
             min = [0., 0., 0., 0.]
             max = [150., 300., 1., 1.]
             name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
@@ -331,7 +331,7 @@ class ProcessMC(process_base.ProcessBase):
             # Create THn of response for jet axis deltaR
             dim = 4;
             title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
-            nbins = [150, 30, 80, 40]
+            nbins = [30, 30, 80, 40]
             min = [0., 0., 0., 0.]
             max = [150., 300., jetR, jetR]
             name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
@@ -440,7 +440,7 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for theta_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-    nbins = [150, 60, 100, 20]
+    nbins = [30, 30, 100, 20]
     min = [0., 0., 0., 0.]
     max = [150., 300., 1., 1.]
     name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
@@ -466,7 +466,7 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for z_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-    nbins = [150, 60, 50, 10]
+    nbins = [30, 30, 50, 20]
     min = [0., 0., 0., 0.]
     max = [150., 300., 0.5, 0.5]
     name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
