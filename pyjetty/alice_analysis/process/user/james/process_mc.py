@@ -306,9 +306,9 @@ class ProcessMC(process_base.ProcessBase):
             # Create THn of response for subjet z
             dim = 4;
             title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
-            nbins = [100, 60, 100, 25]
+            nbins = [150, 30, 100, 50]
             min = [0., 0., 0., 0.]
-            max = [100., 300., 1., 1.]
+            max = [150., 300., 1., 1.]
             name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
             self.create_thn(name, title, dim, nbins, min, max)
             
@@ -331,9 +331,9 @@ class ProcessMC(process_base.ProcessBase):
             # Create THn of response for jet axis deltaR
             dim = 4;
             title = ['p_{T,det}', 'p_{T,truth}', '#DeltaR_{det}', '#DeltaR_{truth}']
-            nbins = [100, 60, 200, 40]
+            nbins = [150, 30, 80, 40]
             min = [0., 0., 0., 0.]
-            max = [100., 300., jetR, jetR]
+            max = [150., 300., jetR, jetR]
             name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
             self.create_thn(name, title, dim, nbins, min, max)
 
@@ -384,28 +384,28 @@ class ProcessMC(process_base.ProcessBase):
       for match in match_list:
 
         name = 'hProngMatching_{}_{}_JetPt_R{}_{}'.format(prong, match, jetR, grooming_label)
-        h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 40, 0., 2*jetR)
+        h = ROOT.TH3F(name, name, 40, 0, 200, 150, -0.4, 1.1, 40, 0., 2*jetR)
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('Prong matching fraction')
         h.GetZaxis().SetTitle('#Delta R_{prong}')
         setattr(self, name, h)
         
         name = 'hProngMatching_{}_{}_JetPtDet_R{}_{}'.format(prong, match, jetR, grooming_label)
-        h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 40, 0., 2*jetR)
+        h = ROOT.TH3F(name, name, 40, 0, 200, 150, -0.4, 1.1, 40, 0., 2*jetR)
         h.GetXaxis().SetTitle('p_{T,pp-det}')
         h.GetYaxis().SetTitle('Prong matching fraction')
         h.GetZaxis().SetTitle('#Delta R_{prong}')
         setattr(self, name, h)
         
         name = 'hProngMatching_{}_{}_JetPtZ_R{}_{}'.format(prong, match, jetR, grooming_label)
-        h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 50, -0.5, 0.5)
+        h = ROOT.TH3F(name, name, 40, 0, 200, 150, -0.4, 1.1, 50, -0.5, 0.5)
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('Prong matching fraction')
         h.GetZaxis().SetTitle('#Delta z_{prong}')
         setattr(self, name, h)
 
     name = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{}'.format(jetR, grooming_label)
-    h = ROOT.TH3F(name, name, 60, 0, 300, 150, -0.4, 1.1, 150, -0.4, 1.1)
+    h = ROOT.TH3F(name, name, 40, 0, 200, 150, -0.4, 1.1, 150, -0.4, 1.1)
     h.GetXaxis().SetTitle('p_{T,pp-det}')
     h.GetYaxis().SetTitle('Prong matching fraction, leading_subleading')
     h.GetZaxis().SetTitle('Prong matching fraction, subleading_leading')
@@ -440,9 +440,9 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for theta_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-    nbins = [100, 60, 100, 20]
+    nbins = [150, 60, 100, 20]
     min = [0., 0., 0., 0.]
-    max = [100., 300., 1., 1.]
+    max = [150., 300., 1., 1.]
     name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
     self.create_thn(name, title, dim, nbins, min, max)
     
@@ -466,9 +466,9 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for z_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-    nbins = [100, 60, 50, 10]
+    nbins = [150, 60, 50, 10]
     min = [0., 0., 0., 0.]
-    max = [100., 300., 0.5, 0.5]
+    max = [150., 300., 0.5, 0.5]
     name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
     self.create_thn(name, title, dim, nbins, min, max)
 
