@@ -4,7 +4,7 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-140
+#SBATCH --array=1-1000
 #SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
 FILE_PATHS='/rstorage/alice/data/LHC19f4/183/files.txt'
@@ -12,7 +12,7 @@ NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 7 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 140 + 1 ))
+FILES_PER_JOB=$(( $NFILES / 1000 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 
 STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))

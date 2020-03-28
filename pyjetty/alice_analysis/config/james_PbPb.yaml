@@ -11,7 +11,7 @@
 # The analysis step is intended to run for a single observable block
 
 process_observables: ['theta_g', 'zg', 'subjet_z', 'jet_axis']
-jetR: [0.2, 0.3, 0.4]
+jetR: [0.2, 0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
 reject_tracks_fraction: 0.0
