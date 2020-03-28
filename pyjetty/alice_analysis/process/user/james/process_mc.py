@@ -107,7 +107,7 @@ class ProcessMC(process_base.ProcessBase):
       self.constituent_subtractor = CEventSubtractor(max_distance=self.max_distance, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR)
     
     print(self)
-  
+    
     # Find jets and fill histograms
     print('Find jets...')
     self.analyzeEvents()
@@ -506,8 +506,13 @@ class ProcessMC(process_base.ProcessBase):
       # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
       result = [self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
       
+      if self.debug_level > 0:
+        for attr in dir(self):
+          obj = getattr(self, attr)
+          print('size of {}: {}'.format(attr, sys.getsizeof(obj)))
+      
       print('Save thn...')
-      process_base.ProcessBase.save_thn_objects(self)
+      process_base.ProcessBase.save_thn_th3_objects(self)
 
   #---------------------------------------------------------------
   # Fill track histograms.
@@ -804,7 +809,7 @@ class ProcessMC(process_base.ProcessBase):
             jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
             jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
             if self.debug_level > 2:
-                print('WTA jet definition is:', jet_def)
+                print('WTA jet definition is:', jet_def_wta)
             reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
             jet_det_wta = reclusterer_wta.result(jet_det)
             jet_truth_wta = reclusterer_wta.result(jet_truth)

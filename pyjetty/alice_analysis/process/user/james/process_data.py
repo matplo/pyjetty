@@ -261,7 +261,7 @@ class ProcessData(process_base.ProcessBase):
       result = [self.analyzeJets(fj_particles, jet_def, jet_selector) for fj_particles in self.df_fjparticles]
       
       print('Save thn...')
-      process_base.ProcessBase.save_thn_objects(self)
+      process_base.ProcessBase.save_thn_th3_objects(self)
         
   #---------------------------------------------------------------
   # Analyze jets of a given event.

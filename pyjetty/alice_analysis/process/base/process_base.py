@@ -326,9 +326,9 @@ class ProcessBase(common_base.CommonBase):
     fout.Close()
 
   #---------------------------------------------------------------
-  # Save all THn, and remove them as class attributes (to clear memory)
+  # Save all THn and TH3, and remove them as class attributes (to clear memory)
   #---------------------------------------------------------------
-  def save_thn_objects(self):
+  def save_thn_th3_objects(self):
     
     outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
     fout = ROOT.TFile(outputfilename, 'update')
@@ -338,7 +338,8 @@ class ProcessBase(common_base.CommonBase):
       
       obj = getattr(self, attr)
       
-      if isinstance(obj, ROOT.THnBase):
+      types = (ROOT.TH3, ROOT.THnBase)
+      if isinstance(obj, types):
         obj.Write()
         delattr(self, attr)
 
