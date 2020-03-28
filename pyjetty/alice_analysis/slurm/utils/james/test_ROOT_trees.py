@@ -35,21 +35,36 @@ def test_ROOT_trees(file_list):
         print('printing out all files that are missing event tree or track tree...')
         print('')
 
-        for file_name in lines:
+        nfiles = len(lines)
+        for i, file_name in enumerate(lines):
+
+            if i % 10 == 0:
+                print('{} / {}'.format(i, nfiles))
+
+            # Check if file exists
+            if not os.path.exists(file_name):
+                print('file does not exist: {}'.format(file_name))
+                f_failed.write('{}\n'.format(file_name))
+                continue
 
             # Check for event tree
             event_tree_path = tree_dir + event_tree_name
             event_tree = uproot.open(file_name)[event_tree_path]
+
+            if not event_tree:
+                print(file_name)
+                f_failed.write('{}\n'.format(file_name))
+                continue
             
             # Check for track tree
             track_tree_path = tree_dir + track_tree_name
             track_tree = uproot.open(file_name)[track_tree_path]
             
-            if event_tree and track_tree:
-                f_passed.write('{}\n'.format(file_name))
-            else:
+            if not track_tree:
                 print(file_name)
                 f_failed.write('{}\n'.format(file_name))
+            else:
+                f_passed.write('{}\n'.format(file_name))
 
 ##################################################################
 if __name__ == '__main__':
