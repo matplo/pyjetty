@@ -90,8 +90,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       
       #self.get_NPcorrection(self.observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
       
-      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
-      #self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
+      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
 
   #----------------------------------------------------------------------
   def get_NPcorrection(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
@@ -581,14 +580,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
     if plot_pythia:
     
-      plot_pythia_from_response = True
-      plot_pythia_from_mateusz = False
-      if plot_pythia_from_response:
-        hPythia = self.get_pythia_from_response(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-        n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_bin_array[0]), hPythia.GetNbinsX())
-        fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
-        hPythia.Scale(1./n_jets_inclusive, 'width')
+      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
+      if hPythia:
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
         hPythia.SetMarkerStyle(21)
@@ -596,24 +589,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         hPythia.SetLineColor(2)
         hPythia.SetLineWidth(1)
         hPythia.Draw('E2 same')
-    
-      if plot_pythia_from_mateusz:
-        fPythia_name = '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
-        fPythia = ROOT.TFile(fPythia_name, 'READ')
-        hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_setting[1], int(min_pt_truth), int(max_pt_truth))
-        hPythia2 = fPythia.Get(hname)
-
-        n_jets_inclusive2 = hPythia2.Integral(0, hPythia2.GetNbinsX()+1)
-        n_jets_tagged2 = hPythia2.Integral(hPythia2.FindBin(truth_bin_array[0]), hPythia2.GetNbinsX())
-        fraction_tagged_pythia =  n_jets_tagged2/n_jets_inclusive2
-        hPythia2.Scale(1./n_jets_inclusive2, 'width')
-        hPythia2.SetFillStyle(0)
-        hPythia2.SetMarkerSize(1.5)
-        hPythia2.SetMarkerStyle(21)
-        hPythia2.SetMarkerColor(1)
-        hPythia2.SetLineColor(1)
-        hPythia2.SetLineWidth(1)
-        hPythia2.Draw('E2 same')
+      else:
+        print('No PYTHIA prediction for {} {}'.format(self.observable, obs_label))
+        plot_pythia = False
     
     color = 600-6
     h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
@@ -686,10 +664,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
-      if plot_pythia_from_response:
-        myLegend.AddEntry(hPythia, 'PYTHIA Monash2013', 'pe')
-      if plot_pythia_from_mateusz:
-        myLegend.AddEntry(hPythia2, 'PYTHIA Monash2013', 'pe')
+      myLegend.AddEntry(hPythia, 'PYTHIA Monash2013', 'pe')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
@@ -708,22 +683,47 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       fFinalResults.Close()
 
   #----------------------------------------------------------------------
-  def get_pythia_from_response(self, observable, jetR, obs_label, min_pt_truth, max_pt_truth):
+  def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth):
+  
+    if self.observable == 'zg' or self.observable == 'theta_g':
+
+      plot_pythia_from_response = True
+      plot_pythia_from_mateusz = False
+      
+      if plot_pythia_from_response:
+      
+        hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth, max_pt_truth)
+        n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+        n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
+    
+      elif plot_pythia_from_mateusz:
+      
+        fPythia_name = '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
+        fPythia = ROOT.TFile(fPythia_name, 'READ')
+        print(fPythia.ls())
+        hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_label, int(min_pt_truth), int(max_pt_truth))
+        hPythia = fPythia.Get(hname)
+        n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+        n_jets_tagged = hPythia.Integral(hPythia2.FindBin(self.truth_bin_array(obs_label)[0]), hPythia2.GetNbinsX())
+        
+      fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
+      hPythia.Scale(1./n_jets_inclusive, 'width')
+        
+    return [hPythia, fraction_tagged_pythia]
+
+  #----------------------------------------------------------------------
+  def get_pythia_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth):
   
     output_dir = getattr(self, 'output_dir_main')
     file = os.path.join(output_dir, 'response.root')
     f = ROOT.TFile(file, 'READ')
 
-    if observable == 'theta_g':
-      thn_name = 'hResponse_JetPt_ThetaG_R{}_{}_rebinned'.format(jetR, obs_label)
-    if observable == 'zg':
-      thn_name = 'hResponse_JetPt_zg_R{}_{}_rebinned'.format(jetR, obs_label)
-    
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
     thn = f.Get(thn_name)
     thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
     h = thn.Projection(3)
-    h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h.SetDirectory(0)
 
     return h
