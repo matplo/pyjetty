@@ -548,6 +548,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     for bin in range(1, h.GetNbinsX()+1):
       content = h.GetBinContent(bin)
       uncertainty = h.GetBinError(bin)
+      if content < 1e-10:
+        print('content of {} in bin {} is {}'.format(h.GetName(), bin, content))
       h.SetBinContent(bin, uncertainty/content * 100)
       h.SetBinError(bin, 0)
 
