@@ -92,11 +92,6 @@ class RunAnalysis(common_base.CommonBase):
     self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
     setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
     setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
-    setattr(self, 'xmin', self.obs_config_dict['common_settings']['xmin'])
-    setattr(self, 'xmax', self.obs_config_dict['common_settings']['xmax'])
-    setattr(self, 'ymax', self.obs_config_dict['common_settings']['ymax'])
-    setattr(self, 'ymin_ratio', self.obs_config_dict['common_settings']['ymin_ratio'])
-    setattr(self, 'ymax_ratio', self.obs_config_dict['common_settings']['ymax_ratio'])
     setattr(self, 'pt_bins_reported', self.obs_config_dict['common_settings']['pt_bins_reported'])
 
     # Retrieve histogram binnings for each observable setting
