@@ -146,11 +146,9 @@ class ProcessMC(process_base.ProcessBase):
     # Create dictionaries to store grooming settings and observable settings for each observable
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores a the observable setting, e.g. subjetR
-    #   The SD list stores a list of SD settings [zcut, beta]
-    #   The DG list stores a list of dynamical grooming settings
+    #   The grooming list stores a list of SD or DG settings {'sd': [zcut, beta]} or {'dg': [a]}
     self.obs_settings = {}
-    self.obs_sd_settings = {}
-    self.obs_dg_settings = {}
+    self.obs_grooming_settings = {}
     
     for observable in self.observable_list:
       
@@ -168,27 +166,16 @@ class ProcessMC(process_base.ProcessBase):
       if observable == 'jet_axis':
         self.obs_settings[observable] = [obs_config_dict[name]['axis'] for name in obs_config_list]
          
-      # Fill SD settings
-      self.obs_sd_settings[observable] = self.utils.sd_settings(obs_config_dict)
+      # Fill grooming settings
+      self.obs_grooming_settings[observable] = self.utils.grooming_settings(obs_config_dict)
       
-      # Fill dynamical grooming settings
-      self.obs_dg_settings[observable] = self.utils.dg_settings(obs_config_dict)
-         
-    # Construct set of unique SD settings
-    self.sd_settings = []
-    lists_sd = [self.obs_sd_settings[obs] for obs in self.observable_list]
-    for observable in lists_sd:
+    # Construct set of unique grooming settings
+    self.grooming_settings = []
+    lists_grooming = [self.obs_grooming_settings[obs] for obs in self.observable_list]
+    for observable in lists_grooming:
       for setting in observable:
-        if setting not in self.sd_settings and setting != None:
-          self.sd_settings.append(setting)
-          
-    # Construct set of unique DG settings
-    self.dg_settings = []
-    lists_dg = [self.obs_dg_settings[obs] for obs in self.observable_list]
-    for observable in lists_dg:
-      for setting in observable:
-        if setting not in self.dg_settings and setting != None:
-          self.dg_settings.append(setting)
+        if setting not in self.grooming_settings and setting != None:
+          self.grooming_settings.append(setting)
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -267,28 +254,18 @@ class ProcessMC(process_base.ProcessBase):
 
         if observable == 'theta_g':
 
-          for sd_setting in self.obs_sd_settings[observable]:
-            if sd_setting:
-              sd_label = self.utils.sd_label(sd_setting)
-              self.create_theta_g_histograms(observable, jetR, sd_label)
-              
-          for dg_setting in self.obs_dg_settings[observable]:
-            if dg_setting:
-              dg_label = 'dg{}'.format(dg_setting)
-              self.create_theta_g_histograms(observable, jetR, dg_label)
-            
+          for grooming_setting in self.obs_grooming_settings[observable]:
+            if grooming_setting:
+              grooming_label = self.utils.grooming_label(grooming_setting)
+              self.create_theta_g_histograms(observable, jetR, grooming_label)
+
         if observable == 'zg':
         
-          for sd_setting in self.obs_sd_settings[observable]:
-            if sd_setting:
-              sd_label = self.utils.sd_label(sd_setting)
-              self.create_zg_histograms(observable, jetR, sd_label)
+          for grooming_setting in self.obs_grooming_settings[observable]:
+            if grooming_setting:
+              grooming_label = self.utils.grooming_label(grooming_setting)
+              self.create_zg_histograms(observable, jetR, grooming_label)
               
-          for dg_setting in self.obs_dg_settings[observable]:
-            if dg_setting:
-              dg_label = 'dg{}'.format(dg_setting)
-              self.create_zg_histograms(observable, jetR, dg_label)
-         
         if observable == 'subjet_z':
 
           for subjetR in self.obs_settings[observable]:
@@ -316,13 +293,13 @@ class ProcessMC(process_base.ProcessBase):
               
           for i, axes in enumerate(self.obs_settings[observable]):
           
-            sd_setting = self.obs_sd_settings[observable][i]
-            if sd_setting:
-              sd_label = self.utils.sd_label(sd_setting)
+            grooming_setting = self.obs_grooming_settings[observable][i]
+            if grooming_setting:
+              grooming_label = self.utils.grooming_label(grooming_setting)
             else:
-              sd_label = ''
+              grooming_label = ''
             
-            name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
+            name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, grooming_label)
             h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
@@ -334,33 +311,22 @@ class ProcessMC(process_base.ProcessBase):
             nbins = [30, 30, 80, 40]
             min = [0., 0., 0., 0.]
             max = [150., 300., jetR, jetR]
-            name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, sd_label)
+            name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, axes, grooming_label)
             self.create_thn(name, title, dim, nbins, min, max)
 
       # Plot some Lund planes
-      for sd_setting in self.sd_settings:
-        if sd_setting:
-          sd_label = self.utils.sd_label(sd_setting)
-          self.create_lund_histograms(jetR, sd_label)
-                    
-      for dg_setting in self.dg_settings:
-        if dg_setting:
-          dg_label = 'dg{}'.format(dg_setting)
-          self.create_lund_histograms(jetR, dg_label)
+      for grooming_setting in self.grooming_settings:
+        if grooming_setting:
+          grooming_label = self.utils.grooming_label(grooming_setting)
+          self.create_lund_histograms(jetR, grooming_label)
 
       # Create prong matching histograms
-      for sd_setting in self.obs_sd_settings['theta_g']:
-        if sd_setting:
-          sd_label = self.utils.sd_label(sd_setting)
+      for grooming_setting in self.obs_grooming_settings['theta_g']:
+        if grooming_setting:
+          grooming_label = self.utils.grooming_label(grooming_setting)
           if not self.is_pp:
-            self.create_prong_matching_histograms(jetR, sd_label)
+            self.create_prong_matching_histograms(jetR, grooming_label)
             
-      for dg_setting in self.obs_dg_settings['theta_g']:
-        if dg_setting:
-          dg_label = 'dg{}'.format(dg_setting)
-          if not self.is_pp:
-            self.create_prong_matching_histograms(jetR, dg_label)
-
   #---------------------------------------------------------------
   # Create Lund plane histograms
   #---------------------------------------------------------------
@@ -623,13 +589,14 @@ class ProcessMC(process_base.ProcessBase):
     # Loop through jets and fill matching histograms
     result = [self.fill_matching_histograms(jet_det, jetR) for jet_det in jets_det_selected]
 
-    # Loop through jets and fill SD histograms if both det and truth jets are unique match
-    for sd_setting in self.sd_settings:
-      result = [self.fill_sd_jet_matches(sd_setting, jet_det, jetR) for jet_det in jets_det_selected]
-      
-    # Loop through jets and fill DG histograms if both det and truth jets are unique match
-    for dg_setting in self.dg_settings:
-      result = [self.fill_dg_jet_matches(dg_setting, jet_det, jetR) for jet_det in jets_det_selected]
+    # Loop through jets and fill groomed histograms if both det and truth jets are unique match
+    for grooming_setting in self.grooming_settings:
+    
+      if 'sd' in grooming_setting:
+        result = [self.fill_sd_jet_matches(grooming_setting, jet_det, jetR) for jet_det in jets_det_selected]
+        
+      if 'dg' in grooming_setting:
+        result = [self.fill_dg_jet_matches(grooming_setting, jet_det, jetR) for jet_det in jets_det_selected]
     
   #---------------------------------------------------------------
   # Fill some background histograms
@@ -771,11 +738,12 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
-  def fill_sd_jet_matches(self, sd_setting, jet_det, jetR):
+  def fill_sd_jet_matches(self, grooming_setting, jet_det, jetR):
             
-    zcut = sd_setting[0]
-    beta = sd_setting[1]
-    sd_label = self.utils.sd_label(sd_setting)
+    key, value = list(grooming_setting.items())[0]
+    zcut = value[0]
+    beta = value[1]
+    grooming_label = self.utils.grooming_label(grooming_setting)
     
     # Define SoftDrop settings
     # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
@@ -802,10 +770,10 @@ class ProcessMC(process_base.ProcessBase):
         jet_det_sd = sd.result(jet_det)
         jet_truth_sd = sd.result(jet_truth)
       
-        self.fill_sd_response(jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_setting, sd_label)
+        self.fill_sd_response(jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label)
         
-        if not self.is_pp and sd_setting in self.obs_sd_settings['theta_g']:
-          self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_sd, sd, jet_pt_truth_ungroomed, jetR, sd_label, type = 'SD')
+        if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
+          self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_sd, sd, jet_pt_truth_ungroomed, jetR, grooming_label, type = 'SD')
           
         # Fill jet axis difference
         if 'jet_axis' in self.observable_list:
@@ -819,12 +787,16 @@ class ProcessMC(process_base.ProcessBase):
             jet_det_wta = reclusterer_wta.result(jet_det)
             jet_truth_wta = reclusterer_wta.result(jet_truth)
         
-            self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_setting, sd_label)
+            self.fill_jet_axis_response(jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, grooming_setting, grooming_label)
 
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
-  def fill_dg_jet_matches(self, dg_setting, jet_det, jetR):
+  def fill_dg_jet_matches(self, grooming_setting, jet_det, jetR):
+    
+    key, value = list(grooming_setting.items())[0]
+    a = value[0]
+    grooming_label = self.utils.grooming_label(grooming_setting)
     
     jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
     dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
@@ -845,37 +817,37 @@ class ProcessMC(process_base.ProcessBase):
         jet_pt_det_ungroomed = jet_det.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
           
-        jet_det_dg = dy_groomer.result(jet_det, dg_setting)
-        jet_truth_dg = dy_groomer.result(jet_truth, dg_setting)
+        jet_det_dg = dy_groomer.result(jet_det, a)
+        jet_truth_dg = dy_groomer.result(jet_truth, a)
               
-        self.fill_dg_response(jet_det_dg, jet_truth_dg, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, dg_setting)
+        self.fill_dg_response(jet_det_dg, jet_truth_dg, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, grooming_setting)
           
-        if not self.is_pp and dg_setting in self.obs_dg_settings['theta_g']:
-          self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg, dy_groomer, jet_pt_truth_ungroomed, jetR, dg_setting, type = 'DG')
+        if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
+          self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg, dy_groomer, jet_pt_truth_ungroomed, jetR, grooming_setting, type = 'DG')
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, sd_setting, sd_label):
+  def fill_jet_axis_response(self, jet_det, jet_truth, jet_det_sd, jet_truth_sd, jet_det_wta, jet_truth_wta, jetR, grooming_setting, grooming_label):
   
     for axis in self.obs_settings['jet_axis']:
 
       if axis == 'Standard_SD':
-        if sd_setting in self.obs_sd_settings['jet_axis']:
+        if grooming_setting in self.obs_grooming_settings['jet_axis']:
 
           deltaR_det = jet_det.delta_R(jet_det_sd)
           deltaR_truth = jet_truth.delta_R(jet_truth_sd)
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_jet_axis_R{}_Standard_SD{}'.format(jetR, sd_label)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_Standard_SD{}'.format(jetR, grooming_label)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-            getattr(self, 'hResidual_JetPt_{}_R{}_Standard_SD{}'.format('jet_axis', jetR, sd_label)).Fill(jet_truth.pt(), axis_resolution)
+            getattr(self, 'hResidual_JetPt_{}_R{}_Standard_SD{}'.format('jet_axis', jetR, grooming_label)).Fill(jet_truth.pt(), axis_resolution)
           
       if axis == 'Standard_WTA':
-        if sd_setting == self.sd_settings[0]:
+        if grooming_setting == self.grooming_settings[0]:
 
           deltaR_det = jet_det.delta_R(jet_det_wta)
           deltaR_truth = jet_truth.delta_R(jet_truth_wta)
@@ -889,62 +861,62 @@ class ProcessMC(process_base.ProcessBase):
             getattr(self, 'hResidual_JetPt_{}_R{}_Standard_WTA'.format('jet_axis', jetR)).Fill(jet_truth.pt(), axis_resolution)
         
       if axis == 'WTA_SD':
-        if sd_setting in self.obs_sd_settings['jet_axis']:
+        if grooming_setting in self.obs_grooming_settings['jet_axis']:
 
           deltaR_det = jet_det_sd.delta_R(jet_det_wta)
           deltaR_truth = jet_truth_sd.delta_R(jet_truth_wta)
           
           x = ([jet_det.pt(), jet_truth.pt(), deltaR_det, deltaR_truth])
           x_array = array('d', x)
-          getattr(self, 'hResponse_JetPt_jet_axis_R{}_WTA_SD{}'.format(jetR, sd_label)).Fill(x_array)
+          getattr(self, 'hResponse_JetPt_jet_axis_R{}_WTA_SD{}'.format(jetR, grooming_label)).Fill(x_array)
           
           if deltaR_truth > 1e-5:
             axis_resolution = (deltaR_det - deltaR_truth) / deltaR_truth
-            getattr(self, 'hResidual_JetPt_{}_R{}_WTA_SD{}'.format('jet_axis', jetR, sd_label)).Fill(jet_truth.pt(), axis_resolution)
+            getattr(self, 'hResidual_JetPt_{}_R{}_WTA_SD{}'.format('jet_axis', jetR, grooming_label)).Fill(jet_truth.pt(), axis_resolution)
 
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_sd_response(self, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, sd_setting, sd_label):
+  def fill_sd_response(self, jet_det_sd, jet_truth_sd, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label):
     
     # Fill responses
     observable = 'theta_g'
     theta_g_det = self.theta_g(jet_det_sd, jetR)
     theta_g_truth = self.theta_g(jet_truth_sd, jetR)
-    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, sd_setting, self.obs_sd_settings['theta_g'], sd_label)
+    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings['theta_g'], grooming_label)
     
     observable = 'zg'
     zg_det = self.zg(jet_det_sd)
     zg_truth = self.zg(jet_truth_sd)
-    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, sd_setting, self.obs_sd_settings['zg'], sd_label)
+    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings['zg'], grooming_label)
     
     # Fill Lund planes
     lund_coords = self.lund_coordinates_SD(jet_truth_sd)
-    name = 'hLundPlane_R{}_{}'.format(jetR, sd_label)
+    name = 'hLundPlane_R{}_{}'.format(jetR, grooming_label)
     if jet_pt_truth_ungroomed > 100.:
       getattr(self, name).Fill(lund_coords[0], lund_coords[1])
     
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_dg_response(self, jet_det_dg, jet_truth_dg, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, dg_setting):
+  def fill_dg_response(self, jet_det_dg, jet_truth_dg, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, jetR, grooming_setting):
     
-    dg_label = 'dg{}'.format(dg_setting)
+    grooming_label = self.utils.grooming_label(grooming_setting)
     
     # Fill responses
     observable = 'theta_g'
     theta_g_det = jet_det_dg.Delta()/jetR
     theta_g_truth = jet_truth_dg.Delta()/jetR
-    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, dg_setting, self.obs_dg_settings['theta_g'], dg_label)
+    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings['theta_g'], grooming_label)
     
     observable = 'zg'
     zg_det = jet_det_dg.z()
     zg_truth = jet_truth_dg.z()
-    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, dg_setting, self.obs_dg_settings['zg'], dg_label)
+    self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings['zg'], grooming_label)
     
     # Fill Lund planes
     lund_coords = self.lund_coordinates_DG(jet_truth_dg)
-    name = 'hLundPlane_R{}_dg{}'.format(jetR, dg_setting)
+    name = 'hLundPlane_R{}_{}'.format(jetR, grooming_label)
     if jet_pt_truth_ungroomed > 100.:
       getattr(self, name).Fill(lund_coords[0], lund_coords[1])
     
@@ -1010,9 +982,7 @@ class ProcessMC(process_base.ProcessBase):
       # Get the fastjet::PseudoJets from the fjcontrib::LundGenerators
       jet_pp_det_groomed = jet_pp_det_groomed.pair()
       jet_det_groomed = jet_det_groomed.pair()
-      
-      grooming_label = 'dg{}'.format(grooming_label)
-    
+          
     if self.debug_level > 1:
 
         if jet_pt_truth_ungroomed > 80.:

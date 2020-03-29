@@ -105,11 +105,9 @@ class ProcessData(process_base.ProcessBase):
     # Create dictionaries to store grooming settings and observable settings for each observable
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores a the observable setting, e.g. subjetR
-    #   The SD list stores a list of SD settings [zcut, beta]
-    #   The DG list stores a list of dynamical grooming settings
+    #   The grooming list stores a list of SD or DG settings {'sd': [zcut, beta]} or {'dg': [a]}
     self.obs_settings = {}
-    self.obs_sd_settings = {}
-    self.obs_dg_settings = {}
+    self.obs_grooming_settings = {}
     
     for observable in self.observable_list:
         
@@ -126,28 +124,17 @@ class ProcessData(process_base.ProcessBase):
       if observable == 'jet_axis':
         self.obs_settings[observable] = [obs_config_dict[name]['axis'] for name in obs_config_list]
         
-      # Fill SD settings
-      self.obs_sd_settings[observable] = self.utils.sd_settings(obs_config_dict)
+      # Fill grooming settings
+      self.obs_grooming_settings[observable] = self.utils.grooming_settings(obs_config_dict)
       
-      # Fill dynamical grooming settings
-      self.obs_dg_settings[observable] = self.utils.dg_settings(obs_config_dict)
-        
-    # Construct set of unique SD settings
-    self.sd_settings = []
-    lists_sd = [self.obs_sd_settings[obs] for obs in self.observable_list]
-    for observable in lists_sd:
+    # Construct set of unique grooming settings
+    self.grooming_settings = []
+    lists_grooming = [self.obs_grooming_settings[obs] for obs in self.observable_list]
+    for observable in lists_grooming:
       for setting in observable:
-        if setting not in self.sd_settings and setting != None:
-          self.sd_settings.append(setting)
+        if setting not in self.grooming_settings and setting != None:
+          self.grooming_settings.append(setting)
               
-    # Construct set of unique DG settings
-    self.dg_settings = []
-    lists_dg = [self.obs_dg_settings[obs] for obs in self.observable_list]
-    for observable in lists_dg:
-      for setting in observable:
-        if setting not in self.dg_settings and setting != None:
-          self.dg_settings.append(setting)
-  
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
@@ -172,18 +159,10 @@ class ProcessData(process_base.ProcessBase):
 
         if observable == 'theta_g':
         
-          for sd_setting in self.obs_sd_settings[observable]:
-            if sd_setting:
-              sd_label = self.utils.sd_label(sd_setting)
-              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('#theta_{g,ch}')
-              setattr(self, name, h)
-            
-          for dg_setting in self.obs_dg_settings[observable]:
-            if dg_setting:
-              name = 'h_{}_JetPt_R{}_dg{}'.format(observable, jetR, dg_setting)
+          for grooming_setting in self.obs_grooming_settings[observable]:
+            if grooming_setting:
+              grooming_label = self.utils.grooming_label(grooming_setting)
+              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
               h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
               h.GetYaxis().SetTitle('#theta_{g,ch}')
@@ -191,22 +170,15 @@ class ProcessData(process_base.ProcessBase):
             
         if observable == 'zg':
         
-          for sd_setting in self.obs_sd_settings[observable]:
-            if sd_setting:
-              sd_label = self.utils.sd_label(sd_setting)
-              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, sd_label)
+          for grooming_setting in self.obs_grooming_settings[observable]:
+            if grooming_setting:
+              grooming_label = self.utils.grooming_label(grooming_setting)
+              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
               h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
               h.GetYaxis().SetTitle('z_{g,ch}')
               setattr(self, name, h)
               
-          for dg_setting in self.obs_dg_settings[observable]:
-            if dg_setting:
-              name = 'h_{}_JetPt_R{}_dg{}'.format(observable, jetR, dg_setting)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('z_{g,ch}')
-              setattr(self, name, h)
         if observable == 'subjet_z':
         
           for subjetR in self.obs_settings[observable]:
@@ -220,13 +192,13 @@ class ProcessData(process_base.ProcessBase):
               
           for i, axes in enumerate(self.obs_settings[observable]):
           
-            sd_setting = self.obs_sd_settings[observable][i]
-            if sd_setting:
-              sd_label = self.utils.sd_label(sd_setting)
+            grooming_setting = self.obs_grooming_settings[observable][i]
+            if grooming_setting:
+              grooming_label = self.utils.grooming_label(grooming_setting)
             else:
-              sd_label = ''
+              grooming_label = ''
             
-            name = 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, axes, sd_label)
+            name = 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, axes, grooming_label)
             h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#Delta R')
@@ -284,14 +256,20 @@ class ProcessData(process_base.ProcessBase):
     jetR = jet_def.R()
     result = [self.analyze_accepted_jets(jet, jetR) for jet in jets_selected]
           
-    # Loop through SD settings and fill SD histograms
-    if len(self.sd_settings) > 0:
-        result = [[self.analyze_softdrop_jet(sd_setting, jet, jetR) for sd_setting in self.sd_settings] for jet in jets_selected]
+    # Loop through grooming settings and fill grooming histograms
+    if len(self.grooming_settings) > 0:
+      result = [[self.analyze_groomed_jet(grooming_setting, jet, jetR) for grooming_setting in self.grooming_settings] for jet in jets_selected]
         
-    # Loop through DG settings and fill DG histograms
-    if len(self.dg_settings) > 0:
-        result = [[self.analyze_dg_jet(dg_setting, jet, jetR) for dg_setting in self.dg_settings] for jet in jets_selected]
-    
+  #---------------------------------------------------------------
+  # Analyze groomed jets
+  #---------------------------------------------------------------
+  def analyze_groomed_jet(self, grooming_setting, jet, jetR):
+  
+    if 'sd' in grooming_setting:
+      self.analyze_softdrop_jet(grooming_setting, jet, jetR)
+    elif 'dg' in grooming_setting:
+      self.analyze_dg_jet(grooming_setting, jet, jetR)
+  
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
@@ -313,17 +291,18 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
-  def analyze_softdrop_jet(self, sd_setting, jet, jetR):
+  def analyze_softdrop_jet(self, grooming_setting, jet, jetR):
     
-    zcut = sd_setting[0]
-    beta = sd_setting[1]
-    sd_label = self.utils.sd_label(sd_setting)
+    key, value = list(grooming_setting.items())[0]
+    zcut = value[0]
+    beta = value[1]
+    grooming_label = self.utils.grooming_label(grooming_setting)
     
     sd = fjcontrib.SoftDrop(beta, zcut, jetR)
     jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
     reclusterer = fjcontrib.Recluster(jet_def_recluster)
     sd.set_reclustering(True, reclusterer)
-    setattr(self, 'sd_R{}_{}'.format(jetR, sd_label), sd)
+    setattr(self, 'sd_R{}_{}'.format(jetR, grooming_label), sd)
     if self.debug_level > 2:
       print('SoftDrop groomer is: {}'.format(sd.description()))
     
@@ -338,7 +317,7 @@ class ProcessData(process_base.ProcessBase):
     jet_sd = sd.result(jet)
     
     # Fill histograms
-    self.fill_softdrop_histograms(jet_sd, jet, jetR, sd_setting, sd_label)
+    self.fill_softdrop_histograms(jet_sd, jet, jetR, grooming_setting, grooming_label)
       
     # Fill jet axis difference
     if 'jet_axis' in self.observable_list:
@@ -351,12 +330,12 @@ class ProcessData(process_base.ProcessBase):
         reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
         jet_wta = reclusterer_wta.result(jet)
 
-        self.fill_jet_axis_histograms(jet, jet_sd, jet_wta, jetR, sd_setting, sd_label)
+        self.fill_jet_axis_histograms(jet, jet_sd, jet_wta, jetR, grooming_setting, grooming_label)
 
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
-  def analyze_dg_jet(self, dg_setting, jet, jetR):
+  def analyze_dg_jet(self, grooming_setting, jet, jetR):
     
     jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
     dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
@@ -369,10 +348,12 @@ class ProcessData(process_base.ProcessBase):
       return
 
     # Perform Dynamical grooming
-    jet_dg = dy_groomer.result(jet, dg_setting)
+    key, value = list(grooming_setting.items())[0]
+    a = value[0]
+    jet_dg = dy_groomer.result(jet, a)
     
     # Fill histograms
-    self.fill_dg_histograms(jet_dg, jet, jetR, dg_setting)
+    self.fill_dg_histograms(jet_dg, jet, jetR, grooming_setting, a)
             
   #---------------------------------------------------------------
   # Fill histograms
@@ -399,7 +380,7 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill soft drop histograms
   #---------------------------------------------------------------
-  def fill_softdrop_histograms(self, jet_sd, jet, jetR, sd_setting, sd_label):
+  def fill_softdrop_histograms(self, jet_sd, jet, jetR, grooming_setting, grooming_label):
     
     if self.debug_level > 1:
       print('Filling SD histograms...')
@@ -411,10 +392,10 @@ class ProcessData(process_base.ProcessBase):
     theta_g = sd_info.dR / jetR
     zg = sd_info.z
 
-    if sd_setting in self.obs_sd_settings['theta_g']:
-      getattr(self, 'h_theta_g_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, theta_g)
-    if sd_setting in self.obs_sd_settings['zg']:
-      getattr(self, 'h_zg_JetPt_R{}_{}'.format(jetR, sd_label)).Fill(jet_pt_ungroomed, zg)
+    if grooming_setting in self.obs_grooming_settings['theta_g']:
+      getattr(self, 'h_theta_g_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, theta_g)
+    if grooming_setting in self.obs_grooming_settings['zg']:
+      getattr(self, 'h_zg_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, zg)
 
     if self.debug_level > 1:
       print('Done.')
@@ -422,7 +403,7 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill DG histograms
   #---------------------------------------------------------------
-  def fill_dg_histograms(self, jet_dg, jet, jetR, dg_setting):
+  def fill_dg_histograms(self, jet_dg, jet, jetR, grooming_setting, a):
     
     if self.debug_level > 1:
       print('Filling DG histograms...')
@@ -435,10 +416,10 @@ class ProcessData(process_base.ProcessBase):
     theta_g = dR / jetR
     zg = jet_dg.z()
 
-    if dg_setting in self.obs_dg_settings['theta_g']:
-      getattr(self, 'h_theta_g_JetPt_R{}_dg{}'.format(jetR, dg_setting)).Fill(jet_pt_ungroomed, theta_g)
-    if dg_setting in self.obs_dg_settings['zg']:
-      getattr(self, 'h_zg_JetPt_R{}_dg{}'.format(jetR, dg_setting)).Fill(jet_pt_ungroomed, zg)
+    if grooming_setting in self.obs_grooming_settings['theta_g']:
+      getattr(self, 'h_theta_g_JetPt_R{}_dg{}'.format(jetR, a)).Fill(jet_pt_ungroomed, theta_g)
+    if grooming_setting in self.obs_grooming_settings['zg']:
+      getattr(self, 'h_zg_JetPt_R{}_dg{}'.format(jetR, a)).Fill(jet_pt_ungroomed, zg)
 
     if self.debug_level > 1:
       print('Done.')
@@ -446,24 +427,24 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill jet axis histograms
   #---------------------------------------------------------------
-  def fill_jet_axis_histograms(self, jet, jet_sd, jet_wta, jetR, sd_setting, sd_label):
+  def fill_jet_axis_histograms(self, jet, jet_sd, jet_wta, jetR, grooming_setting, grooming_label):
 
     for axis in self.obs_settings['jet_axis']:
 
       if axis == 'Standard_SD':
-        if sd_setting in self.obs_sd_settings['jet_axis']:
+        if grooming_setting in self.obs_grooming_settings['jet_axis']:
           deltaR = jet.delta_R(jet_sd)
-          getattr(self, 'h_jet_axis_JetPt_R{}_Standard_SD{}'.format(jetR, sd_label)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_R{}_Standard_SD{}'.format(jetR, grooming_label)).Fill(jet.pt(), deltaR)
           
       if axis == 'Standard_WTA':
-        if sd_setting == self.sd_settings[0]:
+        if grooming_setting == self.grooming_settings[0]:
           deltaR = jet.delta_R(jet_wta)
           getattr(self, 'h_jet_axis_JetPt_R{}_Standard_WTA'.format(jetR)).Fill(jet.pt(), deltaR)
         
       if axis == 'WTA_SD':
-        if sd_setting in self.obs_sd_settings['jet_axis']:
+        if grooming_setting in self.obs_grooming_settings['jet_axis']:
           deltaR = jet_sd.delta_R(jet_wta)
-          getattr(self, 'h_jet_axis_JetPt_R{}_WTA_SD{}'.format(jetR, sd_label)).Fill(jet.pt(), deltaR)
+          getattr(self, 'h_jet_axis_JetPt_R{}_WTA_SD{}'.format(jetR, grooming_label)).Fill(jet.pt(), deltaR)
 
   #---------------------------------------------------------------
   # Fill track histograms.
