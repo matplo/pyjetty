@@ -35,6 +35,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
+      
+    self.figure_approval_status = config['figure_approval_status']
 
     # Theory comparisons
     if 'fPythia' in config:
@@ -184,9 +186,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    xmin = getattr(self, 'xmin')
-    xmax = getattr(self, 'xmax')
-    ymax = getattr(self, 'ymax')
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
@@ -312,11 +311,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
     
-    xmin = getattr(self, 'xmin')
-    xmax = getattr(self, 'xmax')
-    ymax = getattr(self, 'ymax')
-    ymin_ratio = getattr(self, 'ymin_ratio')
-    ymax_ratio = getattr(self, 'ymax_ratio')
     xtitle = getattr(self, 'xtitle')
     ytitle = getattr(self, 'ytitle')
 
@@ -507,7 +501,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'ALICE Preliminary'
+    text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.25, 0.87, text)
     
     text_latex = ROOT.TLatex()
@@ -563,45 +557,11 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     myPad.Draw()
     myPad.cd()
     
-    ymax = getattr(self, 'ymax')
     xtitle = getattr(self, 'xtitle')
     ytitle = getattr(self, 'ytitle')
-    
-    n_obs_bins_truth = self.n_bins_truth(obs_label)
-    truth_bin_array = self.truth_bin_array(obs_label)
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
-    myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle( xtitle )
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(ymax)
-    myBlankHisto.SetMinimum(0.)
-    myBlankHisto.Draw("E")
-
-    if plot_pythia:
-    
-      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
-      if hPythia:
-        hPythia.SetFillStyle(0)
-        hPythia.SetMarkerSize(1.5)
-        hPythia.SetMarkerStyle(21)
-        hPythia.SetMarkerColor(2)
-        hPythia.SetLineColor(2)
-        hPythia.SetLineWidth(1)
-        hPythia.Draw('E2 same')
-      else:
-        print('No PYTHIA prediction for {} {}'.format(self.observable, obs_label))
-        plot_pythia = False
-    
     color = 600-6
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
-    h_sys.SetLineColor(0)
-    h_sys.SetFillColor(color)
-    h_sys.SetFillColorAlpha(color, 0.3)
-    h_sys.SetFillStyle(1001)
-    h_sys.SetLineWidth(0)
-    h_sys.DrawCopy('E2 same')
     
+    # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     if grooming_setting:
       fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
@@ -612,11 +572,46 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     h.SetLineStyle(1)
     h.SetLineWidth(2)
     h.SetLineColor(color)
+    
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    h_sys.SetLineColor(0)
+    h_sys.SetFillColor(color)
+    h_sys.SetFillColorAlpha(color, 0.3)
+    h_sys.SetFillStyle(1001)
+    h_sys.SetLineWidth(0)
+    
+    n_obs_bins_truth = self.n_bins_truth(obs_label)
+    truth_bin_array = self.truth_bin_array(obs_label)
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.SetXTitle( xtitle )
+    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.SetYTitle(ytitle)
+    myBlankHisto.SetMaximum(3*h.GetMaximum())
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.Draw("E")
+
+    if plot_pythia:
+    
+      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
+      if hPythia:
+        hPythia.SetFillStyle(0)
+        hPythia.SetMarkerSize(1.5)
+        hPythia.SetMarkerStyle(21)
+        hPythia.SetMarkerColor(1)
+        hPythia.SetLineColor(1)
+        hPythia.SetLineWidth(1)
+        hPythia.Draw('E2 same')
+      else:
+        print('No PYTHIA prediction for {} {}'.format(self.observable, obs_label))
+        plot_pythia = False
+    
+    h_sys.DrawCopy('E2 same')
     h.DrawCopy('PE X0 same')
   
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'ALICE Preliminary'
+    text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.57, 0.87, text)
     
     text_latex = ROOT.TLatex()
@@ -638,33 +633,35 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     text_latex.DrawLatex(0.57, 0.66, text)
     
     subobs_label = self.utils.formatted_subobs_label(self.observable)
+    delta = 0.
     if subobs_label:
       text = '{} = {}'.format(subobs_label, obs_setting)
       text_latex.DrawLatex(0.57, 0.59, text)
+      delta = 0.07
     
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting)
-      text_latex.DrawLatex(0.57, 0.52, text)
+      text_latex.DrawLatex(0.57, 0.59-delta, text)
       
       text_latex = ROOT.TLatex()
       text_latex.SetNDC()
       text_latex.SetTextSize(0.04)
       text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-      text_latex.DrawLatex(0.57, 0.45, text)
+      text_latex.DrawLatex(0.57, 0.52-delta, text)
     
       if plot_pythia:
         text_latex = ROOT.TLatex()
         text_latex.SetNDC()
         text_latex.SetTextSize(0.04)
         text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
-        text_latex.DrawLatex(0.57, 0.38, text)
+        text_latex.DrawLatex(0.57, 0.52-delta, text)
 
-    myLegend = ROOT.TLegend(0.27,0.7,0.5,0.85)
+    myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
-      myLegend.AddEntry(hPythia, 'PYTHIA Monash2013', 'pe')
+      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
