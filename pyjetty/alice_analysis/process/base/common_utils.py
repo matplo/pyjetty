@@ -36,49 +36,41 @@ class CommonUtils(common_base.CommonBase):
     super(CommonUtils, self).__init__(**kwargs)
   
   #---------------------------------------------------------------
-  # Get SD settings (i.e. list that stores a list of SD settings [zcut, beta])
-  # from observable config block
+  # Get grooming settings (i.e. list that stores a dict of grooming
+  # settings, i.e. {'sd': [zcut, beta]} or {'dg': [a]} from observable config block
   #---------------------------------------------------------------
-  def sd_settings(self, obs_config_dict):
+  def grooming_settings(self, obs_config_dict):
   
-    sd_settings = []
+    grooming_settings = []
     for config_key, subconfig in obs_config_dict.items():
       if config_key == 'common_settings':
         continue
       if 'SoftDrop' in subconfig:
-        sd_dict = obs_config_dict[config_key]['SoftDrop']
-        sd_settings.append([sd_dict['zcut'], sd_dict['beta']])
+        grooming_dict = obs_config_dict[config_key]['SoftDrop']
+        grooming_settings.append({'sd':[grooming_dict['zcut'], grooming_dict['beta']]})
+      elif 'DynamicalGrooming' in subconfig:
+        grooming_dict = obs_config_dict[config_key]['DynamicalGrooming']
+        grooming_settings.append({'dg':[grooming_dict['a']]})
       else:
-        sd_settings.append(None)
+        grooming_settings.append(None)
         
-    return sd_settings
+    return grooming_settings
 
-  # Get formatted Soft Drop label from sd_setting = [zcut, beta]
+  # Get formatted grooming label from grooming_setting,
+  # i.e. {'sd': [zcut, beta]} or {'dg': [a]}
   #---------------------------------------------------------------
-  def sd_label(self, sd_setting):
+  def grooming_label(self, grooming_setting):
   
-      zcut = sd_setting[0]
-      beta = sd_setting[1]
-      sd_label = 'zcut{}_B{}'.format(self.remove_periods(zcut), beta)
-      return sd_label
-      
-  #---------------------------------------------------------------
-  # Get Dynamical Grooming settings (i.e. list that stores DG settings)
-  # from observable config block
-  #---------------------------------------------------------------
-  def dg_settings(self, obs_config_dict):
-  
-    dg_settings = []
-    for config_key, subconfig in obs_config_dict.items():
-      if config_key == 'common_settings':
-        continue
-      if 'DynamicalGrooming' in subconfig:
-        dg_dict = obs_config_dict[config_key]['DynamicalGrooming']
-        dg_settings.append(dg_dict['a'])
-      else:
-        dg_settings.append(None)
-        
-    return dg_settings
+    key, value = list(grooming_setting.items())[0]
+
+    if key == 'sd':
+      text = 'zcut{}_B{}'.format(self.remove_periods(value[0]), value[1])
+    elif key == 'dg':
+      text = 'dg{}'.format(value[0])
+    else:
+      sys.exit('Unknown grooming type!')
+    
+    return text
 
   #---------------------------------------------------------------
   # Remove periods from a label

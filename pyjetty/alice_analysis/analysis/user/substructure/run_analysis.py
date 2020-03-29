@@ -5,12 +5,12 @@ This class steers analysis of generic jet substructure analyses which require 2D
 
 To use this class, the following should be done:
 
-  - Produce a histogram of the data, with name h_[obs]_JetPt_R[R]_[subobs]_[SD]
-    The SD part is optional, and should be labeled zcut01_B0 — from CommonUtils::sd_label([zcut, beta])
+  - Produce a histogram of the data, with name h_[obs]_JetPt_R[R]_[subobs]_[grooming setting]
+    The grooming part is optional, and should be labeled e.g. zcut01_B0 — from CommonUtils::grooming_label({'sd':[zcut, beta]})
     For example: h_subjet_z_JetPt_R0.4_0.1
     For example: h_subjet_z_JetPt_R0.4_0.1_zcut01_B0
     
-  - Produce a histogram of the response, with name hResponse_JetPt_[obs]_R[R]_[subobs]_[SD]
+  - Produce a histogram of the response, with name hResponse_JetPt_[obs]_R[R]_[subobs]_[grooming setting]
   
   - Specify a configuration file, see examples in the config/ directory
   
@@ -88,7 +88,7 @@ class RunAnalysis(common_base.CommonBase):
     self.jetR_list = config['jetR']
     self.obs_config_dict = config[self.observable]
     self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
-    self.sd_settings = self.utils.sd_settings(self.obs_config_dict)
+    self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
     self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
     setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
     setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
@@ -103,7 +103,7 @@ class RunAnalysis(common_base.CommonBase):
     for i, _ in enumerate(self.obs_subconfig_list):
 
       config_name = self.obs_subconfig_list[i]
-      obs_label = self.utils.obs_label(self.obs_settings[i], self.sd_settings[i])
+      obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
       
       pt_bins_truth = (self.obs_config_dict[config_name]['pt_bins_truth'])
       n_pt_bins_truth = len(pt_bins_truth) - 1
@@ -189,21 +189,21 @@ class RunAnalysis(common_base.CommonBase):
       for i, _ in enumerate(self.obs_subconfig_list):
 
         obs_setting = self.obs_settings[i]
-        sd_setting = self.sd_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, sd_setting)
-        reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
 
         # Compute systematics and attach to main results
         if self.do_systematics:
-          self.compute_systematics(jetR, obs_label, obs_setting, sd_setting, reg_param_final)
+          self.compute_systematics(jetR, obs_label, obs_setting, grooming_setting, reg_param_final)
 
         # Plot result for each individial subconfiguration
         if self.do_plot_final_result:
-          self.plot_single_result(jetR, obs_label, obs_setting, sd_setting) # You must implement this
+          self.plot_single_result(jetR, obs_label, obs_setting, grooming_setting) # You must implement this
           
       # Plot final results for all subconfigs
       if self.do_plot_final_result:
-        self.plot_all_results(jetR, obs_label, obs_setting, sd_setting) # You must implement this
+        self.plot_all_results(jetR, obs_label, obs_setting, grooming_setting) # You must implement this
    
     # Plot additional performance plots
     if self.do_plot_performance:
@@ -254,11 +254,11 @@ class RunAnalysis(common_base.CommonBase):
     return rebin_response
 
   #----------------------------------------------------------------------
-  def compute_systematics(self, jetR, obs_label, obs_setting, sd_setting, reg_param_final):
-    print('Compute systematics for {}: R = {}, subobs = {} , SD = {}...'.format(self.observable, jetR, obs_label, sd_setting))
+  def compute_systematics(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final):
+    print('Compute systematics for {}: R = {}, subobs = {} , grooming = {}...'.format(self.observable, jetR, obs_label, grooming_setting))
 
     # Load 2D unfolded results from their files into attributes
-    self.load_2D_observables(jetR, obs_label, obs_setting, sd_setting, reg_param_final)
+    self.load_2D_observables(jetR, obs_label, obs_setting, grooming_setting, reg_param_final)
     
     # Loop through pt slices, and compute systematics for each 1D observable distribution
     for bin in range(0, len(self.pt_bins_reported) - 1):
@@ -266,13 +266,13 @@ class RunAnalysis(common_base.CommonBase):
       max_pt_truth = self.pt_bins_reported[bin+1]
       
       # Load 1D unfolded results for each pt slice into attributes
-      self.load_1D_observables(jetR, obs_label, obs_setting, sd_setting, reg_param_final, min_pt_truth, max_pt_truth)
+      self.load_1D_observables(jetR, obs_label, obs_setting, grooming_setting, reg_param_final, min_pt_truth, max_pt_truth)
       
       # Compute systematics of the 1D distributions for each pt slice
-      self.compute_obs_systematic(jetR, obs_label, obs_setting, sd_setting, reg_param_final, min_pt_truth, max_pt_truth)
+      self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final, min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
-  def load_2D_observables(self, jetR, obs_label, obs_setting, sd_setting, reg_param_final):
+  def load_2D_observables(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final):
     
     # Get all other systematic variations, and store as attributes
     for systematic in self.systematics_list:
@@ -290,11 +290,11 @@ class RunAnalysis(common_base.CommonBase):
         name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final-2)
         self.retrieve_histo_and_set_attribute(name, f)
 
-    # Get tagging rate histogram, and store as an attribute
-    if sd_setting:
-      name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
-      self.retrieve_histo_and_set_attribute(name, fMain)
-      
+        # Get tagging rate histogram, and store as an attribute
+        if grooming_setting:
+          name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
+          self.retrieve_histo_and_set_attribute(name, f)
+        
   #----------------------------------------------------------------------
   def retrieve_histo_and_set_attribute(self, name, file, suffix = ''):
   
@@ -306,29 +306,29 @@ class RunAnalysis(common_base.CommonBase):
   # Get 1D histograms
   # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
   #----------------------------------------------------------------------
-  def load_1D_observables(self, jetR, obs_label, obs_setting, sd_setting, reg_param_final, min_pt_truth, max_pt_truth):
+  def load_1D_observables(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final, min_pt_truth, max_pt_truth):
   
     # Get all other systematic variations, and store as attributes
     for systematic in self.systematics_list:
   
       name2D = 'hUnfolded_{}_R{}_{}_{}{}'.format(self.observable, jetR, obs_label, reg_param_final, systematic)
       name1D = 'h{}_{}_R{}_{}_{}-{}'.format(systematic, self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      self.get_obs_distribution(jetR, obs_label, name2D, name1D, sd_setting, min_pt_truth, max_pt_truth)
+      self.get_obs_distribution(jetR, obs_label, name2D, name1D, grooming_setting, min_pt_truth, max_pt_truth)
 
       if systematic == 'main':
         # Get regularization parameter variations, and store as attributes
         name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final+2)
         name1D = 'hRegParam1_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-        hRegParam1 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, sd_setting, min_pt_truth, max_pt_truth)
+        hRegParam1 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, grooming_setting, min_pt_truth, max_pt_truth)
         
         name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param_final-2)
         name1D = 'hRegParam2_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-        hRegParam2 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, sd_setting, min_pt_truth, max_pt_truth)
+        hRegParam2 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, grooming_setting, min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
   # Compute systematics
   #----------------------------------------------------------------------
-  def compute_obs_systematic(self, jetR, obs_label, obs_setting, sd_setting, reg_param_final, min_pt_truth, max_pt_truth):
+  def compute_obs_systematic(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final, min_pt_truth, max_pt_truth):
     
     # Get main result
     name = 'h{}_{}_R{}_{}_{}-{}'.format('main', self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
@@ -397,10 +397,10 @@ class RunAnalysis(common_base.CommonBase):
     setattr(self, name, hResult_sys)
       
     # Plot systematic uncertainties, and write total systematic to a ROOT file
-    self.plot_systematic_uncertainties(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, h_list, hSystematic_Total)
+    self.plot_systematic_uncertainties(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, h_list, hSystematic_Total)
   
   #----------------------------------------------------------------------
-  def get_obs_distribution(self, jetR, obs_label, name2D, name1D, sd_setting, min_pt_truth, max_pt_truth):
+  def get_obs_distribution(self, jetR, obs_label, name2D, name1D, grooming_setting, min_pt_truth, max_pt_truth):
   
     h2D = getattr(self, name2D)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
@@ -408,7 +408,7 @@ class RunAnalysis(common_base.CommonBase):
     h.SetName(name1D)
     h.SetDirectory(0)
     
-    if sd_setting:
+    if grooming_setting:
         name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
         hTaggingFrac = getattr(self, name)
         x = (min_pt_truth + max_pt_truth)/2.
@@ -426,7 +426,7 @@ class RunAnalysis(common_base.CommonBase):
     return h
   
   #----------------------------------------------------------------------
-  def plot_systematic_uncertainties(self, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, h_list, h_total):
+  def plot_systematic_uncertainties(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, h_list, h_total):
   
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -507,8 +507,8 @@ class RunAnalysis(common_base.CommonBase):
       text = '{} = {}'.format(subobs_label, obs_setting)
       text_latex.DrawLatex(0.3, 0.71, text)
     
-    if sd_setting:
-      text = self.utils.formatted_sd_label(sd_setting)
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting)
       text_latex.DrawLatex(0.3, 0.64, text)
       
     output_dir = getattr(self, 'output_dir_systematics')
@@ -583,7 +583,7 @@ class RunAnalysis(common_base.CommonBase):
   # This function is called once for each subconfiguration
   # You must implement this
   #----------------------------------------------------------------------
-  def plot_single_result(jetR, obs_label, obs_setting, sd_setting):
+  def plot_single_result(jetR, obs_label, obs_setting, grooming_setting):
 
     raise NotImplementedError('You must implement plot_single_result()!')
 
@@ -591,7 +591,7 @@ class RunAnalysis(common_base.CommonBase):
   # This function is called once after all subconfigurations have been looped over, for each R
   # You must implement this
   #----------------------------------------------------------------------
-  def plot_all_results(jetR, obs_label, obs_setting, sd_setting):
+  def plot_all_results(jetR, obs_label, obs_setting, grooming_setting):
 
     raise NotImplementedError('You must implement plot_all_results()!')
       

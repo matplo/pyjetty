@@ -48,23 +48,24 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
   #---------------------------------------------------------------
-  def plot_single_result(self, jetR, obs_label, obs_setting, sd_setting):
+  def plot_single_result(self, jetR, obs_label, obs_setting, grooming_setting):
   
-    self.plot_final_result(jetR, obs_label, obs_setting, sd_setting)
+    self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting)
     
-    if self.observable == 'theta_g' or self.observable == 'zg':
-        self.get_nll_tgraph(jetR, obs_label, obs_setting, sd_setting, 20., 40.)
-        self.get_nll_tgraph(jetR, obs_label, obs_setting, sd_setting, 40., 60.)
-        self.get_nll_tgraph(jetR, obs_label, obs_setting, sd_setting, 60., 80.)
+    #if self.observable == 'theta_g' or self.observable == 'zg':
+    #    self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, 20., 40.)
+    #    self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, 40., 60.)
+    #    self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, 60., 80.)
 
   
   #---------------------------------------------------------------
   # This function is called once after all subconfigurations have been looped over, for each R
   #---------------------------------------------------------------
-  def plot_all_results(self, jetR, obs_label, obs_setting, sd_setting):
+  def plot_all_results(self, jetR, obs_label, obs_setting, grooming_setting):
   
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      self.plot_final_result_overlay(jetR)
+    print('plot_all_results')
+    #if self.observable == 'theta_g' or self.observable == 'zg':
+      #self.plot_final_result_overlay(jetR)
 
       #self.plot_NPcorrection(jetR)
   
@@ -76,7 +77,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     print('Plotting performance plots...')
   
   #----------------------------------------------------------------------
-  def plot_final_result(self, jetR, obs_label, obs_setting, sd_setting):
+  def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
     print('Plot final results for {}: R = {}, {} ...'.format(self.observable, jetR, obs_label))
 
     self.utils.set_plotting_options()
@@ -89,8 +90,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       
       #self.get_NPcorrection(self.observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth)
       
-      self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
-      #self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
+      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False)
+      #self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
 
   #----------------------------------------------------------------------
   def get_NPcorrection(self, observable, jetR, obs_label, obs_setting, min_pt_truth, max_pt_truth):
@@ -126,15 +127,15 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     #self.utils.plot_hist(hNumerator, outputFilename)
 
   #----------------------------------------------------------------------
-  def get_nll_tgraph(self, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth):
+  def get_nll_tgraph(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
 
     n_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
     
     if self.observable == 'theta_g':
-      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(sd_setting[1], int(min_pt_truth), int(max_pt_truth))
+      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(grooming_setting, int(min_pt_truth), int(max_pt_truth))
     if self.observable == 'zg':
-      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(sd_setting[1], int(min_pt_truth), int(max_pt_truth))
+      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(grooming_setting, int(min_pt_truth), int(max_pt_truth))
     
     filename = open(path_txt, 'r')
 
@@ -208,7 +209,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     # Retrieve histogram binnings for each observable setting
     for i, obs_setting in enumerate(self.obs_settings):
       
-      obs_label = self.utils.obs_label(obs_setting, sd_setting)
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
       
       n_obs_bins_truth = self.n_bins_truth(obs_label)
       truth_bin_array = self.truth_bin_array(obs_label)
@@ -376,8 +377,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     for i, _ in enumerate(self.obs_subconfig_list):
 
       obs_setting = self.obs_settings[i]
-      sd_setting = self.sd_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, sd_setting)
+      grooming_setting = self.grooming_settings[i]
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
       n_obs_bins_truth = self.n_bins_truth(obs_label)
       truth_bin_array = self.truth_bin_array(obs_label)
@@ -399,7 +400,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       if plot_pythia:
         
         fPythia = ROOT.TFile(self.fPythia_name, 'READ')
-        hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, sd_setting[1], int(min_pt_truth), int(max_pt_truth))
+        hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, grooming_setting[1], int(min_pt_truth), int(max_pt_truth))
         hPythia = fPythia.Get(hname)
         hPythia.SetDirectory(0)
         
@@ -460,7 +461,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       h.SetLineColor(color)
       h.DrawCopy('PE X0 same')
         
-      myLegend.AddEntry(h, 'ALICE pp #beta={}'.format(sd_setting[1]), 'pe')
+      myLegend.AddEntry(h, 'ALICE pp #beta={}'.format(grooming_setting[1]), 'pe')
 
       if plot_ratio:
         pad2.cd()
@@ -525,7 +526,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     if self.observable == 'theta_g' or self.observable == 'zg':
-      text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(sd_setting[0])
+      text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(grooming_setting[0])
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.69, text)
     
@@ -548,7 +549,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     c.Close()
   
   #----------------------------------------------------------------------
-  def plot_observable(self, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
+  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
     
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -624,7 +625,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     h_sys.DrawCopy('E2 same')
     
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    if sd_setting:
+    if grooming_setting:
       fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = getattr(self, name)
     h.SetMarkerSize(1.5)
@@ -663,8 +664,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       text = '{} = {}'.format(subobs_label, obs_setting)
       text_latex.DrawLatex(0.57, 0.59, text)
     
-    if sd_setting:
-      text = self.utils.formatted_sd_label(sd_setting)
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting)
       text_latex.DrawLatex(0.57, 0.52, text)
       
       text_latex = ROOT.TLatex()
