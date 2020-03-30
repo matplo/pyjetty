@@ -96,7 +96,15 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     # Initialize performance plotting class
     if self.do_plot_performance:
-      self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, self.output_dir_performance)
+      self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, self.output_dir_performance, self.figure_approval_status)
+      
+    # Create output subdirectories
+    self.create_output_subdir(self.output_dir_performance, 'jet')
+    self.create_output_subdir(self.output_dir_performance, 'resolution')
+    self.create_output_subdir(self.output_dir_performance, 'residual')
+    self.create_output_subdir(self.output_dir_performance, 'residual_relative')
+    self.create_output_subdir(self.output_dir_performance, 'mc_projections')
+    self.create_output_subdir(self.output_dir_performance, 'statistics')
     
     # Generate performance plots
     for jetR in self.jetR_list:
@@ -106,7 +114,20 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.plotting_utils.plot_JES(jetR)
       self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
       self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
-  
+      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
+      
+      # Plot subobservable-dependent performance plots
+      for i, _ in enumerate(self.obs_subconfig_list):
+
+        obs_setting = self.obs_settings[i]
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+    
+        self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
+        self.plotting_utils.plot_obs_projections(jetR, obs_label, grooming_setting, self.xtitle, self.pt_bins_reported)
+
       # Plot prong matching histograms
       if not self.is_pp:
         self.prong_match_threshold = 0.5
@@ -131,21 +152,12 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{{}}Scaled'.format(jetR)
         self.plot_prong_matching_correlation(jetR, hname)
 
-      # Plot subobservable-dependent performance plots
-      for i, _ in enumerate(self.obs_subconfig_list):
+        # Plot subobservable-dependent plots
+        for i, _ in enumerate(self.obs_subconfig_list):
+          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+          self.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
+          self.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
 
-        obs_setting = self.obs_settings[i]
-        grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-    
-        self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-       #  self.plotJetRecoEfficiency(jetR, sd_label)
-       #  self.plotRg(jetR, sd_label, zcut, beta)
-       #  self.plot_prong_N_vs_z(jetR, sd_label, 'tagged')
-       #  self.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
-
-  
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
     print('Plot final results for {}: R = {}, {}'.format(self.observable, jetR, obs_label))
