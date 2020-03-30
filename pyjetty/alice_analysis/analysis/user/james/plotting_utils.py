@@ -98,6 +98,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     outputFilename = os.path.join(self.output_dir, "histDeltaJESprof_R{}.pdf".format(self.remove_periods(jetR)))
     histDeltaJESprof.SetMarkerStyle(21)
     histDeltaJESprof.SetMarkerColor(4)
+    histDeltaJESprof.SetMarkerSize(3)
     self.plot_hist(histDeltaJESprof, outputFilename, "P")
 
   #---------------------------------------------------------------
@@ -166,6 +167,149 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     histDeltaJES.GetXaxis().SetRangeUser(minPt, maxPt)
     histDeltaJES.GetYaxis().SetRangeUser(-1., 1.)
     h = histDeltaJES.ProjectionY()
+    
+    integral = h.Integral()
+    if integral > 0:
+      h.Scale(1./integral, 'width')
+    
+    return h
+
+  #---------------------------------------------------------------
+  def plotJER(self, jetR, obs_label):
+    
+    # (pt-det, pt-truth, theta_g-det, theta_g-truth)
+    name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    hRM_4d = self.fMC.Get(name)
+    hRM = hRM_4d.Projection(1,0)
+    hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
+    
+    # For each pT^gen, compute the standard deviation of the pT^det distribution
+    
+    # Get the pT^gen profile, with errors as standard deviation of pT^det distribution
+    histPtGenProf = hRM.ProfileY('histPtGenProff', 1, -1, "s")
+    
+    # Create histo to be used to fill JER values
+    nBins = 60
+    histJER = ROOT.TH1D('histJER_R{}_{}'.format(jetR, obs_label), 'histJER_R{}_{}'.format(jetR, obs_label), nBins, 0., 300.) # same binning for pT^gen as in task
+    
+    # Loop through the bins, and fill the JER
+    for i in range(0,nBins+1):
+      sigma = histPtGenProf.GetBinError(i)
+      pTgen = histPtGenProf.GetXaxis().GetBinCenter(i)
+      JER = sigma/pTgen
+      histJER.SetBinContent(i, JER)
+    
+    histJER.GetYaxis().SetTitle('#frac{#sigma(#it{p}_{T}^{gen})}{#it{p}_{T}^{gen}}')
+    histJER.GetXaxis().SetTitle('#it{p}_{T}^{gen}')
+    histJER.GetYaxis().SetRangeUser(-0.01, 0.5)
+    histJER.GetXaxis().SetRangeUser(5., 100.)
+    outputFilename = os.path.join(self.output_dir, 'histJER_R{}.pdf'.format(self.remove_periods(jetR)))
+    histJER.SetMarkerStyle(21)
+    histJER.SetMarkerColor(2)
+    histJER.SetMarkerSize(3)
+    self.plot_hist(histJER, outputFilename, 'hist P')
+  
+  #---------------------------------------------------------------
+  def plot_obs_resolution(self, jetR, obs_label, xtitle, pt_bins):
+  
+    # (pt-det, pt-truth, theta_g-det, theta_g-truth)
+    name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    hRM_4d = self.fMC.Get(name)
+    
+    hRM = hRM_4d.GetAxis(1).SetRangeUser(40, 60)
+    hRM = hRM_4d.Projection(3,2)
+    hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj_theta'.format(self.observable, jetR, obs_label))
+    
+    # For each pT^gen, compute the standard deviation of the pT^det distribution
+    
+    # Get the pT^gen profile, with errors as standard deviation of pT^det distribution
+    histThetaGenProf = hRM.ProfileY('histThetaGenProff', 1, -1, 's')
+    
+    # Create histo to be used to fill JER values
+    nBins = 20
+    histThetaResolution = ROOT.TH1D('histThetaResolution_R{}_{}'.format(jetR, obs_label), 'histThetaResolution_R{}_{}'.format(jetR, obs_label), nBins, 0., 1.) # same binning for pT^gen as in task
+    
+    # Loop through the bins, and fill the JER
+    for i in range(0,nBins+1):
+      sigma = histThetaGenProf.GetBinError(i)
+      theta_gen = histThetaGenProf.GetXaxis().GetBinCenter(i)
+      resolution = sigma/theta_gen
+      histThetaResolution.SetBinContent(i, resolution)
+    
+    label_gen = '{}^{{gen}}'.format(xtitle)
+    histThetaResolution.GetYaxis().SetTitle('#sigma({}) / {}'.format(label_gen, label_gen))
+    histThetaResolution.GetXaxis().SetTitle(label_gen)
+    histThetaResolution.GetYaxis().SetRangeUser(-0.01, 1.)
+    histThetaResolution.GetXaxis().SetRangeUser(5., 100.)
+    outputFilename = os.path.join(self.output_dir, 'histThetaResolution_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+    histThetaResolution.SetMarkerStyle(21)
+    histThetaResolution.SetMarkerColor(2)
+    histThetaResolution.SetMarkerSize(3)
+    self.plot_hist(histThetaResolution, outputFilename, 'hist P')
+
+  #---------------------------------------------------------------
+  def plot_obs_residual(self, jetR, obs_label, xtitle, pt_bins):
+
+    name = 'hResidual_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    
+    c_residual = ROOT.TCanvas('c','c: hist',600,450)
+    c_residual.cd()
+    c_residual.SetBottomMargin(0.17)
+    
+    leg = ROOT.TLegend(0.55,0.55,0.88,0.85, '')
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+    
+    # Loop through pt slices, and plot final residual for each 1D distribution
+    for i in range(0, len(pt_bins) - 1):
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_pt_truth, max_pt_truth)
+      hResidual.SetMarkerStyle(20)
+      hResidual.SetMarkerColor(ColorArray[i])
+      hResidual.SetLineColor(ColorArray[i])
+
+      if i == 0:
+      
+        hResidual.GetXaxis().SetTitleOffset(1.6);
+        hResidual.GetYaxis().SetTitle('Probability density')
+        hResidual.GetYaxis().SetRangeUser(0, 1.2*hResidual.GetMaximum())
+        hResidual.DrawCopy('P E')
+        
+      else:
+
+        hResidual.DrawCopy('P E same')
+
+      leg.AddEntry(hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+
+    leg.Draw('same')
+    
+    outputFilename = os.path.join(self.output_dir, 'hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+    c_residual.SaveAs(outputFilename)
+    c_residual.Close()
+
+  #---------------------------------------------------------------
+  # Get residual for a fixed pT-gen
+  def get_residual_proj(self, name, label, minPt, maxPt):
+    
+    h_residual_pt = self.fMC.Get(name)
+    h_residual_pt.SetName('{}_{}'.format(h_residual_pt.GetName(), label))
+    
+    h_residual_pt.GetXaxis().SetRangeUser(minPt, maxPt)
+    h_residual_pt.GetYaxis().SetRangeUser(-0.5, 0.5)
+    h = h_residual_pt.ProjectionY()
     
     integral = h.Integral()
     if integral > 0:

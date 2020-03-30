@@ -101,46 +101,49 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     # Generate performance plots
     for jetR in self.jetR_list:
   
+      # Plot some subobservable-independent performance plots
       self.plotting_utils.plot_DeltaR(jetR, self.jet_matching_distance)
       self.plotting_utils.plot_JES(jetR)
       self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
-
-     #self.prong_match_threshold = 0.5
-     #self.min_pt = 80.
-     #self.max_pt = 100.
-     #prong_list = ['leading', 'subleading']
-     #match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
-     #for prong in prong_list:
-     #    for match in match_list:
+      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
   
-     #        hname = 'hProngMatching_{}_{}_JetPt_R{}_{{}}Scaled'.format(prong, match, jetR)
-     #        self.plot_prong_matching(jetR, hname)
-     #        self.plot_prong_matching_delta(jetR, hname, plot_deltaz=False)
-     #
-     #        hname = 'hProngMatching_{}_{}_JetPtDet_R{}_{{}}Scaled'.format(prong, match, jetR)
-     #        self.plot_prong_matching(jetR, hname)
-     #
-     #        if 'subleading' in prong:
-     #          hname = 'hProngMatching_{}_{}_JetPtZ_R{}_{{}}Scaled'.format(prong, match, jetR)
-     #          self.plot_prong_matching_delta(jetR, hname, plot_deltaz=True)
+      # Plot prong matching histograms
+      if not self.is_pp:
+        self.prong_match_threshold = 0.5
+        self.min_pt = 80.
+        self.max_pt = 100.
+        prong_list = ['leading', 'subleading']
+        match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
+        for prong in prong_list:
+          for match in match_list:
+  
+            hname = 'hProngMatching_{}_{}_JetPt_R{}_{{}}Scaled'.format(prong, match, jetR)
+            self.plot_prong_matching(jetR, hname)
+            self.plot_prong_matching_delta(jetR, hname, plot_deltaz=False)
+     
+            hname = 'hProngMatching_{}_{}_JetPtDet_R{}_{{}}Scaled'.format(prong, match, jetR)
+            self.plot_prong_matching(jetR, hname)
+     
+            if 'subleading' in prong:
+              hname = 'hProngMatching_{}_{}_JetPtZ_R{}_{{}}Scaled'.format(prong, match, jetR)
+              self.plot_prong_matching_delta(jetR, hname, plot_deltaz=True)
 
-     #hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{{}}Scaled'.format(jetR)
-     #self.plot_prong_matching_correlation(jetR, hname)
+        hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{{}}Scaled'.format(jetR)
+        self.plot_prong_matching_correlation(jetR, hname)
 
-     #for sd_setting in self.sd_settings:
-     #
-     #  zcut = sd_setting[0]
-     #  beta = sd_setting[1]
-     #  sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
-     #
-     #  self.plotJER(jetR, sd_label)
-     #  self.plot_theta_resolution(jetR, sd_label)
-     #  self.plot_theta_residual(jetR, sd_label)
-     #  self.plot_zg_residual(jetR, sd_label)
-     #  self.plotJetRecoEfficiency(jetR, sd_label)
-     #  self.plotRg(jetR, sd_label, zcut, beta)
-     #  self.plot_prong_N_vs_z(jetR, sd_label, 'tagged')
-     #  self.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
+      # Plot subobservable-dependent performance plots
+      for i, _ in enumerate(self.obs_subconfig_list):
+
+        obs_setting = self.obs_settings[i]
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+    
+        self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
+       #  self.plotJetRecoEfficiency(jetR, sd_label)
+       #  self.plotRg(jetR, sd_label, zcut, beta)
+       #  self.plot_prong_N_vs_z(jetR, sd_label, 'tagged')
+       #  self.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
 
   
   #----------------------------------------------------------------------
