@@ -549,3 +549,16 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     output_filename = os.path.join(self.output_dir, 'mc_projections/h_{}_MC_R{}_{}_{}-{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label, min_pt_det, max_pt_det))
     c.SaveAs(output_filename)
     c.Close()
+
+  #---------------------------------------------------------------
+  def plot_lund_plane(self, jetR, obs_label, grooming_setting):
+
+    name = 'hLundPlane_R{}_{}Scaled'.format(jetR, obs_label)
+    hLund = self.fMC.Get(name)
+    
+    hLund.GetXaxis().SetRangeUser(np.log(1/jetR), 5)
+    hLund.GetYaxis().SetRangeUser(-3., 6.)
+    
+    text = '#it{p}_{T, ch jet}^{truth} > 100 GeV/c'
+    output_filename = os.path.join(self.output_dir, 'lund/hLundPlane_R{}_{}.pdf'.format(jetR, obs_label))
+    self.plot_hist(hLund, output_filename, drawOptions = 'colz', text = text)

@@ -105,6 +105,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     self.create_output_subdir(self.output_dir_performance, 'residual_relative')
     self.create_output_subdir(self.output_dir_performance, 'mc_projections')
     self.create_output_subdir(self.output_dir_performance, 'statistics')
+    self.create_output_subdir(self.output_dir_performance, 'lund')
     
     # Generate performance plots
     for jetR in self.jetR_list:
@@ -127,6 +128,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
         self.plotting_utils.plot_obs_projections(jetR, obs_label, grooming_setting, self.xtitle, self.pt_bins_reported)
+        
+        if grooming_setting:
+          self.plotting_utils.plot_lund_plane(jetR, obs_label, grooming_setting)
 
       # Plot prong matching histograms
       if not self.is_pp:
