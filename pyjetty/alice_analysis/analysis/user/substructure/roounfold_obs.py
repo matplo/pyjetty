@@ -96,7 +96,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
       setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
       setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
-      setattr(self, 'ymax', self.obs_config_dict['common_settings']['ymax'])
       setattr(self, 'pt_bins_reported', self.obs_config_dict['common_settings']['pt_bins_reported'])
 
       # Retrieve histogram binnings for each observable setting
@@ -403,22 +402,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     
     n_bins_truth = getattr(self, 'n_bins_truth_{}'.format(obs_label))
     truth_bin_array = getattr(self, 'truth_bin_array_{}'.format(obs_label))
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
-    myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(self.xtitle)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(self.ytitle)
-    myBlankHisto.SetMaximum(getattr(self, 'ymax'))
-    myBlankHisto.SetMinimum(0.)
-    if option == 'ratio':
-      myBlankHisto.SetMaximum(1.2)
-      myBlankHisto.SetMinimum(0.9)
-      myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter}-1)}')
-    if option == 'uncertainties':
-      myBlankHisto.SetMaximum(40)
-      myBlankHisto.SetMinimum(0.)
-      myBlankHisto.SetYTitle('statistical uncertainty (%)')
-    myBlankHisto.Draw("E")
     
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
@@ -474,6 +457,24 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       # Doesn't work for some reason...
       #shift = 0.5*h.GetBinWidth(1)
       #h.GetXaxis().SetLimits(truth_bin_array[0]+shift,truth_bin_array[-1]+shift)
+      
+      if i == 1 or (i==2 and option == 'ratio'):
+        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
+        myBlankHisto.SetNdivisions(505)
+        myBlankHisto.SetXTitle(self.xtitle)
+        myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+        myBlankHisto.SetYTitle(self.ytitle)
+        myBlankHisto.SetMaximum(3*h.GetMaximum())
+        myBlankHisto.SetMinimum(0.)
+        if option == 'ratio':
+          myBlankHisto.SetMaximum(1.2)
+          myBlankHisto.SetMinimum(0.9)
+          myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter}-1)}')
+        if option == 'uncertainties':
+          myBlankHisto.SetMaximum(40)
+          myBlankHisto.SetMinimum(0.)
+          myBlankHisto.SetYTitle('statistical uncertainty (%)')
+        myBlankHisto.Draw("E")
 
       if option == 'ratio':
         h.DrawCopy('P hist X0 same')
@@ -1108,7 +1109,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     if '_pt_' in outputFilename:
       h.GetYaxis().SetRangeUser(1e-4, 10.)
     else:
-      h.GetYaxis().SetRangeUser(0., getattr(self, 'ymax'))
+      h.GetYaxis().SetRangeUser(0., 3*h.GetMaximum())
 
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
