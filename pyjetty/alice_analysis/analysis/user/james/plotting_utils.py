@@ -211,41 +211,89 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   
   #---------------------------------------------------------------
   def plot_obs_resolution(self, jetR, obs_label, xtitle, pt_bins):
-  
+    
+    c_resolution = ROOT.TCanvas('cres_{}'.format(obs_label),'cres_{}: hist'.format(obs_label),600,450)
+    c_resolution.cd()
+    c_resolution.SetBottomMargin(0.17)
+    c_resolution.SetLeftMargin(0.13)
+    
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0., 1.)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+    myBlankHisto.SetMaximum(2.)
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.Draw()
+    label_gen = '{}^{{gen}}'.format(xtitle)
+    myBlankHisto.GetYaxis().SetTitle('#sigma({}) / {}'.format(label_gen, label_gen))
+    myBlankHisto.GetXaxis().SetTitle(label_gen)
+    
+    myLegend = ROOT.TLegend(0.55,0.55,0.88,0.85)
+    self.setup_legend(myLegend,0.035)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
+    
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
     hRM_4d = self.fMC.Get(name)
     
-    hRM = hRM_4d.GetAxis(1).SetRangeUser(40, 60)
+    for i in range(0, len(pt_bins) - 1):
+    
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      hRM_4d_clone = hRM_4d.Clone()
+      hRM_4d_clone.SetName('{}_{}'.format(hRM_4d_clone.GetName(), i))
+      hResolution = self.get_resolution(hRM_4d_clone, jetR, obs_label, min_pt_truth, max_pt_truth, 'hResolution_{}'.format(i))
+ 
+      hResolution.SetMarkerColor(ColorArray[i])
+      hResolution.SetMarkerStyle(21)
+      hResolution.SetLineColor(ColorArray[i])
+      hResolution.DrawCopy('P same')
+
+      myLegend.AddEntry(hResolution, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+
+      myLegend.Draw('same')
+
+    outputFilename = os.path.join(self.output_dir, 'hResolution_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+    c_resolution.SaveAs(outputFilename)
+    c_resolution.Close()
+
+  #---------------------------------------------------------------
+  # Get resolution for a fixed pT-gen
+  def get_resolution(self, hRM_4d, jetR, obs_label, minPt, maxPt, label):
+
+    hRM = hRM_4d.GetAxis(1).SetRangeUser(minPt, maxPt)
     hRM = hRM_4d.Projection(3,2)
-    hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj_theta'.format(self.observable, jetR, obs_label))
+    hrm_name = 'hResponse_JetPt_{}_R{}_{}_{}-{}_{}Proj'.format(self.observable, jetR, obs_label, minPt, maxPt, label)
+    hRM.SetName(hrm_name)
     
     # For each pT^gen, compute the standard deviation of the pT^det distribution
     
     # Get the pT^gen profile, with errors as standard deviation of pT^det distribution
-    histThetaGenProf = hRM.ProfileY('histThetaGenProff', 1, -1, 's')
+    hprof_name = 'histGenProff_{}_{}-{}'.format(obs_label, minPt, maxPt)
+    histGenProf = hRM.ProfileY(hprof_name, 1, -1, 's')
+    histGenProf.SetName(hprof_name)
     
     # Create histo to be used to fill JER values
     nBins = 20
-    histThetaResolution = ROOT.TH1D('histThetaResolution_R{}_{}'.format(jetR, obs_label), 'histThetaResolution_R{}_{}'.format(jetR, obs_label), nBins, 0., 1.) # same binning for pT^gen as in task
+    hres_name = 'histResolution_R{}_{}_{}-{}_{}'.format(jetR, obs_label, minPt, maxPt, label)
+    histResolution = ROOT.TH1D(hres_name, hres_name, nBins, 0., 1.) # same binning for pT^gen as in task
     
     # Loop through the bins, and fill the JER
     for i in range(0,nBins+1):
-      sigma = histThetaGenProf.GetBinError(i)
-      theta_gen = histThetaGenProf.GetXaxis().GetBinCenter(i)
-      resolution = sigma/theta_gen
-      histThetaResolution.SetBinContent(i, resolution)
-    
-    label_gen = '{}^{{gen}}'.format(xtitle)
-    histThetaResolution.GetYaxis().SetTitle('#sigma({}) / {}'.format(label_gen, label_gen))
-    histThetaResolution.GetXaxis().SetTitle(label_gen)
-    histThetaResolution.GetYaxis().SetRangeUser(-0.01, 1.)
-    histThetaResolution.GetXaxis().SetRangeUser(5., 100.)
-    outputFilename = os.path.join(self.output_dir, 'histThetaResolution_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
-    histThetaResolution.SetMarkerStyle(21)
-    histThetaResolution.SetMarkerColor(2)
-    histThetaResolution.SetMarkerSize(3)
-    self.plot_hist(histThetaResolution, outputFilename, 'hist P')
+      sigma = histGenProf.GetBinError(i)
+      obs_gen = histGenProf.GetXaxis().GetBinCenter(i)
+      resolution = sigma/obs_gen
+      histResolution.SetBinContent(i, resolution)
+      
+    return histResolution
 
   #---------------------------------------------------------------
   def plot_obs_residual(self, jetR, obs_label, xtitle, pt_bins):
