@@ -198,7 +198,7 @@ class RunAnalysis(common_base.CommonBase):
           
       # Plot final results for all subconfigs
       if self.do_plot_final_result:
-        self.plot_all_results(jetR, obs_label, obs_setting, grooming_setting) # You must implement this
+        self.plot_all_results(jetR) # You must implement this
    
     # Plot additional performance plots
     if self.do_plot_performance:
