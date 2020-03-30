@@ -398,6 +398,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
     myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
     self.utils.setup_legend(myLegend,0.035)
+    
+    name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
+    ymax = self.get_maximum(name, overlay_list)
       
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
@@ -416,13 +419,14 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         marker = 21
         marker_pythia = marker+4
         color = 632-4
-      if subconfig_name == overlay_list[2]:
+      if i > 1 and subconfig_name == overlay_list[2]:
         marker = 33
         marker_pythia = 27
         color = 416-2
-      
+            
       name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+      if grooming_setting:
+        fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
       h = getattr(self, name)
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(marker)
@@ -450,7 +454,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(3*h.GetMaximum())
+        myBlankHisto.SetMaximum(2*ymax)
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
@@ -682,7 +686,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       if subconfig_name == overlay_list[1]:
         marker = 21
         color = 632-4
-      if subconfig_name == overlay_list[2]:
+      if i > 1 and subconfig_name == overlay_list[2]:
         marker = 33
         color = 416-2
 
@@ -759,6 +763,26 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
+
+  #----------------------------------------------------------------------
+  # Return maximum y-value of unfolded results in a subconfig list
+  def get_maximum(self, name, overlay_list):
+  
+    max = 0.
+    for i, subconfig_name in enumerate(self.obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+
+      obs_setting = self.obs_settings[i]
+      grooming_setting = self.grooming_settings[i]
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      
+      h = getattr(self, name.format(obs_label))
+      if h.GetMaximum() > max:
+        max = h.GetMaximum()
+        
+    return max
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
