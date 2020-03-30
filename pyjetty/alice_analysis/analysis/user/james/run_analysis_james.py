@@ -9,6 +9,7 @@ import ROOT
 import yaml
 
 from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
+from pyjetty.alice_analysis.analysis.user.james import plotting_utils
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -38,6 +39,14 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       
     self.figure_approval_status = config['figure_approval_status']
     self.plot_overlay_list = self.obs_config_dict['common_settings']['plot_overlay_list']
+    
+    self.jet_matching_distance = config['jet_matching_distance']
+    
+    if 'constituent_subtractor' in config:
+        self.is_pp = False
+    else:
+        self.is_pp = True
+    print('is_pp: {}'.format(self.is_pp))
 
     # Theory comparisons
     if 'fPythia' in config:
@@ -84,6 +93,55 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   def plot_performance(self):
     print('Plotting performance plots...')
+    
+    # Initialize performance plotting class
+    if self.do_plot_performance:
+      self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, self.output_dir_performance)
+    
+    # Generate performance plots
+    for jetR in self.jetR_list:
+  
+      self.plotting_utils.plot_DeltaR(jetR, self.jet_matching_distance)
+      self.plotting_utils.plot_JES(jetR)
+      self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
+
+     #self.prong_match_threshold = 0.5
+     #self.min_pt = 80.
+     #self.max_pt = 100.
+     #prong_list = ['leading', 'subleading']
+     #match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
+     #for prong in prong_list:
+     #    for match in match_list:
+  
+     #        hname = 'hProngMatching_{}_{}_JetPt_R{}_{{}}Scaled'.format(prong, match, jetR)
+     #        self.plot_prong_matching(jetR, hname)
+     #        self.plot_prong_matching_delta(jetR, hname, plot_deltaz=False)
+     #
+     #        hname = 'hProngMatching_{}_{}_JetPtDet_R{}_{{}}Scaled'.format(prong, match, jetR)
+     #        self.plot_prong_matching(jetR, hname)
+     #
+     #        if 'subleading' in prong:
+     #          hname = 'hProngMatching_{}_{}_JetPtZ_R{}_{{}}Scaled'.format(prong, match, jetR)
+     #          self.plot_prong_matching_delta(jetR, hname, plot_deltaz=True)
+
+     #hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{{}}Scaled'.format(jetR)
+     #self.plot_prong_matching_correlation(jetR, hname)
+
+     #for sd_setting in self.sd_settings:
+     #
+     #  zcut = sd_setting[0]
+     #  beta = sd_setting[1]
+     #  sd_label = 'zcut{}_B{}'.format(self.utils.remove_periods(zcut), beta)
+     #
+     #  self.plotJER(jetR, sd_label)
+     #  self.plot_theta_resolution(jetR, sd_label)
+     #  self.plot_theta_residual(jetR, sd_label)
+     #  self.plot_zg_residual(jetR, sd_label)
+     #  self.plotJetRecoEfficiency(jetR, sd_label)
+     #  self.plotRg(jetR, sd_label, zcut, beta)
+     #  self.plot_prong_N_vs_z(jetR, sd_label, 'tagged')
+     #  self.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
+
   
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
