@@ -37,6 +37,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       config = yaml.safe_load(stream)
       
     self.figure_approval_status = config['figure_approval_status']
+    self.plot_overlay_list = self.obs_config_dict['common_settings']['plot_overlay_list']
 
     # Theory comparisons
     if 'fPythia' in config:
@@ -51,28 +52,30 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
   # This function is called once for each subconfiguration
   #---------------------------------------------------------------
   def plot_single_result(self, jetR, obs_label, obs_setting, grooming_setting):
+    print('Plotting each individual result...')
   
     # Plot final result for each 1D substructure distribution (with PYTHIA)
     self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting)
     
     if self.observable == 'theta_g' or self.observable == 'zg':
     
-      # Construct NP correction, and store as an attribute
-      self.construct_NPcorrections(jetR, obs_label)
-    
-    #    self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, 20., 40.)
-    #    self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, 40., 60.)
-    #    self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, 60., 80.)
+      if 'sd' in grooming_setting:
 
+        # Construct NP correction, and store as an attribute
+        self.construct_NPcorrections(jetR, obs_label)
+      
+        # Construct TGraph of NLL predictions
+        self.construct_nll_tgraphs(jetR, obs_label, obs_setting, grooming_setting)
   
   #---------------------------------------------------------------
   # This function is called once after all subconfigurations have been looped over, for each R
   #---------------------------------------------------------------
-  def plot_all_results(self, jetR, obs_label, obs_setting, grooming_setting):
-  
-    print('plot_all_results')
-    #if self.observable == 'theta_g' or self.observable == 'zg':
-      #self.plot_final_result_overlay(jetR)
+  def plot_all_results(self, jetR):
+    print('Plotting overlay of all results...')
+    
+    for i_config,  overlay_list in enumerate(self.plot_overlay_list):
+    
+      self.plot_final_result_overlay(i_config, jetR, overlay_list)
 
       #self.plot_NPcorrection(jetR)
   
@@ -80,12 +83,11 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
   # This function is called once after all subconfigurations and jetR have been looped over
   #----------------------------------------------------------------------
   def plot_performance(self):
-  
     print('Plotting performance plots...')
   
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
-    print('Plot final results for {}: R = {}, {} ...'.format(self.observable, jetR, obs_label))
+    print('Plot final results for {}: R = {}, {}'.format(self.observable, jetR, obs_label))
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -310,15 +312,26 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.utils.plot_hist(hNumerator, outputFilename)
 
   #----------------------------------------------------------------------
+  def construct_nll_tgraphs(self, jetR, obs_label, obs_setting, grooming_setting):
+    
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
+      
+      self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth)
+
+  #----------------------------------------------------------------------
   def get_nll_tgraph(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
 
     n_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
     
+    key, value = list(grooming_setting.items())[0]
+    beta = value[1]
     if self.observable == 'theta_g':
-      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(grooming_setting, int(min_pt_truth), int(max_pt_truth))
+      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
     if self.observable == 'zg':
-      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(grooming_setting, int(min_pt_truth), int(max_pt_truth))
+      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
     
     filename = open(path_txt, 'r')
 
@@ -345,6 +358,284 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     g = ROOT.TGraphAsymmErrors(n_bins_truth, x, center, x_err, x_err, low, up)
     g.SetName('tgraph_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
     setattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth), g)
+
+  #----------------------------------------------------------------------
+  def plot_final_result_overlay(self, i_config, jetR, overlay_list):
+    print('Plotting overlay of {}'.format(overlay_list))
+
+    # Plot overlay of different subconfigs, for fixed pt bin
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
+
+      # Plot PYTHIA
+      self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_pythia=True, plot_ratio = True)
+
+      # Plot NLL
+      self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_nll = True, plot_ratio = False)
+
+  #----------------------------------------------------------------------
+  def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False):
+    
+    name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
+    if plot_ratio:
+      c = ROOT.TCanvas(name, name, 600, 650)
+    else:
+      c = ROOT.TCanvas(name, name, 600, 450)
+    c.Draw()
+    
+    c.cd()
+    if plot_ratio:
+      pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
+    else:
+      pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    pad1.SetLeftMargin(0.2)
+    pad1.SetTopMargin(0.07)
+    pad1.SetRightMargin(0.04)
+    pad1.SetBottomMargin(0.13)
+    if plot_ratio:
+      pad1.SetBottomMargin(0.)
+    pad1.Draw()
+    pad1.cd()
+
+    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
+    self.utils.setup_legend(myLegend,0.035)
+      
+    for i, subconfig_name in enumerate(self.obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+
+      obs_setting = self.obs_settings[i]
+      grooming_setting = self.grooming_settings[i]
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      
+      if subconfig_name == overlay_list[0]:
+        marker = 20
+        marker_pythia = marker+4
+        color = 600-6
+      if subconfig_name == overlay_list[1]:
+        marker = 21
+        marker_pythia = marker+4
+        color = 632-4
+      if subconfig_name == overlay_list[2]:
+        marker = 33
+        marker_pythia = 27
+        color = 416-2
+      
+      name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+      h = getattr(self, name)
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(marker)
+      h.SetMarkerColor(color)
+      h.SetLineStyle(1)
+      h.SetLineWidth(2)
+      h.SetLineColor(color)
+      
+      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+      h_sys.SetLineColor(0)
+      h_sys.SetFillColor(color)
+      h_sys.SetFillColorAlpha(color, 0.3)
+      h_sys.SetFillStyle(1001)
+      h_sys.SetLineWidth(0)
+      
+      if subconfig_name == overlay_list[0]:
+
+        pad1.cd()
+        xtitle = getattr(self, 'xtitle')
+        ytitle = getattr(self, 'ytitle')
+        xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
+        xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
+        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
+        myBlankHisto.SetNdivisions(505)
+        myBlankHisto.SetXTitle(xtitle)
+        myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+        myBlankHisto.SetYTitle(ytitle)
+        myBlankHisto.SetMaximum(3*h.GetMaximum())
+        myBlankHisto.SetMinimum(0.)
+        if plot_ratio:
+          myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
+          myBlankHisto.GetYaxis().SetTitleSize(0.065)
+          myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+          myBlankHisto.GetYaxis().SetLabelSize(0.06)
+        myBlankHisto.Draw('E')
+        
+        # Plot ratio
+        if plot_ratio:
+          
+          c.cd()
+          pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
+          pad2.SetTopMargin(0)
+          pad2.SetBottomMargin(0.4)
+          pad2.SetLeftMargin(0.2)
+          pad2.SetRightMargin(0.04)
+          pad2.Draw()
+          pad2.cd()
+          
+          myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
+          myBlankHisto2.SetYTitle("#frac{Data}{PYTHIA}")
+          myBlankHisto2.SetXTitle(xtitle)
+          myBlankHisto2.GetXaxis().SetTitleSize(30)
+          myBlankHisto2.GetXaxis().SetTitleFont(43)
+          myBlankHisto2.GetXaxis().SetTitleOffset(4.)
+          myBlankHisto2.GetXaxis().SetLabelFont(43)
+          myBlankHisto2.GetXaxis().SetLabelSize(25)
+          myBlankHisto2.GetYaxis().SetTitleSize(20)
+          myBlankHisto2.GetYaxis().SetTitleFont(43)
+          myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
+          myBlankHisto2.GetYaxis().SetLabelFont(43)
+          myBlankHisto2.GetYaxis().SetLabelSize(25)
+          myBlankHisto2.GetYaxis().SetNdivisions(505)
+          myBlankHisto2.GetYaxis().SetRangeUser(0.5, 2.)
+          myBlankHisto2.Draw()
+        
+          line = ROOT.TLine(0,1,xmax,1)
+          line.SetLineColor(920+2)
+          line.SetLineStyle(2)
+          line.Draw()
+      
+      if plot_pythia:
+      
+        hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
+
+        plot_errors = False
+        if plot_errors:
+          hPythia.SetMarkerSize(0)
+          hPythia.SetMarkerStyle(0)
+          hPythia.SetMarkerColor(color)
+          hPythia.SetFillColor(color)
+        else:
+          hPythia.SetLineColor(color)
+          hPythia.SetLineColorAlpha(color, 0.5)
+          hPythia.SetLineWidth(4)
+
+      if plot_nll:
+        
+        # Get parton-level prediction
+        attr_name = 'tgraph_NLL_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth)
+        if hasattr(self, attr_name):
+          g = getattr(self, attr_name)
+        else:
+          print('NLL prediction does not exist for {}'.format(obs_label))
+          return
+        
+        # Get correction
+        apply_nll_correction = False
+        if apply_nll_correction:
+          h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
+        
+          # Apply correction
+          self.utils.multiply_tgraph(g, h_correction)
+        
+        g.SetLineColor(color)
+        g.SetLineColorAlpha(color, 0.5)
+        g.SetLineWidth(4)
+        g.SetFillColor(color)
+        g.SetFillColorAlpha(color, 0.5)
+      
+      if plot_ratio:
+        hRatioSys = h_sys.Clone()
+        hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
+        if plot_pythia:
+          hRatioSys.Divide(hPythia)
+          hRatioSys.SetLineColor(0)
+          hRatioSys.SetFillColor(color)
+          hRatioSys.SetFillColorAlpha(color, 0.3)
+          hRatioSys.SetFillStyle(1001)
+          hRatioSys.SetLineWidth(0)
+        elif plot_nll:
+          gRatioSys = g.Clone()
+          gRatioSys.SetName('{}_{}_Ratio'.format(obs_label, g.GetName()))
+          self.utils.divide_tgraph(hRatioSys, gRatioSys, combine_errors=True)
+          gRatioSys.SetLineColor(0)
+          gRatioSys.SetFillColor(color)
+          gRatioSys.SetFillColorAlpha(color, 0.3)
+          gRatioSys.SetFillStyle(1001)
+          gRatioSys.SetLineWidth(0)
+          
+        hRatioStat = h.Clone()
+        hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
+        if plot_pythia:
+          hRatioStat.Divide(hPythia)
+        elif plot_nll:
+          self.utils.divide_tgraph(hRatioStat, g, combine_errors=False)
+        hRatioStat.SetMarkerSize(1.5)
+        hRatioStat.SetMarkerStyle(marker)
+        hRatioStat.SetMarkerColor(color)
+        hRatioStat.SetLineStyle(1)
+        hRatioStat.SetLineWidth(2)
+        hRatioStat.SetLineColor(color)
+
+      pad1.cd()
+      
+      if plot_pythia:
+        plot_errors = False
+        if plot_errors:
+          hPythia.DrawCopy('E3 same')
+        else:
+          hPythia.DrawCopy('L hist same')
+          
+      if plot_nll:
+        g.Draw('L3 same')
+
+      h_sys.DrawCopy('E2 same')
+      h.DrawCopy('PE X0 same')
+      
+      if plot_ratio:
+        pad2.cd()
+        if plot_pythia:
+          hRatioSys.DrawCopy('E2 same')
+        elif plot_nll:
+          gRatioSys.Draw('L3 same')
+        hRatioStat.DrawCopy('PE X0 same')
+        
+      subobs_label = self.utils.formatted_subobs_label(self.observable)
+      text = ''
+      if subobs_label:
+        text += '{} = {}'.format(subobs_label, obs_setting)
+      if grooming_setting:
+        text += self.utils.formatted_grooming_label(grooming_setting)
+      myLegend.AddEntry(h, '{}'.format(text), 'pe')
+        
+    pad1.cd()
+    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+    if plot_pythia:
+      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
+    if plot_nll:
+      myLegend.AddEntry(g, 'NLL', 'l')
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.25, 0.87, text)
+    
+    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.81, text)
+
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.75, text)
+    
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text_latex.DrawLatex(0.25, 0.69, text)
+    
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.25, 0.63, text)
+    
+    myLegend.Draw()
+
+    name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
+    if plot_pythia:
+      name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
+    if plot_nll:
+      name = 'h_{}_R{}_{}-{}_NLL_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
+    output_dir = getattr(self, 'output_dir_final_results')
+    outputFilename = os.path.join(output_dir, name)
+    c.SaveAs(outputFilename)
+    c.Close()
 
   #----------------------------------------------------------------------
   def plot_NPcorrection(self, observable, jetR):
@@ -449,275 +740,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     myLegend.Draw()
     
     name = 'hNPcorrection_{}_R{}_{}-{}{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results')
-    outputFilename = os.path.join(output_dir, name)
-    c.SaveAs(outputFilename)
-    c.Close()
-    
-  #----------------------------------------------------------------------
-  def plot_final_result_overlay(self, jetR):
-  
-    # Plot overlay of different beta, for fixed pt bin
-
-    # Plot PYTHIA
-    self.plot_observable_overlay_beta(jetR, 20., 40., plot_pythia=True, plot_nll = False, plot_ratio = True)
-    self.plot_observable_overlay_beta(jetR, 40., 60., plot_pythia=True, plot_nll = False, plot_ratio = True)
-    self.plot_observable_overlay_beta(jetR, 60., 80., plot_pythia=True, plot_nll = False, plot_ratio = True)
-  
-    # Plot NLL
-    self.plot_observable_overlay_beta(jetR, 20., 40., plot_pythia=False, plot_nll = True, plot_ratio = False)
-    self.plot_observable_overlay_beta(jetR, 40., 60., plot_pythia=False, plot_nll = True, plot_ratio = False)
-    self.plot_observable_overlay_beta(jetR, 60., 80., plot_pythia=False, plot_nll = True, plot_ratio = False)
-
-  #----------------------------------------------------------------------
-  def plot_observable_overlay_beta(self, jetR, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False):
-    
-    name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
-    if plot_ratio:
-      c = ROOT.TCanvas(name, name, 600, 650)
-    else:
-      c = ROOT.TCanvas(name, name, 600, 450)
-    c.Draw()
-    
-    c.cd()
-    if plot_ratio:
-      pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
-    else:
-      pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-    pad1.SetLeftMargin(0.2)
-    pad1.SetTopMargin(0.07)
-    pad1.SetRightMargin(0.04)
-    pad1.SetBottomMargin(0.13)
-    if plot_ratio:
-      pad1.SetBottomMargin(0.)
-    pad1.Draw()
-    pad1.cd()
-    
-    xtitle = getattr(self, 'xtitle')
-    ytitle = getattr(self, 'ytitle')
-
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
-    myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(xtitle)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(ymax)
-    myBlankHisto.SetMinimum(0.)
-    if plot_ratio:
-      myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
-      myBlankHisto.GetYaxis().SetTitleSize(0.065)
-      myBlankHisto.GetYaxis().SetTitleOffset(1.4)
-      myBlankHisto.GetYaxis().SetLabelSize(0.06)
-    myBlankHisto.Draw("E")
-
-    # Plot ratio
-    if plot_ratio:
-      
-      c.cd()
-      pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
-      pad2.SetTopMargin(0)
-      pad2.SetBottomMargin(0.4)
-      pad2.SetLeftMargin(0.2)
-      pad2.SetRightMargin(0.04)
-      pad2.Draw()
-      pad2.cd()
-      
-      myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
-      myBlankHisto2.SetYTitle("#frac{Data}{PYTHIA}")
-      myBlankHisto2.SetXTitle(xtitle)
-      myBlankHisto2.GetXaxis().SetTitleSize(30)
-      myBlankHisto2.GetXaxis().SetTitleFont(43)
-      myBlankHisto2.GetXaxis().SetTitleOffset(4.)
-      myBlankHisto2.GetXaxis().SetLabelFont(43)
-      myBlankHisto2.GetXaxis().SetLabelSize(25)
-      myBlankHisto2.GetYaxis().SetTitleSize(20)
-      myBlankHisto2.GetYaxis().SetTitleFont(43)
-      myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
-      myBlankHisto2.GetYaxis().SetLabelFont(43)
-      myBlankHisto2.GetYaxis().SetLabelSize(25)
-      myBlankHisto2.GetYaxis().SetNdivisions(505)
-      myBlankHisto2.GetYaxis().SetRangeUser(ymin_ratio, ymax_ratio)
-      myBlankHisto2.Draw()
-    
-      line = ROOT.TLine(0,1,xmax,1)
-      line.SetLineColor(920+2)
-      line.SetLineStyle(2)
-      line.Draw()
-
-    pad1.cd()
-    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
-    self.utils.setup_legend(myLegend,0.035)
-      
-      
-    for i, _ in enumerate(self.obs_subconfig_list):
-
-      obs_setting = self.obs_settings[i]
-      grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-
-      n_obs_bins_truth = self.n_bins_truth(obs_label)
-      truth_bin_array = self.truth_bin_array(obs_label)
-
-      if i == 0:
-        marker = 20
-        marker_pythia = marker+4
-        color = 600-6
-      if i == 1:
-        marker = 21
-        marker_pythia = marker+4
-        color = 632-4
-      if i == 2:
-        marker = 33
-        marker_pythia = 27
-        color = 416-2
-
-      pad1.cd()
-      if plot_pythia:
-        
-        fPythia = ROOT.TFile(self.fPythia_name, 'READ')
-        hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, grooming_setting[1], int(min_pt_truth), int(max_pt_truth))
-        hPythia = fPythia.Get(hname)
-        hPythia.SetDirectory(0)
-        
-        n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-        n_jets_tagged = hPythia.Integral(hPythia.FindBin(truth_bin_array[0]), hPythia.GetNbinsX())
-        fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
-        hPythia.Scale(1./n_jets_inclusive, 'width')
-        
-        plot_errors = False
-        if plot_errors:
-          hPythia.SetMarkerSize(0)
-          hPythia.SetMarkerStyle(0)
-          hPythia.SetMarkerColor(color)
-          hPythia.SetFillColor(color)
-          hPythia.DrawCopy('E3 same')
-        else:
-          hPythia.SetLineColor(color)
-          hPythia.SetLineColorAlpha(color, 0.5)
-          hPythia.SetLineWidth(4)
-          hPythia.DrawCopy('L hist same')
-
-      if plot_nll:
-        
-        # Get parton-level prediction
-        g = getattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
-        
-        # Get correction
-        apply_nll_correction = False
-        if apply_nll_correction:
-          h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
-        
-          # Apply correction
-          self.utils.multiply_tgraph(g, h_correction)
-        
-        g.SetLineColor(color)
-        g.SetLineColorAlpha(color, 0.5)
-        g.SetLineWidth(4)
-        g.SetFillColor(color)
-        g.SetFillColorAlpha(color, 0.5)
-        g.Draw('L3 same')
-    
-      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
-      h_sys.SetLineColor(0)
-      h_sys.SetFillColor(color)
-      h_sys.SetFillColorAlpha(color, 0.3)
-      h_sys.SetFillStyle(1001)
-      h_sys.SetLineWidth(0)
-      h_sys.DrawCopy('E2 same')
-    
-      name = 'hMain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
-      h = getattr(self, name)
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(marker)
-      h.SetMarkerColor(color)
-      h.SetLineStyle(1)
-      h.SetLineWidth(2)
-      h.SetLineColor(color)
-      h.DrawCopy('PE X0 same')
-        
-      myLegend.AddEntry(h, 'ALICE pp #beta={}'.format(grooming_setting[1]), 'pe')
-
-      if plot_ratio:
-        pad2.cd()
-        
-        hRatioSys = h_sys.Clone()
-        hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
-        if plot_pythia:
-          hRatioSys.Divide(hPythia)
-          hRatioSys.SetLineColor(0)
-          hRatioSys.SetFillColor(color)
-          hRatioSys.SetFillColorAlpha(color, 0.3)
-          hRatioSys.SetFillStyle(1001)
-          hRatioSys.SetLineWidth(0)
-          hRatioSys.DrawCopy('E2 same')
-        elif plot_nll:
-          gRatioSys = g.Clone()
-          gRatioSys.SetName('{}_{}_Ratio'.format(obs_label, g.GetName()))
-          self.utils.divide_tgraph(hRatioSys, gRatioSys, combine_errors=True)
-          gRatioSys.SetLineColor(0)
-          gRatioSys.SetFillColor(color)
-          gRatioSys.SetFillColorAlpha(color, 0.3)
-          gRatioSys.SetFillStyle(1001)
-          gRatioSys.SetLineWidth(0)
-          gRatioSys.Draw('L3 same')
-
-        hRatioStat = h.Clone()
-        hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
-        if plot_pythia:
-          hRatioStat.Divide(hPythia)
-        elif plot_nll:
-          self.utils.divide_tgraph(hRatioStat, g, combine_errors=False)
-        hRatioStat.SetMarkerSize(1.5)
-        hRatioStat.SetMarkerStyle(marker)
-        hRatioStat.SetMarkerColor(color)
-        hRatioStat.SetLineStyle(1)
-        hRatioStat.SetLineWidth(2)
-        hRatioStat.SetLineColor(color)
-        hRatioStat.DrawCopy('PE X0 same')
-        
-    pad1.cd()
-    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
-    if plot_pythia:
-      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
-    
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.25, 0.87, text)
-    
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.81, text)
-    
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.75, text)
-    
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(grooming_setting[0])
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.69, text)
-    
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.63, text)
-    
-    myLegend.Draw()
-
-    name = 'h_{}_R{}_{}-{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
-    if plot_pythia:
-      name = 'h_{}_R{}_{}-{}_Pythia{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
-    if plot_nll:
-      name = 'h_{}_R{}_{}-{}_NLL{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
     output_dir = getattr(self, 'output_dir_final_results')
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)

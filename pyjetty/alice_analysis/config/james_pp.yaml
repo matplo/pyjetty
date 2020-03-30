@@ -23,6 +23,10 @@ theta_g:
     xtitle: '#theta_{g}'
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
     pt_bins_reported: [20, 40, 60, 80]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3']
+      - ['config1', 'config4', 'config5']
+      - ['config6', 'config7', 'config8']
 
   config1:
     SoftDrop:
@@ -323,7 +327,7 @@ do_unfolding: False
 force_rebin: False
 do_systematics: True
 do_plot_final_result: True
-do_plot_performance: False
+do_plot_performance: True
 figure_approval_status: 'Work in Progress'
 
 # List of which systematics to perform
