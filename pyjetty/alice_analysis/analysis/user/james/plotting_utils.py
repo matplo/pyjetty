@@ -106,9 +106,15 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     name = 'hJES_R{}Scaled'.format(jetR)
     
-    cJES = ROOT.TCanvas("cJES","cJES: hist",600,450)
+    cJES = ROOT.TCanvas('cJES','cJES: hist',600,450)
     cJES.cd()
     cJES.SetBottomMargin(0.2)
+    
+    leg = ROOT.TLegend(0.55,0.55,0.88,0.85, '')
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
     
     kGreen = 416
     kBlue  = 600
@@ -119,59 +125,34 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     kPink    = 900
     ColorArray = [kBlue-4, kAzure+7, kCyan-2,7, kViolet-8, kBlue-6, kGreen+3]
     
-    hJESProj1 = self.getJESshiftProj(name, "hJESproj1", 20, 30)
-    hJESProj2 = self.getJESshiftProj(name, "hJESproj2", 50, 70)
-    hJESProj3 = self.getJESshiftProj(name, "hJESproj3", 100, 120)
-    hJESProj1b = self.getJESshiftProj(name, "hJESproj1b", 30, 40)
-    hJESProj2b = self.getJESshiftProj(name, "hJESproj2b", 40, 50)
-    hJESProj3b = self.getJESshiftProj(name, "hJESproj3b", 70, 90)
+    # Loop through pt slices, and plot final result for each 1D theta_g distribution
+    for i in range(0, len(pt_bins) - 1):
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      hJESProj = self.getJESshiftProj(name, 'hJESproj1', min_pt_truth, max_pt_truth)
+      hJESProj.SetMarkerStyle(20)
+      hJESProj.SetMarkerColor(ColorArray[i])
+      hJESProj.SetLineColor(ColorArray[i])
+      
+      if i == 0:
+      
+        hJESProj.GetXaxis().SetTitleOffset(1.6);
+        hJESProj.GetYaxis().SetTitle('Probability density')
+        hJESProj.GetXaxis().SetTitle('#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}')
+        
+        hJESProj.GetYaxis().SetRangeUser(0, 10.4)
+        hJESProj.DrawCopy('P E')
+        
+      else:
+      
+        hJESProj.DrawCopy('P E same')
     
-    hJESProj1.SetMarkerStyle(20)
-    hJESProj1b.SetMarkerStyle(20)
-    hJESProj2.SetMarkerStyle(20)
-    hJESProj2b.SetMarkerStyle(20)
-    hJESProj3.SetMarkerStyle(20)
-    hJESProj3b.SetMarkerStyle(20)
-    hJESProj1.SetMarkerColor(ColorArray[0])
-    hJESProj2.SetMarkerColor(ColorArray[1])
-    hJESProj3.SetMarkerColor(ColorArray[2])
-    hJESProj1b.SetMarkerColor(ColorArray[3])
-    hJESProj2b.SetMarkerColor(ColorArray[4])
-    hJESProj3b.SetMarkerColor(ColorArray[5])
-    hJESProj1.SetLineColor(ColorArray[0])
-    hJESProj2.SetLineColor(ColorArray[1])
-    hJESProj3.SetLineColor(ColorArray[2])
-    hJESProj1b.SetLineColor(ColorArray[3])
-    hJESProj2b.SetLineColor(ColorArray[4])
-    hJESProj3b.SetLineColor(ColorArray[5])
+      leg.AddEntry(hJESProj, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+      
+    leg.Draw('same')
     
-    hJESProj1.GetXaxis().SetTitleOffset(1.6);
-    hJESProj1.GetYaxis().SetTitle("Probability density")
-    hJESProj1.GetXaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
-    
-    hJESProj1.GetYaxis().SetRangeUser(0, 10.4)
-    hJESProj1.DrawCopy("P E")
-    hJESProj2.DrawCopy("P E same")
-    hJESProj3.DrawCopy("P E same")
-    hJESProj1b.DrawCopy("P E same")
-    hJESProj2b.DrawCopy("P E same")
-    hJESProj3b.DrawCopy("P E same")
-    
-    leg = ROOT.TLegend(0.55,0.55,0.88,0.85, "")
-    leg.SetFillColor(10)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(1)
-    leg.SetTextSize(0.04)
-    
-    leg.AddEntry(hJESProj1, "#it{p}_{T}^{gen} = 20-30 GeV", "P")
-    leg.AddEntry(hJESProj1b, "#it{p}_{T}^{gen} = 30-40 GeV", "P")
-    leg.AddEntry(hJESProj2b, "#it{p}_{T}^{gen} = 40-50 GeV", "P")
-    leg.AddEntry(hJESProj2, "#it{p}_{T}^{gen} = 50-70 GeV", "P")
-    leg.AddEntry(hJESProj3b, "#it{p}_{T}^{gen} = 70-90 GeV", "P")
-    leg.AddEntry(hJESProj3, "#it{p}_{T}^{gen} = 100-120 GeV", "P")
-    leg.Draw("same")
-    
-    outputFilename = os.path.join(self.output_dir, "histDeltaJESproj_R{}.pdf".format(self.remove_periods(jetR)))
+    outputFilename = os.path.join(self.output_dir, 'histDeltaJESproj_R{}.pdf'.format(self.remove_periods(jetR)))
     cJES.SaveAs(outputFilename)
     cJES.Close()
 
