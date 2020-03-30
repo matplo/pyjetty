@@ -73,11 +73,11 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
   def plot_all_results(self, jetR):
     print('Plotting overlay of all results...')
     
-    for i_config,  overlay_list in enumerate(self.plot_overlay_list):
+    for i_config, overlay_list in enumerate(self.plot_overlay_list):
     
       self.plot_final_result_overlay(i_config, jetR, overlay_list)
 
-      #self.plot_NPcorrection(jetR)
+      self.plot_NPcorrections(i_config, jetR, overlay_list)
   
   #----------------------------------------------------------------------
   # This function is called once after all subconfigurations and jetR have been looped over
@@ -216,7 +216,10 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     if plot_pythia:
       name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
     output_dir = getattr(self, 'output_dir_final_results')
-    outputFilename = os.path.join(output_dir, name)
+    output_dir_single = output_dir + '/single_results'
+    if not os.path.exists(output_dir_single):
+      os.mkdir(output_dir_single)
+    outputFilename = os.path.join(output_dir_single, name)
     c.SaveAs(outputFilename)
     c.Close()
 
@@ -305,11 +308,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     hNumerator.Divide(hDenominator)
     hNumerator.SetName('hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
     setattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth), hNumerator)
-      
-    if self.debug_level > 0:
-      output_dir = getattr(self, 'output_dir_final_results')
-      outputFilename = os.path.join(output_dir, 'hNPcorrection_{}_{}_{}-{}.pdf'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
-      self.utils.plot_hist(hNumerator, outputFilename)
 
   #----------------------------------------------------------------------
   def construct_nll_tgraphs(self, jetR, obs_label, obs_setting, grooming_setting):
@@ -632,20 +630,25 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_nll:
       name = 'h_{}_R{}_{}-{}_NLL_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results')
+    output_dir = getattr(self, 'output_dir_final_results') + '/all_results'
+    if not os.path.exists(output_dir):
+      os.mkdir(output_dir)
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
 
   #----------------------------------------------------------------------
-  def plot_NPcorrection(self, observable, jetR):
+  def plot_NPcorrections(self, i_config, jetR, overlay_list):
+  
+    # Loop through pt slices, and plot NP correction for each 1D observable
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
+      
+      self.plot_NPcorrection_overlay(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth)
 
-    self.plot_NPcorrection_overlay(observable, jetR, 20., 40.)
-    self.plot_NPcorrection_overlay(observable, jetR, 40., 60.)
-    self.plot_NPcorrection_overlay(observable, jetR, 60., 80.)
-    
   #----------------------------------------------------------------------
-  def plot_NPcorrection_overlay(self, observable, jetR, min_pt_truth, max_pt_truth):
+  def plot_NPcorrection_overlay(self, i_config, jetR, overlay_list, min_pt_truth, max_pt_truth):
     
     name = 'cResult_NPcorrection_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -658,62 +661,78 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     pad1.SetBottomMargin(0.13)
     pad1.Draw()
     pad1.cd()
-
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
-    myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle('Correction')
-    myBlankHisto.SetMaximum(ymax)
-    myBlankHisto.SetMinimum(0.)
-    myBlankHisto.Draw("E")
-    
-    line = ROOT.TLine(0,1,xmax,1)
-    line.SetLineColor(920+2)
-    line.SetLineStyle(2)
-    line.Draw()
     
     pad1.cd()
-    myLegend = ROOT.TLegend(0.76,0.65,0.9,0.85)
+    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
     self.utils.setup_legend(myLegend,0.035)
     
-    # Retrieve histogram binnings for each observable setting
-    for i, obs_setting in enumerate(self.obs_settings):
-      
+    # Retrieve histograms for each observable setting
+    for i, subconfig_name in enumerate(self.obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+
+      obs_setting = self.obs_settings[i]
+      grooming_setting = self.grooming_settings[i]
       obs_label = self.utils.obs_label(obs_setting, grooming_setting)
       
-      n_obs_bins_truth = self.n_bins_truth(obs_label)
-      truth_bin_array = self.truth_bin_array(obs_label)
-
-      if i == 0:
+      if subconfig_name == overlay_list[0]:
         marker = 20
         color = 600-6
-      if i == 1:
+      if subconfig_name == overlay_list[1]:
         marker = 21
         color = 632-4
-      if i == 2:
+      if subconfig_name == overlay_list[2]:
         marker = 33
         color = 416-2
 
-      h = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(observable, obs_label, min_pt_truth, max_pt_truth))
+      attr_name = 'hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth)
+      if hasattr(self, attr_name):
+        h = getattr(self, attr_name)
+      else:
+        print('NP prediction does not exist for {}'.format(obs_label))
+        return
+        
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(marker)
       h.SetMarkerColor(color)
       h.SetLineStyle(1)
       h.SetLineWidth(2)
       h.SetLineColor(color)
+      
+      if subconfig_name == overlay_list[0]:
+      
+        xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
+        xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
+        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
+        myBlankHisto.SetNdivisions(505)
+        myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
+        myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+        myBlankHisto.SetYTitle('Correction')
+        myBlankHisto.SetMaximum(2*h.GetMaximum())
+        myBlankHisto.SetMinimum(0.)
+        myBlankHisto.Draw("E")
+        
+        line = ROOT.TLine(0,1,xmax,1)
+        line.SetLineColor(920+2)
+        line.SetLineStyle(2)
+        line.Draw()
+      
       h.DrawCopy('PE X0 same')
       
-      if observable == 'theta_g' or observable == 'zg':
-        myLegend.AddEntry(h, 'pp #beta={}'.format(obs_setting[1]), 'pe')
+      subobs_label = self.utils.formatted_subobs_label(self.observable)
+      text = ''
+      if subobs_label:
+        text += '{} = {}'.format(subobs_label, obs_setting)
+      if grooming_setting:
+        text += self.utils.formatted_grooming_label(grooming_setting)
+      myLegend.AddEntry(h, '{}'.format(text), 'pe')
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'ALICE Simulation'
-    #text_latex.DrawLatex(0.25, 0.87, text)
-  
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.25, 0.87, text)
+    
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.81, text)
@@ -724,23 +743,19 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.75, text)
     
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    if observable == 'theta_g' or observable == 'zg':
-      text = '#it{R} = ' + str(jetR) + '  |#it{#eta}_{jet}| < 0.5' + '  #it{z}_{cut} = ' + str(obs_setting[0])
-      text_latex.SetTextSize(0.045)
-      text_latex.DrawLatex(0.25, 0.69, text)
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text_latex.DrawLatex(0.25, 0.69, text)
     
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.63, text)
     
     myLegend.Draw()
     
-    name = 'hNPcorrection_{}_R{}_{}-{}{}'.format(observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results')
+    name = 'hNPcorrection_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
+    output_dir = getattr(self, 'output_dir_final_results') + '/NPcorrection'
+    if not os.path.exists(output_dir):
+      os.mkdir(output_dir)
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
