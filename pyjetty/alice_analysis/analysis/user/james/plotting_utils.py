@@ -665,6 +665,193 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     myLegend.Draw('same')
 
-    output_filename = os.path.join(self.output_dir, 'prong_matching/{}_{}.pdf'.format(name_prefix, i_overlay))
+    outdir = 'prong_matching_fraction_pt'
+    if 'JetPtDet' in name_prefix:
+      outdir = 'prong_matching_fraction_ptdet'
+    output_filename = os.path.join(self.output_dir, '{}/{}_{}.pdf'.format(outdir, name_prefix, i_overlay))
     c.SaveAs(output_filename)
     c.Close()
+
+  #---------------------------------------------------------------
+  def plot_prong_matching_delta(self, i, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold, min_pt, max_pt, plot_deltaz=False):
+
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.2)
+    ROOT.gPad.SetBottomMargin(0.15)
+    
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0., jetR)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+    max = 0.01
+    myBlankHisto.SetMaximum(max)
+    myBlankHisto.SetMinimum(0.)
+    if plot_deltaz:
+        myBlankHisto.GetXaxis().SetTitle('#Delta z_{prong}')
+        myBlankHisto.GetYaxis().SetTitle('#frac{dN}{d#Delta z_{prong}}')
+    else:
+        myBlankHisto.GetXaxis().SetTitle('#Delta R_{prong}')
+        myBlankHisto.GetYaxis().SetTitle('#frac{dN}{d#Delta R_{prong}}')
+    myBlankHisto.Draw()
+    
+    leg = ROOT.TLegend(0.55,0.3,0.85,0.5)
+    self.setup_legend(leg,0.035)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3]
+    
+    h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
+                # (removed from memory?)
+    
+    for i, subconfig_name in enumerate(obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+        
+      obs_setting = obs_settings[i]
+      grooming_setting = grooming_settings[i]
+      obs_label = self.obs_label(obs_setting, grooming_setting)
+      
+      if subconfig_name == overlay_list[0]:
+        marker = 20
+      elif subconfig_name == overlay_list[1]:
+        marker = 21
+      elif i > 1 and subconfig_name == overlay_list[2]:
+        marker = 33
+      else:
+        marker = 34
+      
+      name = '{}_{}Scaled'.format(name_prefix, obs_label)
+      hFraction_vs_pt = self.fMC.Get(name)
+
+      epsilon = 1e-5
+      min_bin = hFraction_vs_pt.GetYaxis().FindBin(0. + epsilon)
+      cut_bin = hFraction_vs_pt.GetYaxis().FindBin(prong_match_threshold + epsilon)
+      max_bin = hFraction_vs_pt.GetYaxis().FindBin(1. + epsilon)
+      min_frac_bin = cut_bin
+      max_frac_bin = max_bin
+
+      min_pt_bin = hFraction_vs_pt.GetXaxis().FindBin(min_pt + epsilon)
+      max_pt_bin = hFraction_vs_pt.GetXaxis().FindBin(max_pt + epsilon)
+
+      # Get projections of deltaR
+      hFraction_vs_pt.GetXaxis().SetRange(min_pt_bin, max_pt_bin)
+      hFraction_vs_pt.GetYaxis().SetRange(min_frac_bin, max_frac_bin)
+      hUnmatched_vs_pt = hFraction_vs_pt.Project3D('z')
+      hUnmatched_vs_pt.SetName('hUnmatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
+      hUnmatched_vs_pt.SetLineColor(ColorArray[i])
+      if max < hUnmatched_vs_pt.GetMaximum():
+        max = hUnmatched_vs_pt.GetMaximum()
+        myBlankHisto.SetMaximum(max)
+      hUnmatched_vs_pt.Draw('L hist same')
+      leg.AddEntry(hUnmatched_vs_pt, self.formatted_grooming_label(grooming_setting), 'L')
+      h_list.append(hUnmatched_vs_pt)
+
+    text = 'p_{{T}} = {} - {} GeV/c'.format(int(min_pt), int(max_pt))
+    leg.AddEntry(None, text, '')
+    
+    leg.Draw('same')
+
+    if plot_deltaz:
+        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaZ/{}.pdf'.format(name_prefix))
+    else:
+        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaR/{}.pdf'.format(name_prefix))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  def plot_prong_matching_correlation(self, jetR, hname_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold):
+
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.15)
+
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0., 200.)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+    myBlankHisto.SetMaximum(1.2)
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.GetYaxis().SetTitle('Fraction tagged but swapped')
+    myBlankHisto.Draw()
+    
+    leg = ROOT.TLegend(0.55,0.3,0.85,0.5)
+    self.setup_legend(leg,0.035)
+
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3]
+    
+    h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
+                # (removed from memory?)
+    
+    for i, subconfig_name in enumerate(obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+        
+      obs_setting = obs_settings[i]
+      grooming_setting = grooming_settings[i]
+      obs_label = self.obs_label(obs_setting, grooming_setting)
+      
+      if subconfig_name == overlay_list[0]:
+        marker = 20
+      elif subconfig_name == overlay_list[1]:
+        marker = 21
+      elif i > 1 and subconfig_name == overlay_list[2]:
+        marker = 33
+      else:
+        marker = 34
+
+      name = '{}_{}Scaled'.format(hname_prefix, obs_label)
+      hFraction_vs_pt = self.fMC.Get(name)
+
+      epsilon = 1e-5
+      min_bin = hFraction_vs_pt.GetYaxis().FindBin(0. + epsilon)
+      cut_bin = hFraction_vs_pt.GetYaxis().FindBin(prong_match_threshold + epsilon)
+      max_bin = hFraction_vs_pt.GetYaxis().FindBin(1. + epsilon)
+
+      hTotal_vs_pt = hFraction_vs_pt.ProjectionX('hTotal_vs_pt{}_{}_{}'.format(i, jetR, obs_label), 0, -1, cut_bin, max_bin)
+
+      hMatched_vs_pt = hFraction_vs_pt.ProjectionX('hMatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label), cut_bin, max_bin, cut_bin, max_bin)
+
+      hMatchedFraction_vs_pt = hMatched_vs_pt.Clone()
+      hMatchedFraction_vs_pt.SetName('hMatchedFraction_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
+      hMatchedFraction_vs_pt.Divide(hTotal_vs_pt)
+      hMatchedFraction_vs_pt.SetMarkerStyle(marker)
+      hMatchedFraction_vs_pt.SetMarkerColor(ColorArray[i])
+      hMatchedFraction_vs_pt.SetLineColor(ColorArray[i])
+      hMatchedFraction_vs_pt.Draw('P same')
+      leg.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
+      h_list.append(hMatchedFraction_vs_pt)
+
+    leg.Draw('same')
+
+    output_filename = os.path.join(self.output_dir, 'prong_matching_correlation/{}.pdf'.format(hname_prefix))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  def plot_prong_N_vs_z(self, jetR, obs_label, tagged='tagged'):
+
+    name = 'hProngMatching_subleading_leading_N_{}_JetPtDet_R{}_{}_80-100Scaled'.format(tagged, jetR, obs_label)
+    h3D = self.fMC.Get(name)
+    
+    h2D = h3D.Project3D('yx')
+    h2D.GetXaxis().SetTitle('z')
+    h2D.GetYaxis().SetTitle('N_{tracks}^{subleading pp-det prong}')
+    h2D.GetXaxis().SetRangeUser(0, 0.5)
+    h2D.GetYaxis().SetRangeUser(0, 30)
+    outputFilename = os.path.join(self.output_dir, 'prong_matching_N_z/{}.pdf'.format(name))
+    self.plot_hist(h2D, outputFilename, 'colz')

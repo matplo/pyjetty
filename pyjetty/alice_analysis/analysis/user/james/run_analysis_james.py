@@ -108,7 +108,12 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     self.create_output_subdir(self.output_dir_performance, 'statistics')
     self.create_output_subdir(self.output_dir_performance, 'lund')
     if not self.is_pp:
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching')
+      self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_pt')
+      self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_ptdet')
+      self.create_output_subdir(self.output_dir_performance, 'prong_matching_deltaR')
+      self.create_output_subdir(self.output_dir_performance, 'prong_matching_deltaZ')
+      self.create_output_subdir(self.output_dir_performance, 'prong_matching_correlation')
+      self.create_output_subdir(self.output_dir_performance, 'prong_matching_N_z')
     
     # Generate performance plots
     for jetR in self.jetR_list:
@@ -138,8 +143,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       # Plot prong matching histograms
       if not self.is_pp:
         self.prong_match_threshold = 0.5
-        self.min_pt = 80.
-        self.max_pt = 100.
+        min_pt = 80.
+        max_pt = 100.
         prong_list = ['leading', 'subleading']
         match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
         for i, overlay_list in enumerate(self.plot_overlay_list):
@@ -148,23 +153,25 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
               hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
               self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
-             #self.plotting_utils.plot_prong_matching_delta(jetR, hname, plot_deltaz=False)
+              self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=False)
 
-             #hname = 'hProngMatching_{}_{}_JetPtDet_R{}_{{}}Scaled'.format(prong, match, jetR)
-             #self.plotting_utils.plot_prong_matching(jetR, hname)
+              hname = 'hProngMatching_{}_{}_JetPtDet_R{}'.format(prong, match, jetR)
+              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
-             #if 'subleading' in prong:
-             #  hname = 'hProngMatching_{}_{}_JetPtZ_R{}_{{}}Scaled'.format(prong, match, jetR)
-             #  self.plotting_utils.plot_prong_matching_delta(jetR, hname, plot_deltaz=True)
+              if 'subleading' in prong:
+                hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
+                self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
 
-#         hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{{}}Scaled'.format(jetR)
-#         self.plotting_utils.plot_prong_matching_correlation(jetR, hname)
+          hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}'.format(jetR)
+          self.plotting_utils.plot_prong_matching_correlation(jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
-#       # Plot subobservable-dependent plots
-#       for i, _ in enumerate(self.obs_subconfig_list):
-#         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-#         self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
-#         self.plotting_utils.plot_prong_N_vs_z(jetR, sd_label, 'untagged')
+        # Plot subobservable-dependent plots
+        for i, _ in enumerate(self.obs_subconfig_list):
+          obs_setting = self.obs_settings[i]
+          grooming_setting = self.grooming_settings[i]
+          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+          self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
+          self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'untagged')
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
