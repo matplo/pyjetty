@@ -219,7 +219,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     name = 'hJetPt_Truth_R{}Scaled'.format(jetR)
     histPtGen = self.fMC.Get(name)
     histPtGen.Rebin(10)
-    #histPtGen.Scale(1/3.) # TEMP fix since I accidentally filled 3x
     
     # Then, get the pT^gen spectrum for matched jets
     name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
@@ -537,10 +536,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    if option == 'truth':
-      text = 'ALICE Simulation'
-    elif option == 'det':
-      text = 'ALICE {}'.format(self.figure_approval_status)
+    text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.3, 0.85, text)
     
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
