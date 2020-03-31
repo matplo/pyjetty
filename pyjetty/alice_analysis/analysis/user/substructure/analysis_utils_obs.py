@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-  Analysis utilities for Soft Drop jet analysis with track dataframe.
+  Analysis utilities for jet substructure analysis with track dataframe.
   
   Author: James Mulligan (james.mulligan@berkeley.edu)
 """
@@ -86,25 +86,40 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       raise ValueError('No observable is defined in prior_scale_factor_obs()!')
       
     return scale_factor
+    
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
+  # All observable-specific edits should be above here!
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
 
   #---------------------------------------------------------------
-  # Get label from obs_setting and sd_setting
+  # Get label from obs_setting and grooming_setting
   #---------------------------------------------------------------
-  def obs_label(self, obs_setting, sd_setting):
+  def obs_label(self, obs_setting, grooming_setting):
 
     obs_label = ''
     if obs_setting:
       obs_label += '{}'.format(obs_setting)
-    if sd_setting:
-      obs_label += '{}'.format(self.sd_label(sd_setting))
+    if grooming_setting:
+      obs_label += '{}'.format(self.grooming_label(grooming_setting))
     return obs_label
 
   #---------------------------------------------------------------
-  # Get formatted Soft Drop label from sd_setting = [zcut, beta]
+  # Get formatted grooming label from grooming_setting = {'sd': [zcut, beta]} or {'dg': [a]}
   #---------------------------------------------------------------
-  def formatted_sd_label(self, sd_setting):
+  def formatted_grooming_label(self, grooming_setting):
 
-    text = 'z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
+    key, value = list(grooming_setting.items())[0]
+    
+    if key == 'sd':
+      text = 'SD: z_{{cut}} = {}, #beta = {}'.format(value[0], value[1])
+    elif key == 'dg':
+      text = 'DG: a = {}'.format(value[0])
+    else:
+      sys.exit('Unknown grooming type!')
     return text
     
   #---------------------------------------------------------------
@@ -138,18 +153,17 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get regularization parameter
   #---------------------------------------------------------------
-  def get_reg_param(self, obs_settings, sd_settings, obs_subconfig_list, obs_config_dict, obs_label, observable, jetR):
+  def get_reg_param(self, obs_settings, grooming_settings, obs_subconfig_list, obs_config_dict, obs_label, jetR):
     
     for i, _ in enumerate(obs_subconfig_list):
     
       obs_setting = obs_settings[i]
-      sd_setting = sd_settings[i]
+      grooming_setting = grooming_settings[i]
       
-      if self.obs_label(obs_setting, sd_setting) == obs_label:
+      if self.obs_label(obs_setting, grooming_setting) == obs_label:
         
         config_name = obs_subconfig_list[i]
         reg_param = obs_config_dict[config_name]['reg_param'][jetR]
-        #print('reg_param for {} {} jetR={}: {}'.format(obs_label, observable, jetR, reg_param))
           
         return reg_param
       
@@ -157,7 +171,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
         continue
         
   #---------------------------------------------------------------
-  # Compute SD tagging rate, based on MC correction
+  # Compute grooming tagging rate, based on MC correction
   #---------------------------------------------------------------
   def tagging_rate(self, jetR, min_pt_truth, max_pt_truth, hData2D, hMC_Det2D, hMC_Truth2D):
 

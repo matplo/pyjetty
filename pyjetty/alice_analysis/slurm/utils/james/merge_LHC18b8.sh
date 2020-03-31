@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Script to merge output ROOT files
-JOB_ID=30672
-OUTPUT_DIR="/remote_storage/hiccup6/u/alice/AnalysisResults/$JOB_ID"
+JOB_ID=40175
+OUTPUT_DIR="/rstorage/alice/AnalysisResults/james/$JOB_ID"
 
 # command line arguments
 if [ "$1" != "" ]; then
@@ -27,12 +27,12 @@ module load pyjetty/main_python
 module list
 
 # Merge all output files from each pt-hat bin
-FILE_DIR_BASE=/rstorage/u/alice/AnalysisResults/$JOB_ID
-FILES=$( find ${FILE_DIR_BASE}/LHC19f4/183/child_*/*/$BIN -name "*.root" )
+FILE_DIR_BASE=/rstorage/alice/AnalysisResults/james/$JOB_ID
+FILES=$( find ${FILE_DIR_BASE}/LHC18b8/146/child_*/TrainOutput/*/${BIN} -name "*.root" )
 
-OUT_DIR_BASE=/storage/u/alice/AnalysisResults/$JOB_ID
+OUT_DIR_BASE=/rstorage/alice/AnalysisResults/james/$JOB_ID
 mkdir -p ${OUT_DIR_BASE}/Stage0/${BIN}
 hadd -f -j 10 ${OUT_DIR_BASE}/Stage0/${BIN}/AnalysisResults.root $FILES
 
 # Move stdout to appropriate folder
-mv /storage/u/alice/AnalysisResults/slurm-${MERGE_JOB_ID}_${BIN}.out /storage/u/alice/AnalysisResults/${JOB_ID}/
+mv /rstorage/alice/AnalysisResults/james/slurm-${MERGE_JOB_ID}_${BIN}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}/

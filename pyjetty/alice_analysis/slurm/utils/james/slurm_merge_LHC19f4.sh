@@ -5,6 +5,6 @@
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-20
-#SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
-srun merge_LHC18b8.sh $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+srun merge_LHC19f4.sh $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID

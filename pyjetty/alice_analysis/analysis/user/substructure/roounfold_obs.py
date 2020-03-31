@@ -10,7 +10,7 @@ import ROOT
 import yaml
 
 # Analysis utilities
-import analysis_utils_obs
+from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
 from pyjetty.alice_analysis.analysis.base import analysis_base
 
 # Prevent ROOT from stealing focus when plotting
@@ -46,8 +46,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       for i, _ in enumerate(self.obs_subconfig_list):
     
         obs_setting = self.obs_settings[i]
-        sd_setting = self.sd_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, sd_setting)
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
         
         fResult_name = os.path.join(self.output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
         setattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label), fResult_name)
@@ -69,9 +69,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       for i, _ in enumerate(self.obs_subconfig_list):
     
         obs_setting = self.obs_settings[i]
-        sd_setting = self.sd_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, sd_setting)
-        self.unfold_single_setting(jetR, obs_label, obs_setting, sd_setting)
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        self.unfold_single_setting(jetR, obs_label, obs_setting, grooming_setting)
 
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -92,16 +92,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       self.jetR_list = config['jetR']
       self.obs_config_dict = config[self.observable]
       self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
-      self.sd_settings = self.utils.sd_settings(self.obs_config_dict)
+      self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
       self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
       setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
       setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
+      setattr(self, 'pt_bins_reported', self.obs_config_dict['common_settings']['pt_bins_reported'])
 
       # Retrieve histogram binnings for each observable setting
       for i, _ in enumerate(self.obs_subconfig_list):
       
         config_name = self.obs_subconfig_list[i]
-        obs_label = self.utils.obs_label(self.obs_settings[i], self.sd_settings[i])
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
 
         pt_det_bins_name = 'pt_bins_det'
         if self.truncation:
@@ -146,7 +147,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           setattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label), name_data_rebinned)
           setattr(self, 'name_roounfold_R{}_{}'.format(jetR, obs_label), name_roounfold)
             
-      self.regularizationParamName = 'n_iter'
+      self.reg_param_name = 'n_iter'
       self.errorType = ROOT.RooUnfold.kCovToy
 
   #---------------------------------------------------------------
@@ -164,9 +165,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     for jetR in self.jetR_list:
     
       for i, _ in enumerate(self.obs_subconfig_list):
-      
-        obs_label = self.utils.obs_label(self.obs_settings[i], self.sd_settings[i])
 
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
+        
         name_thn = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
         name_data = getattr(self, 'name_data_R{}_{}'.format(jetR, obs_label))
@@ -215,7 +216,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #---------------------------------------------------------------
   def create_output_dirs(self):
     
-    dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt', 'Unfolded_ratio', 'Unfolded_uncertainties', 'StatisticalClosureTest', 'Refolding']
+    dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt', 'Unfolded_ratio', 'Unfolded_uncertainties', 'Test_StatisticalClosure', 'Test_Refolding']
     for dir in dirs:
       output_dir = os.path.join(self.output_dir, dir)
       setattr(self, 'output_dir_{}'.format(dir), output_dir)
@@ -225,7 +226,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   ###################################################################################################
   # Unfold jet substructure observable for a single setting
   ###################################################################################################
-  def unfold_single_setting(self, jetR, obs_label, obs_setting, sd_setting):
+  def unfold_single_setting(self, jetR, obs_label, obs_setting, grooming_setting):
 
     print('jetR = {}, {}'.format(jetR, obs_label))
     
@@ -242,9 +243,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.plot_RM_slices(jetR, obs_label)
     
     # Plot the kinematic efficiency from the response THn, and save it as an attribute
-    self.plot_kinematic_efficiency(jetR, obs_label, obs_setting, sd_setting)
+    self.plot_kinematic_efficiency(jetR, obs_label, obs_setting, grooming_setting)
     
-    # Get MC-det and MC-truth 2D projections for (i) SD tagging rate bin-by-bin correction, and (ii) unfolding closure test
+    # Get MC-det and MC-truth 2D projections for (i) grooming tagging rate bin-by-bin correction, and (ii) unfolding closure test
     name = 'hMC_Det_R{}_{}'.format(jetR, obs_label)
     hMC_Det = self.get_MCdet2D(jetR, obs_label)
     setattr(self, name, hMC_Det)
@@ -253,17 +254,18 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMC_Truth = self.get_MCtruth2D(jetR, obs_label)
     setattr(self, name, hMC_Truth)
     
-    # Compute SD tagging rate
-    if sd_setting:
+    # Compute grooming tagging rate
+    if grooming_setting:
       self.compute_tagging_rate(jetR, obs_label)
 
     # Unfold spectrum
     if hData_PerBin and hMC_Det and hMC_Truth:
       
-      self.unfoldJetSpectrum(jetR, obs_label, obs_setting, sd_setting)
+      self.unfold_observable(jetR, obs_label, obs_setting, grooming_setting)
+      self.unfolding_checks(jetR, obs_label, obs_setting, grooming_setting)
 
   #################################################################################################
-  # Compute SD tagging rate, based on MC correction
+  # Compute grooming tagging rate, based on MC correction
   #################################################################################################
   def compute_tagging_rate(self, jetR, obs_label):
     
@@ -293,9 +295,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMC_Truth.SetName('{}_tagging'.format(hMC_Truth.GetName()))
     
     # Compute the tagging fraction for each pt bin
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
     
       fraction_tagged = self.utils.tagging_rate(jetR, min_pt_truth, max_pt_truth, hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
 
@@ -311,42 +313,31 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Unfold jet spectrum
   #################################################################################################
-  def unfoldJetSpectrum(self, jetR, obs_label, obs_setting, sd_setting):
+  def unfold_observable(self, jetR, obs_label, obs_setting, grooming_setting):
     
-    self.utils.set_plotting_options()
-    ROOT.gROOT.ForceStyle()
-    
-    # Create canvas to superpose iterations on one plot, to examine convergence
-    c1 = ROOT.TCanvas('c1_{}_{}'.format(jetR, obs_label),'c1_{}_{}: histos'.format(jetR, obs_label),600,450)
-    c1.cd()
-    c1.SetLogy()
-    ROOT.gPad.SetLeftMargin(0.15)
-    leg = ROOT.TLegend(0.6,0.5,0.88,0.83,"{} Unfolding".format(type))
-    leg.SetFillColor(10)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
-    leg.SetTextSize(0.04)
-    
-    # Loop over values of regularization parameter
+    # Get response and data to unfold
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
 
     name_data = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
     hData = getattr(self, name_data)
 
+    # Write unfolded results to a ROOT file
     fResult_name = getattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label))
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
     
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    # Select final regularization parameter
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
     
+    # Loop over values of regularization parameter
     for i in range(1, reg_param_final + 3):
       
       # Set up the Bayesian unfolding object
-      unfoldBayes = ROOT.RooUnfoldBayes(response, hData, i)
+      unfold_bayes = ROOT.RooUnfoldBayes(response, hData, i)
       #unfoldBayes.SetNToys(1000)
       
       # Perform the unfolding
-      print('Unfolding with {} = {}'.format(self.regularizationParamName, i))
-      hUnfolded = unfoldBayes.Hreco(self.errorType) # Produces the truth distribution, with errors, PerBin (will scale by bin width below, after refolding checks)
+      print('Unfolding with {} = {}'.format(self.reg_param_name, i))
+      hUnfolded = unfold_bayes.Hreco(self.errorType) # Produces the truth distribution, with errors, PerBin (will scale by bin width below, after refolding checks)
       
       # Save unfolded solution as class member
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)
@@ -362,56 +353,36 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       hUnfolded.Write()
       
       # Plot Pearson correlation coeffs for each k, to get a measure of the correlation between the bins
-      covarianceMatrix = unfoldBayes.Ereco(self.errorType) # Get the covariance matrix
+      covarianceMatrix = unfold_bayes.Ereco(self.errorType) # Get the covariance matrix
       #plotCorrelationCoefficients(covarianceMatrix, i, output_dir, file_format)
       
     fResult.Close()
     print('Done unfolding')
-      
-    self.plot_unfolded_observable(jetR, obs_label, obs_setting, sd_setting)
 
-    self.plot_unfolded_pt(jetR, obs_label, obs_setting, sd_setting)
-
-    #--------------------------------------------------------------
+    # Plot unfolded results
+    self.utils.set_plotting_options()
+    ROOT.gROOT.ForceStyle()
     
-    # Smear MC truth spectrum according to the error bars on the measured spectrum, for closure test
+    self.plot_unfolded_observable(jetR, obs_label, obs_setting, grooming_setting)
+    self.plot_unfolded_pt(jetR, obs_label, obs_setting, grooming_setting)
+
+  #################################################################################################
+  # Plot unfolded observable for various pt slices
+  #################################################################################################
+  def plot_unfolded_observable(self, jetR, obs_label, obs_setting, grooming_setting):
     
-    name_data = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
-    hData = getattr(self, name_data)
-    hMC_Det = getattr(self, 'hMC_Det_R{}_{}'.format(jetR, obs_label))
-
-    measuredErrors = self.getMeasuredErrors(hData)
-    self.smearSpectrum(hMC_Det, measuredErrors)
-
-    # Loop over values of regularization parameter to do unfolding checks
-    for i in range(1, reg_param_final + 3):
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
-      # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
-      self.plot_refolding_test(i, jetR, obs_label, obs_setting, sd_setting)
-
-      # Unfold the smeared det-level result with response, and compare to truth-level MC.
-      self.plot_closure_test(i, jetR, obs_label, obs_setting, sd_setting)
+      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth)
+      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, option = 'ratio')
+      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, option = 'uncertainties')
 
   #################################################################################################
-  # Plot various slices of the response matrix (from the THn)
+  # Plot observable for a single pt slicee
   #################################################################################################
-  def plot_unfolded_observable(self, jetR, obs_label, obs_setting, sd_setting):
-    
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
-      
-      self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth)
-      self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, option = 'ratio')
-      self.plot_observable(jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, option = 'uncertainties')
-
-  #################################################################################################
-  # Plot various slices of the response matrix (from the THn)
-  #################################################################################################
-  def plot_observable(self, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth, option = ''):
+  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, option = ''):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -431,27 +402,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     
     n_bins_truth = getattr(self, 'n_bins_truth_{}'.format(obs_label))
     truth_bin_array = getattr(self, 'truth_bin_array_{}'.format(obs_label))
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
-    myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(self.xtitle)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(self.ytitle)
-    myBlankHisto.SetMaximum(4)
-    myBlankHisto.SetMinimum(0.)
-    if option == 'ratio':
-      myBlankHisto.SetMaximum(1.2)
-      myBlankHisto.SetMinimum(0.9)
-      myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter}-1)}')
-    if option == 'uncertainties':
-      myBlankHisto.SetMaximum(40)
-      myBlankHisto.SetMinimum(0.)
-      myBlankHisto.SetYTitle('statistical uncertainty (%)')
-    myBlankHisto.Draw("E")
     
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -502,13 +457,31 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       # Doesn't work for some reason...
       #shift = 0.5*h.GetBinWidth(1)
       #h.GetXaxis().SetLimits(truth_bin_array[0]+shift,truth_bin_array[-1]+shift)
+      
+      if i == 1 or (i==2 and option == 'ratio'):
+        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
+        myBlankHisto.SetNdivisions(505)
+        myBlankHisto.SetXTitle(self.xtitle)
+        myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+        myBlankHisto.SetYTitle(self.ytitle)
+        myBlankHisto.SetMaximum(3*h.GetMaximum())
+        myBlankHisto.SetMinimum(0.)
+        if option == 'ratio':
+          myBlankHisto.SetMaximum(1.2)
+          myBlankHisto.SetMinimum(0.9)
+          myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter}-1)}')
+        if option == 'uncertainties':
+          myBlankHisto.SetMaximum(40)
+          myBlankHisto.SetMinimum(0.)
+          myBlankHisto.SetYTitle('statistical uncertainty (%)')
+        myBlankHisto.Draw("E")
 
       if option == 'ratio':
         h.DrawCopy('P hist X0 same')
       else:
         h.DrawCopy('PE X0 same')
       
-      label = '{} = {}'.format(self.regularizationParamName, i)
+      label = '{} = {}'.format(self.reg_param_name, i)
       leg.AddEntry(h, label, 'Pe')
 
     leg.Draw()
@@ -523,14 +496,22 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
-    text_latex.DrawLatex(0.25, 0.85, text)
-
+    text_latex.DrawLatex(0.35, 0.85, text)
+    
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    text_latex.DrawLatex(0.25, 0.75, text)
+    text = '#it{R} = ' + str(jetR)
+    text_latex.DrawLatex(0.35, 0.78, text)
     
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.35, 0.71, text)
+    
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting)
+      text_latex.DrawLatex(0.35, 0.64, text)
+
     if option == 'ratio':
       output_dir = getattr(self, 'output_dir_Unfolded_ratio')
     elif option == 'uncertainties':
@@ -568,15 +549,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     for bin in range(1, h.GetNbinsX()+1):
       content = h.GetBinContent(bin)
       uncertainty = h.GetBinError(bin)
+      if content < 1e-10:
+        print('content of {} in bin {} is {}'.format(h.GetName(), bin, content))
       h.SetBinContent(bin, uncertainty/content * 100)
       h.SetBinError(bin, 0)
 
     return h
 
   #################################################################################################
-  # Plot various slices of the response matrix (from the THn)
+  # Get unfolded pt in 1D
   #################################################################################################
-  def plot_unfolded_pt(self, jetR, obs_label, obs_setting, sd_setting):
+  def plot_unfolded_pt(self, jetR, obs_label, obs_setting, grooming_setting):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -608,7 +591,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
     
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.sd_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, self.observable, jetR)
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
     
     for i in range(1, reg_param_final + 3):
       
@@ -653,20 +636,24 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       
       h.DrawCopy('PE X0 same')
       
-      label = '{} = {}'.format(self.regularizationParamName, i)
+      label = '{} = {}'.format(self.reg_param_name, i)
       leg.AddEntry(h, label, 'Pe')
     
     leg.Draw()
-
+    
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = 'R = ' + str(jetR) + '   z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    elif self.observable == 'subjet_z':
-      text = 'R = ' + str(jetR) + '   R_{subjet} = ' + str(obs_setting)
-    elif self.observable == 'jet_axis':
-      text = '#Delta R_{{ {} }}'.format(obs_setting)
-    text_latex.DrawLatex(0.25, 0.75, text)
+    text = '#it{R} = ' + str(jetR)
+    text_latex.DrawLatex(0.35, 0.85, text)
+    
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.35, 0.78, text)
+    
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting)
+      text_latex.DrawLatex(0.35, 0.71, text)
 
     output_dir = getattr(self, 'output_dir_Unfolded_pt')
     outputFilename = os.path.join(output_dir, 'hUnfoldedPt_{}_R{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), obs_label, self.file_format))
@@ -679,7 +666,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #   Numerator: 2D truth-level projection [pt-true, obs-true] using [pt-det, obs-det] cut on det-level
   #   Denominator: 2D truth-level projection [pt-true, obs-true] using no cut on det-level
   ###################################################################################################
-  def plot_kinematic_efficiency(self, jetR, obs_label, obs_setting, sd_setting):
+  def plot_kinematic_efficiency(self, jetR, obs_label, obs_setting, grooming_setting):
     
     # (pt-det, pt-true, obs-det, obs-true)
     name_response = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
@@ -718,12 +705,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     setattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label), hKinematicEfficiency)
     
     # Plot 1D kinematic efficiency
-    self.plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, obs_label, obs_setting, sd_setting)
+    self.plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, obs_label, obs_setting, grooming_setting)
 
   #################################################################################################
   # Plot kinematic efficiency projections for various pt slices
   #################################################################################################
-  def plot_kinematic_efficiency_projections(self, hKinematicEfficiency2D, jetR, obs_label, obs_setting, sd_setting):
+  def plot_kinematic_efficiency_projections(self, hKinematicEfficiency2D, jetR, obs_label, obs_setting, grooming_setting):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -755,11 +742,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
     self.utils.setup_legend(leg,0.04)
     
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
       hKinematicEfficiency2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
       h = hKinematicEfficiency2D.ProjectionY()
@@ -806,8 +791,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       text = '{} = {}'.format(subobs_label, obs_setting)
       text_latex.DrawLatex(0.3, 0.78, text)
     
-    if sd_setting:
-      text = self.utils.formatted_sd_label(sd_setting)
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting)
       text_latex.DrawLatex(0.3, 0.71, text)
     
     line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
@@ -865,14 +850,37 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.utils.plot_hist(hResponse_Obs_Normalized, outputFilename, 'colz', False, True, text)
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum
+  # Perform refolding test and statistical closure test
   #################################################################################################
-  def plot_refolding_test(self, i, jetR, obs_label, obs_setting, sd_setting):
+  def unfolding_checks(self, jetR, obs_label, obs_setting, grooming_setting):
+         
+    # Smear MC truth spectrum according to the error bars on the measured spectrum, for closure test
+    name_data = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
+    hData = getattr(self, name_data)
+    hMC_Det = getattr(self, 'hMC_Det_R{}_{}'.format(jetR, obs_label))
+
+    measuredErrors = self.getMeasuredErrors(hData)
+    self.smearSpectrum(hMC_Det, measuredErrors)
+
+    # Loop over values of regularization parameter to do unfolding checks
+    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
+    for i in range(1, reg_param_final + 3):
+      
+      # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+      self.plot_refolding_test(i, jetR, obs_label, obs_setting, grooming_setting)
+
+      # Unfold the smeared det-level result with response, and compare to truth-level MC.
+      self.plot_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
+
+  #################################################################################################
+  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  #################################################################################################
+  def plot_refolding_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
         
     hUnfolded = getattr(self, 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i))
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
     
-    hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at the moment)
+    hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin (unfolded spectrum is also PerBin at this point)
     
     n_pt_bins_det = getattr(self, 'n_pt_bins_det_{}'.format(obs_label))
     det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
@@ -880,14 +888,14 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       min_pt_det = det_pt_bin_array[bin]
       max_pt_det = det_pt_bin_array[bin+1]
       
-      self.plot_obs_refolded_slice(hFoldedTruth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_det, max_pt_det)
+      self.plot_obs_refolded_slice(hFoldedTruth, i, jetR, obs_label, obs_setting, grooming_setting, min_pt_det, max_pt_det)
 
-    self.plot_pt_refolded_slice(hFoldedTruth, i, jetR, obs_label, obs_setting, sd_setting, det_pt_bin_array[2], det_pt_bin_array[-1])
+    self.plot_pt_refolded_slice(hFoldedTruth, i, jetR, obs_label, obs_setting, grooming_setting, det_pt_bin_array[2], det_pt_bin_array[-1])
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot refolding test, for a given pt slice
   #################################################################################################
-  def plot_obs_refolded_slice(self, hFoldedTruth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_det, max_pt_det):
+  def plot_obs_refolded_slice(self, hFoldedTruth, i, jetR, obs_label, obs_setting, grooming_setting, min_pt_det, max_pt_det):
     
     hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
     hFolded_obs = hFoldedTruth.ProjectionY()
@@ -900,17 +908,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hData_obs.SetName('hData_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i, min_pt_det, max_pt_det))
     
     legendTitle = ''
-    h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
-    output_dir = getattr(self, 'output_dir_Refolding')
+    output_dir = getattr(self, 'output_dir_Test_Refolding')
     outputFilename = os.path.join(output_dir, 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_det), int(max_pt_det), i, self.file_format))
-    self.plot_obs_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det), jetR, obs_label, obs_setting, grooming_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot refolding test, for pt dimension
   #################################################################################################
-  def plot_pt_refolded_slice(self, hFoldedTruth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_det, max_pt_det):
+  def plot_pt_refolded_slice(self, hFoldedTruth, i, jetR, obs_label, obs_setting, grooming_setting, min_pt_det, max_pt_det):
     
     hFoldedTruth.GetXaxis().SetRangeUser(min_pt_det, max_pt_det)
     hFolded_pt = hFoldedTruth.ProjectionX()
@@ -923,17 +931,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hData_pt.SetName('hData_pt_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i, min_pt_det, max_pt_det))
     
     legendTitle = ''
-    h1LegendLabel = 'Folded truth, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'Measured pp'
     ratioYAxisTitle = 'Folded truth / Measured'
-    output_dir = getattr(self, 'output_dir_Refolding')
+    output_dir = getattr(self, 'output_dir_Test_Refolding')
     outputFilename = os.path.join(output_dir, 'hFoldedTruth_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, i, self.file_format))
-    self.plot_obs_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, grooming_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
-  # Closure test
+  # Statistical closure test: Smear data, then unfold and compare to original truth
   #################################################################################################
-  def plot_closure_test(self, i, jetR, obs_label, obs_setting, sd_setting):
+  def plot_closure_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
 
     # Unfold smeared det-level spectrum with RM
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
@@ -941,23 +949,21 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMC_Truth = getattr(self, 'hMC_Truth_R{}_{}'.format(jetR, obs_label))
     
     unfold2 = ROOT.RooUnfoldBayes(response, hMC_Det, i)
-    hUnfolded2 = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin d
+    hUnfolded2 = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin
 
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    for bin in range(1, n_pt_bins_truth-3):
-      min_pt_truth = truth_pt_bin_array[bin]
-      max_pt_truth = truth_pt_bin_array[bin+1]
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
       
-      self.plot_obs_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth)
+      self.plot_obs_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth)
 
     # Closure test for pt dimension
-    self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, truth_pt_bin_array[1], truth_pt_bin_array[-4])
+    self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label, obs_setting, grooming_setting, self.pt_bins_reported[0], self.pt_bins_reported[-1])
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot closure test, for a given pt slice
   #################################################################################################
-  def plot_obs_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth):
+  def plot_obs_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
     
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_obs = hUnfolded.ProjectionY()
@@ -968,17 +974,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMCTruth_obs.SetName('hMCTruth_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i, min_pt_truth, max_pt_truth))
     
     legendTitle = ''
-    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    output_dir = getattr(self, 'output_dir_StatisticalClosureTest')
+    output_dir = getattr(self, 'output_dir_Test_StatisticalClosure')
     outputFilename = os.path.join(output_dir, 'hClosure_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), i, self.file_format))
-    self.plot_obs_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR, obs_label, obs_setting, grooming_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
-  # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
+  # Plot closure test, for pt dimension
   #################################################################################################
-  def plot_pt_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting, sd_setting, min_pt_truth, max_pt_truth):
+  def plot_pt_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
   
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_pt = hUnfolded.ProjectionX()
@@ -989,12 +995,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMCTruth_pt.SetName('hMCTruth_pt_R{}_{}_{}_'.format(jetR, obs_label, i))
     
     legendTitle = ''
-    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.regularizationParamName,i)
+    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    output_dir = getattr(self, 'output_dir_StatisticalClosureTest')
+    output_dir = getattr(self, 'output_dir_Test_StatisticalClosure')
     outputFilename = os.path.join(output_dir, 'hClosure_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, i, self.file_format))
-    self.plot_obs_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, sd_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting, grooming_setting, outputFilename, 'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Get errors from measured spectrum, stored as dictionary {bin:error}
@@ -1072,7 +1078,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Plot spectra and ratio of h (and h3, if supplied) to h2
   #################################################################################################
-  def plot_obs_obs_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, obs_label, obs_setting, sd_setting, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
+  def plot_obs_ratio(self, h, h2, h3, yAxisTitle, ratioYAxisTitle, min_pt_det, max_pt_det, jetR, obs_label, obs_setting, grooming_setting, outputFilename, scalingOptions = "", legendTitle = "",hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "", yRatioMax = 2.2):
     
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -1100,17 +1106,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h.GetYaxis().SetTitle(yAxisTitle)
     
     h.GetYaxis().SetTitleSize(0.06)
-    if self.observable == 'theta_g':
-      if '_pt_' in outputFilename:
-        h.GetYaxis().SetRangeUser(1e-4, 10.)
-      else:
-        h.GetYaxis().SetRangeUser(0., 3.)
+    if '_pt_' in outputFilename:
+      h.GetYaxis().SetRangeUser(1e-4, 10.)
+    else:
+      h.GetYaxis().SetRangeUser(0., 3*h.GetMaximum())
 
-    if self.observable == 'zg':
-      if '_pt_' in outputFilename:
-        h.GetYaxis().SetRangeUser(1e-4, 10.)
-      else:
-        h.GetYaxis().SetRangeUser(0., 8.)
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
     xAxisTitle = self.xtitle
@@ -1202,17 +1202,20 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       text_latex.SetNDC()
       text = str(min_pt_det) + ' < #it{p}_{T,ch jet} < ' + str(max_pt_det)
       text_latex.DrawLatex(0.25, 0.85, text)
-
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'R = ' + str(jetR)
-    text_latex.DrawLatex(0.25, 0.75, text)
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    if self.observable == 'theta_g' or self.observable == 'zg':
-      text = 'z_{cut} = ' + str(sd_setting[0]) + '   #beta = ' + str(sd_setting[1])
-    text_latex.DrawLatex(0.25, 0.65, text)
+    text = '#it{R} = ' + str(jetR)
+    text_latex.DrawLatex(0.25, 0.78, text)
+    
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.25, 0.71, text)
+    
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting)
+      text_latex.DrawLatex(0.25, 0.64, text)
 
     c.SaveAs(outputFilename)
     c.Close()

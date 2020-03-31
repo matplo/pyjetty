@@ -16,6 +16,12 @@ import time
 # Data analysis and plotting
 import ROOT
 import yaml
+import numpy as np
+from array import *
+
+# Fastjet via python (from external library heppy)
+import fastjet as fj
+import fjcontrib
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import common_base
@@ -42,6 +48,11 @@ class ProcessBase(common_base.CommonBase):
     if not os.path.exists(self.output_dir):
       #os.makedirs(self.output_dir, 775)
       os.makedirs(self.output_dir)
+      
+    # Create output file
+    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
+    fout = ROOT.TFile(outputfilename, 'recreate')
+    fout.Close()
 
     # Initialize utils class
     self.utils = process_utils.ProcessUtils()
@@ -74,6 +85,52 @@ class ProcessBase(common_base.CommonBase):
     else:
       print('Constituent subtractor is disabled.')
 
+  #---------------------------------------------------------------
+  # Create thn and set as class attribute from name, dim
+  #   and lists of nbins, xmin, xmax.
+  #---------------------------------------------------------------
+  def create_thn(self, name, title, dim, nbins, xmin, xmax):
+    
+    nbins_arr = (nbins)
+    xmin_arr = (min)
+    xmax_arr = (max)
+    nbins_array = array('i', nbins)
+    xmin_array = array('d', xmin)
+    xmax_array = array('d', xmax)
+    h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+    for i in range(0, dim):
+      h.GetAxis(i).SetTitle(title[i])
+    setattr(self, name, h)
+
+  #---------------------------------------------------------------
+  # Return Lund coordinates [log(1/deltaR), log(1/kt)] of a SD jet
+  #---------------------------------------------------------------
+  def lund_coordinates_SD(self, jet_sd):
+
+    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
+    dR = sd_info.dR
+    z = sd_info.z
+    pt = jet_sd.pt()
+    kt = z*dR*pt
+    
+    if dR > 1e-5:
+      return [np.log(1/dR), np.log(kt)]
+    else:
+      return [sys.maxsize, np.log(kt)]
+
+  #---------------------------------------------------------------
+  # Return Lund coordinates [log(1/deltaR), log(1/kt)] of a DG jet
+  #---------------------------------------------------------------
+  def lund_coordinates_DG(self, jet_dg):
+
+    dR = jet_dg.Delta()
+    kt = jet_dg.kt()
+    
+    if dR > 1e-5:
+      return [np.log(1/dR), np.log(kt)]
+    else:
+      return [sys.maxsize, np.log(kt)]
+    
   #---------------------------------------------------------------
   # Compare two jets and store matching candidates in user_info
   #---------------------------------------------------------------
@@ -256,8 +313,9 @@ class ProcessBase(common_base.CommonBase):
   def save_output_objects(self):
     
     outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
-    fout = ROOT.TFile(outputfilename, 'recreate')
+    fout = ROOT.TFile(outputfilename, 'update')
     fout.cd()
+    
     for attr in dir(self):
       
       obj = getattr(self, attr)
@@ -271,4 +329,24 @@ class ProcessBase(common_base.CommonBase):
       if isinstance(obj, types):
         obj.Write()
   
+    fout.Close()
+
+  #---------------------------------------------------------------
+  # Save all THn and TH3, and remove them as class attributes (to clear memory)
+  #---------------------------------------------------------------
+  def save_thn_th3_objects(self):
+    
+    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
+    fout = ROOT.TFile(outputfilename, 'update')
+    fout.cd()
+    
+    for attr in dir(self):
+      
+      obj = getattr(self, attr)
+      
+      types = (ROOT.TH3, ROOT.THnBase)
+      if isinstance(obj, types):
+        obj.Write()
+        delattr(self, attr)
+
     fout.Close()

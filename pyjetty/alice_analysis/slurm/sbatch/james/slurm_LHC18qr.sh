@@ -1,18 +1,18 @@
 #! /bin/bash
 
-#SBATCH --job-name=rgtest
+#SBATCH --job-name=james18qr
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-100
-#SBATCH --output=/storage/u/alice/AnalysisResults/slurm-%A_%a.out
+#SBATCH --array=1-1000
+#SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/u/alice/LHC18qr/147-148/files.txt'
+FILE_PATHS='/rstorage/alice/data/LHC18qr/147-148/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 7 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 100 + 1 ))
+FILES_PER_JOB=$(( $NFILES / 1000 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 
 STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))
@@ -29,5 +29,5 @@ echo "STOP=$STOP"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun process_rg_LHC18qr.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+  srun process_LHC18qr.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done

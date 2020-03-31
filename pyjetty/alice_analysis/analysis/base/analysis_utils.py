@@ -47,7 +47,7 @@ class AnalysisUtils(common_utils.CommonUtils):
     else:
       print('sumw2 set')
     
-    # Loop over all bins (including under/over-flow -- needed e.g. for SD tagging rate), 
+    # Loop over all bins (including under/over-flow -- needed e.g. for grooming tagging rate), 
     # and fill rebinned histogram
     for bin_x in range(0, hData.GetNbinsX() + 2):
       for bin_y in range(0, hData.GetNbinsY() + 2):

@@ -12,6 +12,7 @@
 from __future__ import print_function
 
 import os   # for creating file on output
+import sys
 
 # Data analysis and plotting
 import uproot
@@ -96,7 +97,7 @@ class ProcessIO(common_base.CommonBase):
     event_tree_name = self.tree_dir + self.event_tree_name
     self.event_tree = uproot.open(self.input_file)[event_tree_name]
     if not self.event_tree:
-      print('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
+      sys.exit('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
     self.event_df_orig = self.event_tree.pandas.df(self.event_columns)
     self.event_df_orig.reset_index(drop=True)
     self.event_df = self.event_df_orig.query('is_ev_rej == 0')
@@ -106,7 +107,7 @@ class ProcessIO(common_base.CommonBase):
     track_tree_name = self.tree_dir + self.track_tree_name
     self.track_tree = uproot.open(self.input_file)[track_tree_name]
     if not self.track_tree:
-      print('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
+      sys.exit('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
     self.track_df_orig = self.track_tree.pandas.df()
 
     # Merge event info into track tree
