@@ -35,7 +35,7 @@ theta_g:
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
     pt_bins_reported: [40, 60, 80, 100]
     plot_overlay_list:
-      - ['config1', 'config2', 'config3']
+      - ['config1', 'config2', 'config3', 'config4']
 
   config1:
     SoftDrop:

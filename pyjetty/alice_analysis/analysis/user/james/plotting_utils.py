@@ -277,6 +277,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
     hRM_4d = self.fMC.Get(name)
     
+    h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
+                # (removed from memory?)
+    
     for i in range(0, len(pt_bins) - 1):
     
       min_pt_truth = pt_bins[i]
@@ -290,10 +293,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hResolution.SetMarkerStyle(21)
       hResolution.SetLineColor(ColorArray[i])
       hResolution.DrawCopy('P same')
-
       myLegend.AddEntry(hResolution, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+      h_list.append(hResolution)
 
-      myLegend.Draw('same')
+    myLegend.Draw('same')
 
     outputFilename = os.path.join(self.output_dir, 'resolution/hResolution_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
     c_resolution.SaveAs(outputFilename)
@@ -579,3 +582,89 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text = '#it{p}_{T, ch jet}^{truth} > 100 GeV/c'
     output_filename = os.path.join(self.output_dir, 'lund/hLundPlane_R{}_{}.pdf'.format(jetR, obs_label))
     self.plot_hist(hLund, output_filename, drawOptions = 'colz', text = text)
+
+  #---------------------------------------------------------------
+  def plot_prong_matching(self, i_overlay, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold):
+  
+    c = ROOT.TCanvas('c','c: hist',600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.15)
+    
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0., 200.)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+    myBlankHisto.SetMaximum(1.2)
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.GetYaxis().SetTitle('Fraction tagged')
+    myBlankHisto.Draw()
+    
+    myLegend = ROOT.TLegend(0.55,0.3,0.85,0.5)
+    self.setup_legend(myLegend,0.035)
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3]
+    
+    h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
+                # (removed from memory?)
+    
+    for i, subconfig_name in enumerate(obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+        
+      obs_setting = obs_settings[i]
+      grooming_setting = grooming_settings[i]
+      obs_label = self.obs_label(obs_setting, grooming_setting)
+      
+      if subconfig_name == overlay_list[0]:
+        marker = 20
+      elif subconfig_name == overlay_list[1]:
+        marker = 21
+      elif i > 1 and subconfig_name == overlay_list[2]:
+        marker = 33
+      else:
+        marker = 34
+      
+      name = '{}_{}Scaled'.format(name_prefix, obs_label)
+      hFraction_vs_pt = self.fMC.Get(name)
+      xtitle = hFraction_vs_pt.GetXaxis().GetTitle()
+      myBlankHisto.GetXaxis().SetTitle(xtitle)
+      
+      epsilon = 1e-5
+      min_bin = hFraction_vs_pt.GetYaxis().FindBin(0. + epsilon)
+      cut_bin = hFraction_vs_pt.GetYaxis().FindBin(prong_match_threshold + epsilon)
+      max_bin = hFraction_vs_pt.GetYaxis().FindBin(1. + epsilon)
+      
+      name_total = 'hTotal_vs_pt{}_{}_{}'.format(i, jetR, obs_label)
+      hTotal_vs_pt = hFraction_vs_pt.ProjectionX(name_total, min_bin, max_bin)
+      hTotal_vs_pt.SetName(name_total)
+      
+      name_matched = 'hMatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label)
+      hMatched_vs_pt = hFraction_vs_pt.ProjectionX(name_matched, cut_bin, max_bin)
+      hMatched_vs_pt.SetName(name_matched)
+      
+      name_fraction = 'hMatchedFraction_vs_pt{}_{}_{}'.format(i, jetR, obs_label)
+      hMatchedFraction_vs_pt = None
+      hMatchedFraction_vs_pt = hMatched_vs_pt.Clone()
+      hMatchedFraction_vs_pt.SetName(name_fraction)
+      hMatchedFraction_vs_pt.Divide(hTotal_vs_pt)
+      hMatchedFraction_vs_pt.SetMarkerStyle(marker)
+      hMatchedFraction_vs_pt.SetMarkerColor(ColorArray[i])
+      hMatchedFraction_vs_pt.SetLineColor(ColorArray[i])
+      hMatchedFraction_vs_pt.DrawCopy('P same')
+      myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
+        
+      h_list.append(hMatchedFraction_vs_pt)
+
+    myLegend.Draw('same')
+
+    output_filename = os.path.join(self.output_dir, 'prong_matching/{}_{}.pdf'.format(name_prefix, i_overlay))
+    c.SaveAs(output_filename)
+    c.Close()
