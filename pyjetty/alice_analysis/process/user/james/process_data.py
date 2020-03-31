@@ -163,7 +163,7 @@ class ProcessData(process_base.ProcessBase):
             if grooming_setting:
               grooming_label = self.utils.grooming_label(grooming_setting)
               name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 150, 0, 1.0)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
               h.GetYaxis().SetTitle('#theta_{g,ch}')
               setattr(self, name, h)
