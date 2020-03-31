@@ -103,7 +103,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     self.create_output_subdir(self.output_dir_performance, 'resolution')
     self.create_output_subdir(self.output_dir_performance, 'residual')
     self.create_output_subdir(self.output_dir_performance, 'residual_relative')
-    self.create_output_subdir(self.output_dir_performance, 'mc_projections')
+    self.create_output_subdir(self.output_dir_performance, 'mc_projections_det')
+    self.create_output_subdir(self.output_dir_performance, 'mc_projections_truth')
     self.create_output_subdir(self.output_dir_performance, 'statistics')
     self.create_output_subdir(self.output_dir_performance, 'lund')
     
@@ -141,14 +142,14 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
         for prong in prong_list:
           for match in match_list:
-  
+ 
             hname = 'hProngMatching_{}_{}_JetPt_R{}_{{}}Scaled'.format(prong, match, jetR)
             self.plot_prong_matching(jetR, hname)
             self.plot_prong_matching_delta(jetR, hname, plot_deltaz=False)
-     
+ 
             hname = 'hProngMatching_{}_{}_JetPtDet_R{}_{{}}Scaled'.format(prong, match, jetR)
             self.plot_prong_matching(jetR, hname)
-     
+ 
             if 'subleading' in prong:
               hname = 'hProngMatching_{}_{}_JetPtZ_R{}_{{}}Scaled'.format(prong, match, jetR)
               self.plot_prong_matching_delta(jetR, hname, plot_deltaz=True)

@@ -218,7 +218,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     # First, get the pT^gen spectrum
     name = 'hJetPt_Truth_R{}Scaled'.format(jetR)
     histPtGen = self.fMC.Get(name)
-    histPtGen.Rebin(5)
+    histPtGen.Rebin(10)
     #histPtGen.Scale(1/3.) # TEMP fix since I accidentally filled 3x
     
     # Then, get the pT^gen spectrum for matched jets
@@ -243,7 +243,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     histEfficiency.SetMarkerSize(3)
     outputFilename = os.path.join(self.output_dir, 'jet/hJetRecoEfficiency_R{}.pdf'.format(self.remove_periods(jetR)))
     self.plot_hist(histEfficiency, outputFilename)
-  
+      
   #---------------------------------------------------------------
   def plot_obs_resolution(self, jetR, obs_label, xtitle, pt_bins):
     
@@ -414,24 +414,22 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     hRM_obs = self.fMC.Get(name)
     hRM_obs.Sumw2()
     
-    if self.fData:
-      name = 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)
-      hObs_JetPt = self.fData.Get(name)
-      hObs_JetPt.Sumw2()
-    else:
-      hObs_JetPt = None
+    name = 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)
+    hObs_JetPt = self.fData.Get(name)
+    hObs_JetPt.Sumw2()
 
-    if self.fData:
-      self.plot2D_obs_statistics(hObs_JetPt.Clone(), jetR, obs_label)
-
-    if self.is_pp:
-        
-      # Loop through pt slices, and plot MC-det and MC-truth 1D distributions
-      for i in range(0, len(pt_bins) - 1):
-        min_pt_truth = pt_bins[i]
-        max_pt_truth = pt_bins[i+1]
-        
-        self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt_truth, max_pt_truth)
+    # Plot 2D statistics in data
+    self.plot2D_obs_statistics(hObs_JetPt.Clone(), jetR, obs_label)
+      
+    # Loop through pt slices, and plot:
+    #   (a) MC-det and MC-truth 1D distributions, for fixed pt-truth
+    #   (b) MC-det and data 1D distributions, for fixed pt-det
+    for i in range(0, len(pt_bins) - 1):
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='truth')
+      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='det')
 
   #---------------------------------------------------------------
   def plot2D_obs_statistics(self, hObs_JetPt, jetR, obs_label):
@@ -440,7 +438,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     c.cd()
     ROOT.gPad.SetLeftMargin(0.15)
     ROOT.gPad.SetBottomMargin(0.15)
-
     
     hObs_JetPt.SetMarkerSize(0.5)
     hObs_JetPt.GetYaxis().SetRangeUser(0, 1.)
@@ -454,38 +451,56 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     c.Close()
 
   #---------------------------------------------------------------
-  def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt_det, max_pt_det):
+  # If option='truth', plot MC-truth and MC-det projections for fixed pt-true
+  # If option='det', plot data and MC-det projections for fixed pt-det
+  def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
 
-    rebin_val_det = 10
-    rebin_val_truth = 2
+    ytitle = '#frac{{dN}}{{d{}}}'.format(xtitle)
     
+    if self.observable == 'theta_g':
+      rebin_val_mcdet = 5
+      rebin_val_mctruth = 1
+      rebin_val_data = 5
+    else:
+      rebin_val_mcdet = 5
+      rebin_val_mctruth = 1
+      rebin_val_data = 5
+
+    # Get RM, for a given pt cut
+    if option == 'det':
+      hRM.GetAxis(0).SetRangeUser(min_pt, max_pt)
+    if option == 'truth':
+      hRM.GetAxis(1).SetRangeUser(min_pt, max_pt)
+    
+    # Get histogram of observable at MC-det from RM
+    hObs_det = hRM.Projection(2)
+    hObs_det.SetName('hObs_det_{}'.format(obs_label))
+    hObs_det.GetYaxis().SetTitle(ytitle)
+    hObs_det.SetLineColor(2)
+    hObs_det.SetLineWidth(2)
+    self.scale_by_integral(hObs_det)
+    hObs_det.Rebin(rebin_val_mcdet)
+    hObs_det.Scale(1., 'width')
+
+    # Get histogram of observable at MC-truth from RM
+    if option == 'truth':
+      hObs_truth = hRM.Projection(3)
+      hObs_truth.SetName('hObs_truth_{}'.format(obs_label))
+      hObs_truth.SetLineColor(4)
+      hObs_truth.SetLineWidth(2)
+      self.scale_by_integral(hObs_truth)
+      hObs_truth.Rebin(rebin_val_mctruth)
+      hObs_truth.Scale(1., 'width')
+      
     # Get histogram of theta_g in data, for given pt-det cut
-    ytitle = '#frac{{dN}}{{{}}}'.format(xtitle)
-    if hObs_JetPt:
-      hObs_JetPt.GetXaxis().SetRange(min_pt_det, max_pt_det)
+    if option == 'det':
+      hObs_JetPt.GetXaxis().SetRangeUser(min_pt, max_pt)
       hObs_data = hObs_JetPt.ProjectionY()
-  
-      hObs_data.GetYaxis().SetTitle(ytitle)
       hObs_data.SetMarkerStyle(21)
       hObs_data.SetMarkerSize(1)
       self.scale_by_integral(hObs_data)
-      hObs_data.Rebin(rebin_val_det)
-
-    # Get histograms of theta_g in MC, for a given pt-det cut
-    hRM.GetAxis(0).SetRange(min_pt_det, max_pt_det)
-    
-    hObs_det = hRM.Projection(2)
-    hObs_det.SetName('hObs_det')
-    hObs_det.SetLineColor(2)
-    hObs_det.SetLineWidth(2)
-    hObs_det.Rebin(rebin_val_det)
-
-    hObs_truth = hRM.Projection(3)
-    hObs_truth.SetName('hObs_truth')
-    hObs_truth.GetYaxis().SetTitle(ytitle)
-    hObs_truth.SetLineColor(4)
-    hObs_truth.SetLineWidth(2)
-    hObs_truth.Rebin(rebin_val_truth)
+      hObs_data.Rebin(rebin_val_data)
+      hObs_data.Scale(1., 'width')
 
     # Draw histogram
     c = ROOT.TCanvas('c','c: hist',600,450)
@@ -499,37 +514,43 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     myPad.Draw()
     myPad.cd()
     
-    hObs_truth.GetXaxis().SetRangeUser(0., 1.)
-    hObs_truth.GetYaxis().SetTitleOffset(1.5)
-    hObs_truth.SetMaximum(2.0*hObs_truth.GetMaximum())
-    hObs_truth.SetMinimum(0.)
-
-    #if hThetaG_JetPt:
-    #hThetaG_data.Draw('E P')
-    hObs_truth.Draw('hist E same')
-    hObs_det.Draw('hist E same')
-    
     leg = ROOT.TLegend(0.7,0.75,0.85,0.85, "")
     leg.SetFillColor(10)
     leg.SetBorderSize(0)
     leg.SetFillStyle(1)
     leg.SetTextSize(0.04)
-    #if hThetaG_JetPt:
-    #leg.AddEntry(hThetaG_data, "data", "P")
+    
+    hObs_det.GetYaxis().SetTitleOffset(1.5)
+    hObs_det.SetMaximum(2.5*hObs_det.GetMaximum())
+    hObs_det.SetMinimum(0.)
+
+    hObs_det.Draw('hist')
     leg.AddEntry(hObs_det, "MC det", "L")
-    leg.AddEntry(hObs_truth, "MC truth", "L")
+    if option == 'truth':
+      hObs_truth.Draw('hist same')
+      leg.AddEntry(hObs_truth, "MC truth", "L")
+    elif option == 'det':
+      hObs_data.Draw('hist E same')
+      leg.AddEntry(hObs_data, "data", "L")
+
     leg.Draw("same")
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'ALICE Simulation'
+    if option == 'truth':
+      text = 'ALICE Simulation'
+    elif option == 'det':
+      text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.3, 0.85, text)
     
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.3, 0.79, text)
 
-    text = str(min_pt_det) + ' < #it{p}_{T, ch jet}^{det} < ' + str(max_pt_det) + ' GeV/#it{c}'
+    if option == 'truth':
+      text = str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}'
+    elif option == 'det':
+      text = str(min_pt) + ' < #it{p}_{T, ch jet}^{det} < ' + str(max_pt) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.3, 0.73, text)
 
     text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
@@ -545,8 +566,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     if grooming_setting:
       text = self.formatted_grooming_label(grooming_setting)
       text_latex.DrawLatex(0.3, 0.61-delta, text)
-    
-    output_filename = os.path.join(self.output_dir, 'mc_projections/h_{}_MC_R{}_{}_{}-{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label, min_pt_det, max_pt_det))
+
+    output_filename = os.path.join(self.output_dir, 'mc_projections_{}/h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
     c.SaveAs(output_filename)
     c.Close()
 
