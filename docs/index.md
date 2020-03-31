@@ -1,6 +1,6 @@
 # Synopsis
 
-https://github.com/matplo/pyjetty (currently private) uses functionality implemented in https://github.com/matplo/heppy (public)
+[pyjett](https://github.com/matplo/pyjetty) (currently private) uses functionality implemented in [heppy](https://github.com/matplo/heppy) (public)
 
 # Contributing
 
