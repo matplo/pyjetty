@@ -909,7 +909,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     
     legendTitle = ''
     h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
-    h2LegendLabel = 'Measured pp'
+    h2LegendLabel = 'Measured data'
     ratioYAxisTitle = 'Folded truth / Measured'
     output_dir = getattr(self, 'output_dir_Test_Refolding')
     outputFilename = os.path.join(output_dir, 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_det), int(max_pt_det), i, self.file_format))
@@ -932,7 +932,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     
     legendTitle = ''
     h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
-    h2LegendLabel = 'Measured pp'
+    h2LegendLabel = 'Measured data'
     ratioYAxisTitle = 'Folded truth / Measured'
     output_dir = getattr(self, 'output_dir_Test_Refolding')
     outputFilename = os.path.join(output_dir, 'hFoldedTruth_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR), obs_label, i, self.file_format))
