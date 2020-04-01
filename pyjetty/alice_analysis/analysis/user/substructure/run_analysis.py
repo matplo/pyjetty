@@ -40,6 +40,7 @@ import numpy
 import math
 import ROOT
 import yaml
+import shutil
 
 from pyjetty.alice_analysis.analysis.base import common_base
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
@@ -213,6 +214,10 @@ class RunAnalysis(common_base.CommonBase):
       output_dir = getattr(self, 'output_dir_{}'.format(systematic))
       data = self.main_data
       response = self.main_response
+      
+      main_response_location = os.path.join(getattr(self, 'output_dir_main'), 'response.root')
+      rebin_response = self.check_rebin_response(output_dir)
+      
       prior_variation_parameter = 0.
       truncation = False
       binning = False
@@ -221,14 +226,18 @@ class RunAnalysis(common_base.CommonBase):
         response = self.trkeff_response
       if systematic == 'prior1':
         prior_variation_parameter = self.prior1_variation_parameter
+        shutil.copyfile(main_response_location, os.path.join(output_dir, 'response.root'))
+        rebin_response = False
       if systematic == 'prior2':
         prior_variation_parameter = self.prior2_variation_parameter
+        shutil.copyfile(main_response_location, os.path.join(output_dir, 'response.root'))
+        rebin_response = False
       if systematic == 'truncation':
         truncation = True
       if systematic == 'binning':
         binning = True
       
-      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file, output_dir, self.file_format, rebin_response=self.check_rebin_response(output_dir), prior_variation_parameter=prior_variation_parameter, truncation=truncation, binning=binning)
+      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file, output_dir, self.file_format, rebin_response=rebin_response, prior_variation_parameter=prior_variation_parameter, truncation=truncation, binning=binning)
       analysis.roounfold_obs()
     
   #----------------------------------------------------------------------
