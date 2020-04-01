@@ -11,7 +11,6 @@
 # The analysis step is intended to run for a single observable block
 
 process_observables: ['theta_g', 'zg', 'subjet_z', 'jet_axis']
-analysis_observable: ['theta_g']
 jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.04
@@ -20,13 +19,23 @@ debug_level: 0
 # Observable block
 theta_g:
 
+  common_settings:
+    xtitle: '#theta_{g}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+    pt_bins_reported: [20, 40, 60, 80]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3']
+      - ['config1', 'config4', 'config5']
+      - ['config6', 'config7', 'config8']
+      - ['config8', 'config9', 'config10']
+
   config1:
     SoftDrop:
       zcut: 0.1
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
@@ -39,7 +48,7 @@ theta_g:
       beta: 1
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det: [0., 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
@@ -52,57 +61,57 @@ theta_g:
       beta: 2
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det: [0., 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
       0.4: 5
-      
+
   config4:
     SoftDrop:
       zcut: 0.2
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
       0.4: 5
-      
+
   config5:
     SoftDrop:
       zcut: 0.3
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
       0.4: 5
-      
+  
   config6:
+    DynamicalGrooming:
+      a: 0.05
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    reg_param:
+      0.4: 5
+  
+  config7:
     DynamicalGrooming:
       a: 0.1
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
-    reg_param:
-      0.4: 5
-      
-  config7:
-    DynamicalGrooming:
-      a: 1.0
-    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
-    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
@@ -111,10 +120,34 @@ theta_g:
       
   config8:
     DynamicalGrooming:
+      a: 0.2
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    reg_param:
+      0.4: 5
+      
+  config9:
+    DynamicalGrooming:
+      a: 1.0
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
+    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    reg_param:
+      0.4: 5
+
+  config10:
+    DynamicalGrooming:
       a: 2.0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
@@ -124,13 +157,23 @@ theta_g:
 # Observable block
 zg:
 
+  common_settings:
+    xtitle: '#it{z}_{g}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
+    pt_bins_reported: [20, 40, 60, 80]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3']
+      - ['config1', 'config4', 'config5']
+      - ['config6', 'config7', 'config8']
+      - ['config8', 'config9', 'config10']
+
   config1:
     SoftDrop:
       zcut: 0.1
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     obs_bins_det_sys_binning: [0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
@@ -143,7 +186,7 @@ zg:
       beta: 1
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0., 0.04, 0.07, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     obs_bins_det_sys_binning: [0., 0.04, 0.07, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43,   0.46, 0.5]
@@ -156,7 +199,7 @@ zg:
       beta: 2
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0., 0.04, 0.07, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     obs_bins_det_sys_binning: [0., 0.04, 0.07, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43,   0.46, 0.5]
@@ -169,7 +212,7 @@ zg:
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     obs_bins_det_sys_binning: [0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
@@ -182,19 +225,19 @@ zg:
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0.3, 0.33, 0.36, 0.39, 0.42, 0.45, 0.5]
     obs_bins_det_sys_binning: [0.3, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     reg_param:
       0.4: 3
-      
+
   config6:
     DynamicalGrooming:
-      a: 0.1
+      a: 0.05
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0., 0.05, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     obs_bins_det_sys_binning: [0., 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
@@ -203,10 +246,10 @@ zg:
       
   config7:
     DynamicalGrooming:
-      a: 1.0
+      a: 0.1
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0., 0.05, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     obs_bins_det_sys_binning: [0., 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
@@ -215,10 +258,34 @@ zg:
       
   config8:
     DynamicalGrooming:
+      a: 0.2
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    obs_bins_det: [0., 0.05, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+    obs_bins_det_sys_binning: [0., 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+    reg_param:
+      0.4: 5
+      
+  config9:
+    DynamicalGrooming:
+      a: 1.0
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    obs_bins_det: [0., 0.05, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+    obs_bins_det_sys_binning: [0., 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
+    reg_param:
+      0.4: 5
+      
+  config10:
+    DynamicalGrooming:
       a: 2.0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0., 0.05, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
     obs_bins_det_sys_binning: [0., 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
@@ -228,12 +295,19 @@ zg:
 # Observable block
 subjet_z:
 
+  common_settings:
+    xtitle: '#it{z}'
+    ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
+    pt_bins_reported: [20, 40, 60, 80]
+    plot_overlay_list:
+      - ['config1', 'config2']
+
   config1:
     subjet_R: 0.1
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
@@ -243,8 +317,8 @@ subjet_z:
     subjet_R: 0.2
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 1.0]
     obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
     reg_param:
@@ -253,14 +327,21 @@ subjet_z:
 # Observable block
 jet_axis:
 
+  common_settings:
+    xtitle: '#it{#Delta R}'
+    ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#Delta R}'
+    pt_bins_reported: [20, 40, 60, 80]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3']
+
   config1:
     axis: 'Standard_WTA'
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15, 0.2]
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
+    obs_bins_det_sys_binning: [0., 0.006, 0.011, 0.016, 0.021, 0.026, 0.032, 0.04, 0.048, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
     reg_param:
       0.4: 3
       
@@ -271,10 +352,10 @@ jet_axis:
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.1, 0.2] # 0.001
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.1, 0.2, 0.3, 0.4] # 0.001
+    obs_bins_det_sys_binning: [0., 0.006, 0.011, 0.016, 0.021, 0.026, 0.032, 0.04, 0.048, 0.06, 0.1, 0.2, 0.3, 0.4]
     reg_param:
       0.4: 3
       
@@ -285,10 +366,10 @@ jet_axis:
       beta: 0
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
-    pt_bins_det_sys_truncation: [7, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
-    obs_bins_truth: [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 1.0]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15, 0.2]
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
+    obs_bins_det_sys_binning: [0., 0.006, 0.011, 0.016, 0.021, 0.026, 0.032, 0.04, 0.048, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
     reg_param:
       0.4: 3
 
@@ -296,29 +377,35 @@ jet_axis:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_40084'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_44856'
+roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
+analysis_observable: 'theta_g'
 do_unfolding: False
 force_rebin: False
-do_systematics: False
-do_plot_final_result: False
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: True
+figure_approval_status: 'Work in Progress'
 
 # List of which systematics to perform
-# Options: [kMain, kTrackEff, kPrior1, kPrior2, kTruncation, kBinning]
+# Options: [main, trkeff, prior1, prior2, truncation, binning]
 systematics_list:
-  - kMain
-#  - kTrackEff
-  - kPrior1
-#  - kPrior2
-#  - kTruncation
-#  - kBinning
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/40084/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/40175/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/44856/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/45556/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/44861/AnalysisResultsFinal.root'
 
-trkeff_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/22958/AnalysisResultsFinal.root'
-trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/24509/AnalysisResultsFinal.root'
+# Prior variation parameters
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5
 
 # Theory comparisons
 fPythia: '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
