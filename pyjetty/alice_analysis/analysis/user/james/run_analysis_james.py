@@ -106,7 +106,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     self.create_output_subdir(self.output_dir_performance, 'mc_projections_det')
     self.create_output_subdir(self.output_dir_performance, 'mc_projections_truth')
     self.create_output_subdir(self.output_dir_performance, 'statistics')
-    self.create_output_subdir(self.output_dir_performance, 'lund')
+    if grooming_setting and self.observable != 'jet_axis':
+      self.create_output_subdir(self.output_dir_performance, 'lund')
     if not self.is_pp:
       self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_pt')
       self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_ptdet')
@@ -135,9 +136,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
-        self.plotting_utils.plot_obs_projections(jetR, obs_label, grooming_setting, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         
-        if grooming_setting:
+        if grooming_setting and self.observable != 'jet_axis':
           self.plotting_utils.plot_lund_plane(jetR, obs_label, grooming_setting)
 
       # Plot prong matching histograms

@@ -336,6 +336,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_obs_residual(self, jetR, obs_label, xtitle, pt_bins, relative=False):
 
     if relative:
+      if self.observable == 'subjet_z' or self.observable == 'jet_axis':
+        return
       name = 'hRelativeResidual_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
     else:
       name = 'hResidual_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
@@ -409,7 +411,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     return h
 
   #---------------------------------------------------------------
-  def plot_obs_projections(self, jetR, obs_label, grooming_setting, xtitle, pt_bins):
+  def plot_obs_projections(self, jetR, obs_label, obs_setting, grooming_setting, xtitle, pt_bins):
 
     # (pt-det, pt-truth, obs-det, obs-truth)
     name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
@@ -430,8 +432,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
       
-      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='truth')
-      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='det')
+      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='truth')
+      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='det')
 
   #---------------------------------------------------------------
   def plot2D_obs_statistics(self, hObs_JetPt, jetR, obs_label):
@@ -455,7 +457,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   # If option='truth', plot MC-truth and MC-det projections for fixed pt-true
   # If option='det', plot data and MC-det projections for fixed pt-det
-  def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
+  def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
 
     ytitle = '#frac{{dN}}{{d{}}}'.format(xtitle)
     
@@ -463,11 +465,19 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       rebin_val_mcdet = 5
       rebin_val_mctruth = 1
       rebin_val_data = 5
-    else:
+    elif self.observable == 'zg':
       rebin_val_mcdet = 5
+      rebin_val_mctruth = 2
+      rebin_val_data = 10
+    elif self.observable == 'subjet_z':
+      rebin_val_mcdet = 2
+      rebin_val_mctruth = 1
+      rebin_val_data = 2
+    elif self.observable == 'jet_axis':
+      rebin_val_mcdet = 2
       rebin_val_mctruth = 1
       rebin_val_data = 5
-
+      
     # Get RM, for a given pt cut
     if option == 'det':
       hRM.GetAxis(0).SetRangeUser(min_pt, max_pt)
