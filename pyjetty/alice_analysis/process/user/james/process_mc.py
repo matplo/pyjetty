@@ -683,8 +683,11 @@ class ProcessMC(process_base.ProcessBase):
                 getattr(self, 'hDeltaPt_emb_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, delta_pt)
                 
         if 'subjet_z' in self.observable_list:
-
-          result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, jet_det, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
+        
+          if self.is_pp:
+            result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, None, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
+          else:
+            result = [self.fill_subjet_matching_histograms(jet_det, jet_truth, jet_pp_det, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
         
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
