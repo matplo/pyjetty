@@ -84,9 +84,11 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     for i_config, overlay_list in enumerate(self.plot_overlay_list):
     
-      self.plot_final_result_overlay(i_config, jetR, overlay_list)
+      if len(plot_overlay_list) > 1:
+      
+        self.plot_final_result_overlay(i_config, jetR, overlay_list)
 
-      self.plot_NPcorrections(i_config, jetR, overlay_list)
+        self.plot_NPcorrections(i_config, jetR, overlay_list)
   
   #----------------------------------------------------------------------
   # This function is called once after all subconfigurations and jetR have been looped over
