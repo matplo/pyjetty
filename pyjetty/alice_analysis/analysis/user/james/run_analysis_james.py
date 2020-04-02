@@ -84,7 +84,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     for i_config, overlay_list in enumerate(self.plot_overlay_list):
     
-      if len(plot_overlay_list) > 1:
+      if len(overlay_list) > 1:
       
         self.plot_final_result_overlay(i_config, jetR, overlay_list)
 
@@ -108,8 +108,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     self.create_output_subdir(self.output_dir_performance, 'mc_projections_det')
     self.create_output_subdir(self.output_dir_performance, 'mc_projections_truth')
     self.create_output_subdir(self.output_dir_performance, 'statistics')
-    if grooming_setting and self.observable != 'jet_axis':
-      self.create_output_subdir(self.output_dir_performance, 'lund')
+    self.create_output_subdir(self.output_dir_performance, 'lund')
     if not self.is_pp:
       self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_pt')
       self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_ptdet')
