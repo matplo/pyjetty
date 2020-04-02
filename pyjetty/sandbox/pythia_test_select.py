@@ -11,13 +11,14 @@ import argparse
 import os
 import numpy as np
 
+from pyjetty.mputils import *
+
 from heppy.pythiautils import configuration as pyconf
 import pythia8
 import pythiafjext
 import pythiaext
 
 import ROOT
-import treewriter
 
 def print_pythia_particle(p):
 	print(' ', p.name(), p.id())
@@ -26,6 +27,19 @@ def main():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
 	pyconf.add_standard_pythia_args(parser)
 	parser.add_argument('--charged', default=False, action='store_true')
+	parser.add_argument('--neutral', default=False, action='store_true')
+	parser.add_argument('--partons', default=False, action='store_true')
+	parser.add_argument('--quarks', default=False, action='store_true')
+	parser.add_argument('--diquarks', default=False, action='store_true')
+	parser.add_argument('--gluons', default=False, action='store_true')
+	parser.add_argument('--leptons', default=False, action='store_true')
+	parser.add_argument('--Ncharged', default=False, action='store_true')
+	parser.add_argument('--Nneutral', default=False, action='store_true')
+	parser.add_argument('--Npartons', default=False, action='store_true')
+	parser.add_argument('--Nquarks', default=False, action='store_true')
+	parser.add_argument('--Ndiquarks', default=False, action='store_true')
+	parser.add_argument('--Ngluons', default=False, action='store_true')
+	parser.add_argument('--Nleptons', default=False, action='store_true')
 	args = parser.parse_args()
 
 	mycfg = []
