@@ -27,6 +27,8 @@ def main():
 	parser.add_argument('--fj-R', help='jet finder R', default=0.8, type=float)
 	parser.add_argument('--user-seed', help='pythia seed', default=1111, type=int)
 	parser.add_argument('--output', default="pythia_dyngroom_test_output.root", type=str)
+	parser.add_argument('--min-jet-pt', help='jet pt selection', default=450., type=float)
+	parser.add_argument('--max-jet-pt', help='jet pt selection', default=1000., type=float)
 	args = parser.parse_args()
 
 	if args.user_seed < 0:
@@ -51,7 +53,7 @@ def main():
 	max_eta_hadron = 3.
 	pwarning('max eta for particles after hadronization set to', max_eta_hadron)
 	parts_selector_h = fj.SelectorAbsEtaMax(max_eta_hadron)
-	jet_selector = fj.SelectorPtMin(450.0) & fj.SelectorPtMax(1000.0) & fj.SelectorAbsEtaMax(max_eta_hadron - 1.05 * jet_R0)
+	jet_selector = fj.SelectorPtMin(args.min_jet_pt) & fj.SelectorPtMax(args.max_jet_pt) & fj.SelectorAbsEtaMax(max_eta_hadron - 1.05 * jet_R0)
 
 	max_eta_parton = max_eta_hadron + 2. * jet_R0
 	pwarning('max eta for partons set to', max_eta_parton)
