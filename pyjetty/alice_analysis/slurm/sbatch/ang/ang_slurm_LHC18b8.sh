@@ -4,16 +4,16 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-90
+#SBATCH --array=1-140
 #SBATCH --mail-user=elesser@berkeley.edu --mail-type=ALL
-#SBATCH --output=/storage/u/alice/AnalysisResults/ang/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/u/alice/LHC18b8/146/files.txt'
+FILE_PATHS='/rstorage/alice/data/LHC18b8/146/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 7 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 90 + 1 ))
+FILES_PER_JOB=$(( $NFILES / 140 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 
 STOP=$(( SLURM_ARRAY_TASK_ID * FILES_PER_JOB ))

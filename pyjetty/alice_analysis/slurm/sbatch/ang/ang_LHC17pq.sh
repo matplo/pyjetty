@@ -31,7 +31,7 @@ OUTPUT_PREFIX="AnalysisResults/ang/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-8)
 #echo $OUTPUT_SUFFIX
-OUTPUT_DIR="/storage/u/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX/"
+OUTPUT_DIR="/rstorage/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX/"
 mkdir -p $OUTPUT_DIR
 echo "Output dir: $OUTPUT_DIR"
 
@@ -47,4 +47,4 @@ cd /home/ezra/pyjetty/pyjetty/alice_analysis/
 python process/user/ang_pp/ang_data.py -c config/angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
-mv /storage/u/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /storage/u/alice/AnalysisResults/ang/${JOB_ID}
+mv /rstorage/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/ang/${JOB_ID}

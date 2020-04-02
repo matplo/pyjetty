@@ -76,7 +76,7 @@ class roounfold_ang(analysis_base.AnalysisBase):
   def initialize_config(self):
 
     # Call base class initialization
-    analysis_base.analysis_base.initialize_config(self)
+    analysis_base.AnalysisBase.initialize_config(self)
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -121,7 +121,7 @@ class roounfold_ang(analysis_base.AnalysisBase):
         name_thn = 'hResponse_JetpT_lambda_%sScaled' % conf
         name_thn_rebinned = 'hResponse_JetpT_lambda_%s_rebinned' % conf
         name_roounfold = 'roounfold_response_%s' % conf
-        name_data = 'hLambda_JetpT_%sScaled' % conf
+        name_data = 'hLambda_JetpT_%s' % conf
         name_data_rebinned = '%s_rebinned' % name_data
         setattr(self, 'name_roounfold_%s' % conf, name_roounfold)
         setattr(self, 'name_thn_%s' % conf, name_thn)
@@ -138,11 +138,6 @@ class roounfold_ang(analysis_base.AnalysisBase):
   # Get responses, either from file or manually rebin
   #---------------------------------------------------------------
   def get_responses(self, rebin_response=False):
-
-    response_file_name = os.path.join(self.output_dir, 'response.root')
-    if rebin_response:
-      f = ROOT.TFile(response_file_name, 'RECREATE')
-      f.Close()
 
     # Rebin response matrix, and create RooUnfoldResponse object
     # THn response matrix is: (pt-det, pt-true, obs-det, obs-true)
@@ -169,7 +164,10 @@ class roounfold_ang(analysis_base.AnalysisBase):
         thn = self.fResponse.Get(name_thn)
         thn.SetName(name_thn)
         setattr(self, name_thn, thn)
+        response_file_name = os.path.join(self.output_dir, 'response_%s.root' % label)
         if rebin_response:
+          f = ROOT.TFile(response_file_name, 'RECREATE')
+          f.Close()
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
           self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold, label,
                                     n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
@@ -360,7 +358,7 @@ class roounfold_ang(analysis_base.AnalysisBase):
     c.Draw()
 
     c.cd()
-    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad = ROOT.TPad('myPad', 'The pad', 0,0,1,1)
     myPad.SetLeftMargin(0.2)
     myPad.SetTopMargin(0.07)
     myPad.SetRightMargin(0.04)
@@ -375,7 +373,7 @@ class roounfold_ang(analysis_base.AnalysisBase):
     myBlankHisto.SetXTitle('#lambda_{#beta=%s}' % beta)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(self.ytitle)
-    myBlankHisto.SetMaximum(4)
+    myBlankHisto.SetMaximum(7)
     myBlankHisto.SetMinimum(0.)
     if option == 'ratio':
       myBlankHisto.SetMaximum(1.2)
@@ -755,11 +753,11 @@ class roounfold_ang(analysis_base.AnalysisBase):
   #################################################################################################
   def plot_mc_data_ratios(self, hData_PerBin, jetR, label):
 
-    output_dir_ratios = os.path.joinn(self.output_dir, 'ratios')
+    output_dir_ratios = os.path.join(self.output_dir, 'ratios')
     if not os.path.isdir(output_dir_ratios):
       os.makedirs(output_dir_ratios)
 
-    hResponse_PerBin = getattr(self, getattr(self, 'name_thn_rebinned_%s' % conf)).Projection(3,2)
+    hResponse_PerBin = getattr(self, getattr(self, 'name_thn_rebinned_%s' % label)).Projection(3,2)
 
     # TODO - finish/redo this
     # prob better to just run a new MC job with the 2D lambda vs pT plot of interest
