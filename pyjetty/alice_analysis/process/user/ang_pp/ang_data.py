@@ -57,7 +57,7 @@ class process_ang_data(process_base.ProcessBase):
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object
     # of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
-    io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+    io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle')
     self.df_fjparticles = io.load_data()
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
@@ -120,15 +120,13 @@ class process_ang_data(process_base.ProcessBase):
     
     for jetR in self.jetR_list:
 
-      str_jetR = str(jetR).replace('.', '')
-
-      name = 'hJetPt_R%s' % str_jetR
+      name = 'hJetPt_R%s' % jetR
       h = ROOT.TH1F(name, name, 300, 0, 300)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('dN/dp_{T}')
       setattr(self, name, h)
       
-      name = 'hM_JetPt_R%s' % str_jetR
+      name = 'hM_JetPt_R%s' % jetR
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('m_{ch jet}')
@@ -136,8 +134,6 @@ class process_ang_data(process_base.ProcessBase):
 
       
       for beta in self.beta_list:
-
-        config = ("R%s_B%s" % (jetR, beta)).replace('.', '')
 
         '''
         for i, pTmin in list(enumerate(self.pTbins))[0:-1]:
@@ -159,34 +155,34 @@ class process_ang_data(process_base.ProcessBase):
         '''
 
         # Lambda vs pT plots with fine binning
-        name = "hLambda_JetpT_%s" % config
+        name = "h_ang_JetPt_R%s_%s" % (jetR, beta)
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('p_{T, jet}')
+        h.GetXaxis().SetTitle('p_{T,ch jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
 
         # Lambda vs pT plots with fine binning -- with soft drop
-        name = "hLambda_JetpT_%s_SD" % config
+        name = "h_ang_JetPt_R%s_%s_SD" % (jetR, beta)
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('p_{T, jet}')
+        h.GetXaxis().SetTitle('p_{T,ch jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
 
         # Lambda vs rapidity plots with fine binning
-        name = "hLambda_JetRap_%s" % config
+        name = "h_ang_JetRap_R%s_%s" % (jetR, beta)
         h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('#eta_{jet}')
+        h.GetXaxis().SetTitle('#eta_{ch jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
 
         # Lambda vs pT plots with fine binning -- with soft drop
-        name = "hLambda_JetRap_%s_SD" % config
+        name = "h_ang_JetRap_R%s_%s_SD" % (jetR, beta)
         h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('#eta_{jet}')
+        h.GetXaxis().SetTitle('#eta_{ch jet}')
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
 
@@ -269,10 +265,10 @@ class process_ang_data(process_base.ProcessBase):
     lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
 
     # Fill plots
-    getattr(self, ("hLambda_JetpT_%s" % config)).Fill(jet_pt, l)
-    getattr(self, ("hLambda_JetpT_%s_SD" % config)).Fill(jet_sd.pt(), lsd)
-    getattr(self, ("hLambda_JetRap_%s" % config)).Fill(jet.rap(), l)
-    getattr(self, ("hLambda_JetRap_%s_SD" % config)).Fill(jet_sd.rap(), lsd)
+    getattr(self, ("h_ang_JetPt_R%s_%s" % (jetR, beta))).Fill(jet_pt, l)
+    getattr(self, ("h_ang_JetPt_R%s_%s_SD" % (jetR, beta))).Fill(jet_sd.pt(), lsd)
+    getattr(self, ("h_ang_JetRap_R%s_%s" % (jetR, beta))).Fill(jet.rap(), l)
+    getattr(self, ("h_ang_JetRap_R%s_%s_SD" % (jetR, beta))).Fill(jet_sd.rap(), lsd)
 
     '''
     # just use kappa = 1 for now
@@ -291,8 +287,8 @@ class process_ang_data(process_base.ProcessBase):
       getattr(self, ("hLambda_JetpT_%s_SD" % config)).Fill(jet_sd.pt(), lsd)
     '''
 
-    getattr(self, 'hJetPt_R%s' % str(jetR).replace('.', '')).Fill(jet_pt)
-    getattr(self, 'hM_JetPt_R%s' % str(jetR).replace('.', '')).Fill(jet_pt, jet.m())
+    getattr(self, 'hJetPt_R%s' % str(jetR)).Fill(jet_pt)
+    getattr(self, 'hM_JetPt_R%s' % str(jetR)).Fill(jet_pt, jet.m())
 
 
 ##################################################################

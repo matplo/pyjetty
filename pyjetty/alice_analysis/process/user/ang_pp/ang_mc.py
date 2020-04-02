@@ -155,7 +155,7 @@ class process_ang_mc(process_base.ProcessBase):
 
     for jetR in self.jetR_list:
 
-      name = 'hJetpT_Truth_R%s' % str(jetR).replace('.', '')
+      name = 'hJetPt_Truth_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH1F(name, name+';p_{T,tru,ch jet};#frac{dN}{dp_{T,tru,ch jet};', 300, 0, 300)
       setattr(self, name, h)
 
@@ -177,13 +177,13 @@ class process_ang_mc(process_base.ProcessBase):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
       '''
-      name = 'hResponse_JetpT_R%s' % str(jetR).replace('.', '')
+      name = 'hResponse_JetPt_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 200, 0, 200, 200, 0, 200)
       h.GetXaxis().SetTitle('p_{T,det,ch jet}')
       h.GetYaxis().SetTitle('p_{T,tru,ch jet}')
       setattr(self, name, h)
 
-      name = 'hJetpT_N_R%s' % str(jetR).replace('.', '')
+      name = 'hJetPt_N_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 100)
       h.GetXaxis().SetTitle('p_{T,tru,ch jet}')
       h.GetYaxis().SetTitle('N_{constit}')
@@ -191,28 +191,28 @@ class process_ang_mc(process_base.ProcessBase):
 
       for beta in self.beta_list:
 
-        label = ("R%s_B%s" % (str(jetR), str(beta))).replace('.', '')
+        label = "R%s_%s" % (str(jetR), str(beta))
 
-        name = 'hResponse_lambda_%s' % label
+        name = 'hResponse_ang_%s' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
         h.GetXaxis().SetTitle('#lambda_{%s,det}' % beta)
         h.GetYaxis().SetTitle('#lambda_{%s,tru}' % beta)
         setattr(self, name, h)
 
-        name = 'hResponse_lambda_%s_SD' % label
+        name = 'hResponse_ang_%s_SD' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
         h.GetXaxis().SetTitle('#lambda_{%s,det,SD}' % beta)
         h.GetYaxis().SetTitle('#lambda_{%s,tru,SD}' % beta)
         setattr(self, name, h)
 
-        name = 'hLambda_JetpT_det_%s' % label
+        name = 'hAng_JetPt_det_%s' % label
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('p_{T,det}')
         h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{det,%s}}' % str(beta))
         setattr(self, name, h)
 
-        name = 'hLambda_JetpT_tru_%s' % label
+        name = 'hAng_JetPt_tru_%s' % label
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('p_{T,tru}')
@@ -238,7 +238,7 @@ class process_ang_mc(process_base.ProcessBase):
           setattr(self, name, h)
         '''
 
-        name = "hLambdaResidual_JetpT_%s" % label
+        name = "hAngResidual_JetPt_%s" % label
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
         h.GetXaxis().SetTitle('p_{T,truth}')
         h.GetYaxis().SetTitle('#frac{#lambda_{det}-#lambda_{truth}}{#lambda_{truth}}')
@@ -248,13 +248,13 @@ class process_ang_mc(process_base.ProcessBase):
         dim = 4;
         title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
         nbins = [95, 30, 100, 20]
-        min = [5.,   0.,   0.,  0.]
-        max = [100., 150., 1.0, 1.0]
+        min_li = [5.,   0.,   0.,  0.]
+        max_li = [100., 150., 1.0, 1.0]
         
-        name = 'hResponse_JetpT_lambda_%s' % label
+        name = 'hResponse_JetPt_ang_%s' % label
         nbins = (nbins)
-        xmin = (min)
-        xmax = (max)
+        xmin = (min_li)
+        xmax = (max_li)
         nbins_array = array('i', nbins)
         xmin_array = array('d', xmin)
         xmax_array = array('d', xmax)
@@ -420,8 +420,8 @@ class process_ang_mc(process_base.ProcessBase):
   #---------------------------------------------------------------
   def fill_truth_before_matching(self, jet, jetR):
 
-    getattr(self, 'hJetpT_Truth_R%s' % str(jetR).replace('.', '')).Fill(jet.pt())
-    getattr(self, 'hJetpT_N_R%s' % str(jetR).replace('.', '')).Fill(jet.pt(), len(jet.constituents()))
+    getattr(self, 'hJetPt_Truth_R%s' % str(jetR).replace('.', '')).Fill(jet.pt())
+    getattr(self, 'hJetPt_N_R%s' % str(jetR).replace('.', '')).Fill(jet.pt(), len(jet.constituents()))
 
     '''
     for constituent in jet.constituents():
@@ -456,7 +456,7 @@ class process_ang_mc(process_base.ProcessBase):
         JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
         getattr(self, 'hJES_R%s' % str(jetR).replace('.', '')).Fill(jet_pt_truth_ungroomed, JES)
 
-        getattr(self, 'hResponse_JetpT_R%s' % 
+        getattr(self, 'hResponse_JetPt_R%s' % 
                 str(jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
 
   #---------------------------------------------------------------
@@ -480,7 +480,7 @@ class process_ang_mc(process_base.ProcessBase):
     l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
     l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
 
-    label = ("R%s_B%s" % (str(jetR), str(beta))).replace('.', '')
+    label = "R%s_%s" % (str(jetR), str(beta))
 
     ''' Histograms per pT bin (currently unnecessary and cause clutter)
     (pTmin, pTmax) = pT_bin(jet_det.pt(), self.pTbins)
@@ -493,17 +493,17 @@ class process_ang_mc(process_base.ProcessBase):
     '''
 
     lambda_resolution = (l_det - l_tru) / l_tru
-    getattr(self, 'hLambdaResidual_JetpT_%s' % label).Fill(jet_pt_truth, lambda_resolution)
+    getattr(self, 'hAngResidual_JetPt_%s' % label).Fill(jet_pt_truth, lambda_resolution)
 
     # Observable plots
-    getattr(self, 'hLambda_JetpT_det_%s' % label).Fill(jet_pt_det, l_det)
-    getattr(self, 'hLambda_JetpT_tru_%s' % label).Fill(jet_pt_truth, l_tru)
-    getattr(self, 'hResponse_lambda_%s' % label).Fill(l_det, l_tru)
-    getattr(self, 'hResponse_lambda_%s_SD' % label).Fill(l_sd_det, l_sd_tru)
+    getattr(self, 'hAng_JetPt_det_%s' % label).Fill(jet_pt_det, l_det)
+    getattr(self, 'hAng_JetPt_tru_%s' % label).Fill(jet_pt_truth, l_tru)
+    getattr(self, 'hResponse_ang_%s' % label).Fill(l_det, l_tru)
+    getattr(self, 'hResponse_ang_%s_SD' % label).Fill(l_sd_det, l_sd_tru)
 
     x = ([jet_pt_det, jet_pt_truth, l_det, l_tru])
     x_array = array('d', x)
-    getattr(self, 'hResponse_JetpT_lambda_%s' % label).Fill(x_array)
+    getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(x_array)
 
 
 ##################################################################
