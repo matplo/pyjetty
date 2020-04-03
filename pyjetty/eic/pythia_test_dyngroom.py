@@ -73,7 +73,8 @@ def main():
 		if not pythia.next():
 			continue
 
-		parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], add_particle_info = True)
+		# parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], add_particle_info = True)
+		parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
 		parts_pythia_p_selected = parts_selector_p(parts_pythia_p)
 
 		hstatus = pythia.forceHadronLevel()
@@ -81,7 +82,8 @@ def main():
 			pwarning('forceHadronLevel false event', iev)
 			continue
 		# parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kHadron, pythiafjext.kCharged])
-		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], add_particle_info = True)
+		# parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], add_particle_info = True)
+		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
 		parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
 
 		jets_p = jet_selector(fj.sorted_by_pt(jet_def(parts_pythia_p)))
