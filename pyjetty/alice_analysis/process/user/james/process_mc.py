@@ -126,6 +126,9 @@ class ProcessMC(process_base.ProcessBase):
     # Call base class initialization
     process_base.ProcessBase.initialize_config(self)
     
+    # Option to dry-run without writing any histograms
+    self.dry_run = False
+    
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
@@ -538,6 +541,9 @@ class ProcessMC(process_base.ProcessBase):
         cs_combined = fj.ClusterSequence(fj_particles_combined, jet_def)
         jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
         jets_combined_selected = jet_selector_det(jets_combined)
+
+    if self.dry_run:
+      return
 
     # Do jet finding
     cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
