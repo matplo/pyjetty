@@ -37,38 +37,52 @@ class CommonUtils(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Get grooming settings (i.e. list that stores a dict of grooming
-  # settings, i.e. {'sd': [zcut, beta]} or {'dg': [a]} from observable config block
+  # settings, i.e. {'sd': [zcut, beta]} or {'dg': [a]} from observable config block.
+  # Note that one can also include multiple grooming settings
+  # e.g. {'sd': [zcut, beta], 'dg': [a]}.
   #---------------------------------------------------------------
   def grooming_settings(self, obs_config_dict):
   
     grooming_settings = []
     for config_key, subconfig in obs_config_dict.items():
+    
+      grooming_setting_dict = {}
+    
       if config_key == 'common_settings':
         continue
       if 'SoftDrop' in subconfig:
-        grooming_dict = obs_config_dict[config_key]['SoftDrop']
-        grooming_settings.append({'sd':[grooming_dict['zcut'], grooming_dict['beta']]})
-      elif 'DynamicalGrooming' in subconfig:
-        grooming_dict = obs_config_dict[config_key]['DynamicalGrooming']
-        grooming_settings.append({'dg':[grooming_dict['a']]})
+        grooming_config_dict = obs_config_dict[config_key]['SoftDrop']
+        grooming_setting_dict['sd'] = [grooming_config_dict['zcut'], grooming_config_dict['beta']]
+      if 'DynamicalGrooming' in subconfig:
+        grooming_config_dict = obs_config_dict[config_key]['DynamicalGrooming']
+        grooming_setting_dict['dg'] = [grooming_config_dict['a']]
+      
+      if grooming_setting_dict:
+        grooming_settings.append(grooming_setting_dict)
       else:
         grooming_settings.append(None)
         
     return grooming_settings
 
   # Get formatted grooming label from grooming_setting,
-  # i.e. {'sd': [zcut, beta]} or {'dg': [a]}
+  # i.e. {'sd': [zcut, beta]} or {'dg': [a]} or {'sd': [zcut, beta], 'dg': [a]}
   #---------------------------------------------------------------
   def grooming_label(self, grooming_setting):
-  
-    key, value = list(grooming_setting.items())[0]
 
-    if key == 'sd':
-      text = 'zcut{}_B{}'.format(self.remove_periods(value[0]), value[1])
-    elif key == 'dg':
-      text = 'dg{}'.format(value[0])
-    else:
-      sys.exit('Unknown grooming type!')
+    text = ''
+    for key, value in grooming_setting.items():
+    
+      if key == 'sd':
+        if text:
+          text += '_'
+        text += 'SD_zcut{}_B{}'.format(self.remove_periods(value[0]), value[1])
+      if key == 'dg':
+        if text:
+           text += '_'
+        text += 'DG_a{}'.format(self.remove_periods(value[0]))
+      
+    if not text:
+      sys.exit('CommonUtils::grooming_label: Unknown grooming type!')
     
     return text
 
