@@ -46,6 +46,8 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
     super(ProcessData, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+
+    # Initialize configuration
     self.initialize_config()
 
   #---------------------------------------------------------------
@@ -63,8 +65,7 @@ class ProcessData(process_base.ProcessBase):
     self.nTracks = len(io.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     
-    # Initialize configuration and histograms
-    self.initialize_config()
+    # Initialize histograms
     self.initialize_output_objects()
     
     # Create constituent subtractor, if configured
@@ -265,11 +266,83 @@ class ProcessData(process_base.ProcessBase):
   #---------------------------------------------------------------
   def analyze_groomed_jet(self, grooming_setting, jet, jetR):
   
-    if 'sd' in grooming_setting:
-      self.analyze_softdrop_jet(grooming_setting, jet, jetR)
-    elif 'dg' in grooming_setting:
-      self.analyze_dg_jet(grooming_setting, jet, jetR)
+    # Check additional acceptance criteria
+    if not self.utils.is_det_jet_accepted(jet):
+      return
+      
+    jet_pt_ungroomed = jet.pt()
   
+    grooming_label = self.utils.grooming_label(grooming_setting)
+  
+    # Construct SD groomer, and groom jet
+    if 'sd' in grooming_setting:
+          
+      zcut = grooming_setting['sd'][0]
+      beta = grooming_setting['sd'][1]
+      sd = fjcontrib.SoftDrop(beta, zcut, jetR)
+      jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+      reclusterer = fjcontrib.Recluster(jet_def_recluster)
+      sd.set_reclustering(True, reclusterer)
+      if self.debug_level > 2:
+        print('SoftDrop groomer is: {}'.format(sd.description()))
+
+      jet_sd = sd.result(jet)
+      
+    # Construct Dynamical groomer, and groom jet
+    if 'dg' in grooming_setting:
+      
+      a = grooming_setting['dg'][0]
+      jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+      dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
+      if self.debug_level > 2:
+        print('Dynamical groomer is: {}'.format(dy_groomer.description()))
+
+      jet_dg_lund = dy_groomer.result(jet, a)
+      jet_dg = jet_dg_lund.pair()
+    
+    # Compute groomed observables
+    if 'sd' in grooming_setting:
+
+      # If both SD and DG are specified, first apply DG, then SD
+      if 'dg' in grooming_setting:
+        if jet_dg.has_constituents():
+          jet_groomed = sd.result(jet_dg)
+        else:
+          return
+      else:
+        jet_groomed = jet_sd
+
+      sd_info = fjcontrib.get_SD_jet_info(jet_groomed)
+      theta_g = sd_info.dR / jetR
+      zg = sd_info.z
+
+    elif 'dg' in grooming_setting:
+      jet_groomed = jet_dg
+    
+      # (https://phab.hepforge.org/source/fastjetsvn/browse/contrib/contribs/LundPlane/tags/1.0.3/LundGenerator.hh)
+      dR = jet_dg_lund.Delta()
+      theta_g = dR / jetR
+      zg = jet_dg_lund.z()
+      
+    # Fill histograms
+    if grooming_setting in self.obs_grooming_settings['theta_g']:
+      getattr(self, 'h_theta_g_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, theta_g)
+    if grooming_setting in self.obs_grooming_settings['zg']:
+      getattr(self, 'h_zg_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, zg)
+
+    # Fill jet axis difference
+    if 'jet_axis' in self.observable_list:
+
+      # Recluster with WTA (with larger jet R)
+      jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+      jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
+      if self.debug_level > 2:
+          print('WTA jet definition is:', jet_def_wta)
+      reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
+      jet_wta = reclusterer_wta.result(jet)
+
+      self.fill_jet_axis_histograms(jet, jet_groomed, jet_wta, jetR, grooming_setting, grooming_label)
+
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
@@ -287,74 +360,7 @@ class ProcessData(process_base.ProcessBase):
       result = [self.analyze_subjets(jet, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
     
     self.fill_jet_histograms(jet, jetR)
-      
-  #---------------------------------------------------------------
-  # Fill histograms
-  #---------------------------------------------------------------
-  def analyze_softdrop_jet(self, grooming_setting, jet, jetR):
-    
-    key, value = list(grooming_setting.items())[0]
-    zcut = value[0]
-    beta = value[1]
-    grooming_label = self.utils.grooming_label(grooming_setting)
-    
-    sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-    jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-    reclusterer = fjcontrib.Recluster(jet_def_recluster)
-    sd.set_reclustering(True, reclusterer)
-    setattr(self, 'sd_R{}_{}'.format(jetR, grooming_label), sd)
-    if self.debug_level > 2:
-      print('SoftDrop groomer is: {}'.format(sd.description()))
-    
-    if self.debug_level > 1:
-      print('SD -- jet: {} with pt={}'.format(jet, jet.pt()))
-  
-    # Check additional acceptance criteria
-    if not self.utils.is_det_jet_accepted(jet):
-      return
 
-    # Perform SoftDrop grooming
-    jet_sd = sd.result(jet)
-    
-    # Fill histograms
-    self.fill_softdrop_histograms(jet_sd, jet, jetR, grooming_setting, grooming_label)
-      
-    # Fill jet axis difference
-    if 'jet_axis' in self.observable_list:
-
-        # Recluster with WTA (with larger jet R)
-        jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
-        jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
-        if self.debug_level > 2:
-            print('WTA jet definition is:', jet_def)
-        reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
-        jet_wta = reclusterer_wta.result(jet)
-
-        self.fill_jet_axis_histograms(jet, jet_sd, jet_wta, jetR, grooming_setting, grooming_label)
-
-  #---------------------------------------------------------------
-  # Fill histograms
-  #---------------------------------------------------------------
-  def analyze_dg_jet(self, grooming_setting, jet, jetR):
-    
-    jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
-    dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
-    
-    if self.debug_level > 2:
-      print('Dynamical groomer is: {}'.format(dy_groomer.description()))
-
-    # Check additional acceptance criteria
-    if not self.utils.is_det_jet_accepted(jet):
-      return
-
-    # Perform Dynamical grooming
-    key, value = list(grooming_setting.items())[0]
-    a = value[0]
-    jet_dg = dy_groomer.result(jet, a)
-    
-    # Fill histograms
-    self.fill_dg_histograms(jet_dg, jet, jetR, grooming_setting, a)
-            
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
@@ -376,53 +382,6 @@ class ProcessData(process_base.ProcessBase):
     for subjet in subjets:
       z = subjet.pt() / jet.pt()
       getattr(self, 'h_subjet_z_JetPt_R{}_{}'.format(jetR, subjetR)).Fill(jet.pt(), z)
-
-  #---------------------------------------------------------------
-  # Fill soft drop histograms
-  #---------------------------------------------------------------
-  def fill_softdrop_histograms(self, jet_sd, jet, jetR, grooming_setting, grooming_label):
-    
-    if self.debug_level > 1:
-      print('Filling SD histograms...')
-    
-    jet_pt_ungroomed = jet.pt()
-
-    # SD jet variables
-    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
-    theta_g = sd_info.dR / jetR
-    zg = sd_info.z
-
-    if grooming_setting in self.obs_grooming_settings['theta_g']:
-      getattr(self, 'h_theta_g_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, theta_g)
-    if grooming_setting in self.obs_grooming_settings['zg']:
-      getattr(self, 'h_zg_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, zg)
-
-    if self.debug_level > 1:
-      print('Done.')
-    
-  #---------------------------------------------------------------
-  # Fill DG histograms
-  #---------------------------------------------------------------
-  def fill_dg_histograms(self, jet_dg, jet, jetR, grooming_setting, a):
-    
-    if self.debug_level > 1:
-      print('Filling DG histograms...')
-    
-    jet_pt_ungroomed = jet.pt()
-
-    # DG jet variables
-    # (https://phab.hepforge.org/source/fastjetsvn/browse/contrib/contribs/LundPlane/tags/1.0.3/LundGenerator.hh)
-    dR = jet_dg.Delta()
-    theta_g = dR / jetR
-    zg = jet_dg.z()
-
-    if grooming_setting in self.obs_grooming_settings['theta_g']:
-      getattr(self, 'h_theta_g_JetPt_R{}_dg{}'.format(jetR, a)).Fill(jet_pt_ungroomed, theta_g)
-    if grooming_setting in self.obs_grooming_settings['zg']:
-      getattr(self, 'h_zg_JetPt_R{}_dg{}'.format(jetR, a)).Fill(jet_pt_ungroomed, zg)
-
-    if self.debug_level > 1:
-      print('Done.')
           
   #---------------------------------------------------------------
   # Fill jet axis histograms
