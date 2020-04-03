@@ -24,8 +24,8 @@ from pyjetty.mputils import CEventSubtractor
 from pyjetty.mputils import RTreeWriter
 
 from alice_efficiency import AliceChargedParticleEfficiency
-from data_io import DataIO
-from jet_analysis import fill_tree_data, JetAnalysis
+from pyjetty.mputils.data_io import DataIO
+from pyjetty.mputils.jet_analysis import fill_tree_data, JetAnalysisWithRho
 
 import ROOT
 ROOT.gROOT.SetBatch(True)
@@ -75,7 +75,7 @@ def main():
 
 	sd_zcut = args.zcut
 	sd = fjcontrib.SoftDrop(0, sd_zcut, jet_R0)
-	ja = JetAnalysis(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
+	ja = JetAnalysisWithRho(jet_R=jet_R0, jet_algorithm=fj.antikt_algorithm, particle_eta_max=max_eta)
 	data = DataIO(file_list=args.datalist)
 	print(data)
 	cs = None
@@ -90,6 +90,7 @@ def main():
 	tw = RTreeWriter(tree=t)
 
 	# need to change this for data to drive...
+	delta_t = 1e-6
 	start_t = time.time()
 	iev = 0
 	while data.load_event():
