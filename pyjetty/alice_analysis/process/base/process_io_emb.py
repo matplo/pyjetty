@@ -38,8 +38,13 @@ class ProcessIO_Emb(common_base.CommonBase):
     
     self.list_of_files = []
     with open(self.file_list) as f:
-        self.list_of_files = [fn.strip() for fn in f.readlines()]
+        list_of_files = [fn.strip() for fn in f.readlines()]
     
+    # Choose N random files to keep in the list
+    n_files = 500
+    random.shuffle(list_of_files)
+    self.list_of_files = list_of_files[0:n_files]
+
     self.current_file_df = None
     self.current_file_nevents = 0
     self.current_event_index = 0
@@ -62,12 +67,13 @@ class ProcessIO_Emb(common_base.CommonBase):
     return current_event
 
   #---------------------------------------------------------------
-  # Pick a random file from the file list, and load it as the
-  # current file as a dataframe.
+  # Pick a random file from the file list, load it as the
+  # current file as a dataframe, and remove it from the file list.
   #---------------------------------------------------------------
   def load_file(self):
     
     input_file = random.choice(self.list_of_files)
+    self.list_of_files.remove(input_file)
     print('Opening Pb-Pb file: {}'.format(input_file))
 
     io = process_io.ProcessIO(input_file=input_file, track_tree_name=self.track_tree_name)
