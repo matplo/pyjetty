@@ -2,6 +2,7 @@ import numpy as np
 import array
 import fnmatch
 import os
+import sys
 
 def find_files(rootdir='.', pattern='*'):
     return [os.path.join(rootdir, filename)
@@ -57,17 +58,17 @@ class ColorS(object):
 				print(s1) 
 			print('\n') 
 
-def pwarning(*args):
-	print(ColorS.yellow('[w]', *args))
+def pwarning(*args, file=sys.stderr):
+	print(ColorS.yellow('[w]', *args), file=file)
 
-def pdebug(*args):
-	print(ColorS.purple('[d]', *args))
+def pdebug(*args, file=sys.stderr):
+	print(ColorS.purple('[d]', *args), file=file)
 
-def perror(*args):
-	print(ColorS.red('[e]', *args))
+def perror(*args, file=sys.stderr):
+	print(ColorS.red('[e]', *args), file=file)
 
-def pinfo(*args):
-	print(ColorS.green('[i]', *args))
+def pinfo(*args, file=sys.stdout):
+	print(ColorS.green('[i]', *args), file=file)
 
 # think about thread safe implementation
 # use unique file names... for example?
