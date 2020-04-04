@@ -100,7 +100,8 @@ class ProcessMC(process_base.ProcessBase):
     # ------------------------------------------------------------------------
 
     # Initialize histograms
-    self.initialize_output_objects()
+    if not self.dry_run:
+      self.initialize_output_objects()
     
     # Create constituent subtractor, if configured
     if self.do_constituent_subtraction:
@@ -127,7 +128,7 @@ class ProcessMC(process_base.ProcessBase):
     process_base.ProcessBase.initialize_config(self)
     
     # Option to dry-run without writing any histograms
-    self.dry_run = False
+    self.dry_run = True
     
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -459,14 +460,16 @@ class ProcessMC(process_base.ProcessBase):
   def analyzeEvents(self):
     
     # Fill track histograms
-    [self.fillTrackHistograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
+    if not self.dry_run:
+      [self.fillTrackHistograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
     
     fj.ClusterSequence.print_banner()
     print()
     
     for jetR in self.jetR_list:
     
-      self.initialize_output_objects_R(jetR)
+      if not self.dry_run:
+        self.initialize_output_objects_R(jetR)
       
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
@@ -535,7 +538,8 @@ class ProcessMC(process_base.ProcessBase):
 
         # Perform constituent subtraction on det-level, if applicable
         fj_particles_combined = self.constituent_subtractor.process_event(fj_particles_combined_beforeCS)
-        self.fill_background_histograms(fj_particles_combined_beforeCS, fj_particles_combined, jetR)
+        if not self.dry_run:
+          self.fill_background_histograms(fj_particles_combined_beforeCS, fj_particles_combined, jetR)
     
         # Do jet finding
         cs_combined = fj.ClusterSequence(fj_particles_combined, jet_def)
