@@ -41,7 +41,7 @@ class ProcessIO_Emb(common_base.CommonBase):
         list_of_files = [fn.strip() for fn in f.readlines()]
     
     # Choose N random files to keep in the list
-    n_files = 500
+    n_files = 1000
     random.shuffle(list_of_files)
     self.list_of_files = list_of_files[0:n_files]
 
