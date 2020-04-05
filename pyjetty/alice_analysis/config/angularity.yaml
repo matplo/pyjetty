@@ -26,14 +26,11 @@ sd_beta: 0      # exponent on (deltaR / R)
 ang:
 
   common_settings:
-    xmin: 0.
-    xmax: 1.
-    ymax: 8.
-    ymin_ratio: 0.
-    ymax_ratio: 2.8
-    xtitle: "#lambda_{#beta}"
-    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#lambda_{#beta}}'
+    xtitle: '#theta_{g}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
     pt_bins_reported: [20, 40, 60, 80]
+    plot_overlay_list:
+      - ['config_R0.4_B1', 'config_R0.4_B1.5', 'config_R0.4_B2', 'config_R0.4_B3']
 
   # Different R & beta configurations
   #config_R0.2_B1:
@@ -131,7 +128,8 @@ do_unfolding: True
 force_rebin: False
 do_systematics: True
 do_plot_final_result: True
-do_plot_performance: True
+do_plot_performance: False
+figure_approval_status: 'Work in Progress'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]

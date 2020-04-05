@@ -25,13 +25,13 @@ from pyjetty.alice_analysis.analysis.base import analysis_utils
 
 ################################################################
 class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
-  
+
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, observable='', **kwargs):
     super(AnalysisUtils_Obs, self).__init__(**kwargs)
-    
+
     self.observable = observable
 
   #---------------------------------------------------------------
@@ -39,29 +39,31 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   # from observable config block
   #---------------------------------------------------------------
   def obs_settings(self, observable, obs_config_dict, obs_subconfig_list):
-  
+
     if observable == 'subjet_z':
-      obs_settings = [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
+      return [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
     elif observable == 'jet_axis':
-      obs_settings = [obs_config_dict[name]['axis'] for name in obs_subconfig_list]
-    else:
-      obs_settings = [None for _ in obs_subconfig_list]
-      
-    return obs_settings
-    
+      return [obs_config_dict[name]['axis'] for name in obs_subconfig_list]
+    elif observable == 'ang':
+      return [obs_config_dict[name]['beta'] for name in obs_subconfig_list]
+
+    # Else observable not implemented
+    return [None for _ in obs_subconfig_list]
+
   #---------------------------------------------------------------
   # Get subobservable label (e.g. formatted label for subjetR)
   #---------------------------------------------------------------
   def formatted_subobs_label(self, observable):
-  
+
     if observable == 'subjet_z':
-      label = '#it{R}_{subjet}'
+      return '#it{R}_{subjet}'
     elif observable == 'jet_axis':
-      label = '#Delta #it{R}_{axis}'
-    else:
-      label = None
-      
-    return label
+      return '#Delta #it{R}_{axis}'
+    elif observable == 'ang':
+      return '#beta'
+
+    # Else observable not implemented
+    return None
 
   #---------------------------------------------------------------
   # Compute scale factor to vary prior of observable
@@ -73,20 +75,21 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   # This function overrides the virtual function in analysis_utils.py
   #---------------------------------------------------------------
   def prior_scale_factor_obs(self, obs_true, prior_variation_parameter):
-  
+
     if self.observable == 'zg':
-      scale_factor = math.pow(obs_true, prior_variation_parameter)
+      return math.pow(obs_true, prior_variation_parameter)
     elif self.observable == 'theta_g':
-      scale_factor = (1 + obs_true)
+      return (1 + obs_true)
     elif self.observable == 'subjet_z':
-      scale_factor = (1 + obs_true)
+      return (1 + obs_true)
     elif self.observable == 'jet_axis':
-      scale_factor = (1 + obs_true)
-    else:
-      raise ValueError('No observable is defined in prior_scale_factor_obs()!')
-      
-    return scale_factor
-    
+      return (1 + obs_true)
+    elif self.observable == 'ang':
+      return (1 + obs_true)
+
+    # Else observable has not been implemented
+    raise ValueError('No observable is defined in prior_scale_factor_obs()!')
+
   #---------------------------------------------------------------
   #---------------------------------------------------------------
   #---------------------------------------------------------------

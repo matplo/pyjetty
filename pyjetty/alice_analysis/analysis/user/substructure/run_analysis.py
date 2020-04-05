@@ -187,7 +187,9 @@ class RunAnalysis(common_base.CommonBase):
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-        reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings, self.obs_subconfig_list, self.obs_config_dict, obs_label, jetR)
+        reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings,
+                                                   self.obs_subconfig_list, self.obs_config_dict,
+                                                   obs_label, jetR)
 
         # Compute systematics and attach to main results
         if self.do_systematics:
@@ -224,20 +226,24 @@ class RunAnalysis(common_base.CommonBase):
     
       if systematic == 'trkeff':
         response = self.trkeff_response
-      if systematic == 'prior1':
+      elif systematic == 'prior1':
         prior_variation_parameter = self.prior1_variation_parameter
         shutil.copyfile(main_response_location, os.path.join(output_dir, 'response.root'))
         rebin_response = False
-      if systematic == 'prior2':
+      elif systematic == 'prior2':
         prior_variation_parameter = self.prior2_variation_parameter
         shutil.copyfile(main_response_location, os.path.join(output_dir, 'response.root'))
         rebin_response = False
-      if systematic == 'truncation':
+      elif systematic == 'truncation':
         truncation = True
-      if systematic == 'binning':
+      elif systematic == 'binning':
         binning = True
       
-      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file, output_dir, self.file_format, rebin_response=rebin_response, prior_variation_parameter=prior_variation_parameter, truncation=truncation, binning=binning)
+      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file,
+                                             output_dir, self.file_format,
+                                             rebin_response=rebin_response,
+                                             prior_variation_parameter=prior_variation_parameter,
+                                             truncation=truncation, binning=binning)
       analysis.roounfold_obs()
     
   #----------------------------------------------------------------------
