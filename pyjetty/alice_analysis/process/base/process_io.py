@@ -51,14 +51,8 @@ class ProcessIO(common_base.CommonBase):
   # Clear dataframes
   #---------------------------------------------------------------
   def reset_dataframes(self):
-    self.event_tree = None
     self.event_df_orig = None
-    self.event_df = None
-    self.track_tree = None
-    self.track_df_orig = None
     self.track_df = None
-    self.track_df_grouped = None
-    self.df_fjparticles = None
   
   #---------------------------------------------------------------
   # Convert ROOT TTree to SeriesGroupBy object of fastjet particles per event.
@@ -94,24 +88,28 @@ class ProcessIO(common_base.CommonBase):
   def load_dataframe(self):
 
     # Load event tree into dataframe, and apply event selection
+    event_tree = None
+    event_df = None
     event_tree_name = self.tree_dir + self.event_tree_name
-    self.event_tree = uproot.open(self.input_file)[event_tree_name]
-    if not self.event_tree:
+    event_tree = uproot.open(self.input_file)[event_tree_name]
+    if not event_tree:
       sys.exit('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
-    self.event_df_orig = self.event_tree.pandas.df(self.event_columns)
+    self.event_df_orig = event_tree.pandas.df(self.event_columns)
     self.event_df_orig.reset_index(drop=True)
-    self.event_df = self.event_df_orig.query('is_ev_rej == 0')
-    self.event_df.reset_index(drop=True)
+    event_df = self.event_df_orig.query('is_ev_rej == 0')
+    event_df.reset_index(drop=True)
 
     # Load track tree into dataframe
+    track_tree = None
+    track_df_orig = None
     track_tree_name = self.tree_dir + self.track_tree_name
-    self.track_tree = uproot.open(self.input_file)[track_tree_name]
-    if not self.track_tree:
+    track_tree = uproot.open(self.input_file)[track_tree_name]
+    if not track_tree:
       sys.exit('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
-    self.track_df_orig = self.track_tree.pandas.df()
+    track_df_orig = track_tree.pandas.df()
 
     # Merge event info into track tree
-    self.track_df = pandas.merge(self.track_df_orig, self.event_df, on=['run_number', 'ev_id'])
+    self.track_df = pandas.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
     return self.track_df
 
   #---------------------------------------------------------------
@@ -178,20 +176,22 @@ class ProcessIO(common_base.CommonBase):
 
       # (i) Group the track dataframe by event
       #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
-      self.track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
+      track_df_grouped = None
+      track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
     
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
-      self.df_fjparticles = self.track_df_grouped.apply(self.get_fjparticles, offset_indices=offset_indices)
+      df_fjparticles = None
+      df_fjparticles = track_df_grouped.apply(self.get_fjparticles, offset_indices=offset_indices)
     
     else:
       print("Transform the track dataframe into a dataframe of fastjet particles per track...")
 
       # Transform into a DataFrame of fastjet particles
       df = self.track_df
-      self.df_fjparticles = pandas.DataFrame( {"run_number": df["run_number"], "ev_id": df["ev_id"], 
+      df_fjparticles = pandas.DataFrame( {"run_number": df["run_number"], "ev_id": df["ev_id"],
                                                "fj_particle": self.get_fjparticles(self.track_df)} )
 
-    return self.df_fjparticles
+    return df_fjparticles
 
   #---------------------------------------------------------------
   # Return fastjet:PseudoJets from a given track dataframe
