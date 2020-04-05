@@ -66,7 +66,11 @@ class ProcessMC(process_base.ProcessBase):
     # Use IO helper class to convert detector-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
-    io_det = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle')
+    if self.fast_simulation:
+      tree_dir = ''
+    else:
+      tree_dir = 'PWGHF_TreeCreator'
+    io_det = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir, track_tree_name='tree_Particle')
     df_fjparticles_det = io_det.load_data(reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
@@ -76,7 +80,7 @@ class ProcessMC(process_base.ProcessBase):
 
     # Use IO helper class to convert truth-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
-    io_truth = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle_gen')
+    io_truth = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir, track_tree_name='tree_Particle_gen')
     df_fjparticles_truth = io_truth.load_data()
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
@@ -128,11 +132,14 @@ class ProcessMC(process_base.ProcessBase):
     process_base.ProcessBase.initialize_config(self)
     
     # Option to dry-run without writing any histograms
-    self.dry_run = True
+
     
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
+      
+    self.fast_simulation = config['fast_simulation']
+    self.dry_run = config['dry_run']
       
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
