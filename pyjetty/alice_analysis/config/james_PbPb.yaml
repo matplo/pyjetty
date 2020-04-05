@@ -16,6 +16,8 @@ jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distan
 mc_fraction_threshold: 0.5
 reject_tracks_fraction: 0.0
 debug_level: 0
+dry_run: False
+fast_simulation: False
 
 constituent_subtractor:
   max_distance: 0.25

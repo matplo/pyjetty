@@ -16,7 +16,7 @@ jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distan
 reject_tracks_fraction: 0.0
 debug_level: 0
 dry_run: False
-fast_simulation: True
+fast_simulation: False
 
 # Observable block
 theta_g:
