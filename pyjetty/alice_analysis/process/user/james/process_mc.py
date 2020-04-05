@@ -857,7 +857,7 @@ class ProcessMC(process_base.ProcessBase):
             getattr(self, name).Fill(lund_coords[0], lund_coords[1])
               
           if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
-            self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg, dy_groomer, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'DG')
+            self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg_lund, dy_groomer, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'DG')
 
         # Fill jet axis difference
         if 'jet_axis' in self.observable_list:
@@ -959,12 +959,16 @@ class ProcessMC(process_base.ProcessBase):
       jet_pp_det_prong1 = fj.PseudoJet()
       jet_pp_det_prong2 = fj.PseudoJet()
       has_parents_pp_det = jet_pp_det_groomed.has_parents(jet_pp_det_prong1, jet_pp_det_prong2)
+      
+      # Get prongs of combined jet
+      jet_combined_prong1 = fj.PseudoJet()
+      jet_combined_prong2 = fj.PseudoJet()
+      has_parents_combined = jet_det_groomed.has_parents(jet_combined_prong1, jet_combined_prong2)
 
     elif type == 'DG':
       
       a = grooming_setting['dg'][0]
       jet_pp_det_groomed_lund = groomer.result(jet_pp_det, a)
-      jet_pp_det_groomed = jet_pp_det_groomed_lund.pair()
     
       # Dynamical grooming returns a fjcontrib::LundGenerator
       #   The prongs can be retrieved directly from this object.
@@ -973,10 +977,14 @@ class ProcessMC(process_base.ProcessBase):
       jet_pp_det_prong2 = jet_pp_det_groomed_lund.softer()
       has_parents_pp_det = jet_pp_det_groomed_lund
 
-    # Get prongs of combined jet
-    jet_combined_prong1 = fj.PseudoJet()
-    jet_combined_prong2 = fj.PseudoJet()
-    has_parents_combined = jet_det_groomed.has_parents(jet_combined_prong1, jet_combined_prong2)
+      # Get prongs of combined jet
+      jet_combined_prong1 = jet_det_groomed.harder()
+      jet_combined_prong2 = jet_det_groomed.softer()
+      has_parents_combined = jet_det_groomed
+      
+      # Get the fastjet::PseudoJets from the fjcontrib::LundGenerators
+      jet_pp_det_groomed = jet_pp_det_groomed_lund.pair()
+      jet_det_groomed = jet_det_groomed.pair()
           
     if self.debug_level > 1:
 
