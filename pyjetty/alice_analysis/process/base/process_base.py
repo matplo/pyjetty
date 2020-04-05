@@ -27,7 +27,6 @@ import fjcontrib
 from pyjetty.alice_analysis.process.base import common_base
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import jet_info
-from pyjetty.mputils import treewriter
 
 ################################################################
 class ProcessBase(common_base.CommonBase):
@@ -319,10 +318,6 @@ class ProcessBase(common_base.CommonBase):
     for attr in dir(self):
       
       obj = getattr(self, attr)
-      
-      # If tree writer object, get the tree it contains
-      if isinstance(obj, treewriter.RTreeWriter):
-        obj = obj.tree
       
       # Write all ROOT histograms and trees to file
       types = (ROOT.TH1, ROOT.THnBase, ROOT.TTree)
