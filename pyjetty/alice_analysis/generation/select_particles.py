@@ -9,22 +9,22 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 
 #---------------------------------------------------------------
-def accept_particle_pythia(part, pdg):
+def accept_particle_pythia(part, status, end_vertex, pid, pdg):
 
-  return accept_particle_status(part, pdg, status = [1])
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
   
 #---------------------------------------------------------------
-def accept_particle_herwig(part, pdg):
+def accept_particle_herwig(part, status, end_vertex, pid, pdg):
 
-  return accept_particle_status(part, pdg, status = [1])
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
   
 #---------------------------------------------------------------
-def accept_particle_jewel(part, pdg):
+def accept_particle_jewel(part, status, end_vertex, pid, pdg):
 
-  return accept_particle_status(part, pdg, status = [1])
-  
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
+
 #---------------------------------------------------------------
-def accept_particle_martini(part, pdg):
+def accept_particle_martini(part, status, end_vertex, pid, pdg):
   '''
   Status codes:
     parton: 1
@@ -33,7 +33,7 @@ def accept_particle_martini(part, pdg):
     negative particles: 401
   '''
   
-  return accept_particle_status(part, pdg, status = [201])
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [201])
   
 #---------------------------------------------------------------
 def accept_particle_hybrid(part, pdg):
@@ -44,24 +44,24 @@ def accept_particle_hybrid(part, pdg):
     wake, negative: 7
   '''
   
-  return accept_particle_status(part, pdg, status = [1, 6, 7])
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1, 6, 7])
   
 #---------------------------------------------------------------
-def accept_particle_status(part, pdg, status = [1]):
+def accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1]):
   
   # Check status
-  #print('status: {}'.format(part.status))
-  if part.status not in status:
+  #print('status: {}'.format(status))
+  if status not in status_accepted:
     return False
   
   # Check that particle does not have any daughter vertex
-  #print(part.end_vertex)
-  if part.end_vertex:
+  #print(end_vertex)
+  if end_vertex:
     return False
   
   # Check PID for charged particles
   #print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
-  if pdg.GetParticle(part.pid).Charge() == 0:
+  if pdg.GetParticle(pid).Charge() == 0:
     return False
     
   return True

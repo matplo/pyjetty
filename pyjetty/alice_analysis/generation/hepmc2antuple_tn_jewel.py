@@ -5,7 +5,7 @@ from __future__ import print_function
 import os
 import argparse
 
-import pyhepmc_ng
+import hepmc2wrap
 
 import hepmc2antuple_base
 
@@ -28,41 +28,35 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
   #---------------------------------------------------------------
   def main(self):
   
-    if self.hepmc == 3:
-      input_hepmc = pyhepmc_ng.ReaderAscii(self.input)
-    if self.hepmc == 2:
-      input_hepmc = pyhepmc_ng.ReaderAsciiHepMC2(self.input)
+    input_hepmc = hepmc2wrap.ReadHepMCFile(self.input)
 
     if input_hepmc.failed():
       print ("[error] unable to read from {}".format(self.input))
       sys.exit(1)
 
-    event_hepmc = pyhepmc_ng.GenEvent()
-
     while not input_hepmc.failed():
-      ev = input_hepmc.read_event(event_hepmc)
-      if input_hepmc.failed():
-        break
+      if input_hepmc.NextEvent():
 
-      self.fill_event(event_hepmc)
-      self.increment_event()
-      if self.nev > 0 and self.ev_id > self.nev:
-        break
+        self.fill_event(input_hepmc)
+        self.increment_event()
+        if self.nev > 0 and self.ev_id > self.nev:
+          break
       
     self.finish()
 
   #---------------------------------------------------------------
-  def fill_event(self, event_hepmc):
+  def fill_event(self, input_hepmc, final = True):
 
     self.t_e.Fill(self.run_number, self.ev_id, 0, 0)
-
-    for part in event_hepmc.particles:
     
-      if self.accept_particle(part, part.status, part.end_vertex, part.pid, self.pdg, self.gen):
-      
-        self.particles_accepted.add(self.pdg.GetParticle(part.pid).GetName())
-        self.t_p.Fill(self.run_number, self.ev_id, part.momentum.pt(), part.momentum.eta(), part.momentum.phi(), part.pid)
-        
+    for part in input_hepmc.HepMCParticles(final):
+
+      pid = part.pdg_id()
+      if self.accept_particle(part, part.status(), part.end_vertex(), pid, self.pdg, self.gen):
+            
+        self.particles_accepted.add(self.pdg.GetParticle(pid).GetName())
+        self.t_p.Fill(self.run_number, self.ev_id, part.momentum().perp(), part.momentum().pseudoRapidity(), part.momentum().phi(), pid)
+
 #---------------------------------------------------------------
 if __name__ == '__main__':
   
