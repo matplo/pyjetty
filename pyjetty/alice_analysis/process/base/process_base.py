@@ -64,7 +64,12 @@ class ProcessBase(common_base.CommonBase):
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
-    
+      
+    if 'event_number_max' in config:
+      self.event_number_max = config['event_number_max']
+    else:
+      self.event_number_max = sys.maxsize
+      
     self.jetR_list = config['jetR']
     self.debug_level = config['debug_level']
 
