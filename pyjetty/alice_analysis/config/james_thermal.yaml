@@ -20,6 +20,11 @@ dry_run: False
 fast_simulation: False
 #event_number_max: 1000
 
+thermal_model:
+  beta: 0.4
+  N_avg: 2500
+  sigma_N: 500
+
 constituent_subtractor:
   max_distance: 0.25
   alpha: 0

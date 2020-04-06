@@ -37,7 +37,9 @@ from pyjetty.alice_analysis.process.base import process_io_emb
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import jet_info
 from pyjetty.alice_analysis.process.base import process_base
+from pyjetty.alice_analysis.process.base import thermal_generator
 from pyjetty.mputils import CEventSubtractor
+
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -98,7 +100,7 @@ class ProcessMC(process_base.ProcessBase):
     # ------------------------------------------------------------------------
     
     # Set up the Pb-Pb embedding object
-    if not self.is_pp:
+    if not self.is_pp and not self.thermal_model:
         self.process_io_emb = process_io_emb.ProcessIO_Emb(self.emb_file_list, track_tree_name='tree_Particle')
     
     # ------------------------------------------------------------------------
@@ -131,16 +133,13 @@ class ProcessMC(process_base.ProcessBase):
     # Call base class initialization
     process_base.ProcessBase.initialize_config(self)
     
-    # Option to dry-run without writing any histograms
-
-    
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
       
     self.fast_simulation = config['fast_simulation']
     self.dry_run = config['dry_run']
-      
+    
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
     if 'mc_fraction_threshold' in config:
@@ -151,6 +150,15 @@ class ProcessMC(process_base.ProcessBase):
         self.emb_file_list = config['emb_file_list']
     else:
         self.is_pp = True
+        
+    if 'thermal_model' in config:
+      self.thermal_model = True
+      beta = config['thermal_model']['beta']
+      N_avg = config['thermal_model']['N_avg']
+      sigma_N = config['thermal_model']['sigma_N']
+      self.thermal_generator = thermal_generator.ThermalGenerator(N_avg, sigma_N, beta)
+    else:
+      self.thermal_model = False
      
     self.observable_list = config['process_observables']
     
@@ -260,7 +268,11 @@ class ProcessMC(process_base.ProcessBase):
       name = 'hJetPt_Truth_R{}'.format(jetR)
       h = ROOT.TH1F(name, name, 300, 0, 300)
       setattr(self, name, h)
-          
+      
+      name = 'hN_MeanPt_R{}'.format(jetR)
+      h = ROOT.TH2F(name, name, 200, 0, 5000, 200, 0., 2.)
+      setattr(self, name, h)
+      
       for observable in self.observable_list:
 
         if observable == 'theta_g':
@@ -269,6 +281,13 @@ class ProcessMC(process_base.ProcessBase):
             if grooming_setting:
               grooming_label = self.utils.grooming_label(grooming_setting)
               self.create_theta_g_histograms(observable, jetR, grooming_label)
+              
+              if self.thermal_model:
+                name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+                h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
+                h.GetXaxis().SetTitle('p_{T,ch jet}')
+                h.GetYaxis().SetTitle('#theta_{g,ch}')
+                setattr(self, name, h)
 
         if observable == 'zg':
         
@@ -276,6 +295,13 @@ class ProcessMC(process_base.ProcessBase):
             if grooming_setting:
               grooming_label = self.utils.grooming_label(grooming_setting)
               self.create_zg_histograms(observable, jetR, grooming_label)
+              
+              if self.thermal_model:
+                name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+                h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+                h.GetXaxis().SetTitle('p_{T,ch jet}')
+                h.GetYaxis().SetTitle('z_{g,ch}')
+                setattr(self, name, h)
               
         if observable == 'subjet_z':
 
@@ -475,6 +501,8 @@ class ProcessMC(process_base.ProcessBase):
     
     for jetR in self.jetR_list:
     
+      self.event_number = 0
+    
       if not self.dry_run:
         self.initialize_output_objects_R(jetR)
       
@@ -511,12 +539,16 @@ class ProcessMC(process_base.ProcessBase):
     for track in fj_particles_det:
       self.hTrackEtaPhi.Fill(track.eta(), track.phi())
       self.hTrackPt.Fill(track.pt())
-
+      
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
   def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det, jet_selector_truth_matched):
+  
+    self.event_number += 1
+    if self.event_number > self.event_number_max:
+      return
      
     if self.debug_level > 1:
       t = time.time() - self.start_time
@@ -532,16 +564,28 @@ class ProcessMC(process_base.ProcessBase):
     
     jetR = jet_def.R()
     
+    # If Pb-Pb, do embedding
     if not self.is_pp:
         
-        # Get Pb-Pb event
-        fj_particles_combined_beforeCS = self.process_io_emb.load_event()
-            
-        # Form the combined det-level event
-        # The pp-det tracks are each stored with a unique user_index >= 0
-        #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
-        # The Pb-Pb tracks are each stored with a unique user_index < 0
-        [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_det]
+        # If thermal model, generate a thermal event and add it to the det-level particle list
+        if self.thermal_model:
+          fj_particles_combined_beforeCS = self.thermal_generator.load_event()
+          
+          # Form the combined det-level event
+          # The pp-det tracks are each stored with a unique user_index >= 0
+          #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
+          # The thermal tracks are each stored with a unique user_index < 0
+          [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_det]
+
+        # Main case: Get Pb-Pb event and embed it into the det-level particle list
+        else:
+          fj_particles_combined_beforeCS = self.process_io_emb.load_event()
+              
+          # Form the combined det-level event
+          # The pp-det tracks are each stored with a unique user_index >= 0
+          #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
+          # The Pb-Pb tracks are each stored with a unique user_index < 0
+          [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_det]
 
         # Perform constituent subtraction on det-level, if applicable
         fj_particles_combined = self.constituent_subtractor.process_event(fj_particles_combined_beforeCS)
@@ -621,7 +665,7 @@ class ProcessMC(process_base.ProcessBase):
     
     # Fill random cone delta-pt before constituent subtraction
     self.fill_deltapt_RC_histogram(fj_particles_combined_beforeCS, rho, jetR, before_CS=True)
-    
+        
     # Fill random cone delta-pt after constituent subtraction
     self.fill_deltapt_RC_histogram(fj_particles_combined, rho, jetR, before_CS=False)
     
@@ -636,9 +680,11 @@ class ProcessMC(process_base.ProcessBase):
     
     # Loop through tracks and sum pt inside the cone
     pt_sum = 0.
+    pt_sum_global = 0.
     for track in fj_particles:
         if self.utils.delta_R(track, eta, phi) < jetR:
             pt_sum += track.pt()
+        pt_sum_global += track.pt()
             
     if before_CS:
         delta_pt = pt_sum - rho * np.pi * jetR * jetR
@@ -646,6 +692,12 @@ class ProcessMC(process_base.ProcessBase):
     else:
         delta_pt = pt_sum
         getattr(self, 'hDeltaPt_RC_afterCS_R{}'.format(jetR)).Fill(delta_pt)
+        
+    # Fill mean pt
+    if before_CS:
+      N_tracks = len(fj_particles)
+      mean_pt = pt_sum_global/N_tracks
+      getattr(self, 'hN_MeanPt_R{}'.format(jetR)).Fill(N_tracks, mean_pt)
 
   #---------------------------------------------------------------
   # Fill truth jet histograms
@@ -668,7 +720,72 @@ class ProcessMC(process_base.ProcessBase):
     for constituent in jet.constituents():
       z = constituent.pt() / jet_pt
       getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet_pt, z)
+      
+    # Fill groomed histograms
+    if self.thermal_model:
+      for grooming_setting in self.grooming_settings:
+            
+        grooming_label = self.utils.grooming_label(grooming_setting)
 
+        # Construct SD groomer, and groom jet
+        if 'sd' in grooming_setting:
+
+          zcut = grooming_setting['sd'][0]
+          beta = grooming_setting['sd'][1]
+          
+          # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
+          sd = fjcontrib.SoftDrop(beta, zcut, jetR)
+          jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+          reclusterer = fjcontrib.Recluster(jet_def_recluster)
+          sd.set_reclustering(True, reclusterer)
+          if self.debug_level > 2:
+            print('SoftDrop groomer is: {}'.format(sd.description()))
+ 
+          jet_det_sd = sd.result(jet)
+
+        # Construct Dynamical groomer, and groom jet
+        if 'dg' in grooming_setting:
+
+          a = grooming_setting['dg'][0]
+          
+          jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+          dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
+          if self.debug_level > 2:
+            print('Dynamical groomer is: {}'.format(dy_groomer.description()))
+          
+          jet_det_dg_lund = dy_groomer.result(jet, a)
+          jet_det_dg = jet_det_dg_lund.pair()
+           
+        # Compute groomed observables
+        if 'sd' in grooming_setting:
+
+          # If both SD and DG are specified, first apply DG, then SD
+          if 'dg' in grooming_setting:
+            if jet_det_dg.has_constituents():
+              jet_det_groomed = sd.result(jet_det_dg)
+            else:
+              return
+          else:
+            jet_det_groomed = jet_det_sd
+          
+          theta_g_det = self.theta_g(jet_det_groomed, jetR)
+          zg_det = self.zg(jet_det_groomed)
+
+        elif 'dg' in grooming_setting:
+          jet_det_groomed = jet_det_dg
+ 
+          theta_g_det = jet_det_dg_lund.Delta()/jetR
+          zg_det = jet_det_dg_lund.z()
+
+        # Fill histograms
+        observable = 'theta_g'
+        name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+        getattr(self, name).Fill(jet_pt, theta_g_det)
+         
+        observable = 'zg'
+        name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+        getattr(self, name).Fill(jet_pt, zg_det)
+        
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
   #---------------------------------------------------------------
