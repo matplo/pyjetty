@@ -38,7 +38,8 @@ class ProcessIO_Emb(common_base.CommonBase):
     
     self.list_of_files = []
     with open(self.file_list) as f:
-        list_of_files = [fn.strip() for fn in f.readlines()]
+      files = [fn.strip() for fn in f.readlines()]
+    list_of_files = list(filter(None, files))
     
     # Choose N random files to keep in the list
     n_files = 1000
@@ -48,7 +49,7 @@ class ProcessIO_Emb(common_base.CommonBase):
     self.current_file_df = None
     self.current_file_nevents = 0
     self.current_event_index = 0
-  
+      
     # Initialize by loading a file
     self.load_file()
     
@@ -71,7 +72,7 @@ class ProcessIO_Emb(common_base.CommonBase):
   # current file as a dataframe, and remove it from the file list.
   #---------------------------------------------------------------
   def load_file(self):
-    
+      
     input_file = random.choice(self.list_of_files)
     self.list_of_files.remove(input_file)
     print('Opening Pb-Pb file: {}'.format(input_file))
