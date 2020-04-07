@@ -97,6 +97,10 @@ def main():
 				if dy_groomed.pair().pt() > 0:
 					tw.fill_branch('parton_j_logkt_dg{:.1f}'.format(a), ROOT.TMath.Log(dy_groomed.kt()))
 					tw.fill_branch('parton_j_log1odR_dg{:.1f}'.format(a), ROOT.TMath.Log(1/dy_groomed.Delta()))
+			max_pt_groomed = dy_groomer.max_pt_softer(j)
+			if max_pt_groomed.pair().pt() > 0:
+				tw.fill_branch('parton_j_logkt_max_pt_softer', ROOT.TMath.Log(max_pt_groomed.kt()))
+				tw.fill_branch('parton_j_log1odR_max_pt_softer', ROOT.TMath.Log(1/max_pt_groomed.Delta()))
 		for j in jets_h:
 			tw.fill_branch('hadron_j', j)
 			for a in [0.1, 1.0, 2.0]:
@@ -104,6 +108,10 @@ def main():
 				if dy_groomed.pair().pt() > 0:
 					tw.fill_branch('hadron_j_logkt_dg{:.1f}'.format(a), ROOT.TMath.Log(dy_groomed.kt()))
 					tw.fill_branch('hadron_j_log1odR_dg{:.1f}'.format(a), ROOT.TMath.Log(1/dy_groomed.Delta()))
+			max_pt_groomed = dy_groomer.max_pt_softer(j)
+			if max_pt_groomed.pair().pt() > 0:
+				tw.fill_branch('hadron_j_logkt_max_pt_softer', ROOT.TMath.Log(max_pt_groomed.kt()))
+				tw.fill_branch('hadron_j_log1odR_max_pt_softer', ROOT.TMath.Log(1/max_pt_groomed.Delta()))
 		if len(jets_p) > 0 or len(jets_h) > 0:
 			tw.fill_tree()
 
