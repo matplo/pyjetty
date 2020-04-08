@@ -105,6 +105,14 @@ def main():
 			if max_z_groomed.pair().pt() > 0:
 				tw.fill_branch('parton_j_logkt_max_z', ROOT.TMath.Log(max_z_groomed.kt()))
 				tw.fill_branch('parton_j_log1odR_max_z', ROOT.TMath.Log(1/max_z_groomed.Delta()))
+			max_kt_groomed = dy_groomer.max_kt(j)
+			if max_kt_groomed.pair().pt() > 0:
+				tw.fill_branch('parton_j_logkt_max_kt', ROOT.TMath.Log(max_kt_groomed.kt()))
+				tw.fill_branch('parton_j_log1odR_max_kt', ROOT.TMath.Log(1/max_kt_groomed.Delta()))
+			max_kappa_groomed = dy_groomer.max_kappa(j)
+			if max_kappa_groomed.pair().pt() > 0:
+				tw.fill_branch('parton_j_logkt_max_kappa', ROOT.TMath.Log(max_kappa_groomed.kt()))
+				tw.fill_branch('parton_j_log1odR_max_kappa', ROOT.TMath.Log(1/max_kappa_groomed.Delta()))
 		for j in jets_h:
 			tw.fill_branch('hadron_j', j)
 			for a in [0.1, 1.0, 2.0]:
@@ -120,6 +128,14 @@ def main():
 			if max_z_groomed.pair().pt() > 0:
 				tw.fill_branch('hadron_j_logkt_max_z', ROOT.TMath.Log(max_z_groomed.kt()))
 				tw.fill_branch('hadron_j_log1odR_max_z', ROOT.TMath.Log(1/max_z_groomed.Delta()))
+			max_kt_groomed = dy_groomer.max_kt(j)
+			if max_kt_groomed.pair().pt() > 0:
+				tw.fill_branch('hadron_j_logkt_max_kt', ROOT.TMath.Log(max_kt_groomed.kt()))
+				tw.fill_branch('hadron_j_log1odR_max_kt', ROOT.TMath.Log(1/max_kt_groomed.Delta()))
+			max_kappa_groomed = dy_groomer.max_kappa(j)
+			if max_kappa_groomed.pair().pt() > 0:
+				tw.fill_branch('hadron_j_logkt_max_kappa', ROOT.TMath.Log(max_kappa_groomed.kt()))
+				tw.fill_branch('hadron_j_log1odR_max_kappa', ROOT.TMath.Log(1/max_kappa_groomed.Delta()))
 		if len(jets_p) > 0 or len(jets_h) > 0:
 			tw.fill_tree()
 
