@@ -99,9 +99,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
       self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict,
                                                   self.obs_subconfig_list)
-      setattr(self, 'xtitle', self.obs_config_dict['common_settings']['xtitle'])
-      setattr(self, 'ytitle', self.obs_config_dict['common_settings']['ytitle'])
-      setattr(self, 'pt_bins_reported', self.obs_config_dict['common_settings']['pt_bins_reported'])
+      self.xtitle = self.obs_config_dict['common_settings']['xtitle']
+      self.ytitle = self.obs_config_dict['common_settings']['ytitle']
+      self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
+      self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']
 
       # Retrieve histogram binnings for each observable setting
       for i, _ in enumerate(self.obs_subconfig_list):
@@ -227,8 +228,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   def create_output_dirs(self):
 
     dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt',
-            'Unfolded_ratio', 'Unfolded_niter_sys', 'Unfolded_stat_uncert',
-            'Test_StatisticalClosure', 'Test_Refolding']
+            'Unfolded_ratio', 'Unfolded_stat_uncert', 'Test_StatisticalClosure', 'Test_Refolding']
     for i in dirs:
       output_dir = os.path.join(self.output_dir, i)
       setattr(self, 'output_dir_{}'.format(i), output_dir)
@@ -343,13 +343,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     fResult_name = getattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label))
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
 
-    # Select final regularization parameter
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings,
-                                               self.obs_subconfig_list, self.obs_config_dict,
-                                               obs_label, jetR)
-
     # Loop over values of regularization parameter
-    for i in range(1, reg_param_final + 3):
+    for i in range(1, self.max_reg_param + 3):
 
       # Set up the Bayesian unfolding object
       unfold_bayes = ROOT.RooUnfoldBayes(response, hData, i)
@@ -403,8 +398,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                            min_pt_truth, max_pt_truth, option = 'ratio')
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, option = 'stat_uncert')
-      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
-                           min_pt_truth, max_pt_truth, option = 'niter_sys')
 
   #################################################################################################
   # Plot observable for a single pt slicee
@@ -450,17 +443,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         else:
           continue
 
-      if option == 'stat_uncert':
+      elif option == 'stat_uncert':
         h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth,
                                                    max_pt_truth, option)
-
-      if option == 'niter_sys':
-        if i > 2:
-          h_2prev = self.get_unfolded_result(jetR, obs_label, i-2, min_pt_truth,
-                                             max_pt_truth, option)
-          h_2prev.Add(h, -1)
-          h_2prev.Divide(h)
-          h = h_2prev
         else:
           continue
 
@@ -524,7 +509,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       #h.GetXaxis().SetLimits(truth_bin_array[0]+shift,truth_bin_array[-1]+shift)
 
       # Create empty histogram for plotting superimposed results of each n_iter
-      if i == 1 or (i == 2 and option == 'ratio') or (i == 3 and option == 'niter_sys'):
+      if i == 1 or (i == 2 and option == 'ratio'):
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram',
                                  n_bins_truth, truth_bin_array)
         myBlankHisto.SetNdivisions(505)
@@ -541,14 +526,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           myBlankHisto.SetMaximum(40)
           myBlankHisto.SetMinimum(0.)
           myBlankHisto.SetYTitle('statistical uncertainty (%)')
-        if option == 'niter_sys':
-          myBlankHisto.SetMaximum(1.4)
-          myBlankHisto.SetMinimum(0.6)
-          myBlankHisto.SetYTitle('#frac{y_{n=i-2} - y_{n=i}}{y_{n=i}}')
         myBlankHisto.Draw("E")
 
       # Plot the current calculation on the superimposed plot
-      if option == 'ratio' or option == 'niter_sys':
+      if option == 'ratio':
         h.DrawCopy('P hist X0 same')
       else:
         h.DrawCopy('PE X0 same')
@@ -559,7 +540,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg.Draw()
 
     # Draw horizontal line at y = 1
-    if option == 'ratio' or option == 'niter_sys':
+    if option == 'ratio':
       line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
       line.SetLineColor(920+2)
       line.SetLineStyle(2)

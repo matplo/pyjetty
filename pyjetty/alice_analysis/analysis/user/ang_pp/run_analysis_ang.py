@@ -81,7 +81,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     # Initialize performance plotting class
     if self.do_plot_performance:
-      self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, self.output_dir_performance, self.figure_approval_status)
+      self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp,
+                                                         self.main_data, self.main_response,
+                                                         self.output_dir_performance,
+                                                         self.figure_approval_status)
       
     # Create output subdirectories
     self.create_output_subdir(self.output_dir_performance, 'jet')
@@ -107,8 +110,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.plotting_utils.plot_DeltaR(jetR, self.jet_matching_distance)
       self.plotting_utils.plot_JES(jetR)
       self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
-      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
-      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
+      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], 
+                                                             self.grooming_settings[0]))
+      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0],
+                                                                              self.grooming_settings[0]))
       
       # Plot subobservable-dependent performance plots
       for i, _ in enumerate(self.obs_subconfig_list):
@@ -119,8 +124,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
-        self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported,
+                                              relative=True)
+        self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting,
+                                                 self.xtitle, self.pt_bins_reported)
         
         if grooming_setting and self.observable != 'jet_axis':
           self.plotting_utils.plot_lund_plane(jetR, obs_label, grooming_setting)
@@ -137,18 +144,30 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             for match in match_list:
 
               hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
-              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
-              self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=False)
+              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list,
+                                                      self.obs_settings, self.grooming_settings,
+                                                      overlay_list, self.prong_match_threshold)
+              self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list,
+                                                            self.obs_settings, self.grooming_settings,
+                                                            overlay_list, self.prong_match_threshold,
+                                                            min_pt, max_pt, plot_deltaz=False)
 
               hname = 'hProngMatching_{}_{}_JetPtDet_R{}'.format(prong, match, jetR)
-              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list,
+                                                      self.obs_settings, self.grooming_settings,
+                                                      overlay_list, self.prong_match_threshold)
 
               if 'subleading' in prong:
                 hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
-                self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
+                self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list,
+                                                              self.obs_settings, self.grooming_settings,
+                                                              overlay_list, self.prong_match_threshold,
+                                                              min_pt, max_pt, plot_deltaz=True)
 
           hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}'.format(jetR)
-          self.plotting_utils.plot_prong_matching_correlation(jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+          self.plotting_utils.plot_prong_matching_correlation(jetR, hname, self.obs_subconfig_list,
+                                                              self.obs_settings, self.grooming_settings,
+                                                              overlay_list, self.prong_match_threshold)
 
         # Plot subobservable-dependent plots
         for i, _ in enumerate(self.obs_subconfig_list):
@@ -166,14 +185,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     ROOT.gROOT.ForceStyle()
 
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
-    for bin in range(0, len(self.pt_bins_reported) - 1):
-      min_pt_truth = self.pt_bins_reported[bin]
-      max_pt_truth = self.pt_bins_reported[bin+1]
+    for i in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[i]
+      max_pt_truth = self.pt_bins_reported[i+1]
       
-      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
+      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
+                           min_pt_truth, max_pt_truth, plot_pythia=True)
+
+      self.plot_error(jetR, obs_label, obs_setting, grooming_setting,
+                      min_pt_truth, max_pt_truth)
       
   #----------------------------------------------------------------------
-  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
+  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
+                      min_pt_truth, max_pt_truth, plot_pythia=False):
     
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -193,7 +217,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     color = 600-6
     
     # Get histograms
-    name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
+                                          min_pt_truth, max_pt_truth)
     if grooming_setting:
       fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = getattr(self, name)
@@ -204,7 +229,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h.SetLineWidth(2)
     h.SetLineColor(color)
     
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR,
+                                                                    obs_label, min_pt_truth,
+                                                                    max_pt_truth))
     h_sys.SetLineColor(0)
     h_sys.SetFillColor(color)
     h_sys.SetFillColorAlpha(color, 0.3)
@@ -226,7 +253,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     if plot_pythia:
     
-      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
+      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label,
+                                                               min_pt_truth, max_pt_truth)
       if hPythia:
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
@@ -285,9 +313,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     myLegend.Draw()
 
-    name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+    name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                             int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
-      name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+      name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR),
+                                                      obs_label, int(min_pt_truth),
+                                                      int(max_pt_truth), self.file_format)
     output_dir = getattr(self, 'output_dir_final_results')
     output_dir_single = output_dir + '/single_results'
     if not os.path.exists(output_dir_single):
@@ -303,6 +334,25 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_sys.Write()
     hPythia.Write()
     fFinalResults.Close()
+
+
+  #----------------------------------------------------------------------
+  def plot_error(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
+
+    # TODO: Similar to roounfold_obs.create_output_dirs -- prob should unify somehow at some point
+    # Subdirectories which have relevant error calculations
+    dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt',
+            'Unfolded_ratio', 'Unfolded_niter_sys', 'Unfolded_stat_uncert',
+            'Test_StatisticalClosure', 'Test_Refolding']
+
+    for s in dirs:
+      di = self.output_dir_main
+      if di[-1] != '/':
+        di += '/'
+      di += s + '/'
+      
+    # TODO: Finish
+
 
   #----------------------------------------------------------------------
   def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth):

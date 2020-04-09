@@ -154,9 +154,10 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       return 'h_{}_JetPt_R{}_{}_rebinned'.format(observable, jetR, obs_label)
 
   #---------------------------------------------------------------
-  # Get regularization parameter
+  # Get custom regularization parameter
   #---------------------------------------------------------------
-  def get_reg_param(self, obs_settings, grooming_settings, obs_subconfig_list, obs_config_dict, obs_label, jetR):
+  def get_reg_param(self, obs_settings, grooming_settings, obs_subconfig_list,
+                    obs_config_dict, obs_label, jetR):
     
     for i, _ in enumerate(obs_subconfig_list):
     
