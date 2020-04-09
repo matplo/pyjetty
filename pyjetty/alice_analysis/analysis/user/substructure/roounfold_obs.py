@@ -427,11 +427,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings,
-                                               self.obs_subconfig_list, self.obs_config_dict,
-                                               obs_label, jetR)
-
-    for i in range(1, reg_param_final + 3):
+    for i in range(1, self.max_reg_param + 3):
 
       h = self.get_unfolded_result(jetR, obs_label, i, min_pt_truth, max_pt_truth, option)
 
@@ -446,8 +442,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       elif option == 'stat_uncert':
         h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth,
                                                    max_pt_truth, option)
-        else:
-          continue
 
       # Save the histogram to the result ROOT file for future access
       if len(option):
@@ -650,11 +644,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings,
-                                               self.obs_subconfig_list, self.obs_config_dict,
-                                               obs_label, jetR)
-
-    for i in range(1, reg_param_final + 3):
+    for i in range(1, self.max_reg_param + 3):
 
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)
       h2D = getattr(self, name)
@@ -938,10 +928,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.smearSpectrum(hMC_Det, measuredErrors)
 
     # Loop over values of regularization parameter to do unfolding checks
-    reg_param_final = self.utils.get_reg_param(self.obs_settings, self.grooming_settings,
-                                               self.obs_subconfig_list, self.obs_config_dict,
-                                               obs_label, jetR)
-    for i in range(1, reg_param_final + 3):
+    for i in range(1, self.max_reg_param + 3):
 
       # Apply RM to unfolded result, and check that I obtain measured spectrum
       # (simple technical check)

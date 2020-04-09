@@ -196,7 +196,7 @@ class RunAnalysis(common_base.CommonBase):
 
         # Compute systematics and attach to main results
         if self.do_systematics:
-            self.compute_systematics(jetR, obs_label, obs_setting, grooming_setting, reg_param)
+            self.compute_systematics(jetR, obs_label, obs_setting, grooming_setting)
 
         # Plot result for each individial subconfiguration
         if self.do_plot_final_result:
@@ -250,13 +250,6 @@ class RunAnalysis(common_base.CommonBase):
       analysis.roounfold_obs()
 
 
-    # Loop through jet radii
-    for jetR in self.jetR_list:
-
-      # Loop through subconfigurations to unfold
-      for i, _ in enumerate(self.obs_subconfig_list):
-
-
   #----------------------------------------------------------------------
   def check_rebin_response(self, output_dir):
 
@@ -275,13 +268,13 @@ class RunAnalysis(common_base.CommonBase):
     return rebin_response
 
   #----------------------------------------------------------------------
-  def compute_systematics(self, jetR, obs_label, obs_setting, grooming_setting, reg_param):
-
-    print(("Compute systematics for {}: R = {}, subobs = {}, grooming = {}, reg param = " + 
-           "{}...").format(self.observable, jetR, obs_label, grooming_setting, reg_param))
+  def compute_systematics(self, jetR, obs_label, obs_setting, grooming_setting):
 
     # First, calculate systematics for all possible reg params
     for reg_param in range(3, self.max_reg_param + 1):
+
+      print( ("Compute systematics for {}: R = {}, subobs = {}, grooming = {}, reg param = " +
+              "{}...").format(self.observable, jetR, obs_label, grooming_setting, reg_param) )
 
       # Load 2D unfolded results from their files into attributes
       self.load_2D_observables(jetR, obs_label, obs_setting, grooming_setting, reg_param)
@@ -293,7 +286,7 @@ class RunAnalysis(common_base.CommonBase):
 
         # Load 1D unfolded results for each pt slice into attributes
         self.load_1D_observables(jetR, obs_label, obs_setting, grooming_setting, reg_param,
-                                   min_pt_truth, max_pt_truth)
+                                 min_pt_truth, max_pt_truth)
 
         # Compute systematics of the 1D distributions for each pt slice
         self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param,
@@ -305,7 +298,7 @@ class RunAnalysis(common_base.CommonBase):
       max_pt_truth = self.pt_bins_reported[i+1]
       reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
                                                        min_pt_truth, max_pt_truth)
-      print("Optimal regularization parameter determined to be %s = %i." % (self.reg_param_name, reg_param_final)
+      print("Optimal regularization parameter determined to be %s = %i." % (self.reg_param_name, reg_param_final))
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, final=True)
 
@@ -378,7 +371,7 @@ class RunAnalysis(common_base.CommonBase):
                              reg_param, min_pt_truth, max_pt_truth, final=False):
 
     # Get main result
-    name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR,
+    name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format('main', self.observable, jetR,
                                             obs_label, reg_param, min_pt_truth, max_pt_truth)
     hMain = getattr(self, name)
 
@@ -455,10 +448,9 @@ class RunAnalysis(common_base.CommonBase):
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
                                                          reg_param, int(min_pt_truth), int(max_pt_truth))
       setattr(self, name, hSystematic_Total)
-
       # Attach total systematic to main result, and save as an attribute
-      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                           reg_param, int(min_pt_truth), int(max_pt_truth))
+      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label, reg_param,
+                                                           int(min_pt_truth), int(max_pt_truth))
       hResult_sys = hMain.Clone()
       hResult_sys.SetName(name)
       hResult_sys.SetDirectory(0)
@@ -470,10 +462,9 @@ class RunAnalysis(common_base.CommonBase):
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
                                                          reg_param, int(min_pt_truth), int(max_pt_truth))
       hSystematic_Total = getattr(self, name)
-      output_dir = getattr(self, 'output_dir_systematics')
-      name = 'hSystematic_Total_R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
-                                                     int(min_pt_truth), int(max_pt_truth))
-      outputFilename = os.path.join(output_dir, name + self.file_format)
+      name = 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                                       int(min_pt_truth), int(max_pt_truth), self.file_format)
+      outputFilename = os.path.join(self.output_dir_systematics, name)
       self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
       # Plot systematic uncertainties, and write total systematic to a ROOT file
@@ -646,7 +637,7 @@ class RunAnalysis(common_base.CommonBase):
     fdir += "Unfolded_stat_uncert/"
     name = "fResult_name_R%s_%s.root" % (jetR, obs_setting)
     f = ROOT.TFile.Open(fdir + name, "READ")
-    names = [ "hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % (self.obersvable, self.utils.remove_periods(jetR),
+    names = [ "hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % (self.observable, self.utils.remove_periods(jetR),
                                                                obs_setting, reg_param, min_pt_truth, max_pt_truth) 
               for reg_param in reg_params ]
     hStat_list = [ f.Get(name) for name in names ]
