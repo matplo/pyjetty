@@ -16,7 +16,7 @@ debug_level: 0
 
 process_observables: ['ang']
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
-reject_tracks_fraction: 0.04
+reject_tracks_fraction: 0
 
 # SoftDrop setting (current same for all SD plots)
 sd_zcut: 0.1    # multiplier
@@ -26,8 +26,8 @@ sd_beta: 0      # exponent on (deltaR / R)
 ang:
 
   common_settings:
-    xtitle: '#theta_{g}'
-    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+    xtitle: '#lambda_{#beta}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#lambda_{#beta}}'
     pt_bins_reported: [20, 40, 60, 80]
     plot_overlay_list:
       - ['config_R0.4_B1', 'config_R0.4_B1.5', 'config_R0.4_B2', 'config_R0.4_B3']

@@ -270,11 +270,11 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   def compute_systematics(self, jetR, obs_label, obs_setting, grooming_setting):
 
+    print( "Compute systematics for %s: R = %s, subobs = %s, grooming = %s" % 
+           (self.observable, jetR, obs_label, grooming_setting) )
+
     # First, calculate systematics for all possible reg params
     for reg_param in range(3, self.max_reg_param + 1):
-
-      print( ("Compute systematics for {}: R = {}, subobs = {}, grooming = {}, reg param = " +
-              "{}...").format(self.observable, jetR, obs_label, grooming_setting, reg_param) )
 
       # Load 2D unfolded results from their files into attributes
       self.load_2D_observables(jetR, obs_label, obs_setting, grooming_setting, reg_param)
@@ -298,7 +298,8 @@ class RunAnalysis(common_base.CommonBase):
       max_pt_truth = self.pt_bins_reported[i+1]
       reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
                                                        min_pt_truth, max_pt_truth)
-      print("Optimal regularization parameter determined to be %s = %i." % (self.reg_param_name, reg_param_final))
+      print( "Optimal regularization parameter for pT=%i-%i determined to be %s = %i." % 
+             (min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final) )
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, final=True)
 
@@ -374,6 +375,11 @@ class RunAnalysis(common_base.CommonBase):
     name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format('main', self.observable, jetR,
                                             obs_label, reg_param, min_pt_truth, max_pt_truth)
     hMain = getattr(self, name)
+    if final:
+      # Also save under name without reg param, won't need this info later
+      name = 'h{}_{}_R{}_{}_{}-{}'.format('main', self.observable, jetR,
+                                              obs_label, min_pt_truth, max_pt_truth)
+      setattr(self, name, hMain)
 
     # Loop through all systematic variations, and take ratio to main result
     h_list = []
@@ -458,6 +464,14 @@ class RunAnalysis(common_base.CommonBase):
       setattr(self, name, hResult_sys)
 
     else:
+      # Save main result under name without reg param
+      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label, reg_param,
+                                                           int(min_pt_truth), int(max_pt_truth))
+      hResult_sys = getattr(self, name)
+      name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
+                                                           int(min_pt_truth), int(max_pt_truth))
+      setattr(self, name, hResult_sys)
+
       # Get total uncertainty plot from memory and save
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
                                                          reg_param, int(min_pt_truth), int(max_pt_truth))
@@ -485,7 +499,7 @@ class RunAnalysis(common_base.CommonBase):
         name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
         hTaggingFrac = getattr(self, name)
         x = (min_pt_truth + max_pt_truth)/2.
-        fraction_tagged =  hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
+        fraction_tagged = hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
         setattr(self, '{}_fraction_tagged'.format(name1D), fraction_tagged)
     else:
         fraction_tagged = 1.
@@ -641,15 +655,16 @@ class RunAnalysis(common_base.CommonBase):
                                                                obs_setting, reg_param, min_pt_truth, max_pt_truth) 
               for reg_param in reg_params ]
     hStat_list = [ f.Get(name) for name in names ]
-    f.Close()
 
     # Add statistical and systematic uncertainties in quadrature
-    hUncert_list = [ self.add_in_quadrature([hSys, hStat]) for hSys, hStat in zip(hSys_list, hStat_list) ]
+    hUncert_list = [ self.add_in_quadrature([hSys, hStat]) for (hSys, hStat) in zip(hSys_list, hStat_list) ]
 
     # Sum total uncertainties per observable bin and return lowest value
     hUncert_sum_list = [ sum([ h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1) ]) for h in hUncert_list ]
-    index_min = min(xrange(len(hUncert_sum_list)), key=hUncert_sum_list.__getitem__)
+    index_min = min(range(len(hUncert_sum_list)), key=hUncert_sum_list.__getitem__)
     return index_min + min_reg_param
+
+    f.Close()
 
   #----------------------------------------------------------------------
   def change_to_per(self, h):

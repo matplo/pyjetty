@@ -191,9 +191,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, plot_pythia=True)
-
-      self.plot_error(jetR, obs_label, obs_setting, grooming_setting,
-                      min_pt_truth, max_pt_truth)
       
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
@@ -218,7 +215,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                          min_pt_truth, max_pt_truth)
+                                              min_pt_truth, max_pt_truth)
     if grooming_setting:
       fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = getattr(self, name)
@@ -334,25 +331,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_sys.Write()
     hPythia.Write()
     fFinalResults.Close()
-
-
-  #----------------------------------------------------------------------
-  def plot_error(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
-
-    # TODO: Similar to roounfold_obs.create_output_dirs -- prob should unify somehow at some point
-    # Subdirectories which have relevant error calculations
-    dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt',
-            'Unfolded_ratio', 'Unfolded_niter_sys', 'Unfolded_stat_uncert',
-            'Test_StatisticalClosure', 'Test_Refolding']
-
-    for s in dirs:
-      di = self.output_dir_main
-      if di[-1] != '/':
-        di += '/'
-      di += s + '/'
-      
-    # TODO: Finish
-
 
   #----------------------------------------------------------------------
   def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth):
