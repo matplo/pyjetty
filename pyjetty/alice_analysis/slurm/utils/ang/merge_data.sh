@@ -2,7 +2,7 @@
 #
 # Script to merge output ROOT files
 
-JOB_ID=44195
+JOB_ID=59376
 
 # First, merge all output files on each hiccup
 FILE_DIR="/rstorage/alice/AnalysisResults/ang/$JOB_ID"

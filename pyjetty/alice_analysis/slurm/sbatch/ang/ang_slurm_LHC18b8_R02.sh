@@ -30,5 +30,5 @@ echo "STOP=$STOP"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun ang_LHC18b8.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+  srun ang_LHC18b8_R02.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done
