@@ -335,25 +335,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth):
   
-    plot_pythia_from_response = True
-    plot_pythia_from_mateusz = False
-    
-    if plot_pythia_from_response:
-    
-      hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth, max_pt_truth)
-      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-      n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
-  
-    elif plot_pythia_from_mateusz:
-    
-      fPythia_name = '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
-      fPythia = ROOT.TFile(fPythia_name, 'READ')
-      print(fPythia.ls())
-      hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_label, int(min_pt_truth), int(max_pt_truth))
-      hPythia = fPythia.Get(hname)
-      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-      n_jets_tagged = hPythia.Integral(hPythia2.FindBin(self.truth_bin_array(obs_label)[0]), hPythia2.GetNbinsX())
-      
+    hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth, max_pt_truth)
+    n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+    n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
+
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
     hPythia.Scale(1./n_jets_inclusive, 'width')
       
@@ -434,14 +419,18 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if subconfig_name == overlay_list[0]:
         marker = 20
         marker_pythia = marker+4
-        color = 600-6
-      if subconfig_name == overlay_list[1]:
+        color = 1
+      elif subconfig_name == overlay_list[1]:
         marker = 21
         marker_pythia = marker+4
+        color = 600-6
+      elif subconfig_name == overlay_list[2]:
+        marker = 22
+        marker_pythia = marker+4
         color = 632-4
-      if i > 1 and subconfig_name == overlay_list[2]:
-        marker = 33
-        marker_pythia = 27
+      else:  # subconfig_name == overlay_list[3]:
+        marker = 23
+        marker_pythia = 32
         color = 416-2
             
       name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
