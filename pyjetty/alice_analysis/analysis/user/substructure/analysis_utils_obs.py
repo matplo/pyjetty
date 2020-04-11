@@ -112,14 +112,19 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   def formatted_grooming_label(self, grooming_setting):
 
-    key, value = list(grooming_setting.items())[0]
-    
-    if key == 'sd':
-      text = 'SD: z_{{cut}} = {}, #beta = {}'.format(value[0], value[1])
-    elif key == 'dg':
-      text = 'DG: a = {}'.format(value[0])
-    else:
+    text = ''
+    for key, value in grooming_setting.items():
+      
+      if text:
+        text += ', '
+      if key == 'sd':
+        text += 'SD: z_{{cut}} = {}, #beta = {}'.format(value[0], value[1])
+      if key == 'dg':
+        text += 'DG: a = {}'.format(value[0])
+
+    if not text:
       sys.exit('Unknown grooming type!')
+
     return text
     
   #---------------------------------------------------------------
