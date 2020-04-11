@@ -549,10 +549,11 @@ class ProcessMC(process_base.ProcessBase):
     self.event_number += 1
     if self.event_number > self.event_number_max:
       return
+    if self.debug_level > 1:
+      print('event {}'.format(self.event_number))
      
     if self.debug_level > 1:
       t = time.time() - self.start_time
-      print(t)
       if t > 120.:
         return
       
@@ -652,6 +653,8 @@ class ProcessMC(process_base.ProcessBase):
 
     # Loop through jets and fill groomed histograms if both det and truth jets are unique match
     for grooming_setting in self.grooming_settings:
+      if self.debug_level > 2:
+        print('grooming setting: {}'.format(grooming_setting))
       result = [self.fill_groomed_jet_matches(grooming_setting, jet_det, jetR) for jet_det in jets_det_selected]
 
   #---------------------------------------------------------------
@@ -886,6 +889,9 @@ class ProcessMC(process_base.ProcessBase):
      
         jet_pt_det_ungroomed = jet_det.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
+        
+        if self.debug_level > 2:
+          print('**** jet_pt_det_ungroomed: {}, jet_pt_truth_ungroomed: {}'.format(jet_pt_det_ungroomed, jet_pt_truth_ungroomed))
        
         # Construct SD groomer, and groom jet
         if 'sd' in grooming_setting:
@@ -925,12 +931,16 @@ class ProcessMC(process_base.ProcessBase):
 
           # If both SD and DG are specified, first apply DG, then SD
           if 'dg' in grooming_setting:
+            if self.debug_level > 2:
+              print('both SD and DG applied')
             if jet_det_dg.has_constituents() and jet_truth_dg.has_constituents():
               jet_det_groomed = sd.result(jet_det_dg)
               jet_truth_groomed = sd.result(jet_truth_dg)
             else:
               return
           else:
+            if self.debug_level > 2:
+              print('SD applied')
             jet_det_groomed = jet_det_sd
             jet_truth_groomed = jet_truth_sd
             
@@ -940,6 +950,10 @@ class ProcessMC(process_base.ProcessBase):
           zg_truth = self.zg(jet_truth_groomed)
 
         elif 'dg' in grooming_setting:
+        
+          if self.debug_level > 2:
+            print('DG applied')
+          
           jet_det_groomed = jet_det_dg
           jet_truth_groomed = jet_truth_dg
           
@@ -963,8 +977,14 @@ class ProcessMC(process_base.ProcessBase):
           if jet_pt_truth_ungroomed > 100.:
             getattr(self, name).Fill(lund_coords[0], lund_coords[1])
           
-          if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
-            self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed, sd, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'SD')
+          if 'dg' in grooming_setting:
+            groomer_list = [sd, dy_groomer]
+            if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
+              self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'SD+DG')
+          else:
+            groomer_list = [sd]
+            if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
+              self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'SD')
       
         elif 'dg' in grooming_setting:
 
@@ -974,7 +994,7 @@ class ProcessMC(process_base.ProcessBase):
             getattr(self, name).Fill(lund_coords[0], lund_coords[1])
               
           if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
-            self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg_lund, dy_groomer, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'DG')
+            self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg_lund, [dy_groomer], jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'DG')
 
         # Fill jet axis difference
         if 'jet_axis' in self.observable_list:
@@ -982,7 +1002,7 @@ class ProcessMC(process_base.ProcessBase):
           # Recluster with WTA (with larger jet R)
           jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
           jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
-          if self.debug_level > 2:
+          if self.debug_level > 3:
               print('WTA jet definition is:', jet_def_wta)
           reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
           jet_det_wta = reclusterer_wta.result(jet_det)
@@ -1060,14 +1080,24 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Do prong-matching
   #---------------------------------------------------------------
-  def fill_prong_matching_histograms(self, jet_truth, jet_det, jet_det_groomed, groomer, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'SD'):
+  def fill_prong_matching_histograms(self, jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, type = 'SD'):
     
     # Do grooming on pp-det jet, and get prongs
     jet_pp_det = jet_truth.python_info().match
 
-    if type == 'SD':
+    if 'SD' in type:
     
-      jet_pp_det_groomed = groomer.result(jet_pp_det)
+      if 'DG' in type:
+      
+        # Assumes groomer_list = [sd, dy_groomer]
+        a = grooming_setting['dg'][0]
+        jet_pp_det_dg_lund = groomer_list[1].result(jet_pp_det, a)
+        jet_pp_det_dg = jet_pp_det_dg_lund.pair()
+        jet_pp_det_groomed = groomer_list[0].result(jet_pp_det_dg)
+      
+      else:
+      
+        jet_pp_det_groomed = groomer_list[0].result(jet_pp_det)
     
       # SD grooming returns the groomed fastjet::PseudoJet
       # Use the fastjet::PseudoJet::has_parents function which returns the last clustering step
@@ -1085,7 +1115,7 @@ class ProcessMC(process_base.ProcessBase):
     elif type == 'DG':
       
       a = grooming_setting['dg'][0]
-      jet_pp_det_groomed_lund = groomer.result(jet_pp_det, a)
+      jet_pp_det_groomed_lund = groomer_list[0].result(jet_pp_det, a)
     
       # Dynamical grooming returns a fjcontrib::LundGenerator
       #   The prongs can be retrieved directly from this object.
