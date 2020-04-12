@@ -16,7 +16,7 @@
 ```
 module use <where pyjetty>/modules
 module load pyjetty/1.0
-pyjettypython cpptools/tests/pythia_gen_fj_lund_test.py
+pyjettypython $PYJETTY_DIR/cpptools/tests/pythia_gen_fj_lund_test.py
 ```
 
 
