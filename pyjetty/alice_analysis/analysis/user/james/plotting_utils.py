@@ -32,10 +32,24 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     self.observable = observable
     self.is_pp = is_pp
-    self.fData = ROOT.TFile(fnameData, 'READ')
+    
+    if fnameData:
+      self.fData = ROOT.TFile(fnameData, 'READ')
+    else:
+      self.fData = None
+      
     self.fMC = ROOT.TFile(fnameMC, 'READ')
     self.output_dir = output_dir
     self.figure_approval_status = figure_approval_status
+    
+    kGreen = 416
+    kBlue  = 600
+    kCyan  = 432
+    kAzure   = 860
+    kViolet  = 880
+    kMagenta = 616
+    kPink    = 900
+    self.ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3, kPink]
     
     print(self)
 
@@ -117,25 +131,16 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetBorderSize(0)
     leg.SetFillStyle(1)
     leg.SetTextSize(0.04)
-    
-    kGreen = 416
-    kBlue  = 600
-    kCyan  = 432
-    kAzure   = 860
-    kViolet  = 880
-    kMagenta = 616
-    kPink    = 900
-    ColorArray = [kBlue-4, kAzure+7, kCyan-2,7, kViolet-8, kBlue-6, kGreen+3]
-    
+
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
       
-      hJESProj = self.getJESshiftProj(name, 'hJESproj1', min_pt_truth, max_pt_truth)
+      hJESProj = self.getJESshiftProj(name, 'hJESproj{}'.format(i), min_pt_truth, max_pt_truth)
       hJESProj.SetMarkerStyle(20)
-      hJESProj.SetMarkerColor(ColorArray[i])
-      hJESProj.SetLineColor(ColorArray[i])
+      hJESProj.SetMarkerColor(self.ColorArray[i])
+      hJESProj.SetLineColor(self.ColorArray[i])
       
       if i == 0:
       
@@ -143,7 +148,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         hJESProj.GetYaxis().SetTitle('Probability density')
         hJESProj.GetXaxis().SetTitle('#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}')
         
-        hJESProj.GetYaxis().SetRangeUser(0, 10.4)
+        hJESProj.GetYaxis().SetRangeUser(0, 1.3*hJESProj.GetMaximum())
         hJESProj.DrawCopy('P E')
         
       else:
@@ -219,6 +224,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     name = 'hJetPt_Truth_R{}Scaled'.format(jetR)
     histPtGen = self.fMC.Get(name)
     histPtGen.Rebin(10)
+    histPtGen.Scale(5./2)
     
     # Then, get the pT^gen spectrum for matched jets
     name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
@@ -264,15 +270,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     myLegend = ROOT.TLegend(0.55,0.55,0.88,0.85)
     self.setup_legend(myLegend,0.035)
     
-    kGreen = 416
-    kBlue  = 600
-    kCyan  = 432
-    kAzure   = 860
-    kViolet  = 880
-    kMagenta = 616
-    kPink    = 900
-    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
-    
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
     hRM_4d = self.fMC.Get(name)
@@ -289,9 +286,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hRM_4d_clone.SetName('{}_{}'.format(hRM_4d_clone.GetName(), i))
       hResolution = self.get_resolution(hRM_4d_clone, jetR, obs_label, min_pt_truth, max_pt_truth, 'hResolution_{}'.format(i))
  
-      hResolution.SetMarkerColor(ColorArray[i])
+      hResolution.SetMarkerColor(self.ColorArray[i])
       hResolution.SetMarkerStyle(21)
-      hResolution.SetLineColor(ColorArray[i])
+      hResolution.SetLineColor(self.ColorArray[i])
       hResolution.DrawCopy('P same')
       myLegend.AddEntry(hResolution, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
       h_list.append(hResolution)
@@ -352,15 +349,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetFillStyle(1)
     leg.SetTextSize(0.04)
     
-    kGreen = 416
-    kBlue  = 600
-    kCyan  = 432
-    kAzure   = 860
-    kViolet  = 880
-    kMagenta = 616
-    kPink    = 900
-    ColorArray = [kBlue-4, kAzure+7, kCyan-2, 7, kViolet-8, kBlue-6, kGreen+3]
-    
     # Loop through pt slices, and plot final residual for each 1D distribution
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
@@ -368,14 +356,14 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       
       hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_pt_truth, max_pt_truth)
       hResidual.SetMarkerStyle(20)
-      hResidual.SetMarkerColor(ColorArray[i])
-      hResidual.SetLineColor(ColorArray[i])
+      hResidual.SetMarkerColor(self.ColorArray[i])
+      hResidual.SetLineColor(self.ColorArray[i])
 
       if i == 0:
       
         hResidual.GetXaxis().SetTitleOffset(1.6);
         hResidual.GetYaxis().SetTitle('Probability density')
-        hResidual.GetYaxis().SetRangeUser(0, 1.2*hResidual.GetMaximum())
+        hResidual.GetYaxis().SetRangeUser(0, 1.3*hResidual.GetMaximum())
         hResidual.DrawCopy('P E')
         
       else:
@@ -412,6 +400,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
   #---------------------------------------------------------------
   def plot_obs_projections(self, jetR, obs_label, obs_setting, grooming_setting, xtitle, pt_bins):
+
+    if not self.fData:
+      return
 
     # (pt-det, pt-truth, obs-det, obs-truth)
     name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
@@ -450,7 +441,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     hObs_JetPt.RebinY(5)
     hObs_JetPt.Draw('text colz')
 
-    output_filename = os.path.join(self.output_dir, 'statistics/h2D_{}_statistics_R{}_{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label))
+    output_filename = os.path.join(self.output_dir, 'data/h2D_{}_statistics_R{}_{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label))
     c.SaveAs(output_filename)
     c.Close()
 
@@ -594,6 +585,106 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.plot_hist(hLund, output_filename, drawOptions = 'colz', text = text)
 
   #---------------------------------------------------------------
+  def plot_delta_pt(self, jetR, pt_bins):
+  
+    self.plot_delta_pt_RC(jetR, 'before')
+    self.plot_delta_pt_RC(jetR, 'after')
+    self.plot_delta_pt_emb(jetR, pt_bins)
+
+  #---------------------------------------------------------------
+  def plot_delta_pt_RC(self, jetR, CS_label):
+  
+    name = 'hDeltaPt_RC_{}CS_R{}Scaled'.format(CS_label, jetR)
+    hDeltaPt = self.fMC.Get(name)
+    hDeltaPt.SetMarkerStyle(21)
+    hDeltaPt.SetMarkerSize(2)
+    hDeltaPt.SetMarkerColor(self.ColorArray[0])
+    hDeltaPt.GetYaxis().SetTitle('#frac{dN}{d#delta#it{p}_{T}}')
+    if 'after' in CS_label:
+      min = 0
+      hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T}^{RC}')
+    else:
+      min = -50
+      hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T}^{RC} - #pi#rho#it{R}^{2}')
+    hDeltaPt.GetXaxis().SetRangeUser(min, 50)
+    hDeltaPt.GetYaxis().SetRangeUser(10, 100*hDeltaPt.GetMaximum())
+    
+    mean = hDeltaPt.GetMean()
+    std_dev = hDeltaPt.GetStdDev()
+    text = 'Mean: {:.2f}, #sigma: {:.2f}'.format(mean, std_dev)
+    
+    output_filename = os.path.join(self.output_dir, 'delta_pt/hDeltaPt_RC_{}CS_R{}.pdf'.format(CS_label, self.remove_periods(jetR)))
+    self.plot_hist(hDeltaPt, output_filename, setLogy = True, text = text)
+    
+  #---------------------------------------------------------------
+  def plot_delta_pt_emb(self, jetR, pt_bins):
+  
+    name = 'hDeltaPt_emb_R{}Scaled'.format(jetR)
+    
+    c = ROOT.TCanvas('c','c: hist',600,450)
+    c.cd()
+    c.SetBottomMargin(0.17)
+    c.SetLeftMargin(0.17)
+    
+    leg = ROOT.TLegend(0.57,0.53,0.9,0.87, '')
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    # Loop through pt slices, and plot final residual for each 1D distribution
+    for i in range(0, len(pt_bins) - 1):
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      hDeltaPt = self.get_delta_pt_proj(name, 'h_delta_pt{}'.format(i), min_pt_truth, max_pt_truth)
+      hDeltaPt.SetMarkerStyle(20)
+      hDeltaPt.SetMarkerColor(self.ColorArray[i])
+      hDeltaPt.SetLineColor(self.ColorArray[i])
+
+      if i == 0:
+      
+        hDeltaPt.GetXaxis().SetTitleOffset(1.6);
+        hDeltaPt.GetYaxis().SetTitleOffset(1.6);
+        hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T,jet}^{combined} - #it{p}_{T,jet}^{pp-det}')
+        hDeltaPt.GetYaxis().SetTitle('#frac{dN}{d#delta#it{p}_{T}}')
+        hDeltaPt.GetXaxis().SetRangeUser(-50, 50)
+        hDeltaPt.DrawCopy('P E')
+        
+      else:
+
+        hDeltaPt.DrawCopy('P E same')
+
+      leg.AddEntry(hDeltaPt, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+      
+      mean = hDeltaPt.GetMean()
+      std_dev = hDeltaPt.GetStdDev()
+      text = 'Mean: {:.2f}, #sigma: {:.2f}'.format(mean, std_dev)
+      leg.AddEntry(None, text, '')
+
+    leg.Draw('same')
+    
+    output_filename = os.path.join(self.output_dir, 'delta_pt/hDeltaPt_Emb_R{}.pdf'.format(self.remove_periods(jetR)))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  # Get delta_pt for a fixed pT-gen
+  def get_delta_pt_proj(self, name, label, minPt, maxPt):
+    
+    h_delta_pt = self.fMC.Get(name)
+    h_delta_pt.SetName('{}_{}'.format(h_delta_pt.GetName(), label))
+    
+    h_delta_pt.GetXaxis().SetRangeUser(minPt, maxPt)
+    h = h_delta_pt.ProjectionY()
+    
+    integral = h.Integral()
+    if integral > 0:
+      h.Scale(1./integral, 'width')
+    
+    return h
+
+  #---------------------------------------------------------------
   def plot_prong_matching(self, i_overlay, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold):
   
     c = ROOT.TCanvas('c','c: hist',600,450)
@@ -612,23 +703,14 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     myLegend = ROOT.TLegend(0.55,0.3,0.85,0.5)
     self.setup_legend(myLegend,0.035)
     
-    kGreen = 416
-    kBlue  = 600
-    kCyan  = 432
-    kAzure   = 860
-    kViolet  = 880
-    kMagenta = 616
-    kPink    = 900
-    ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3]
-    
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
-    
+
     for i, subconfig_name in enumerate(obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
         continue
-        
+
       obs_setting = obs_settings[i]
       grooming_setting = grooming_settings[i]
       obs_label = self.obs_label(obs_setting, grooming_setting)
@@ -666,8 +748,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hMatchedFraction_vs_pt.SetName(name_fraction)
       hMatchedFraction_vs_pt.Divide(hTotal_vs_pt)
       hMatchedFraction_vs_pt.SetMarkerStyle(marker)
-      hMatchedFraction_vs_pt.SetMarkerColor(ColorArray[i])
-      hMatchedFraction_vs_pt.SetLineColor(ColorArray[i])
+      hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[i])
+      hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i])
       hMatchedFraction_vs_pt.DrawCopy('P same')
       myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
         
@@ -706,15 +788,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     leg = ROOT.TLegend(0.55,0.3,0.85,0.5)
     self.setup_legend(leg,0.035)
-    
-    kGreen = 416
-    kBlue  = 600
-    kCyan  = 432
-    kAzure   = 860
-    kViolet  = 880
-    kMagenta = 616
-    kPink    = 900
-    ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3]
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
@@ -755,7 +828,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hFraction_vs_pt.GetYaxis().SetRange(min_frac_bin, max_frac_bin)
       hUnmatched_vs_pt = hFraction_vs_pt.Project3D('z')
       hUnmatched_vs_pt.SetName('hUnmatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
-      hUnmatched_vs_pt.SetLineColor(ColorArray[i])
+      hUnmatched_vs_pt.SetLineColor(self.ColorArray[i])
       if max < hUnmatched_vs_pt.GetMaximum():
         max = hUnmatched_vs_pt.GetMaximum()
         myBlankHisto.SetMaximum(max)
@@ -794,15 +867,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg = ROOT.TLegend(0.55,0.3,0.85,0.5)
     self.setup_legend(leg,0.035)
 
-    kGreen = 416
-    kBlue  = 600
-    kCyan  = 432
-    kAzure   = 860
-    kViolet  = 880
-    kMagenta = 616
-    kPink    = 900
-    ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3]
-    
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
     
@@ -840,8 +904,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hMatchedFraction_vs_pt.SetName('hMatchedFraction_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
       hMatchedFraction_vs_pt.Divide(hTotal_vs_pt)
       hMatchedFraction_vs_pt.SetMarkerStyle(marker)
-      hMatchedFraction_vs_pt.SetMarkerColor(ColorArray[i])
-      hMatchedFraction_vs_pt.SetLineColor(ColorArray[i])
+      hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[i])
+      hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i])
       hMatchedFraction_vs_pt.Draw('P same')
       leg.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
       h_list.append(hMatchedFraction_vs_pt)

@@ -107,9 +107,10 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     self.create_output_subdir(self.output_dir_performance, 'residual_relative')
     self.create_output_subdir(self.output_dir_performance, 'mc_projections_det')
     self.create_output_subdir(self.output_dir_performance, 'mc_projections_truth')
-    self.create_output_subdir(self.output_dir_performance, 'statistics')
+    self.create_output_subdir(self.output_dir_performance, 'data')
     self.create_output_subdir(self.output_dir_performance, 'lund')
     if not self.is_pp:
+      self.create_output_subdir(self.output_dir_performance, 'delta_pt')
       self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_pt')
       self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_ptdet')
       self.create_output_subdir(self.output_dir_performance, 'prong_matching_deltaR')
@@ -126,6 +127,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
       self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
       self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
+      
+      if not self.is_pp:
+        self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
       
       # Plot subobservable-dependent performance plots
       for i, _ in enumerate(self.obs_subconfig_list):
