@@ -36,6 +36,7 @@ cd ${this_directory}
 
 git clone git@github.com:matplo/pyjetty.git
 export HEPPY_DIR=${this_directory}/heppy
+cd pyjetty
 ./cpptools/build.sh
 ```
 
