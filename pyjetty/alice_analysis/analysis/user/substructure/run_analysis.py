@@ -313,7 +313,7 @@ class RunAnalysis(common_base.CommonBase):
       if self.use_max_reg_param:
         reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
                                                          min_pt_truth, max_pt_truth)
-      print( "Optimal regularization parameter for pT=%i-%i determined to be %s = %i." % 
+        print( "Optimal regularization parameter for pT=%i-%i determined to be %s = %i." %
              (min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final) )
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, final=True)
@@ -363,7 +363,7 @@ class RunAnalysis(common_base.CommonBase):
                                                  reg_param, systematic)
       name1D = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR,
                                             obs_label, reg_param, min_pt_truth, max_pt_truth)
-      self.get_obs_distribution(jetR, obs_label, name2D, name1D, grooming_setting,
+      self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
                                 min_pt_truth, max_pt_truth)
 
       if systematic == 'main':
@@ -371,13 +371,13 @@ class RunAnalysis(common_base.CommonBase):
         name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param+2)
         name1D = 'hRegParam1_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
                                                          reg_param, min_pt_truth, max_pt_truth)
-        hRegParam1 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, grooming_setting,
+        hRegParam1 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
                                                min_pt_truth, max_pt_truth)
 
         name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param-2)
         name1D = 'hRegParam2_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
                                                          reg_param, min_pt_truth, max_pt_truth)
-        hRegParam2 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, grooming_setting,
+        hRegParam2 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
                                                min_pt_truth, max_pt_truth)
 
   #----------------------------------------------------------------------
@@ -410,11 +410,12 @@ class RunAnalysis(common_base.CommonBase):
                                                                    reg_param, min_pt_truth, max_pt_truth)
         h_systematic_ratio = getattr(self, name)
 
-        output_dir = getattr(self, 'output_dir_systematics')
-        name = 'hSystematic_{}_R{}_{}_{}-{}{}'.format(systematic, self.utils.remove_periods(jetR), obs_label,
+        if self.debug_level > 0:
+          output_dir = getattr(self, 'output_dir_systematics')
+          name = 'hSystematic_{}_R{}_{}_{}-{}{}'.format(systematic, self.utils.remove_periods(jetR), obs_label,
                                                       int(min_pt_truth), int(max_pt_truth), self.file_format)
-        outputFilename = os.path.join(output_dir, name)
-        self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
+          outputFilename = os.path.join(output_dir, name)
+          self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
 
       elif systematic != 'main':
         # Get systematic variation and plot ratio 
@@ -429,10 +430,11 @@ class RunAnalysis(common_base.CommonBase):
         h_systematic_ratio.SetName(name_ratio)
         h_systematic_ratio.Divide(h_systematic)
 
-        print("Printing systematic variation ratio for", systematic) 
-        for i in range(1, h_systematic.GetNbinsX()+1):
-          print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
-                "-- ratio:", h_systematic_ratio.GetBinContent(i))
+        if self.debug_level > 0:
+          print("Printing systematic variation ratio for", systematic) 
+          for i in range(1, h_systematic.GetNbinsX()+1):
+            print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
+                  "-- ratio:", h_systematic_ratio.GetBinContent(i))
 
         self.change_to_per(h_systematic_ratio)
         setattr(self, name_ratio, h_systematic_ratio)
@@ -497,17 +499,19 @@ class RunAnalysis(common_base.CommonBase):
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
                                                          reg_param, int(min_pt_truth), int(max_pt_truth))
       hSystematic_Total = getattr(self, name)
-      name = 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
+      
+      if self.debug_level > 0:
+        name = 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
                                                        int(min_pt_truth), int(max_pt_truth), self.file_format)
-      outputFilename = os.path.join(self.output_dir_systematics, name)
-      self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
+        outputFilename = os.path.join(self.output_dir_systematics, name)
+        self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
       # Plot systematic uncertainties, and write total systematic to a ROOT file
       self.plot_systematic_uncertainties(jetR, obs_label, obs_setting, grooming_setting,
                                          min_pt_truth, max_pt_truth, h_list, hSystematic_Total)
 
   #----------------------------------------------------------------------
-  def get_obs_distribution(self, jetR, obs_label, name2D, name1D, grooming_setting,
+  def get_obs_distribution(self, jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
                            min_pt_truth, max_pt_truth):
 
     h2D = getattr(self, name2D)
@@ -521,7 +525,8 @@ class RunAnalysis(common_base.CommonBase):
         hTaggingFrac = getattr(self, name)
         x = (min_pt_truth + max_pt_truth)/2.
         fraction_tagged = hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
-        setattr(self, '{}_fraction_tagged'.format(name1D), fraction_tagged)
+        name_tagged = '{}_fraction_tagged'.format(name1D.replace('_n{}'.format(reg_param), ''))
+        setattr(self, name_tagged, fraction_tagged)
     else:
         fraction_tagged = 1.
 
@@ -676,10 +681,10 @@ class RunAnalysis(common_base.CommonBase):
 
     # Obtain the statistical uncertainty histograms from disk
     fdir = os.path.join(self.output_dir_main, "Unfolded_stat_uncert",
-                        "fResult_name_R%s_%s.root" % (jetR, obs_setting))
+                        "fResult_name_R%s_%s.root" % (jetR, obs_label))
     f = ROOT.TFile.Open(fdir, "READ")
     names = ["hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % (self.observable, self.utils.remove_periods(jetR),
-                                                              obs_setting, reg_param, min_pt_truth, max_pt_truth) 
+                                                              obs_label, reg_param, min_pt_truth, max_pt_truth)
              for reg_param in reg_params]
     hStat_list = [f.Get(name) for name in names]
 
