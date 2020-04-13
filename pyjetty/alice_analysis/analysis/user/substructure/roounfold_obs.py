@@ -102,7 +102,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       self.xtitle = self.obs_config_dict['common_settings']['xtitle']
       self.ytitle = self.obs_config_dict['common_settings']['ytitle']
       self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
-      self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']
+
+      self.use_max_reg_param = False
+      if 'max_reg_param' in self.obs_config_dict['common_settings']:
+        self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']
+        self.use_max_reg_param = True
 
       # Retrieve histogram binnings for each observable setting
       for i, _ in enumerate(self.obs_subconfig_list):
@@ -343,8 +347,16 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     fResult_name = getattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label))
     fResult = ROOT.TFile(fResult_name, 'UPDATE')
 
+    # Select final regularization parameter
+    if self.use_max_reg_param:
+      reg_param_final = self.max_reg_param
+    else:
+      reg_param_final = self.utils.get_reg_param(
+        self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
+        self.obs_config_dict, obs_label, jetR)
+
     # Loop over values of regularization parameter
-    for i in range(1, self.max_reg_param + 3):
+    for i in range(1, reg_param_final + 3):
 
       # Set up the Bayesian unfolding object
       unfold_bayes = ROOT.RooUnfoldBayes(response, hData, i)
@@ -427,7 +439,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    for i in range(1, self.max_reg_param + 3):
+    # Select final regularization parameter
+    if self.use_max_reg_param:
+      reg_param_final = self.max_reg_param
+    else:
+      reg_param_final = self.utils.get_reg_param(
+        self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
+        self.obs_config_dict, obs_label, jetR)
+
+    for i in range(1, reg_param_final + 3):
 
       h = self.get_unfolded_result(jetR, obs_label, i, min_pt_truth, max_pt_truth, option)
 
@@ -644,7 +664,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    for i in range(1, self.max_reg_param + 3):
+    # Select final regularization parameter
+    if self.use_max_reg_param:
+      reg_param_final = self.max_reg_param
+    else:
+      reg_param_final = self.utils.get_reg_param(
+        self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
+        self.obs_config_dict, obs_label, jetR)
+
+    for i in range(1, reg_param_final + 3):
 
       name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)
       h2D = getattr(self, name)
@@ -927,8 +955,16 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     measuredErrors = self.getMeasuredErrors(hData)
     self.smearSpectrum(hMC_Det, measuredErrors)
 
+    # Select final regularization parameter
+    if self.use_max_reg_param:
+      reg_param_final = self.max_reg_param
+    else:
+      reg_param_final = self.utils.get_reg_param(
+        self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
+        self.obs_config_dict, obs_label, jetR)
+
     # Loop over values of regularization parameter to do unfolding checks
-    for i in range(1, self.max_reg_param + 3):
+    for i in range(1, reg_param_final + 3):
 
       # Apply RM to unfolded result, and check that I obtain measured spectrum
       # (simple technical check)

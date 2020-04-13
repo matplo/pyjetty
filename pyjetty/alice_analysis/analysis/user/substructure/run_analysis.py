@@ -94,11 +94,15 @@ class RunAnalysis(common_base.CommonBase):
     self.xtitle = self.obs_config_dict['common_settings']['xtitle']
     self.ytitle = self.obs_config_dict['common_settings']['ytitle']
     self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
-    self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']
-    if self.max_reg_param < 3:
-      print("ERROR: The minimum number of iterations has been set to 3.",
-            "Please set max_reg_param to a value >= 3.")
-      raise ValueError()
+
+    self.use_max_reg_param = False
+    if 'max_reg_param' in self.obs_config_dict['common_settings']:
+      self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']
+      if self.max_reg_param < 3:
+        print("ERROR: The minimum number of iterations has been set to 3.",
+              "Please set max_reg_param to a value >= 3.")
+        raise ValueError()
+      self.use_max_reg_param = True
     self.reg_param_name = 'n_iter'
 
     # Retrieve histogram binnings for each observable setting
@@ -273,8 +277,18 @@ class RunAnalysis(common_base.CommonBase):
     print( "Compute systematics for %s: R = %s, subobs = %s, grooming = %s" % 
            (self.observable, jetR, obs_label, grooming_setting) )
 
+    # Select final regularization parameter
+    if self.use_max_reg_param:
+      reg_param_final = self.max_reg_param
+      min_reg_param = 3
+    else:
+      reg_param_final = self.utils.get_reg_param(
+        self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
+        self.obs_config_dict, obs_label, jetR)
+      min_reg_param = reg_param_final
+
     # First, calculate systematics for all possible reg params
-    for reg_param in range(3, self.max_reg_param + 1):
+    for reg_param in range(min_reg_param, reg_param_final + 1):
 
       # Load 2D unfolded results from their files into attributes
       self.load_2D_observables(jetR, obs_label, obs_setting, grooming_setting, reg_param)
@@ -296,8 +310,9 @@ class RunAnalysis(common_base.CommonBase):
     for i in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[i]
       max_pt_truth = self.pt_bins_reported[i+1]
-      reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
-                                                       min_pt_truth, max_pt_truth)
+      if self.use_max_reg_param:
+        reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
+                                                         min_pt_truth, max_pt_truth)
       print( "Optimal regularization parameter for pT=%i-%i determined to be %s = %i." % 
              (min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final) )
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
@@ -413,10 +428,16 @@ class RunAnalysis(common_base.CommonBase):
         h_systematic_ratio = hMain.Clone()
         h_systematic_ratio.SetName(name_ratio)
         h_systematic_ratio.Divide(h_systematic)
+
+        print("Printing systematic variation ratio for", systematic) 
+        for i in range(1, h_systematic.GetNbinsX()+1):
+          print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
+                "-- ratio:", h_systematic_ratio.GetBinContent(i))
+
         self.change_to_per(h_systematic_ratio)
         setattr(self, name_ratio, h_systematic_ratio)
 
-      elif systematic == 'main':
+      else:  # systematic == 'main':
         # Do the two reg param variations & average them
 
         name = 'hRegParam1_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
@@ -638,29 +659,35 @@ class RunAnalysis(common_base.CommonBase):
 
     # Obtain the total systematic uncertainty histograms from memory
     min_reg_param = 3
-    reg_params = range(min_reg_param, self.max_reg_param + 1)
-    names = [ "hSystematic_Total_R{}_{}_n{}_{}-{}".format(self.utils.remove_periods(jetR), obs_label,
-                                                          reg_param, int(min_pt_truth), int(max_pt_truth))
-              for reg_param in reg_params ]
-    hSys_list = [ getattr(self, name) for name in names ]
+
+    # Select final regularization parameter
+    if self.use_max_reg_param:
+      reg_param_final = self.max_reg_param
+    else:
+      reg_param_final = self.utils.get_reg_param(
+        self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
+        self.obs_config_dict, obs_label, jetR)
+
+    reg_params = range(min_reg_param, reg_param_final + 1)
+    names = ["hSystematic_Total_R{}_{}_n{}_{}-{}".format(self.utils.remove_periods(jetR), obs_label,
+                                                         reg_param, int(min_pt_truth), int(max_pt_truth))
+             for reg_param in reg_params]
+    hSys_list = [getattr(self, name) for name in names]
 
     # Obtain the statistical uncertainty histograms from disk
-    fdir = self.output_dir_main
-    if fdir[-1] != '/':  # TODO: Check if this is done automatically, and if not, do it
-      fdir += '/'
-    fdir += "Unfolded_stat_uncert/"
-    name = "fResult_name_R%s_%s.root" % (jetR, obs_setting)
-    f = ROOT.TFile.Open(fdir + name, "READ")
-    names = [ "hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % (self.observable, self.utils.remove_periods(jetR),
-                                                               obs_setting, reg_param, min_pt_truth, max_pt_truth) 
-              for reg_param in reg_params ]
-    hStat_list = [ f.Get(name) for name in names ]
+    fdir = os.path.join(self.output_dir_main, "Unfolded_stat_uncert",
+                        "fResult_name_R%s_%s.root" % (jetR, obs_setting))
+    f = ROOT.TFile.Open(fdir, "READ")
+    names = ["hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % (self.observable, self.utils.remove_periods(jetR),
+                                                              obs_setting, reg_param, min_pt_truth, max_pt_truth) 
+             for reg_param in reg_params]
+    hStat_list = [f.Get(name) for name in names]
 
     # Add statistical and systematic uncertainties in quadrature
-    hUncert_list = [ self.add_in_quadrature([hSys, hStat]) for (hSys, hStat) in zip(hSys_list, hStat_list) ]
+    hUncert_list = [self.add_in_quadrature([hSys, hStat]) for (hSys, hStat) in zip(hSys_list, hStat_list)]
 
     # Sum total uncertainties per observable bin and return lowest value
-    hUncert_sum_list = [ sum([ h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1) ]) for h in hUncert_list ]
+    hUncert_sum_list = [sum([h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1)]) for h in hUncert_list]
     index_min = min(range(len(hUncert_sum_list)), key=hUncert_sum_list.__getitem__)
     return index_min + min_reg_param
 
@@ -686,9 +713,9 @@ class RunAnalysis(common_base.CommonBase):
       avg =  0.5*(value1 + value2)
 
       if takeMaxDev:
-        if value1>value2:
+        if value1 > value2:
           avg = value1
-        else:
+        else:  # value2 > value1:
           avg = value2
 
       h_avg.SetBinContent(i, avg)
