@@ -596,7 +596,10 @@ class RunAnalysis(common_base.CommonBase):
 
         h.DrawCopy('P X0 same')
 
-        leg.AddEntry(h, self.systematics_list[i], 'Pe')
+        legend_label = self.systematics_list[i]
+        if legend_label == 'main':
+          legend_label = 'reg param'
+        leg.AddEntry(h, legend_label, 'Pe')
 
     h_total.SetLineStyle(1)
     h_total.SetLineColor(1)
