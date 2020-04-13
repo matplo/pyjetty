@@ -21,11 +21,16 @@ pipenv install numpy
 ./external/root/build.sh
 ./external/pythia8/build.sh
 ./cpptools/build.sh
+```
 
+```
+module use ${this_directory}/heppy/modules
 # run a test (but before install deps)
 pipenv install tqdm argparse 
-./heppy/examples/pythia_gen_fastjet_lund_test.py
+${HEPPY_DIR}/heppy/examples/pythia_gen_fastjet_lund_test.py
+```
 
+```
 # now install pyjetty
 cd ${this_directory}
 
