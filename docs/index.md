@@ -14,6 +14,7 @@ cd ./heppy
 pipenv install numpy
 
 # now build commands here... (root takes sometime)
+# note fastjet/build.sh now takes an optional --cgal flag that enables an attempt to compile with cgal (we've encountered trouble using CGAL header only installation with cmake on MacOSX - cgal is disabled by default - try the flag and see whether the configure step is successful...)
 ./external/fastjet/build.sh
 ./external/lhapdf6/build.sh
 ./external/hepmc2/build.sh
