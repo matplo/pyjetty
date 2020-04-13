@@ -16,7 +16,7 @@ pipenv install numpy
 # now build commands here... (root takes sometime)
 ./external/fastjet/build.sh
 ./external/lhapdf6/build.sh
-./external/hepmc/build.sh
+./external/hepmc2/build.sh
 ./external/hepmc3/build.sh
 ./external/root/build.sh
 ./external/pythia8/build.sh
