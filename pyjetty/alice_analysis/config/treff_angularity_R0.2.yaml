@@ -1,0 +1,119 @@
+# Processing parameters
+#jetR: [0.2, 0.4]
+jetR: [0.2]
+betas: [0.5, 1, 1.5, 2, 3]
+
+# Initial detector-level binnings. Distributions are rebinned via configs before unfolding
+n_pt_bins: 195
+pt_limits: [5, 200]
+n_lambda_bins: 200
+lambda_limits: [0, 1]
+n_rap_bins: 20            # just for fun, look at lambda distribution vs rapidity
+rap_limits: [-0.5, 0.5]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.04      # Reject 4% of tracks for tracking efficiency systematic
+
+# SoftDrop setting (current same for all SD plots)
+sd_zcut: 0.1    # multiplier
+sd_beta: 0      # exponent on (deltaR / R)
+
+
+
+
+
+#############################################################################################
+##### NOTHING BELOW THIS LINE SHOULD MATTER FOR THIS SCRIPT
+##### THIS IS FOR GENERATION TRACK EFFICIENCY CUT RESPONSE MATRIX ONLY!
+##### INFO BELOW HERE IS UNRELIABLE, PROCEED W/ CAUTION
+#############################################################################################
+
+
+
+
+
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  common_settings:
+    xtitle: '#lambda_{#beta}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#lambda_{#beta}}'
+    pt_bins_reported: [20, 40, 60, 80]
+    plot_overlay_list:
+      - ['config_R0.2_B1', 'config_R0.2_B1.5', 'config_R0.2_B2', 'config_R0.2_B3']
+    max_reg_param: 10
+
+  # Different R & beta configurations
+  config_R0.2_B1:
+    R: 0.2
+    beta: 1
+    pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
+    pt_bins_det: [10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 27, 30, 35, 40, 45, 50, 60, 80]
+    obs_bins_truth: [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.7]
+    obs_bins_det: [0, 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 
+                      0.33, 0.36, 0.40, 0.45, 0.5, 0.65]
+
+  config_R0.2_B1.5:
+    R: 0.2
+    beta: 1.5
+    pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
+    pt_bins_det: [10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 27, 30, 35, 40, 45, 50, 60, 80]
+    obs_bins_truth: [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.45, 0.65]
+    obs_bins_det: [0, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
+                      0.20, 0.22, 0.24, 0.26, 0.30, 0.35, 0.45]
+
+  config_R0.2_B2:
+    R: 0.2
+    beta: 2
+    pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
+    pt_bins_det: [10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 27, 30, 35, 40, 45, 50, 60, 80]
+    obs_bins_truth: [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.55]
+    obs_bins_det: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14,
+                      0.16, 0.18, 0.20, 0.25, 0.30, 0.40]
+
+  config_R0.2_B3:
+    R: 0.2
+    beta: 3
+    pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
+    pt_bins_det: [10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 27, 30, 35, 40, 45, 50, 60, 80]
+    obs_bins_truth: [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.55]
+    obs_bins_det: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14,
+                      0.16, 0.18, 0.20, 0.25, 0.30, 0.40]
+
+
+###############################################################################
+# Analysis & plotting parameters
+file_format: ".png"
+output_dir: "./TestOutput"
+roounfold_path: "/home/ezra/RooUnfold/libRooUnfold.so"
+
+analysis_observable: 'ang'
+do_unfolding: True
+force_rebin: False
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: False
+figure_approval_status: 'Work in Progress'
+
+# List of which systematics to perform
+# Options: [main, trkeff, prior1, prior2, truncation, binning]
+systematics_list:
+  - main
+#  - trkeff
+  - prior1
+  - prior2
+#  - truncation
+#  - binning
+
+# Paths to processing output, to be used for unfolding
+main_data: '/rstorage/alice/AnalysisResults/ang/44195/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/44572/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/44572/AnalysisResultsFinal.root'
+
+# Prior variation parameters
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5

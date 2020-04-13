@@ -108,7 +108,7 @@ class process_ang_data(process_base.ProcessBase):
     self.sd_beta = config["sd_beta"]
 
     # Configs for each jetR / beta
-    self.config_dict = config["configs"]
+    self.config_dict = config["ang"]
   
   #---------------------------------------------------------------
   # Initialize histograms

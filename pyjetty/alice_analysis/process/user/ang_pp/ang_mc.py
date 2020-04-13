@@ -247,9 +247,9 @@ class process_ang_mc(process_base.ProcessBase):
         # Create THn of response
         dim = 4;
         title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-        nbins = [95, 30, 100, 20]
-        min_li = [5.,   0.,   0.,  0.]
-        max_li = [100., 150., 1.0, 1.0]
+        nbins = [20, 40, 200, 100]
+        min_li = [0.,   0.,   0.,  0.]
+        max_li = [100., 200., 1.0, 1.0]
         
         name = 'hResponse_JetPt_ang_%s' % label
         nbins = (nbins)
