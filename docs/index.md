@@ -36,6 +36,50 @@ export HEPPY_DIR=${this_directory}/heppy
 
 **warning:** this was tested on Mojave (brew python3) and CENTOS-7 (with devtools-7); we will make it running for Catalina; we do not expect issues for other Linux-like OS'
 
+# using pyjetty (not a compile mode)
+
+The build generated an envoronment module (http://modules.sourceforge.net) setting up things for normal (python coding / running) use so you can:
+
+```
+module use ${this_directory}/modules
+module load pyjetty/1.0
+```
+
+and you can try a test code
+
+```
+$PYJETTY_DIR/pyjetty/examples/pythia_gen_fastjet_lund_test.py
+```
+
+## I like to have a few bash functions in my login scripts (.profile or .bashrc for example)
+
+```
+function pyjetty_load()
+{
+    export PS1="(pyj)$PS1"
+    if [ -d $HOME/devel/pyjetty/modules ]; then
+        module use $HOME/devel/pyjetty/modules
+        module load pyjetty/1.0
+    fi
+
+}
+export -f pyjetty_load
+```
+
+such than from the command line I can type
+
+```
+pyjetty_load
+```
+
+and the module is loaded.
+
+Note, on CENTOS-7 we want devtools - so for example (insert before `module load`):
+
+```
+source scl_source enable devtoolset-7
+```
+
 ## alternative with pre-installed packages
 
 The installation on heppy will look for packages in the following directories defined by environment variables:
