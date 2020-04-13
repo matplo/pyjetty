@@ -36,7 +36,7 @@ export HEPPY_DIR=${this_directory}/heppy
 
 **warning:** this was tested on Mojave (brew python3) and CENTOS-7 (with devtools-7); we will make it running for Catalina; we do not expect issues for other Linux-like OS'
 
-**note:** note fastjet/build.sh now takes an optional --cgal flag that enables an attempt to compile with cgal (we've encountered trouble using CGAL header only installation with cmake on MacOSX - cgal is disabled by default - try the flag and see whether the configure step is successful...)
+**note:** fastjet/build.sh now takes an optional --cgal flag that enables an attempt to compile with cgal (we've encountered trouble using CGAL header only installation with cmake on MacOSX - cgal is disabled by default - try the flag and see whether the configure step is successful...)
 
 # using pyjetty (not a compile mode)
 
