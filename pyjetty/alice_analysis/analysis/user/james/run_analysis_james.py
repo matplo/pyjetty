@@ -386,6 +386,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_label[-1], int(min_pt_truth), int(max_pt_truth))
 
     hNumerator = fNumerator.Get(hname)
+    if not hNumerator:
+      print('NP prediction does not exist for {}'.format(obs_label))
+      return
     hNumerator.SetDirectory(0)
     n_jets_inclusive = hNumerator.Integral(0, hNumerator.GetNbinsX()+1)
     n_jets_tagged = hNumerator.Integral(hNumerator.FindBin(self.truth_bin_array(obs_label)[0]), hNumerator.GetNbinsX())
@@ -425,6 +428,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     if self.observable == 'zg':
       path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
     
+    if not os.path.exists(path_txt):
+      print('NLL prediction does not exist for {}'.format(obs_label))
+      return
     filename = open(path_txt, 'r')
 
     x_list = []
@@ -613,7 +619,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         if hasattr(self, attr_name):
           g = getattr(self, attr_name)
         else:
-          print('NLL prediction does not exist for {}'.format(obs_label))
           return
         
         # Get correction
@@ -788,7 +793,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       if hasattr(self, attr_name):
         h = getattr(self, attr_name)
       else:
-        print('NP prediction does not exist for {}'.format(obs_label))
         return
         
       h.SetMarkerSize(1.5)
