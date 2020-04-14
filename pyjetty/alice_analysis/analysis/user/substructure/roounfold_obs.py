@@ -5,7 +5,7 @@ import os
 import argparse
 import itertools
 from array import *
-import numpy
+import numpy as np
 import ROOT
 import yaml
 
@@ -232,7 +232,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   def create_output_dirs(self):
 
     dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt',
-            'Unfolded_ratio', 'Unfolded_stat_uncert', 'Test_StatisticalClosure', 'Test_Refolding']
+            'Unfolded_ratio', 'Unfolded_stat_uncert', 'Test_StatisticalClosure',
+            'Test_Refolding', 'Correlation_Coefficients']
     for i in dirs:
       output_dir = os.path.join(self.output_dir, i)
       setattr(self, 'output_dir_{}'.format(i), output_dir)
@@ -380,10 +381,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       # Write result to file
       hUnfolded.Write()
 
-      # Plot Pearson correlation coeffs for each k, to get a measure of
+      # Plot Pearson correlation coeffs for each iteration, to get a measure of
       # the correlation between the bins
-      covarianceMatrix = unfold_bayes.Ereco(self.errorType) # Get the covariance matrix
-      #plotCorrelationCoefficients(covarianceMatrix, i, output_dir, file_format)
+      covariance_matrix = unfold_bayes.Ereco(self.errorType) # Get the covariance matrix
+      self.plot_correlation_coefficients(covariance_matrix, jetR, obs_label, i)
 
     fResult.Close()
     print('Done unfolding')
@@ -941,6 +942,43 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     outf_name = '{}{}'.format(hResponse_Obs.GetName(), self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     self.utils.plot_hist(hResponse_Obs_Normalized, outf_name, 'colz', False, True, text)
+
+  #################################################################################################
+  # Plot correlation coefficients
+  # Note: At the moment this directly plots the global bin index correlation...which
+  #       as far as I can tell is what RooUnfold gives us (it maps the 4D RM into 2D)
+  #################################################################################################
+  def plot_correlation_coefficients(self, covariance_matrix, jetR, obs_label, i):
+
+    nBinsX = covariance_matrix.GetNrows()
+    nBinsY = covariance_matrix.GetNcols()
+    
+    correlation_coefficient_matrix = ROOT.TH2D('correlation_coefficient_matrix', 'correlation_coefficient_matrix', nBinsX, 0, nBinsX, nBinsY, 0, nBinsY)
+    correlation_coefficient_matrix.GetXaxis().SetTitle('bin #')
+    correlation_coefficient_matrix.GetYaxis().SetTitle('bin #')
+
+    for xbin in range(0, nBinsX):
+      varianceX = covariance_matrix(xbin, xbin)
+      sigmaX = np.sqrt(varianceX)
+
+      for ybin in range(0, nBinsY):
+        varianceY = covariance_matrix(ybin, ybin)
+        sigmaY = np.sqrt(varianceY)
+        
+        covXY = covariance_matrix(xbin, ybin)
+        if sigmaX > 0 and sigmaY > 0:
+          Cxy = covXY / (sigmaX * sigmaY)
+          correlation_coefficient_matrix.SetBinContent(xbin+1, ybin+1, Cxy)
+
+          if self.debug_level > 2:
+            print('sigma x: {}, sigmay: {}'.format(sigmaX, sigmaY))
+            print('cov (x,y) = {}'.format(covXY))
+            print('Cxy = {}'.format(Cxy))
+
+    output_dir = os.path.join(self.output_dir, 'Correlation_Coefficients')
+    outputFilename = os.path.join(output_dir, 'hCorrelationCoefficientMatrix{}{}'.format(i, self.file_format))
+    self.utils.plot_hist(correlation_coefficient_matrix, outputFilename, 'colz')
+
 
   #################################################################################################
   # Perform refolding test and statistical closure test
