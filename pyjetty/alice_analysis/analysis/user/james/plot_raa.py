@@ -41,28 +41,40 @@ class PlotRAA(common_base.CommonBase):
     #self.figure_approval_status = config['figure_approval_status']
     self.figure_approval_status = 'Work in progress'
     
-    output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_63515_62950_dev/theta_g/'
-    name = 'hRAA.pdf'
-    self.output_filename = os.path.join(output_dir, name)
+    self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_63515_62950_dev/RAA/'
  
-    self.file_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_53358/theta_g/final_results/fFinalResults.root'
-    self.file_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_63515_62950_dev/theta_g/final_results/fFinalResults.root'
- 
-    self.observable = 'theta_g'
+    self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_53358/'
+    self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_63515_62950_dev/'
+    
+    self.observables = ['theta_g', 'zg']
     self.obs_label = 'zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
     self.jetR = 0.4
     self.min_pt = 60
     self.max_pt = 80
-    if self.observable == 'theta_g':
-      self.xtitle = '#theta_{g}'
-      self.ytitle = '#frac{{1}}{{#it{{N}}_{{jets, inc}}}} #frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
- 
-    self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
-    self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
     
-    self.main_result_name_AA = 'hmain_{}_R0.2_SD_{}_n3_{}-{}'.format(self.observable, self.obs_label, self.min_pt, self.max_pt)
-    self.sys_total_name_AA = 'hResult_{}_systotal_R0.2_SD_{}_n3_{}-{}'.format(self.observable, self.obs_label, self.min_pt, self.max_pt)
+    if not os.path.exists(self.output_dir):
+      os.makedirs(self.output_dir)
+
+  #---------------------------------------------------------------
+  # Initialize config file into class members
+  #---------------------------------------------------------------
+  def init_observable(self, observable):
+  
+    self.file_pp_name = os.path.join(self.filedir_pp_name, '{}/final_results/fFinalResults.root'.format(observable))
+    self.file_AA_name = os.path.join(self.filedir_AA_name, '{}/final_results/fFinalResults.root'.format(observable))
+
+    if observable == 'theta_g':
+      self.xtitle = '#theta_{g}'
+    if observable == 'zg':
+      self.xtitle = 'z_{g}'
+    self.ytitle = '#frac{{1}}{{#it{{N}}_{{jets, inc}}}} #frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
+ 
+    self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
+    self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
+    
+    self.main_result_name_AA = 'hmain_{}_R0.2_SD_{}_n3_{}-{}'.format(observable, self.obs_label, self.min_pt, self.max_pt)
+    self.sys_total_name_AA = 'hResult_{}_systotal_R0.2_SD_{}_n3_{}-{}'.format(observable, self.obs_label, self.min_pt, self.max_pt)
  
     self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
     self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
@@ -76,11 +88,24 @@ class PlotRAA(common_base.CommonBase):
     self.colors = [600-6, 632-4, 416-2]
     self.markers = [20, 21, 33]
     
+    name = 'hRAA_{}.pdf'.format(observable)
+    self.output_filename = os.path.join(self.output_dir, name)
+      
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
   #----------------------------------------------------------------------
-  def plot_final_result(self):
-    print('Plot final results for {}: R = {}, {}'.format(self.observable, self.jetR, self.obs_label))
+  def plot_raa(self):
+  
+    for observable in self.observables:
+  
+      self.init_observable(observable)
+      self.plot_final_result(observable)
+  
+  #---------------------------------------------------------------
+  # This function is called once for each subconfiguration
+  #----------------------------------------------------------------------
+  def plot_final_result(self, observable):
+    print('Plot final results for {}: R = {}, {}'.format(observable, self.jetR, self.obs_label))
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -244,4 +269,4 @@ if __name__ == '__main__':
   print('configFile: \'{0}\''.format(args.configFile))
   
   analysis = PlotRAA(config_file = args.configFile)
-  analysis.plot_final_result()
+  analysis.plot_raa()
