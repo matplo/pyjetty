@@ -290,11 +290,12 @@ class ProcessMC(process_base.ProcessBase):
                   self.create_theta_g_histograms(observable, jetR, grooming_label, R_max)
               
               if self.thermal_model:
-                name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
-                h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
-                h.GetXaxis().SetTitle('p_{T,ch jet}')
-                h.GetYaxis().SetTitle('#theta_{g,ch}')
-                setattr(self, name, h)
+                for R_max in self.max_distance:
+                  name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
+                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
+                  h.GetXaxis().SetTitle('p_{T,ch jet}')
+                  h.GetYaxis().SetTitle('#theta_{g,ch}')
+                  setattr(self, name, h)
 
         if observable == 'zg':
         
@@ -309,11 +310,12 @@ class ProcessMC(process_base.ProcessBase):
                   self.create_zg_histograms(observable, jetR, grooming_label, R_max)
 
               if self.thermal_model:
-                name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
-                h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
-                h.GetXaxis().SetTitle('p_{T,ch jet}')
-                h.GetYaxis().SetTitle('z_{g,ch}')
-                setattr(self, name, h)
+                for R_max in self.max_distance:
+                  name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
+                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+                  h.GetXaxis().SetTitle('p_{T,ch jet}')
+                  h.GetYaxis().SetTitle('z_{g,ch}')
+                  setattr(self, name, h)
               
         if observable == 'subjet_z':
 
@@ -689,7 +691,7 @@ class ProcessMC(process_base.ProcessBase):
           self.hNevents.Fill(0)
         return
       
-      self.fill_det_before_matching(jet_det, jetR)
+      self.fill_det_before_matching(jet_det, jetR, R_max)
   
     # Fill truth-level jet histograms (before matching)
     for jet_truth in jets_truth_selected:
@@ -784,7 +786,7 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill det jet histograms
   #---------------------------------------------------------------
-  def fill_det_before_matching(self, jet, jetR):
+  def fill_det_before_matching(self, jet, jetR, R_max):
     
     jet_pt = jet.pt()
     for constituent in jet.constituents():
@@ -850,11 +852,11 @@ class ProcessMC(process_base.ProcessBase):
 
         # Fill histograms
         observable = 'theta_g'
-        name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+        name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
         getattr(self, name).Fill(jet_pt, theta_g_det)
          
         observable = 'zg'
-        name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+        name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
         getattr(self, name).Fill(jet_pt, zg_det)
         
   #---------------------------------------------------------------
