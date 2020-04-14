@@ -235,12 +235,8 @@ class RunAnalysis(common_base.CommonBase):
         response = self.trkeff_response
       elif systematic == 'prior1':
         prior_variation_parameter = self.prior1_variation_parameter
-        shutil.copyfile(main_response_location, os.path.join(output_dir, 'response.root'))
-        rebin_response = False
       elif systematic == 'prior2':
         prior_variation_parameter = self.prior2_variation_parameter
-        shutil.copyfile(main_response_location, os.path.join(output_dir, 'response.root'))
-        rebin_response = False
       elif systematic == 'truncation':
         truncation = True
       elif systematic == 'binning':
