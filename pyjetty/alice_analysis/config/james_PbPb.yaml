@@ -22,6 +22,7 @@ fast_simulation: False
 
 constituent_subtractor:
   max_distance: [0.05, 0.25, 0.7]
+  main_R_max: 0.25
   alpha: 0
   max_eta: 0.9
   bge_rho_grid_size: 1.0

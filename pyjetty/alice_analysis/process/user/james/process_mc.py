@@ -147,6 +147,7 @@ class ProcessMC(process_base.ProcessBase):
     if self.do_constituent_subtraction:
         self.is_pp = False
         self.emb_file_list = config['emb_file_list']
+        self.main_R_max = config['constituent_subtractor']['main_R_max']
     else:
         self.is_pp = True
         
@@ -288,6 +289,8 @@ class ProcessMC(process_base.ProcessBase):
               else:
                 for R_max in self.max_distance:
                   self.create_theta_g_histograms(observable, jetR, grooming_label, R_max)
+                  if R_max == self.main_R_max:
+                    self.create_theta_g_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
               
               if self.thermal_model:
                 for R_max in self.max_distance:
@@ -308,6 +311,8 @@ class ProcessMC(process_base.ProcessBase):
               else:
                 for R_max in self.max_distance:
                   self.create_zg_histograms(observable, jetR, grooming_label, R_max)
+                  if R_max == self.main_R_max:
+                    self.create_zg_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
 
               if self.thermal_model:
                 for R_max in self.max_distance:
@@ -463,7 +468,7 @@ class ProcessMC(process_base.ProcessBase):
   # Create theta_g response histograms
   #---------------------------------------------------------------
   def create_theta_g_histograms(self, observable, jetR, grooming_label, R_max = None):
-            
+
     if R_max:
       suffix = '_Rmax{}'.format(R_max)
     else:
@@ -494,7 +499,7 @@ class ProcessMC(process_base.ProcessBase):
   # Create theta_g response histograms
   #---------------------------------------------------------------
   def create_zg_histograms(self, observable, jetR, grooming_label, R_max = None):
-        
+
     if R_max:
       suffix = '_Rmax{}'.format(R_max)
     else:
@@ -1038,13 +1043,6 @@ class ProcessMC(process_base.ProcessBase):
           zg_det = jet_det_dg_lund.z()
           zg_truth = jet_truth_dg_lund.z()
         
-        # Fill histograms
-        observable = 'theta_g'
-        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max)
-          
-        observable = 'zg'
-        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max)
-          
         # Fill Lund planes
         if 'sd' in grooming_setting:
 
@@ -1056,11 +1054,11 @@ class ProcessMC(process_base.ProcessBase):
           if 'dg' in grooming_setting:
             groomer_list = [sd, dy_groomer]
             if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
-              self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD+DG')
+              prong_match = self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD+DG')
           else:
             groomer_list = [sd]
             if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
-              self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD')
+              prong_match = self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD')
       
         elif 'dg' in grooming_setting:
 
@@ -1070,7 +1068,18 @@ class ProcessMC(process_base.ProcessBase):
             getattr(self, name).Fill(lund_coords[0], lund_coords[1])
               
           if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
-            self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg_lund, [dy_groomer], jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'DG')
+            prong_match = self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_dg_lund, [dy_groomer], jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'DG')
+
+        # If PbPb, fill extra RM only for successful prong matches
+        if self.is_pp:
+          prong_match = False
+        
+        # Fill histograms
+        observable = 'theta_g'
+        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
+          
+        observable = 'zg'
+        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
 
         # Fill jet axis difference
         if 'jet_axis' in self.observable_list:
@@ -1138,7 +1147,7 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_groomed_response(self, observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, obs_det, obs_truth, grooming_setting, obs_grooming_settings, grooming_label, R_max):
+  def fill_groomed_response(self, observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, obs_det, obs_truth, grooming_setting, obs_grooming_settings, grooming_label, R_max, prong_match = False):
   
     if grooming_setting in obs_grooming_settings:
 
@@ -1148,7 +1157,7 @@ class ProcessMC(process_base.ProcessBase):
       if not self.is_pp:
         name += '_Rmax{}'.format(R_max)
       getattr(self, name).Fill(x_array)
-      
+        
       if obs_truth > 1e-5:
         obs_resolution = (obs_det - obs_truth) / obs_truth
         name = 'hRelativeResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
@@ -1161,6 +1170,19 @@ class ProcessMC(process_base.ProcessBase):
       if not self.is_pp:
         name += '_Rmax{}'.format(R_max)
       getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
+      
+      # Fill prong-matched response
+      if not self.is_pp and R_max == self.main_R_max:
+        if prong_match:
+        
+          name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
+          getattr(self, name).Fill(x_array)
+          
+          name = 'hRelativeResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
+          getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
+          
+          name = 'hResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
+          getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
 
   #---------------------------------------------------------------
   # Do prong-matching
@@ -1379,6 +1401,11 @@ class ProcessMC(process_base.ProcessBase):
                     getattr(self, 'hProngMatching_subleading_leading_N_untagged_JetPtDet_R{}_{}_80-100_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(z, N_subleading_pp_det, N_leading_pp_det)
                 elif  matched_pt_subleading_leading > 0.5:
                     getattr(self, 'hProngMatching_subleading_leading_N_tagged_JetPtDet_R{}_{}_80-100_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(z, N_subleading_pp_det, N_leading_pp_det)
+        
+    subleading_match = (matched_pt_subleading_subleading > 0.5)
+    leading_match = (matched_pt_leading_leading > 0.5)
+    prong_match = subleading_match and leading_match
+    return prong_match
         
   #---------------------------------------------------------------
   # Compute theta_g
