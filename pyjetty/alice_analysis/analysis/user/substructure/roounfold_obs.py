@@ -619,13 +619,16 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     h = self.get_unfolded_result(jetR, obs_label, i, min_pt_truth, max_pt_truth, option)
 
-    for bin in range(1, h.GetNbinsX()+1):
-      content = h.GetBinContent(bin)
-      uncertainty = h.GetBinError(bin)
+    for bin_n in range(1, h.GetNbinsX()+1):
+      content = h.GetBinContent(bin_n)
+      uncertainty = h.GetBinError(bin_n)
       if content < 1e-10:
-        print('content of {} in bin {} is {}'.format(h.GetName(), bin, content))
-      h.SetBinContent(bin, uncertainty/content * 100)
-      h.SetBinError(bin, 0)
+        print('Warning: content of {} in bin {} is {}'.format(h.GetName(), bin_n, content))
+        print('Setting unfolded uncertainty to 0 to prevent div by 0 error.')
+        h.SetBinContent(bin_n, 0)
+      else:
+        h.SetBinContent(bin_n, uncertainty/content * 100)
+      h.SetBinError(bin_n, 0)
 
     return h
 
@@ -1279,7 +1282,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     h.SetLineWidth(2)
     h.SetLineStyle(1)
 
-    h.Scale(1./h.Integral(), scalingOptions)
+    integral = h.Integral()
+    if integral < 1e-10:
+      print("Warning: scaling skipped for histogram {} since integral is {}".format(h.GetName(), integral))
+    else:
+      h.Scale(1./integral, scalingOptions)
+
     if '_pt_' in outputFilename:
       h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{p}_{T}}')
     else:
