@@ -10,7 +10,7 @@
 # The process step is intended  to loop over all observables simultaneously
 # The analysis step is intended to run for a single observable block
 
-process_observables: ['theta_g', 'zg', 'subjet_z', 'jet_axis']
+process_observables: ['theta_g', 'zg']
 jetR: [0.2, 0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
@@ -26,7 +26,7 @@ thermal_model:
   sigma_N: 500
 
 constituent_subtractor:
-  max_distance: 0.25
+  max_distance: [0.05, 0.25, 0.7]
   alpha: 0
   max_eta: 0.9
   bge_rho_grid_size: 1.0
