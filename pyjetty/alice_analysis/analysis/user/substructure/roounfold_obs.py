@@ -27,7 +27,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #---------------------------------------------------------------
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='',
                output_dir='', file_format='', rebin_response=False, truncation=False,
-               binning=False, prior_variation_parameter=0., **kwargs):
+               binning=False, prior_variation_parameter=0., R_max = None, **kwargs):
 
     super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file,
                                         output_dir, file_format, **kwargs)
@@ -39,6 +39,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.truncation = truncation
     self.binning = binning
     self.prior_variation_parameter = prior_variation_parameter
+    self.R_max = R_max
 
     self.initialize_config()
 
@@ -50,7 +51,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
 
         fResult_name = os.path.join(self.output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
         setattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label), fResult_name)
@@ -73,7 +74,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
         self.unfold_single_setting(jetR, obs_label, obs_setting, grooming_setting)
 
   #---------------------------------------------------------------
@@ -112,7 +113,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       for i, _ in enumerate(self.obs_subconfig_list):
 
         config_name = self.obs_subconfig_list[i]
-        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i], self.R_max)
 
         pt_det_bins_name = 'pt_bins_det'
         if self.truncation:
@@ -176,7 +177,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       for i, _ in enumerate(self.obs_subconfig_list):
 
-        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i], self.R_max)
 
         name_thn = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
@@ -1463,5 +1464,6 @@ if __name__ == '__main__':
                            input_file_response = args.inputFileResponse,
                            config_file = args.configFile, output_dir = args.outputDir,
                            file_format = args.imageFormat, rebin_response=True,
-                           truncation=False, binning=False, prior_variation_parameter=0.)
+                           truncation=False, binning=False, prior_variation_parameter=0.,
+                           R_max = None)
   analysis.roounfold_obs()

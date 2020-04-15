@@ -101,13 +101,15 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get label from obs_setting and grooming_setting
   #---------------------------------------------------------------
-  def obs_label(self, obs_setting, grooming_setting):
+  def obs_label(self, obs_setting, grooming_setting, R_max = None):
 
     obs_label = ''
     if obs_setting:
       obs_label += '{}'.format(obs_setting)
     if grooming_setting:
       obs_label += '{}'.format(self.grooming_label(grooming_setting))
+    if R_max:
+      obs_label += '_Rmax{}'.format(R_max)
     return obs_label
 
   #---------------------------------------------------------------

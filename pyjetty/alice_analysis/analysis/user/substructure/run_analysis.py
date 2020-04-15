@@ -84,6 +84,14 @@ class RunAnalysis(common_base.CommonBase):
     self.do_plot_final_result = config['do_plot_final_result']
     self.force_rebin_response=config['force_rebin']
     self.do_plot_performance = config['do_plot_performance']
+    
+    # Set whether pp or PbPb
+    if 'constituent_subtractor' in config:
+        self.is_pp = False
+        self.R_max = config['constituent_subtractor']['main_R_max']
+    else:
+        self.is_pp = True
+        self.R_max = None
 
     # Get the sub-configs to unfold
     self.jetR_list = config['jetR']
@@ -109,7 +117,7 @@ class RunAnalysis(common_base.CommonBase):
     for i, _ in enumerate(self.obs_subconfig_list):
 
       config_name = self.obs_subconfig_list[i]
-      obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
+      obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i], self.R_max)
 
       pt_bins_truth = (self.obs_config_dict[config_name]['pt_bins_truth'])
       n_pt_bins_truth = len(pt_bins_truth) - 1
@@ -196,7 +204,7 @@ class RunAnalysis(common_base.CommonBase):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
 
         # Compute systematics and attach to main results
         if self.do_systematics:
@@ -246,7 +254,7 @@ class RunAnalysis(common_base.CommonBase):
                                              output_dir, self.file_format,
                                              rebin_response=rebin_response,
                                              prior_variation_parameter=prior_variation_parameter,
-                                             truncation=truncation, binning=binning)
+                                             truncation=truncation, binning=binning, R_max=self.R_max)
       analysis.roounfold_obs()
 
 
