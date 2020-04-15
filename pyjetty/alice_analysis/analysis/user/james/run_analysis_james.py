@@ -42,20 +42,21 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     self.jet_matching_distance = config['jet_matching_distance']
     
-    if 'constituent_subtractor' in config:
-        self.is_pp = False
-    else:
-        self.is_pp = True
-    print('is_pp: {}'.format(self.is_pp))
-
     # Theory comparisons
     if 'fPythia' in config:
       self.fPythia_name = config['fPythia']
+      
     if 'fNLL' in config:
       self.fNLL = config['fNLL']
+    else:
+      self.fNLL = False
+
     if 'fNPcorrection_numerator' in config and 'fNPcorrection_denominator' in config:
+      self.NPcorrection = True
       self.fNPcorrection_numerator = config['fNPcorrection_numerator']
       self.fNPcorrection_denominator = config['fNPcorrection_denominator']
+    else:
+      self.NPcorrection = False
 
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -71,10 +72,12 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       if 'sd' in grooming_setting:
 
         # Construct NP correction, and store as an attribute
-        self.construct_NPcorrections(jetR, obs_label)
+        if self.NPcorrection:
+          self.construct_NPcorrections(jetR, obs_label)
       
         # Construct TGraph of NLL predictions
-        self.construct_nll_tgraphs(jetR, obs_label, obs_setting, grooming_setting)
+        if self.fNLL:
+          self.construct_nll_tgraphs(jetR, obs_label, obs_setting, grooming_setting)
   
   #---------------------------------------------------------------
   # This function is called once after all subconfigurations have been looped over, for each R
@@ -125,8 +128,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.plotting_utils.plot_DeltaR(jetR, self.jet_matching_distance)
       self.plotting_utils.plot_JES(jetR)
       self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
-      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
-      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
+      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0], self.R_max))
+      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0], self.R_max))
       
       if not self.is_pp:
         self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
@@ -136,7 +139,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
@@ -175,7 +178,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         for i, _ in enumerate(self.obs_subconfig_list):
           obs_setting = self.obs_settings[i]
           grooming_setting = self.grooming_settings[i]
-          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+          obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'untagged')
 
@@ -509,7 +512,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
       
       if subconfig_name == overlay_list[0]:
         marker = 20
@@ -589,10 +592,10 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
-          myBlankHisto2.GetYaxis().SetRangeUser(0.5, 2.)
+          myBlankHisto2.GetYaxis().SetRangeUser(0., 2.)
           myBlankHisto2.Draw()
         
-          line = ROOT.TLine(0,1,xmax,1)
+          line = ROOT.TLine(xmin,1,xmax,1)
           line.SetLineColor(920+2)
           line.SetLineStyle(2)
           line.Draw()
@@ -777,7 +780,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
       
       if subconfig_name == overlay_list[0]:
         marker = 20
@@ -874,7 +877,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
       
       h = getattr(self, name.format(obs_label))
       if h.GetMaximum() > max:
