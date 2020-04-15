@@ -279,7 +279,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.57, 0.73, text)
 
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
     text_latex.DrawLatex(0.57, 0.66, text)
     
     subobs_label = self.utils.formatted_subobs_label(self.observable)
@@ -587,7 +587,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.75, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
     text_latex.DrawLatex(0.25, 0.69, text)
     
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'

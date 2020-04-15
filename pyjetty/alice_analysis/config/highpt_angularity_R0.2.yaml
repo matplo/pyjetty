@@ -1,6 +1,6 @@
 # Processing parameters
 #jetR: [0.2, 0.4]
-jetR: [0.4]
+jetR: [0.2]
 betas: [0.5, 1, 1.5, 2, 3]
 
 # Initial detector-level binnings. Distributions are rebinned via configs before unfolding
@@ -30,67 +30,68 @@ ang:
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#lambda_{#beta}}'
     pt_bins_reported: [20, 40, 60, 80]
     plot_overlay_list:
-      - ['config_R0.4_B1', 'config_R0.4_B1.5', 'config_R0.4_B2', 'config_R0.4_B3']
+      - ['config_R0.2_B1', 'config_R0.2_B1.5', 'config_R0.2_B2', 'config_R0.2_B3']
     max_reg_param: 10
 
   # Different R & beta configurations
-  config_R0.4_B1:
-    R: 0.4
+  config_R0.2_B1:
+    R: 0.2
     beta: 1
     pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 80]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 30, 35, 40, 45, 50, 60, 85]
-    obs_bins_truth: [0, 0.1, 0.14, 0.18, 0.22, 0.26, 0.3, 0.35, 0.4, 0.5, 0.7]
-    obs_bins_det: [0, 0.05, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 
-                      0.33, 0.36, 0.40, 0.45, 0.5, 0.65]
-    obs_bins_det_sys_binning: [0, 0.06, 0.08, 0.1, 0.125, 0.15, 0.175, 0.20, 0.225, 0.25, 0.275, 0.30, 
+    obs_bins_truth: [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.45, 0.7]
+    obs_bins_det: [0, 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 
+                   0.33, 0.36, 0.40, 0.45, 0.5, 0.65]
+    obs_bins_det_sys_binning: [0, 0.06, 0.105, 0.125, 0.15, 0.175, 0.20, 0.225, 0.25, 0.275, 0.30, 
                       0.34, 0.38, 0.42, 0.5, 0.7]
 
-  config_R0.4_B1.5:
-    R: 0.4
+  config_R0.2_B1.5:
+    R: 0.2
     beta: 1.5
     pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 80]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 30, 35, 40, 45, 50, 60, 85]
-    obs_bins_truth: [0, 0.03, 0.06, 0.1, 0.15, 0.2, 0.25, 0.35, 0.5]
+    obs_bins_truth: [0, 0.03, 0.06, 0.1, 0.15, 0.2, 0.3, 0.50]
     obs_bins_det: [0, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
-                      0.20, 0.22, 0.24, 0.26, 0.30, 0.35, 0.45]
+                   0.20, 0.22, 0.24, 0.26, 0.30, 0.35, 0.45]
     obs_bins_det_sys_binning: [0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19,
                       0.21, 0.23, 0.25, 0.27, 0.30, 0.35, 0.5]
 
-  config_R0.4_B2:
-    R: 0.4
+  config_R0.2_B2:
+    R: 0.2
     beta: 2
     pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 80]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 30, 35, 40, 45, 50, 60, 85]
-    obs_bins_truth: [0, 0.02, 0.04, 0.07, 0.1, 0.15, 0.2, 0.3, 0.45]
+    obs_bins_truth: [0, 0.02, 0.04, 0.07, 0.1, 0.13, 0.16, 0.2, 0.45]
     obs_bins_det: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14,
-                      0.16, 0.18, 0.20, 0.25, 0.30, 0.40]
+                   0.16, 0.18, 0.20, 0.25, 0.30, 0.40]
     obs_bins_det_sys_binning: [0, 0.015, 0.03, 0.045, 0.055, 0.065, 0.075, 0.085, 0.105, 0.13, 0.15,
                       0.17, 0.20, 0.25, 0.30, 0.45]
 
-  config_R0.4_B3:
-    R: 0.4
+  config_R0.2_B3:
+    R: 0.2
     beta: 3
     pt_bins_truth:  [5, 10, 20, 40, 60, 80, 100]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 80]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 30, 35, 40, 45, 50, 60, 85]
-    obs_bins_truth: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.25, 0.4]
+    obs_bins_truth: [0, 0.02, 0.04, 0.06, 0.08, 0.15, 0.4]
     obs_bins_det: [0, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06,
                    0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.20, 0.30]
     obs_bins_det_sys_binning: [0, 0.01, 0.015, 0.025, 0.03, 0.04, 0.045, 0.055, 0.065,
                    0.075, 0.085, 0.095, 0.105, 0.13, 0.145, 0.165, 0.19, 0.21, 0.35]
 
+
 ###############################################################################
 # Analysis & plotting parameters
 file_format: ".png"
-output_dir: "./TestAngR04"
+output_dir: "./TestAngR02_highpt"
 roounfold_path: "/home/ezra/RooUnfold/libRooUnfold.so"
 
 analysis_observable: 'ang'
 do_unfolding: True
-force_rebin: True
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
@@ -108,8 +109,8 @@ systematics_list:
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/44195/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/61681/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/61683/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/61541/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/61682/AnalysisResultsFinal.root'
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5

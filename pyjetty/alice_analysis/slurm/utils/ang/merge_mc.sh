@@ -2,7 +2,7 @@
 #
 # Script to merge output ROOT files
 SUBDIR="ang"
-JOB_ID=59460
+JOB_ID=60289
 OUTPUT_DIR="/rstorage/alice/AnalysisResults/$SUBDIR/$JOB_ID"
 
 # Merge all output files from each pt-hat bin
