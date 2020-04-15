@@ -15,7 +15,7 @@ fi
 if [ "$2" != "" ]; then
   JOB_ID=$2
   echo "Job ID: $JOB_ID"
-else
+else 
   echo "Wrong command line arguments"
 fi
 
@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /software/users/james/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/james/process_mc.py -c config/james_pp.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+pipenv run python process/user/james/process_mc.py -c config/theta_g/pp/james_pp_trkeff.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/james/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}/
