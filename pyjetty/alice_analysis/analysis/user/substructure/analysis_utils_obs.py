@@ -85,7 +85,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     elif self.observable == 'jet_axis':
       return (1 + obs_true)
     elif self.observable == 'ang':
-      return (1 + obs_true)
+      return math.pow(obs_true, 1 + prior_variation_parameter)
 
     # Else observable has not been implemented
     raise ValueError('No observable is defined in prior_scale_factor_obs()!')
