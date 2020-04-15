@@ -70,7 +70,7 @@ class ProcessData(process_base.ProcessBase):
     
     # Create constituent subtractor, if configured
     if not self.is_pp:
-      self.constituent_subtractor = CEventSubtractor(max_distance=self.max_distance, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR)
+      self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) for R_max in self.max_distance]
     
     print(self)
 
@@ -163,22 +163,38 @@ class ProcessData(process_base.ProcessBase):
           for grooming_setting in self.obs_grooming_settings[observable]:
             if grooming_setting:
               grooming_label = self.utils.grooming_label(grooming_setting)
-              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('#theta_{g,ch}')
-              setattr(self, name, h)
+              if self.is_pp:
+                name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+                h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
+                h.GetXaxis().SetTitle('p_{T,ch jet}')
+                h.GetYaxis().SetTitle('#theta_{g,ch}')
+                setattr(self, name, h)
+              else:
+                for R_max in self.max_distance:
+                  name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
+                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
+                  h.GetXaxis().SetTitle('p_{T,ch jet}')
+                  h.GetYaxis().SetTitle('#theta_{g,ch}')
+                  setattr(self, name, h)
             
         if observable == 'zg':
         
           for grooming_setting in self.obs_grooming_settings[observable]:
             if grooming_setting:
               grooming_label = self.utils.grooming_label(grooming_setting)
-              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('z_{g,ch}')
-              setattr(self, name, h)
+              if self.is_pp:
+                name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, grooming_label)
+                h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+                h.GetXaxis().SetTitle('p_{T,ch jet}')
+                h.GetYaxis().SetTitle('z_{g,ch}')
+                setattr(self, name, h)
+              else:
+                for R_max in self.max_distance:
+                  name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
+                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+                  h.GetXaxis().SetTitle('p_{T,ch jet}')
+                  h.GetYaxis().SetTitle('z_{g,ch}')
+                  setattr(self, name, h)
               
         if observable == 'subjet_z':
         
@@ -219,52 +235,82 @@ class ProcessData(process_base.ProcessBase):
     print('Find jets...')
     fj.ClusterSequence.print_banner()
     print()
+  
+    # Use list comprehension to do jet-finding and fill histograms
+    result = [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles]
     
-    for jetR in self.jetR_list:
-
-      print('--- {} seconds ---'.format(time.time() - self.start_time))
-
-      # Set jet definition and a jet selector
-      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-      print('jet definition is:', jet_def)
-      print('jet selector is:', jet_selector,'\n')
+    print('--- {} seconds ---'.format(time.time() - self.start_time))
+    print('Save thn...')
+    process_base.ProcessBase.save_thn_th3_objects(self)
       
-      # Use list comprehension to do jet-finding and fill histograms
-      result = [self.analyzeJets(fj_particles, jet_def, jet_selector) for fj_particles in self.df_fjparticles]
-      
-      print('Save thn...')
-      process_base.ProcessBase.save_thn_th3_objects(self)
-        
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles, jet_def, jet_selector):
+  def analyze_event(self, fj_particles):
     
-    # Perform constituent subtraction
-    if not self.is_pp:
-      fj_particles = self.constituent_subtractor.process_event(fj_particles)
-      rho = self.constituent_subtractor.bge_rho.rho()
-      getattr(self, 'hRho').Fill(rho)
+    # Loop through jetR, and process event for each R
+    for jetR in self.jetR_list:
     
-    # Do jet finding
-    cs = fj.ClusterSequence(fj_particles, jet_def)
-    jets = fj.sorted_by_pt(cs.inclusive_jets())
-    jets_selected = jet_selector(jets)
+      # Keep track of whether to fill R-independent histograms
+      self.fill_R_indep_hists = (jetR == self.jetR_list[0])
+
+      # Set jet definition and a jet selector
+      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      if self.debug_level > 2:
+        print('jet definition is:', jet_def)
+        print('jet selector is:', jet_selector,'\n')
+        
+      # Analyze
+      if self.is_pp:
+      
+        # Do jet finding
+        cs = fj.ClusterSequence(fj_particles, jet_def)
+        jets = fj.sorted_by_pt(cs.inclusive_jets())
+        jets_selected = jet_selector(jets)
+      
+        self.analyze_jets(jets_selected, jetR)
+        
+      else:
+      
+        for i, R_max in enumerate(self.max_distance):
+            
+          if self.debug_level > 1:
+            print('R_max: {}'.format(R_max))
+            
+          # Keep track of whether to fill R_max-independent histograms
+          self.fill_Rmax_indep_hists = (i == 0)
+          
+          # Perform constituent subtraction
+          fj_particles = self.constituent_subtractor[i].process_event(fj_particles)
+          rho = self.constituent_subtractor[i].bge_rho.rho()
+          if self.fill_R_indep_hists and self.fill_Rmax_indep_hists:
+            getattr(self, 'hRho').Fill(rho)
+          
+          # Do jet finding (re-do each time, to make sure matching info gets reset)
+          cs = fj.ClusterSequence(fj_particles, jet_def)
+          jets = fj.sorted_by_pt(cs.inclusive_jets())
+          jets_selected = jet_selector(jets)
+          
+          self.analyze_jets(jets_selected, jetR, R_max = R_max)
+      
+  #---------------------------------------------------------------
+  # Analyze jets of a given event.
+  #---------------------------------------------------------------
+  def analyze_jets(self, jets_selected, jetR, R_max = None):
     
-    # Loop through jets and fill non-SD histograms
-    jetR = jet_def.R()
+    # Loop through jets and fill histos
     result = [self.analyze_accepted_jets(jet, jetR) for jet in jets_selected]
           
     # Loop through grooming settings and fill grooming histograms
     if len(self.grooming_settings) > 0:
-      result = [[self.analyze_groomed_jet(grooming_setting, jet, jetR) for grooming_setting in self.grooming_settings] for jet in jets_selected]
+      result = [[self.analyze_groomed_jet(grooming_setting, jet, jetR, R_max) for grooming_setting in self.grooming_settings] for jet in jets_selected]
         
   #---------------------------------------------------------------
   # Analyze groomed jets
   #---------------------------------------------------------------
-  def analyze_groomed_jet(self, grooming_setting, jet, jetR):
+  def analyze_groomed_jet(self, grooming_setting, jet, jetR, R_max):
   
     # Check additional acceptance criteria
     if not self.utils.is_det_jet_accepted(jet):
@@ -325,10 +371,14 @@ class ProcessData(process_base.ProcessBase):
       zg = jet_dg_lund.z()
       
     # Fill histograms
+    if R_max:
+      suffix = '_Rmax{}'.format(R_max)
+    else:
+      suffix = ''
     if grooming_setting in self.obs_grooming_settings['theta_g']:
-      getattr(self, 'h_theta_g_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, theta_g)
+      getattr(self, 'h_theta_g_JetPt_R{}_{}{}'.format(jetR, grooming_label, suffix)).Fill(jet_pt_ungroomed, theta_g)
     if grooming_setting in self.obs_grooming_settings['zg']:
-      getattr(self, 'h_zg_JetPt_R{}_{}'.format(jetR, grooming_label)).Fill(jet_pt_ungroomed, zg)
+      getattr(self, 'h_zg_JetPt_R{}_{}{}'.format(jetR, grooming_label, suffix)).Fill(jet_pt_ungroomed, zg)
 
     # Fill jet axis difference
     if 'jet_axis' in self.observable_list:
@@ -359,7 +409,8 @@ class ProcessData(process_base.ProcessBase):
     if 'subjet_z' in self.observable_list:
       result = [self.analyze_subjets(jet, jetR, subjetR) for subjetR in self.obs_settings['subjet_z']]
     
-    self.fill_jet_histograms(jet, jetR)
+    if self.is_pp or self.fill_Rmax_indep_hists:
+      self.fill_jet_histograms(jet, jetR)
 
   #---------------------------------------------------------------
   # Fill histograms
