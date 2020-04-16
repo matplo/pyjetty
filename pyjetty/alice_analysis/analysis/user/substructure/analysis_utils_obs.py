@@ -101,15 +101,13 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get label from obs_setting and grooming_setting
   #---------------------------------------------------------------
-  def obs_label(self, obs_setting, grooming_setting, R_max = None):
+  def obs_label(self, obs_setting, grooming_setting):
 
     obs_label = ''
     if obs_setting:
       obs_label += '{}'.format(obs_setting)
     if grooming_setting:
       obs_label += '{}'.format(self.grooming_label(grooming_setting))
-    if R_max:
-      obs_label += '_Rmax{}'.format(R_max)
     return obs_label
 
   #---------------------------------------------------------------
@@ -135,9 +133,12 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get name of response THn
   #---------------------------------------------------------------
-  def name_thn(self, observable, jetR, obs_label):
+  def name_thn(self, observable, jetR, obs_label, R_max = None):
   
-      return 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
+      if R_max:
+        return 'hResponse_JetPt_{}_R{}_{}_Rmax{}Scaled'.format(observable, jetR, obs_label, R_max)
+      else:
+        return 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
 
   #---------------------------------------------------------------
   # Get name of response THn, rebinned
@@ -149,9 +150,12 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get name of 2D data histogram
   #---------------------------------------------------------------
-  def name_data(self, observable, jetR, obs_label):
+  def name_data(self, observable, jetR, obs_label, R_max = None):
   
-      return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
+      if R_max:
+        return 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
+      else:
+        return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
   
   #---------------------------------------------------------------
   # Get name of 2D data histogram, rebinned

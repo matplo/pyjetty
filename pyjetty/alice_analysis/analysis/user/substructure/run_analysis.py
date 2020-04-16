@@ -117,7 +117,7 @@ class RunAnalysis(common_base.CommonBase):
     for i, _ in enumerate(self.obs_subconfig_list):
 
       config_name = self.obs_subconfig_list[i]
-      obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i], self.R_max)
+      obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
 
       pt_bins_truth = (self.obs_config_dict[config_name]['pt_bins_truth'])
       n_pt_bins_truth = len(pt_bins_truth) - 1
@@ -145,6 +145,11 @@ class RunAnalysis(common_base.CommonBase):
       self.prior1_variation_parameter = config['prior1_variation_parameter']
     if 'prior2' in self.systematics_list:
       self.prior2_variation_parameter = config['prior2_variation_parameter']
+      
+    if 'subtraction1' in self.systematics_list:
+      self.R_max1 = config['R_max_variation1']
+    if 'subtraction2' in self.systematics_list:
+      self.R_max2 = config['R_max_variation2']
 
     # Create output dirs
     self.file_format = config['file_format']
@@ -204,7 +209,7 @@ class RunAnalysis(common_base.CommonBase):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
         # Compute systematics and attach to main results
         if self.do_systematics:
@@ -238,6 +243,7 @@ class RunAnalysis(common_base.CommonBase):
       prior_variation_parameter = 0.
       truncation = False
       binning = False
+      R_max =  self.R_max
 
       if systematic == 'trkeff':
         response = self.trkeff_response
@@ -249,12 +255,16 @@ class RunAnalysis(common_base.CommonBase):
         truncation = True
       elif systematic == 'binning':
         binning = True
+      elif systematic == 'subtraction1':
+        R_max = self.R_max1
+      elif systematic == 'subtraction2':
+        R_max = self.R_max2
 
       analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file,
                                              output_dir, self.file_format,
                                              rebin_response=rebin_response,
                                              prior_variation_parameter=prior_variation_parameter,
-                                             truncation=truncation, binning=binning, R_max=self.R_max)
+                                             truncation=truncation, binning=binning, R_max=R_max)
       analysis.roounfold_obs()
 
 
