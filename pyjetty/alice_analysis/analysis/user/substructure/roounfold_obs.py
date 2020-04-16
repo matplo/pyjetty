@@ -924,6 +924,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       max_pt_truth = truth_pt_bin_array[bin+1]
 
       self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse)
+      
+    # Plot pt-response (summed over substructure observable)
+    self.plot_pt_response(jetR, obs_label, hResponse)
 
   #################################################################################################
   # Plot 2D observable response for a fixed range of pt-truth
@@ -952,6 +955,31 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     outf_name = '{}{}'.format(hResponse_Obs.GetName(), self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     self.utils.plot_hist(hResponse_Obs_Normalized, outf_name, 'colz', False, True, text)
+
+  #################################################################################################
+  # Plot 2D pt response
+  #################################################################################################
+  def plot_pt_response(self, jetR, obs_label, hResponse):
+
+    hResponse4D = hResponse.Clone()
+    hResponse4D.SetName('{}_pt'.format(hResponse4D.GetName()))
+
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
+    hResponse4D.GetAxis(1).SetRangeUser(truth_pt_bin_array[0], truth_pt_bin_array[-1])
+    
+    det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
+    hResponse4D.GetAxis(0).SetRangeUser(det_pt_bin_array[0], det_pt_bin_array[-1])
+
+    hResponse_Obs = hResponse4D.Projection(1, 0)
+    hResponse_Obs.SetName('hResponse_pt_R{}_{}'.format(self.utils.remove_periods(jetR),
+                                                              obs_label))
+
+    hResponse_Obs_Normalized = self.utils.normalize_response_matrix(hResponse_Obs)
+
+    output_dir = getattr(self, 'output_dir_RM')
+    outf_name = '{}{}'.format(hResponse_Obs.GetName(), self.file_format)
+    outf_name = os.path.join(output_dir, outf_name)
+    self.utils.plot_hist(hResponse_Obs_Normalized, outf_name, 'colz', False, True)
 
   #################################################################################################
   # Plot correlation coefficients
@@ -1344,7 +1372,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     h.GetYaxis().SetTitleSize(0.06)
     if '_pt_' in outputFilename:
-      h.GetYaxis().SetRangeUser(1e-4, 10.)
+      h.GetYaxis().SetRangeUser(0.1*h.GetMinimum(), 1e3*h.GetMaximum())
     else:
       h.GetYaxis().SetRangeUser(0., 3*h.GetMaximum())
 
