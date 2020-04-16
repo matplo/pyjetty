@@ -1372,7 +1372,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     h.GetYaxis().SetTitleSize(0.06)
     if '_pt_' in outputFilename:
-      h.GetYaxis().SetRangeUser(1e-4, 10.)
+      h.GetYaxis().SetRangeUser(0.1*h.GetMinimum(), 1e3*h.GetMaximum())
     else:
       h.GetYaxis().SetRangeUser(0., 3*h.GetMaximum())
 
