@@ -150,6 +150,12 @@ class RunAnalysis(common_base.CommonBase):
       self.R_max1 = config['R_max_variation1']
     if 'subtraction2' in self.systematics_list:
       self.R_max2 = config['R_max_variation2']
+      
+    if 'thermal_closure' in config:
+      self.do_thermal_closure = True
+      self.fThermal = config['thermal_closure']
+    else:
+      self.do_thermal_closure = False
 
     # Create output dirs
     self.file_format = config['file_format']
@@ -170,6 +176,9 @@ class RunAnalysis(common_base.CommonBase):
 
     for systematic in self.systematics_list:
       self.create_output_subdir(output_dir, systematic)
+      
+    if self.do_thermal_closure:
+      self.create_output_subdir(output_dir, 'thermal_closure')
 
     if self.do_systematics:
       output_dir_systematics = self.create_output_subdir(output_dir, 'systematics')
@@ -270,7 +279,18 @@ class RunAnalysis(common_base.CommonBase):
                                              truncation=truncation, binning=binning, R_max=R_max,
                                              prong_matching_response=prong_matching_response)
       analysis.roounfold_obs()
-
+      
+    # Unfold thermal closure test
+    if self.do_thermal_closure:
+    
+      output_dir = getattr(self, 'output_dir_thermal_closure')
+      rebin_response = self.check_rebin_response(output_dir)
+      
+      analysis = roounfold_obs.Roounfold_Obs(self.observable, self.fThermal, self.fThermal, self.config_file,
+                                             output_dir, self.file_format,
+                                             rebin_response=rebin_response,
+                                             R_max=R_max, thermal_model = True)
+      analysis.roounfold_obs()
 
   #----------------------------------------------------------------------
   def check_rebin_response(self, output_dir):
