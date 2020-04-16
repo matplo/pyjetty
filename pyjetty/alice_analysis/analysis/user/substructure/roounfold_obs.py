@@ -1059,8 +1059,13 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   def plot_refolding_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
 
-    hUnfolded = getattr(self, 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i))
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
+    hUnfolded = getattr(self, 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)).Clone()
+    hUnfolded.SetName('hUnfolded_{}_R{}_{}_{}-clone'.format(self.observable, jetR, obs_label, i))
+    
+    # Undo the kinematic efficiency correction -- we don't want to apply it for the refolding test
+    hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
+    hUnfolded.Multiply(hKinematicEfficiency)
 
     hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin
     # (unfolded spectrum is also PerBin at this point)
