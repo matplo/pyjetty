@@ -119,7 +119,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.plot_single_performance(output_dir_performance)
       
     else:
-    
+      
+      # Plot for each R_max
       for R_max in self.max_distance:
       
         output_dir_performance = os.path.join(self.output_dir_performance, 'Rmax{}'.format(R_max))
@@ -127,6 +128,15 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, output_dir_performance, self.figure_approval_status, R_max = R_max)
         
         self.plot_single_performance(output_dir_performance, R_max)
+
+        # Plot for thermal model
+        if self.do_thermal_closure and R_max == self.R_max:
+          
+          output_dir_performance = os.path.join(self.output_dir_performance, 'thermal')
+        
+          self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.fThermal, self.fThermal, output_dir_performance, self.figure_approval_status, R_max = R_max, thermal = True)
+          
+          self.plot_single_performance(output_dir_performance, R_max)
 
   #----------------------------------------------------------------------
   # This function is called once after all subconfigurations and jetR have been looped over
@@ -216,12 +226,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
           obs_label = self.utils.obs_label(obs_setting, grooming_setting)
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'untagged')
-          
-    if self.do_thermal_closure:
-      x = self.fThermal
-      RM = 'RM'
-      pp_truth = 'from_RM'
-      combined_det = 'h_zg_JetPt_R0.2_SD_zcut01_B0Scaled'
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):

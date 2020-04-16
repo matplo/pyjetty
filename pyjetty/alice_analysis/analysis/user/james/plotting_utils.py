@@ -28,7 +28,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, observable='', is_pp=False, fnameData='', fnameMC='', output_dir='.',
-               figure_approval_status='', R_max = None, **kwargs):
+               figure_approval_status='', R_max = None, thermal = False, **kwargs):
     super(PlottingUtils, self).__init__(**kwargs)
     
     self.observable = observable
@@ -43,6 +43,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.output_dir = output_dir
     self.figure_approval_status = figure_approval_status
     self.R_max = R_max
+    self.thermal = thermal
     
     if self.R_max:
       self.suffix = '_Rmax{}'.format(self.R_max)
@@ -414,11 +415,16 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     # (pt-det, pt-truth, obs-det, obs-truth)
     name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     hRM_obs = self.fMC.Get(name)
-    hRM_obs.Sumw2()
+    if hRM_obs.GetSumw2() is 0:
+      hRM_obs.Sumw2()
     
-    name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
+    if self.thermal:
+      name = 'h_{}_JetPt_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    else:
+      name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     hObs_JetPt = self.fData.Get(name)
-    hObs_JetPt.Sumw2()
+    if hObs_JetPt.GetSumw2() is 0:
+      hObs_JetPt.Sumw2()
 
     # Plot 2D statistics in data
     self.plot2D_obs_statistics(hObs_JetPt.Clone(), jetR, obs_label)
