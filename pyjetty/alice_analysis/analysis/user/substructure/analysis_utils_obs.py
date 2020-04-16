@@ -156,10 +156,13 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get name of 2D data histogram
   #---------------------------------------------------------------
-  def name_data(self, observable, jetR, obs_label, R_max = None):
+  def name_data(self, observable, jetR, obs_label, R_max = None, thermal_model = False):
   
       if R_max:
-        return 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
+        if thermal_model:
+          return 'h_{}_JetPt_R{}_{}_Rmax{}Scaled'.format(observable, jetR, obs_label, R_max)
+        else:
+          return 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
       else:
         return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
   

@@ -28,7 +28,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='',
                output_dir='', file_format='', rebin_response=False, truncation=False,
                binning=False, prior_variation_parameter=0., R_max = None,
-               prong_matching_response = False, **kwargs):
+               prong_matching_response = False, thermal_model = False, **kwargs):
 
     super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file,
                                         output_dir, file_format, **kwargs)
@@ -42,6 +42,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.prior_variation_parameter = prior_variation_parameter
     self.R_max = R_max
     self.prong_matching_response = prong_matching_response
+    self.thermal_model = thermal_model
 
     self.initialize_config()
 
@@ -150,7 +151,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
           name_thn = self.utils.name_thn(self.observable, jetR, obs_label, self.R_max, self.prong_matching_response)
           name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
-          name_data = self.utils.name_data(self.observable, jetR, obs_label, self.R_max)
+          name_data = self.utils.name_data(self.observable, jetR, obs_label, self.R_max, self.thermal_model)
           name_data_rebinned = self.utils.name_data_rebinned(self.observable, jetR, obs_label)
 
           name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, obs_label)
@@ -237,6 +238,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt',
             'Unfolded_ratio', 'Unfolded_stat_uncert', 'Test_StatisticalClosure',
             'Test_Refolding', 'Correlation_Coefficients']
+    if self.thermal_model:
+      dirs.append('Test_ThermalClosure')
+      
     for i in dirs:
       output_dir = os.path.join(self.output_dir, i)
       setattr(self, 'output_dir_{}'.format(i), output_dir)
@@ -600,7 +604,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Get unfolded result in 1D, for fixed slice of pt
   #################################################################################################
-  def get_unfolded_result(self, jetR, obs_label, i, min_pt_truth, max_pt_truth, option):
+  def get_unfolded_result(self, jetR, obs_label, i, min_pt_truth, max_pt_truth, option = ''):
 
     name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)
     h2D = getattr(self, name)
@@ -1016,6 +1020,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       # Unfold the smeared det-level result with response, and compare to truth-level MC.
       self.plot_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
+      
+    # Plot thermal closure test
+    if self.thermal_model:
+    
+      self.plot_thermal_closure_test(jetR, obs_label, obs_setting, grooming_setting, reg_param_final)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
@@ -1182,6 +1191,43 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.plot_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle,
                         0, 0, jetR, obs_label, obs_setting, grooming_setting, outf_name,
                         'width', legendTitle, h1LegendLabel, h2LegendLabel)
+
+  #################################################################################################
+  # Plot thermal closure test: unfolded result / truth
+  #################################################################################################
+  def plot_thermal_closure_test(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final):
+  
+    # Get MC truth
+    hMC_Truth = getattr(self, 'hMC_Truth_R{}_{}'.format(jetR, obs_label))
+  
+    # Loop through pt bins
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
+    for bin in range(1, n_pt_bins_truth-1):
+      min_pt_truth = truth_pt_bin_array[bin]
+      max_pt_truth = truth_pt_bin_array[bin+1]
+      
+      # Get unfolded result
+      hUnfolded_obs = self.get_unfolded_result(jetR, obs_label, reg_param_final, min_pt_truth, max_pt_truth)
+      
+      # Get MC truth projection
+      hMC_Truth.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+      hMCTruth_obs = hMC_Truth.ProjectionY()
+      hMCTruth_obs.SetName('hMCTruth_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, reg_param_final,
+                                                                 min_pt_truth, max_pt_truth))
+      
+      # Plot ratio
+      legendTitle = ''
+      h1LegendLabel = 'Unfolded result'
+      h2LegendLabel = 'MC-truth'
+      ratioYAxisTitle = 'Unfolded / Truth'
+      output_dir = getattr(self, 'output_dir_Test_ThermalClosure')
+      outf_name = 'hThermalClosure_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR),
+                                                   obs_label, min_pt_truth, max_pt_truth, self.file_format)
+      outf_name = os.path.join(output_dir, outf_name)
+      self.plot_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle,
+                          min_pt_truth, max_pt_truth, jetR, obs_label, obs_setting, grooming_setting, outf_name,
+                          'width', legendTitle, h1LegendLabel, h2LegendLabel)
 
   #################################################################################################
   # Get errors from measured spectrum, stored as dictionary {bin:error}
@@ -1467,5 +1513,5 @@ if __name__ == '__main__':
                            config_file = args.configFile, output_dir = args.outputDir,
                            file_format = args.imageFormat, rebin_response=True,
                            truncation=False, binning=False, prior_variation_parameter=0.,
-                           R_max = None, prong_matching_response = False)
+                           R_max = None, prong_matching_response = False, thermal_model = False)
   analysis.roounfold_obs()
