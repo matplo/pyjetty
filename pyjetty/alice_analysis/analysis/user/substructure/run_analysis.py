@@ -332,11 +332,14 @@ class RunAnalysis(common_base.CommonBase):
     for i in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[i]
       max_pt_truth = self.pt_bins_reported[i+1]
+      maxbin = self.obs_max_bins(obs_label)[i]
+
       if self.use_max_reg_param:
         reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
-                                                         min_pt_truth, max_pt_truth)
+                                                         min_pt_truth, max_pt_truth, maxbin)
         print( "Optimal regularization parameter for pT=%i-%i determined to be %s = %i." %
              (min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final) )
+
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, maxbin, final=True)
 
@@ -711,7 +714,7 @@ class RunAnalysis(common_base.CommonBase):
   # Finds the regularization parameter than minimizes statistical and
   # all calculated systematic uncertainties when added in quadrature
   def determine_reg_param_final(self, jetR, obs_label, obs_setting, grooming_setting,
-                                min_pt_truth, max_pt_truth):
+                                min_pt_truth, max_pt_truth, maxbin):
 
     # Obtain the total systematic uncertainty histograms from memory
     min_reg_param = 3
@@ -737,7 +740,9 @@ class RunAnalysis(common_base.CommonBase):
     names = ["hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % (self.observable, self.utils.remove_periods(jetR),
                                                               obs_label, reg_param, min_pt_truth, max_pt_truth)
              for reg_param in reg_params]
-    hStat_list = [f.Get(name) for name in names]
+    hStat_list_untruncated = [f.Get(name) for name in names]
+    hStat_list = [self.truncate_hist(h, maxbin, name+'_trunc')
+                  for (h, name) in zip(hStat_list_untruncated, names)]
 
     # Add statistical and systematic uncertainties in quadrature
     hUncert_list = [self.add_in_quadrature([hSys, hStat]) for (hSys, hStat) in zip(hSys_list, hStat_list)]
