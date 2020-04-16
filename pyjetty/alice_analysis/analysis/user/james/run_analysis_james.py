@@ -44,12 +44,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     if 'constituent_subtractor' in config:
       self.max_distance = config['constituent_subtractor']['max_distance']
-    
-    if 'thermal_closure' in config:
-      self.do_thermal_closure = True
-      self.fThermal = config['thermal_closure']
-    else:
-      self.do_thermal_closure = False
 
     # Theory comparisons
     if 'fPythia' in config:
