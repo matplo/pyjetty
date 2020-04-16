@@ -51,7 +51,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
         fResult_name = os.path.join(self.output_dir, 'fResult_R{}_{}.root'.format(jetR, obs_label))
         setattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label), fResult_name)
@@ -74,7 +74,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
         self.unfold_single_setting(jetR, obs_label, obs_setting, grooming_setting)
 
   #---------------------------------------------------------------
@@ -113,7 +113,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       for i, _ in enumerate(self.obs_subconfig_list):
 
         config_name = self.obs_subconfig_list[i]
-        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i], self.R_max)
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
 
         pt_det_bins_name = 'pt_bins_det'
         if self.truncation:
@@ -146,9 +146,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         for jetR in self.jetR_list:
 
-          name_thn = self.utils.name_thn(self.observable, jetR, obs_label)
+          name_thn = self.utils.name_thn(self.observable, jetR, obs_label, self.R_max)
           name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
-          name_data = self.utils.name_data(self.observable, jetR, obs_label)
+          name_data = self.utils.name_data(self.observable, jetR, obs_label, self.R_max)
           name_data_rebinned = self.utils.name_data_rebinned(self.observable, jetR, obs_label)
 
           name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, obs_label)
@@ -177,7 +177,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       for i, _ in enumerate(self.obs_subconfig_list):
 
-        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i], self.R_max)
+        obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
 
         name_thn = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
@@ -213,7 +213,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array,
                                   n_bins_det, det_bin_array)
         h.SetDirectory(0)
-        name = '{}_{}'.format(name_data, 'rebinned')
+        name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
         setattr(self, name, h)
 
         # Retrieve responses from file
