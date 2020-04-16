@@ -42,6 +42,15 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     self.jet_matching_distance = config['jet_matching_distance']
     
+    if 'constituent_subtractor' in config:
+      self.max_distance = config['constituent_subtractor']['max_distance']
+    
+    if 'thermal_closure' in config:
+      self.do_thermal_closure = True
+      self.fThermal = config['thermal_closure']
+    else:
+      self.do_thermal_closure = False
+
     # Theory comparisons
     if 'fPythia' in config:
       self.fPythia_name = config['fPythia']
@@ -97,29 +106,55 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
   # This function is called once after all subconfigurations and jetR have been looped over
   #----------------------------------------------------------------------
   def plot_performance(self):
+    
+    if not self.do_plot_performance:
+      return
     print('Plotting performance plots...')
     
-    # Initialize performance plotting class
-    if self.do_plot_performance:
+    # Initialize performance plotting class, and plot
+    if self.is_pp:
+    
       self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, self.output_dir_performance, self.figure_approval_status)
       
+      self.plot_single_performance(output_dir_performance)
+      
+    else:
+    
+      for R_max in self.max_distance:
+      
+        output_dir_performance = os.path.join(self.output_dir_performance, 'Rmax{}'.format(R_max))
+      
+        self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, output_dir_performance, self.figure_approval_status, R_max = R_max)
+        
+        self.plot_single_performance(output_dir_performance, R_max)
+
+  #----------------------------------------------------------------------
+  # This function is called once after all subconfigurations and jetR have been looped over
+  #----------------------------------------------------------------------
+  def plot_single_performance(self, output_dir_performance, R_max = None):
+  
+    if R_max:
+      suffix = '_Rmax{}'.format(R_max)
+    else:
+      suffix = ''
+      
     # Create output subdirectories
-    self.create_output_subdir(self.output_dir_performance, 'jet')
-    self.create_output_subdir(self.output_dir_performance, 'resolution')
-    self.create_output_subdir(self.output_dir_performance, 'residual')
-    self.create_output_subdir(self.output_dir_performance, 'residual_relative')
-    self.create_output_subdir(self.output_dir_performance, 'mc_projections_det')
-    self.create_output_subdir(self.output_dir_performance, 'mc_projections_truth')
-    self.create_output_subdir(self.output_dir_performance, 'data')
-    self.create_output_subdir(self.output_dir_performance, 'lund')
+    self.create_output_subdir(output_dir_performance, 'jet')
+    self.create_output_subdir(output_dir_performance, 'resolution')
+    self.create_output_subdir(output_dir_performance, 'residual')
+    self.create_output_subdir(output_dir_performance, 'residual_relative')
+    self.create_output_subdir(output_dir_performance, 'mc_projections_det')
+    self.create_output_subdir(output_dir_performance, 'mc_projections_truth')
+    self.create_output_subdir(output_dir_performance, 'data')
+    self.create_output_subdir(output_dir_performance, 'lund')
     if not self.is_pp:
-      self.create_output_subdir(self.output_dir_performance, 'delta_pt')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_pt')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_ptdet')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_deltaR')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_deltaZ')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_correlation')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_N_z')
+      self.create_output_subdir(output_dir_performance, 'delta_pt')
+      self.create_output_subdir(output_dir_performance, 'prong_matching_fraction_pt')
+      self.create_output_subdir(output_dir_performance, 'prong_matching_fraction_ptdet')
+      self.create_output_subdir(output_dir_performance, 'prong_matching_deltaR')
+      self.create_output_subdir(output_dir_performance, 'prong_matching_deltaZ')
+      self.create_output_subdir(output_dir_performance, 'prong_matching_correlation')
+      self.create_output_subdir(output_dir_performance, 'prong_matching_N_z')
     
     # Generate performance plots
     for jetR in self.jetR_list:
@@ -181,6 +216,12 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
           obs_label = self.utils.obs_label(obs_setting, grooming_setting)
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'untagged')
+          
+    if self.do_thermal_closure:
+      x = self.fThermal
+      RM = 'RM'
+      pp_truth = 'from_RM'
+      combined_det = 'h_zg_JetPt_R0.2_SD_zcut01_B0Scaled'
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):

@@ -27,7 +27,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, observable='', is_pp=False, fnameData='', fnameMC='', output_dir='.', figure_approval_status='', **kwargs):
+  def __init__(self, observable='', is_pp=False, fnameData='', fnameMC='', output_dir='.',
+               figure_approval_status='', R_max = None, **kwargs):
     super(PlottingUtils, self).__init__(**kwargs)
     
     self.observable = observable
@@ -41,6 +42,12 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.fMC = ROOT.TFile(fnameMC, 'READ')
     self.output_dir = output_dir
     self.figure_approval_status = figure_approval_status
+    self.R_max = R_max
+    
+    if self.R_max:
+      self.suffix = '_Rmax{}'.format(self.R_max)
+    else:
+      self.suffix = ''
     
     kGreen = 416
     kBlue  = 600
@@ -57,9 +64,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_DeltaR(self, jetR, jet_matching_distance):
 
     if self.is_pp:
-      name = 'hDeltaR_All_R{}Scaled'.format(jetR)
+      name = 'hDeltaR_All_R{}{}Scaled'.format(jetR, self.suffix)
     else:
-      name = 'hDeltaR_combined_ppdet_R{}Scaled'.format(jetR)
+      name = 'hDeltaR_combined_ppdet_R{}{}Scaled'.format(jetR, self.suffix)
     h = self.fMC.Get(name)
     
     c = ROOT.TCanvas("c","c: hist",600,450)
@@ -184,7 +191,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   def plotJER(self, jetR, obs_label):
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     hRM_4d = self.fMC.Get(name)
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
@@ -227,7 +234,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     histPtGen.Scale(5./2)
     
     # Then, get the pT^gen spectrum for matched jets
-    name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     hRM_4d = self.fMC.Get(name)
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
@@ -271,7 +278,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.setup_legend(myLegend,0.035)
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     hRM_4d = self.fMC.Get(name)
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
@@ -335,9 +342,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     if relative:
       if self.observable == 'subjet_z' or self.observable == 'jet_axis':
         return
-      name = 'hRelativeResidual_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+      name = 'hRelativeResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     else:
-      name = 'hResidual_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+      name = 'hResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
@@ -363,7 +370,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       
         hResidual.GetXaxis().SetTitleOffset(1.6);
         hResidual.GetYaxis().SetTitle('Probability density')
-        hResidual.GetYaxis().SetRangeUser(0, 1.3*hResidual.GetMaximum())
+        hResidual.GetYaxis().SetRangeUser(0, 2.*hResidual.GetMaximum())
         hResidual.DrawCopy('P E')
         
       else:
@@ -405,11 +412,11 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       return
 
     # (pt-det, pt-truth, obs-det, obs-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     hRM_obs = self.fMC.Get(name)
     hRM_obs.Sumw2()
     
-    name = 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)
+    name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     hObs_JetPt = self.fData.Get(name)
     hObs_JetPt.Sumw2()
 
@@ -574,7 +581,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_lund_plane(self, jetR, obs_label, grooming_setting):
 
-    name = 'hLundPlane_R{}_{}Scaled'.format(jetR, obs_label)
+    name = 'hLundPlane_R{}_{}{}Scaled'.format(jetR, obs_label, self.suffix)
     hLund = self.fMC.Get(name)
     
     hLund.GetXaxis().SetRangeUser(np.log(1/jetR), 5)
@@ -594,7 +601,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_delta_pt_RC(self, jetR, CS_label):
   
-    name = 'hDeltaPt_RC_{}CS_R{}Scaled'.format(CS_label, jetR)
+    name = 'hDeltaPt_RC_{}CS_R{}{}Scaled'.format(CS_label, jetR, self.suffix)
     hDeltaPt = self.fMC.Get(name)
     hDeltaPt.SetMarkerStyle(21)
     hDeltaPt.SetMarkerSize(2)
@@ -619,7 +626,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_delta_pt_emb(self, jetR, pt_bins):
   
-    name = 'hDeltaPt_emb_R{}Scaled'.format(jetR)
+    name = 'hDeltaPt_emb_R{}{}Scaled'.format(jetR, self.suffix)
     
     c = ROOT.TCanvas('c','c: hist',600,450)
     c.cd()
@@ -724,7 +731,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       else:
         marker = 34
       
-      name = '{}_{}Scaled'.format(name_prefix, obs_label)
+      name = '{}_{}{}Scaled'.format(name_prefix, obs_label, self.suffix)
       hFraction_vs_pt = self.fMC.Get(name)
       xtitle = hFraction_vs_pt.GetXaxis().GetTitle()
       myBlankHisto.GetXaxis().SetTitle(xtitle)
@@ -810,7 +817,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       else:
         marker = 34
       
-      name = '{}_{}Scaled'.format(name_prefix, obs_label)
+      name = '{}_{}{}Scaled'.format(name_prefix, obs_label, self.suffix)
       hFraction_vs_pt = self.fMC.Get(name)
 
       epsilon = 1e-5
@@ -888,7 +895,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       else:
         marker = 34
 
-      name = '{}_{}Scaled'.format(hname_prefix, obs_label)
+      name = '{}_{}{}Scaled'.format(hname_prefix, obs_label, self.suffix)
       hFraction_vs_pt = self.fMC.Get(name)
 
       epsilon = 1e-5
@@ -919,7 +926,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_prong_N_vs_z(self, jetR, obs_label, tagged='tagged'):
 
-    name = 'hProngMatching_subleading_leading_N_{}_JetPtDet_R{}_{}_80-100Scaled'.format(tagged, jetR, obs_label)
+    name = 'hProngMatching_subleading_leading_N_{}_JetPtDet_R{}_{}_80-100{}Scaled'.format(tagged, jetR, obs_label, self.suffix)
     h3D = self.fMC.Get(name)
     
     h2D = h3D.Project3D('yx')
