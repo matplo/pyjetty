@@ -133,12 +133,18 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   # Get name of response THn
   #---------------------------------------------------------------
-  def name_thn(self, observable, jetR, obs_label, R_max = None):
+  def name_thn(self, observable, jetR, obs_label, R_max = None, prong_matching_response = False):
   
+      name = ''
       if R_max:
-        return 'hResponse_JetPt_{}_R{}_{}_Rmax{}Scaled'.format(observable, jetR, obs_label, R_max)
+        if prong_matching_response:
+          name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}_matchedScaled'.format(observable, jetR, obs_label, R_max)
+        else:
+          name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}Scaled'.format(observable, jetR, obs_label, R_max)
       else:
-        return 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
+        name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
+        
+      return name
 
   #---------------------------------------------------------------
   # Get name of response THn, rebinned

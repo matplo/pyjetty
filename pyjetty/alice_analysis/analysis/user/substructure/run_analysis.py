@@ -244,6 +244,7 @@ class RunAnalysis(common_base.CommonBase):
       truncation = False
       binning = False
       R_max =  self.R_max
+      prong_matching_response = False
 
       if systematic == 'trkeff':
         response = self.trkeff_response
@@ -259,12 +260,15 @@ class RunAnalysis(common_base.CommonBase):
         R_max = self.R_max1
       elif systematic == 'subtraction2':
         R_max = self.R_max2
+      elif systematic == 'prong_matching':
+        prong_matching_response = True
 
       analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file,
                                              output_dir, self.file_format,
                                              rebin_response=rebin_response,
                                              prior_variation_parameter=prior_variation_parameter,
-                                             truncation=truncation, binning=binning, R_max=R_max)
+                                             truncation=truncation, binning=binning, R_max=R_max,
+                                             prong_matching_response=prong_matching_response)
       analysis.roounfold_obs()
 
 
