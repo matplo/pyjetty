@@ -128,8 +128,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.plotting_utils.plot_DeltaR(jetR, self.jet_matching_distance)
       self.plotting_utils.plot_JES(jetR)
       self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
-      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0], self.R_max))
-      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0], self.R_max))
+      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
+      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
       
       if not self.is_pp:
         self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
@@ -139,7 +139,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
@@ -178,7 +178,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         for i, _ in enumerate(self.obs_subconfig_list):
           obs_setting = self.obs_settings[i]
           grooming_setting = self.grooming_settings[i]
-          obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
           self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'untagged')
 
@@ -512,7 +512,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
       
       if subconfig_name == overlay_list[0]:
         marker = 20
@@ -780,7 +780,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
       
       if subconfig_name == overlay_list[0]:
         marker = 20
@@ -877,7 +877,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting, self.R_max)
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
       
       h = getattr(self, name.format(obs_label))
       if h.GetMaximum() > max:
