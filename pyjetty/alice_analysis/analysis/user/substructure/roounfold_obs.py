@@ -1039,7 +1039,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     n_pt_bins_det = getattr(self, 'n_pt_bins_det_{}'.format(obs_label))
     det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
-    for bin in range(2, n_pt_bins_det):
+    for bin in range(0, n_pt_bins_det):
       min_pt_det = det_pt_bin_array[bin]
       max_pt_det = det_pt_bin_array[bin+1]
 
@@ -1047,7 +1047,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                    grooming_setting, min_pt_det, max_pt_det)
 
     self.plot_pt_refolded_slice(hFoldedTruth, i, jetR, obs_label, obs_setting,
-                                grooming_setting, det_pt_bin_array[2], det_pt_bin_array[-1])
+                                grooming_setting, det_pt_bin_array[0], det_pt_bin_array[-1])
 
   #################################################################################################
   # Plot refolding test, for a given pt slice
