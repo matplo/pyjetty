@@ -27,7 +27,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #---------------------------------------------------------------
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='',
                output_dir='', file_format='', rebin_response=False, truncation=False,
-               binning=False, prior_variation_parameter=0., R_max = None, **kwargs):
+               binning=False, prior_variation_parameter=0., R_max = None,
+               prong_matching_response = False, **kwargs):
 
     super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file,
                                         output_dir, file_format, **kwargs)
@@ -40,6 +41,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.binning = binning
     self.prior_variation_parameter = prior_variation_parameter
     self.R_max = R_max
+    self.prong_matching_response = prong_matching_response
 
     self.initialize_config()
 
@@ -146,7 +148,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         for jetR in self.jetR_list:
 
-          name_thn = self.utils.name_thn(self.observable, jetR, obs_label, self.R_max)
+          name_thn = self.utils.name_thn(self.observable, jetR, obs_label, self.R_max, self.prong_matching_response)
           name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
           name_data = self.utils.name_data(self.observable, jetR, obs_label, self.R_max)
           name_data_rebinned = self.utils.name_data_rebinned(self.observable, jetR, obs_label)
@@ -1465,5 +1467,5 @@ if __name__ == '__main__':
                            config_file = args.configFile, output_dir = args.outputDir,
                            file_format = args.imageFormat, rebin_response=True,
                            truncation=False, binning=False, prior_variation_parameter=0.,
-                           R_max = None)
+                           R_max = None, prong_matching_response = False)
   analysis.roounfold_obs()
