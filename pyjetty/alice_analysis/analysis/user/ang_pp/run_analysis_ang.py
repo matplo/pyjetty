@@ -227,9 +227,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h.SetLineWidth(2)
     h.SetLineColor(color)
     
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR,
-                                                                    obs_label, min_pt_truth,
-                                                                    max_pt_truth))
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h_sys.SetLineColor(0)
     h_sys.SetFillColor(color)
     h_sys.SetFillColorAlpha(color, 0.3)
@@ -383,7 +382,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth,
                                          max_pt_truth, maxbins, plot_pythia=False,
                                          plot_nll=False, plot_ratio=False):
-    
+
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
     if plot_ratio:
       c = ROOT.TCanvas(name, name, 600, 650)
@@ -405,12 +404,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
-    self.utils.setup_legend(myLegend,0.035)
+    myLegend = ROOT.TLegend(0.66, 0.65, 0.8, 0.85)
+    self.utils.setup_legend(myLegend, 0.035)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = self.get_maximum(name, overlay_list)
-      
+
+    h_list = []
+    text_list = []
+
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
@@ -437,11 +439,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         marker = 23
         marker_pythia = 32
         color = 416-2
-            
+
       name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       if grooming_setting:
         fraction_tagged = getattr(self, name+'_fraction_tagged')
-      h = self.truncate_hist(getattr(self, name), maxbin, name+'_fraction_tagged_trunc')
+      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+      h.SetDirectory(0)
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(marker)
       h.SetMarkerColor(color)
@@ -515,7 +518,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           line.Draw()
       
       if plot_pythia:
-      
         hPythia, fraction_tagged_pythia = self.pythia_prediction(
           jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin)
 
@@ -553,7 +555,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hRatioStat.SetLineColor(color)
 
       pad1.cd()
-      
       if plot_pythia:
         plot_errors = False
         if plot_errors:
@@ -568,17 +569,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         pad2.cd()
         if plot_pythia:
           hRatioSys.DrawCopy('E2 same')
-        hRatioStat.DrawCopy('PE X0 same')
-        
+          hRatioStat.DrawCopy('PE X0 same')
+
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
       if subobs_label:
         text += '{} = {}'.format(subobs_label, obs_setting)
       if grooming_setting:
         text += self.utils.formatted_grooming_label(grooming_setting)
-      myLegend.AddEntry(h, '{}'.format(text), 'pe')
+      text_list.append(text)
+      h_list.append(h)
         
     pad1.cd()
+    for h, text in zip(h_list, text_list):
+      myLegend.AddEntry(h, text, 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
