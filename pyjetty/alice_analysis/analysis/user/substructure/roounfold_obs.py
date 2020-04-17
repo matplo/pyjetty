@@ -186,6 +186,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       for i, _ in enumerate(self.obs_subconfig_list):
 
         obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
+        grooming_setting = self.grooming_settings[i]
 
         name_thn = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
@@ -202,6 +203,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         det_bin_array = getattr(self, 'det_bin_array_{}'.format(obs_label))
         n_bins_truth = getattr(self, 'n_bins_truth_{}'.format(obs_label))
         truth_bin_array = getattr(self, 'truth_bin_array_{}'.format(obs_label))
+        
+        # For SD, fill underflow bin to include untagged fraction in the unfolding
+        # If underflow is activated, create a new underflow bin for the observable
+        use_underflow =  'sd' in grooming_setting
+        if use_underflow:
+          det_bin_array.insert(0, det_bin_array[0] - 0.1)
+          n_bins_det += 1
+          truth_bin_array.insert(0, truth_bin_array[0] - 0.1)
+          n_bins_truth += 1
 
         # Rebin if requested, and write to file
         thn = self.fResponse.Get(name_thn)
@@ -214,12 +224,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                     label, n_pt_bins_det, det_pt_bin_array, n_bins_det,
                                     det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
                                     n_bins_truth, truth_bin_array, self.observable,
-                                    self.prior_variation_parameter)
+                                    self.prior_variation_parameter, use_underflow=use_underflow)
 
         # Also re-bin the data histogram
         hData = self.fData.Get(name_data)
         h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array,
-                                  n_bins_det, det_bin_array)
+                                  n_bins_det, det_bin_array, use_underflow=use_underflow)
         h.SetDirectory(0)
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
         setattr(self, name, h)
