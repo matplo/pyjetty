@@ -683,12 +683,8 @@ class RunAnalysis(common_base.CommonBase):
     elif maxbin < 1:
       raise ValueError("Max bin number {} cannot be less than 1".format(maxbin))
 
-    bin_edges = [h.GetXaxis().GetBinLowEdge(i) for i in range(1, maxbin+2)]
-    h_new = ROOT.TH1D(new_name, new_name, maxbin, array('d', bin_edges))
-    for i in range(1, maxbin+1):
-      h_new.SetBinContent(i, h.GetBinContent(i))
-      h_new.SetBinError(i, h.GetBinError(i))
-    return h_new
+    bin_edges = array('d', [h.GetXaxis().GetBinLowEdge(i) for i in range(1, maxbin+2)])
+    return h.Rebin(len(bin_edges)-1, new_name, bin_edges)
 
   #----------------------------------------------------------------------
   # Add a list of (identically-binned) histograms in quadrature, bin-by-bin
