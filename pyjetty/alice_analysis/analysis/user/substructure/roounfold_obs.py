@@ -63,6 +63,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     # Create output directories for unfolding plots
     self.create_output_dirs()
+    
+    self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
+                       ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
+                       ROOT.kOrange-3]
+    self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
 
     print(self)
 
@@ -834,15 +839,16 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('#varepsilon_{kin}')
     myBlankHisto.SetMaximum(1.2)
-    myBlankHisto.SetMinimum(0.8)
+    min = 0.7
+    myBlankHisto.SetMinimum(min)
     myBlankHisto.Draw("E")
 
     leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
     self.utils.setup_legend(leg,0.04)
 
-    for bin in range(0, len(self.pt_bins_reported) - 1):
-      min_pt_truth = self.pt_bins_reported[bin]
-      max_pt_truth = self.pt_bins_reported[bin+1]
+    for i in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[i]
+      max_pt_truth = self.pt_bins_reported[i+1]
 
       hKinematicEfficiency2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
       h = hKinematicEfficiency2D.ProjectionY()
@@ -850,28 +856,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                                         min_pt_truth, max_pt_truth)
       h.SetName(name)
 
-      if bin == 1:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(20)
-      elif bin == 2:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(21)
-      elif bin == 3:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(22)
-      elif bin == 4:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(23)
-      elif bin == 5:
-        h.SetMarkerSize(2)
-        h.SetMarkerStyle(33)
-      else:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(19)
-      h.SetMarkerColor(600-6+bin)
+      h.SetMarkerSize(1.5)
+      h.SetMarkerStyle(self.MarkerArray[i])
+      h.SetMarkerColor(self.ColorArray[i])
+      h.SetLineColor(self.ColorArray[i])
       h.SetLineStyle(1)
       h.SetLineWidth(2)
-      h.SetLineColor(600-6+bin)
+      if h.GetMinimum() < min:
+        min = h.GetMinimum() - 0.05
+        myBlankHisto.SetMinimum(min)
 
       h.DrawCopy('P X0 same')
 

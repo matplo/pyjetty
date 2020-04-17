@@ -64,6 +64,11 @@ class RunAnalysis(common_base.CommonBase):
 
     # Initialize yaml config
     self.initialize_config()
+    
+    self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
+                       ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
+                       ROOT.kOrange-3]
+    self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
 
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -604,40 +609,28 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
-    myBlankHisto.SetMaximum(1.5*h_total.GetMaximum())
+    myBlankHisto.SetMaximum(1.7*h_total.GetMaximum())
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
-    leg = ROOT.TLegend(0.67,0.65,0.8,0.92)
+    leg = ROOT.TLegend(0.67,0.6,0.8,0.92)
     self.utils.setup_legend(leg,0.04)
 
     for i, h in enumerate(h_list):
       if h:
-        if i == 0:
-          h.SetMarkerStyle(20)
-        if i == 1:
-          h.SetMarkerStyle(21)
-        if i == 2:
-          h.SetMarkerStyle(22)
-        if i == 3:
-          h.SetMarkerStyle(23)
-        if i == 4:
-          h.SetMarkerStyle(33)
-        if i == 5:
-          h.SetMarkerStyle(34)
-
+        h.SetMarkerStyle(self.MarkerArray[i])
         h.SetMarkerSize(1.5)
-        h.SetMarkerColor(600-5+i)
+        h.SetMarkerColor(self.ColorArray[i])
+        h.SetLineColor(self.ColorArray[i])
         h.SetLineStyle(1)
         h.SetLineWidth(2)
-        h.SetLineColor(600-5+i)
 
         h.DrawCopy('P X0 same')
 
         legend_label = self.systematics_list[i]
         if legend_label == 'main':
           legend_label = 'reg param'
-        leg.AddEntry(h, legend_label, 'Pe')
+        leg.AddEntry(h, legend_label, 'P')
 
     h_total.SetLineStyle(1)
     h_total.SetLineColor(1)
