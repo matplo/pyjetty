@@ -188,13 +188,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     for i in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[i]
       max_pt_truth = self.pt_bins_reported[i+1]
+      maxbin = self.obs_max_bins(obs_label)[i]
       
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
-                           min_pt_truth, max_pt_truth, plot_pythia=True)
+                           min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
       
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
-                      min_pt_truth, max_pt_truth, plot_pythia=False):
+                      min_pt_truth, max_pt_truth, maxbin, plot_pythia=False):
     
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -226,9 +227,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h.SetLineWidth(2)
     h.SetLineColor(color)
     
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR,
-                                                                    obs_label, min_pt_truth,
-                                                                    max_pt_truth))
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h_sys.SetLineColor(0)
     h_sys.SetFillColor(color)
     h_sys.SetFillColorAlpha(color, 0.3)
@@ -250,8 +250,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     if plot_pythia:
     
-      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label,
-                                                               min_pt_truth, max_pt_truth)
+      hPythia, fraction_tagged_pythia = self.pythia_prediction(
+        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin)
+
       if hPythia:
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
@@ -299,7 +300,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
       if plot_pythia:
         text_latex.SetTextSize(0.04)
-        text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+        text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (
+          ', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
         text_latex.DrawLatex(0.57, 0.52-delta, text)
 
     myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
@@ -333,9 +335,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     fFinalResults.Close()
 
   #----------------------------------------------------------------------
-  def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth):
+  def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin):
   
-    hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth, max_pt_truth)
+    hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth, max_pt_truth, maxbin)
     n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
     n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
 
@@ -345,7 +347,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     return [hPythia, fraction_tagged_pythia]
 
   #----------------------------------------------------------------------
-  def get_pythia_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth):
+  def get_pythia_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, maxbin):
   
     output_dir = getattr(self, 'output_dir_main')
     file = os.path.join(output_dir, 'response.root')
@@ -355,8 +357,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     thn = f.Get(thn_name)
     thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
-    h = thn.Projection(3)
-    h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    name = 'hPythia_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h = self.truncate_hist(thn.Projection(3), maxbin, name)
     h.SetDirectory(0)
 
     return h
@@ -366,20 +368,21 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     print('Plotting overlay of {}'.format(overlay_list))
 
     # Plot overlay of different subconfigs, for fixed pt bin
-    for bin in range(0, len(self.pt_bins_reported) - 1):
-      min_pt_truth = self.pt_bins_reported[bin]
-      max_pt_truth = self.pt_bins_reported[bin+1]
+    for i in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[i]
+      max_pt_truth = self.pt_bins_reported[i+1]
+      maxbins = [self.obs_max_bins(obs_label)[i] for obs_label in self.obs_labels]
 
       # Plot PYTHIA
       self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth,
-                                              max_pt_truth, plot_pythia=True, plot_ratio = True)
+                                              max_pt_truth, maxbins, plot_pythia=True, plot_ratio = True)
 
 
   #----------------------------------------------------------------------
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth,
-                                         max_pt_truth, plot_pythia=False, plot_nll=False,
-                                         plot_ratio=False):
-    
+                                         max_pt_truth, maxbins, plot_pythia=False,
+                                         plot_nll=False, plot_ratio=False):
+
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
     if plot_ratio:
       c = ROOT.TCanvas(name, name, 600, 650)
@@ -401,12 +404,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
-    self.utils.setup_legend(myLegend,0.035)
+    myLegend = ROOT.TLegend(0.66, 0.65, 0.8, 0.85)
+    self.utils.setup_legend(myLegend, 0.035)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = self.get_maximum(name, overlay_list)
-      
+
+    h_list = []
+    text_list = []
+
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
@@ -414,7 +420,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      obs_label = self.obs_labels[i]
+      maxbin = maxbins[i]
       
       if subconfig_name == overlay_list[0]:
         marker = 20
@@ -432,11 +439,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         marker = 23
         marker_pythia = 32
         color = 416-2
-            
+
       name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       if grooming_setting:
-        fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
-      h = getattr(self, name)
+        fraction_tagged = getattr(self, name+'_fraction_tagged')
+      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+      h.SetDirectory(0)
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(marker)
       h.SetMarkerColor(color)
@@ -444,7 +452,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h.SetLineWidth(2)
       h.SetLineColor(color)
       
-      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
       h_sys.SetFillColor(color)
       h_sys.SetFillColorAlpha(color, 0.3)
@@ -458,6 +467,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         ytitle = getattr(self, 'ytitle')
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
+        if maxbin:
+          xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(xtitle)
@@ -507,8 +518,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           line.Draw()
       
       if plot_pythia:
-      
-        hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
+        hPythia, fraction_tagged_pythia = self.pythia_prediction(
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin)
 
         plot_errors = False
         if plot_errors:
@@ -544,7 +555,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hRatioStat.SetLineColor(color)
 
       pad1.cd()
-      
       if plot_pythia:
         plot_errors = False
         if plot_errors:
@@ -559,17 +569,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         pad2.cd()
         if plot_pythia:
           hRatioSys.DrawCopy('E2 same')
-        hRatioStat.DrawCopy('PE X0 same')
-        
+          hRatioStat.DrawCopy('PE X0 same')
+
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
       if subobs_label:
         text += '{} = {}'.format(subobs_label, obs_setting)
       if grooming_setting:
         text += self.utils.formatted_grooming_label(grooming_setting)
-      myLegend.AddEntry(h, '{}'.format(text), 'pe')
+      text_list.append(text)
+      h_list.append(h)
         
     pad1.cd()
+    for h, text in zip(h_list, text_list):
+      myLegend.AddEntry(h, text, 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
@@ -600,9 +613,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                         self.utils.remove_periods(jetR), int(min_pt_truth), 
                                         int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:
-      name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, 
-                                                 self.utils.remove_periods(jetR), 
-                                                 int(min_pt_truth), int(max_pt_truth), 
+      name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR),
+                                                 int(min_pt_truth), int(max_pt_truth),
                                                  i_config, self.file_format)
     output_dir = getattr(self, 'output_dir_final_results') + '/all_results'
     if not os.path.exists(output_dir):
