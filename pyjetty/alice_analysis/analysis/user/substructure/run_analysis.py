@@ -109,7 +109,7 @@ class RunAnalysis(common_base.CommonBase):
     self.xtitle = self.obs_config_dict['common_settings']['xtitle']
     self.ytitle = self.obs_config_dict['common_settings']['ytitle']
     self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
-
+    
     self.use_max_reg_param = False
     if 'max_reg_param' in self.obs_config_dict['common_settings']:
       self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']
@@ -336,7 +336,7 @@ class RunAnalysis(common_base.CommonBase):
       obs_max_bins = [obs_bins_truth.index(i) for i in obs_max_reported]
 
     else:
-      obs_max_bins = None
+      obs_max_bins = [None for i in self.pt_bins_reported]
 
     setattr(self, "obs_max_bins_{}".format(obs_label), obs_max_bins)
 
@@ -390,6 +390,12 @@ class RunAnalysis(common_base.CommonBase):
 
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, maxbin, final=True)
+                                  
+      # Set SD tagging fraction for final reg parameter
+      if 'sd' in grooming_setting:
+        f_tagging_name = 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth)
+        f_tagged = getattr(self, '{}_{}'.format(f_tagging_name, reg_param_final))
+        setattr(self, f_tagging_name, f_tagged)
 
   #----------------------------------------------------------------------
   def load_2D_observables(self, jetR, obs_label, obs_setting, grooming_setting, reg_param):
@@ -409,11 +415,6 @@ class RunAnalysis(common_base.CommonBase):
         self.retrieve_histo_and_set_attribute(name, f)
         name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param-2)
         self.retrieve_histo_and_set_attribute(name, f)
-
-        # Get tagging rate histogram, and store as an attribute
-        if grooming_setting:
-          name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
-          self.retrieve_histo_and_set_attribute(name, f)
 
   #----------------------------------------------------------------------
   def retrieve_histo_and_set_attribute(self, name, f, suffix = ''):
@@ -437,7 +438,7 @@ class RunAnalysis(common_base.CommonBase):
       name1D = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR,
                                             obs_label, reg_param, min_pt_truth, max_pt_truth)
       self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
-                                min_pt_truth, max_pt_truth)
+                                min_pt_truth, max_pt_truth, store_tagging_fraction=True)
 
       if systematic == 'main':
         # Get regularization parameter variations, and store as attributes
@@ -588,30 +589,34 @@ class RunAnalysis(common_base.CommonBase):
 
   #----------------------------------------------------------------------
   def get_obs_distribution(self, jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
-                           min_pt_truth, max_pt_truth):
+                           min_pt_truth, max_pt_truth, store_tagging_fraction=False):
 
     h2D = getattr(self, name2D)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     h = h2D.ProjectionY() # Better to use ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) ?
     h.SetName(name1D)
     h.SetDirectory(0)
-
-    if grooming_setting:
-        name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
-        hTaggingFrac = getattr(self, name)
-        x = (min_pt_truth + max_pt_truth)/2.
-        fraction_tagged = hTaggingFrac.GetBinContent(hTaggingFrac.FindBin(x))
-        name_tagged = '{}_fraction_tagged'.format(name1D.replace('_n{}'.format(reg_param), ''))
-        setattr(self, name_tagged, fraction_tagged)
+        
+    # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
+    
+    if 'sd' in grooming_setting:
+    
+      # If SD, the untagged jets are in the first bin
+      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1)
+      n_jets_tagged = h.Integral(2, h.GetNbinsX()+1)
+      
+      if store_tagging_fraction:
+        f_tagging = n_jets_tagged/n_jets_inclusive
+        f_tagging_name = 'tagging_fraction_{}_{}-{}_{}'.format(obs_label, min_pt_truth, max_pt_truth, reg_param)
+        setattr(self, f_tagging_name, f_tagging)
+      
     else:
-        fraction_tagged = 1.
-
-    n_jets_tagged = h.Integral(1, h.GetNbinsX())
-    n_jets_inclusive = n_jets_tagged/fraction_tagged
+      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1)
+    
     h.Scale(1./n_jets_inclusive, 'width')
-
+    
     setattr(self, name1D, h)
-
+    
     return h
 
   #----------------------------------------------------------------------
