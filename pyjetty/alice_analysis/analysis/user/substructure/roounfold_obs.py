@@ -168,6 +168,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       self.reg_param_name = 'n_iter'
       self.errorType = ROOT.RooUnfold.kCovToy
+      
+      # Get shape variation parameter for closure test
+      self.shape_variation_parameter1 = config['prior1_variation_parameter']
+      self.shape_variation_parameter2 = config['prior2_variation_parameter']
 
   #---------------------------------------------------------------
   # Get responses, either from file or manually rebin
@@ -252,6 +256,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     dirs = ['RM', 'Data', 'KinematicEfficiency', 'Unfolded_obs', 'Unfolded_pt',
             'Unfolded_ratio', 'Unfolded_stat_uncert', 'Test_StatisticalClosure',
+            'Test_ShapeClosure{}'.format(self.utils.remove_periods(self.shape_variation_parameter1)),
+            'Test_ShapeClosure{}'.format(self.utils.remove_periods(self.shape_variation_parameter2)),
             'Test_Refolding', 'Correlation_Coefficients']
     if self.thermal_model:
       dirs.append('Test_ThermalClosure')
@@ -953,10 +959,14 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       # Apply RM to unfolded result, and check that I obtain measured spectrum
       # (simple technical check)
-      self.plot_refolding_test(i, jetR, obs_label, obs_setting, grooming_setting)
+      self.refolding_test(i, jetR, obs_label, obs_setting, grooming_setting)
 
       # Unfold the smeared det-level result with response, and compare to truth-level MC.
-      self.plot_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
+      self.statistical_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
+      
+      # Scale the shape of the det-level and truth-level spectra (by the same scaling as the prior),
+      # and compare the unfolded MC det-level result to truth-level MC.
+      self.shape_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
       
     # Plot thermal closure test
     if self.thermal_model:
@@ -966,7 +976,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
   #################################################################################################
-  def plot_refolding_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
+  def refolding_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
 
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
     hUnfolded = getattr(self, 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)).Clone()
@@ -1056,7 +1066,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Statistical closure test: Smear data, then unfold and compare to original truth
   #################################################################################################
-  def plot_closure_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
+  def statistical_closure_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
 
     # Unfold smeared det-level spectrum with RM
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
@@ -1071,18 +1081,21 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       max_pt_truth = self.pt_bins_reported[bin+1]
 
       self.plot_obs_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label,
-                                  obs_setting, grooming_setting, min_pt_truth, max_pt_truth)
+                                  obs_setting, grooming_setting, min_pt_truth,
+                                  max_pt_truth, option='Statistical')
 
     # Closure test for pt dimension
     self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label,
                                obs_setting, grooming_setting,
-                               self.pt_bins_reported[0], self.pt_bins_reported[-1])
+                               self.pt_bins_reported[0], self.pt_bins_reported[-1],
+                               option='Statistical')
 
   #################################################################################################
   # Plot closure test, for a given pt slice
   #################################################################################################
   def plot_obs_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting,
-                             grooming_setting, min_pt_truth, max_pt_truth):
+                             grooming_setting, min_pt_truth, max_pt_truth, option='Statistical',
+                             suffix = ''):
 
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_obs = hUnfolded.ProjectionY()
@@ -1098,7 +1111,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    output_dir = getattr(self, 'output_dir_Test_StatisticalClosure')
+    output_dir = getattr(self, 'output_dir_Test_{}Closure{}'.format(option,
+                         self.utils.remove_periods(suffix)))
     outf_name = 'hClosure_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR),
                                                     obs_label, int(min_pt_truth),
                                                     int(max_pt_truth), i, self.file_format)
@@ -1112,7 +1126,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   # Plot closure test, for pt dimension
   #################################################################################################
   def plot_pt_closure_slice(self, hUnfolded, hMC_Truth, i, jetR, obs_label,
-                            obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
+                            obs_setting, grooming_setting, min_pt_truth, max_pt_truth,
+                            option='Statistical', suffix = ''):
 
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_pt = hUnfolded.ProjectionX()
@@ -1126,13 +1141,61 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
     h2LegendLabel = 'MC-truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
-    output_dir = getattr(self, 'output_dir_Test_StatisticalClosure')
+    output_dir = getattr(self, 'output_dir_Test_{}Closure{}'.format(option,
+                         self.utils.remove_periods(suffix)))
     outf_name = 'hClosure_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR),
                                                  obs_label, i, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     self.plot_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle,
                         0, 0, jetR, obs_label, obs_setting, grooming_setting, outf_name,
                         'width', legendTitle, h1LegendLabel, h2LegendLabel)
+
+  #################################################################################################
+  # Scale the shape of the det-level and truth-level spectra (by the same scaling as the prior),
+  # and compare the unfolded MC det-level result to truth-level MC.
+  #################################################################################################
+  def shape_closure_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
+  
+    self.shape_closure_test_single(i, jetR, obs_label, obs_setting, grooming_setting,
+                                   self.shape_variation_parameter1)
+                                   
+    self.shape_closure_test_single(i, jetR, obs_label, obs_setting, grooming_setting,
+                                   self.shape_variation_parameter2)
+
+  #################################################################################################
+  # Scale the shape of the det-level and truth-level spectra (by the same scaling as the prior),
+  # and compare the unfolded MC det-level result to truth-level MC.
+  #################################################################################################
+  def shape_closure_test_single(self, i, jetR, obs_label, obs_setting, grooming_setting, shape_variation_parameter):
+
+    # Unfold smeared det-level spectrum with RM
+    response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
+    hMC_Det_original = getattr(self, 'hMC_Det_R{}_{}'.format(jetR, obs_label))
+    hMC_Det = hMC_Det_original.Clone('{}_shape'.format(hMC_Det_original.GetName()))
+    
+    hMC_Truth_original = getattr(self, 'hMC_Truth_R{}_{}'.format(jetR, obs_label))
+    hMC_Truth = hMC_Truth_original.Clone('{}_shape'.format(hMC_Truth_original.GetName()))
+
+    # Scale the det-level and truth-level MC by the prior variation
+    self.utils.scale_by_prior(hMC_Det, shape_variation_parameter)
+    self.utils.scale_by_prior(hMC_Truth, shape_variation_parameter)
+
+    unfold2 = ROOT.RooUnfoldBayes(response, hMC_Det, i)
+    hUnfolded2 = unfold2.Hreco() # Produces the truth distribution, with errors, PerBin
+
+    for bin in range(0, len(self.pt_bins_reported) - 1):
+      min_pt_truth = self.pt_bins_reported[bin]
+      max_pt_truth = self.pt_bins_reported[bin+1]
+
+      self.plot_obs_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label,
+                                  obs_setting, grooming_setting, min_pt_truth,
+                                  max_pt_truth, option='Shape', suffix=shape_variation_parameter)
+
+    # Closure test for pt dimension
+    self.plot_pt_closure_slice(hUnfolded2, hMC_Truth, i, jetR, obs_label,
+                               obs_setting, grooming_setting,
+                               self.pt_bins_reported[0], self.pt_bins_reported[-1],
+                               option='Shape', suffix=shape_variation_parameter)
 
   #################################################################################################
   # Plot thermal closure test: unfolded result / truth

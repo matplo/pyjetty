@@ -184,6 +184,34 @@ class AnalysisUtils(common_utils.CommonUtils):
     print('done')
 
   #---------------------------------------------------------------
+  # Scale a 2D (pt, obs) histogram according to prior variation (no re-binning)
+  #---------------------------------------------------------------
+  def scale_by_prior(self, h, prior_variation_parameter):
+  
+    for i in range(1, h.GetNbinsX() + 1):
+      for j in range(1, h.GetNbinsY() + 1):
+      
+        pt = h.GetXaxis().GetBinCenter(i)
+        obs = h.GetYaxis().GetBinCenter(j)
+        old_content = h.GetBinContent(i, j)
+        old_uncertainty = h.GetBinError(i, j)
+
+        if math.fabs(prior_variation_parameter) > 1e-3 :
+          if pt > 0. and obs > 0.:
+          
+            # Scale number of counts according to variation of pt prior
+            scale_factor = math.pow(pt, prior_variation_parameter)
+            
+            # Scale number of counts according to variation of observable prior
+            scale_factor *= self.prior_scale_factor_obs(obs, prior_variation_parameter)
+
+            content = old_content * scale_factor
+            uncertainty = old_uncertainty * scale_factor
+            
+            h.SetBinContent(i, j, content)
+            h.SetBinError(i, j, uncertainty)
+
+  #---------------------------------------------------------------
   # Compute scale factor to vary prior of observable
   # This should be implemented in analysis_utils_obs.py
   #---------------------------------------------------------------
