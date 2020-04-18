@@ -877,7 +877,7 @@ class ProcessMC(process_base.ProcessBase):
         jet_pt_det_ungroomed = jet_det.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
         JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
-        if self.fill_Rmax_indep_hists:
+        if self.is_pp or self.fill_Rmax_indep_hists:
           getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
         
         if not self.is_pp:
