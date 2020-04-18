@@ -95,6 +95,8 @@ class AnalysisUtils(common_utils.CommonUtils):
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, 
                                          n_obs_bins_det, det_obs_bin_array, n_pt_bins_truth,
                                          truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array)
+    for i in range(0, 4):
+      thn_rebinned.GetAxis(i).SetTitle(thn.GetAxis(i).GetTitle())
     
     # Create empty RooUnfoldResponse with specified binning
     hist_measured = thn_rebinned.Projection(2, 0)

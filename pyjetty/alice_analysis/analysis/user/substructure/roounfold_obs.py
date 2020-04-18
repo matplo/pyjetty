@@ -281,13 +281,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.utils.plot_hist(hData_PerBin, outf_name, 'colz', False, True)
 
     # Plot various slices of the response matrix (from the THn)
-    self.plot_RM_slices(jetR, obs_label)
-
+    self.plot_RM_slices(jetR, obs_label, grooming_setting)
+    
     # Plot the kinematic efficiency from the response THn, and save it as an attribute
     self.plot_kinematic_efficiency(jetR, obs_label, obs_setting, grooming_setting)
 
-    # Get MC-det and MC-truth 2D projections for (i) grooming tagging rate
-    # bin-by-bin correction, and (ii) unfolding closure test
+    # Get MC-det and MC-truth 2D projections for unfolding closure test
     name = 'hMC_Det_R{}_{}'.format(jetR, obs_label)
     hMC_Det = self.get_MCdet2D(jetR, obs_label)
     setattr(self, name, hMC_Det)
@@ -296,64 +295,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMC_Truth = self.get_MCtruth2D(jetR, obs_label)
     setattr(self, name, hMC_Truth)
 
-    # Compute grooming tagging rate
-    if grooming_setting:
-      self.compute_tagging_rate(jetR, obs_label)
-
     # Unfold spectrum
     if hData_PerBin and hMC_Det and hMC_Truth:
 
       self.unfold_observable(jetR, obs_label, obs_setting, grooming_setting)
       self.unfolding_checks(jetR, obs_label, obs_setting, grooming_setting)
-
-  #################################################################################################
-  # Compute grooming tagging rate, based on MC correction
-  #################################################################################################
-  def compute_tagging_rate(self, jetR, obs_label):
-
-    # Get truth binnings, since we need to rebin the det-level histograms
-    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
-    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    n_bins_truth = getattr(self, 'n_bins_truth_{}'.format(obs_label))
-    truth_bin_array = getattr(self, 'truth_bin_array_{}'.format(obs_label))
-
-    # Create a histogram to store the tagging fractions
-    name = 'hTaggingFractions_R{}_{}'.format(jetR, obs_label)
-    h = ROOT.TH1F(name, name, n_pt_bins_truth, truth_pt_bin_array)
-
-    # Get relevant histograms
-    name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
-    hData2D = getattr(self, name).Clone()
-    hData2D.SetName('{}_tagging'.format(hData2D.GetName()))
-    hData2D_rebinned = self.utils.rebin_data(hData2D, name, n_pt_bins_truth, truth_pt_bin_array,
-                                             n_bins_truth, truth_bin_array)
-
-    name = 'hMC_Det_R{}_{}'.format(jetR, obs_label)
-    hMC_Det = getattr(self, name).Clone()
-    hMC_Det.SetName('{}_tagging'.format(hMC_Det.GetName()))
-    hMC_Det_rebinned = self.utils.rebin_data(hMC_Det, name, n_pt_bins_truth, truth_pt_bin_array,
-                                             n_bins_truth, truth_bin_array)
-
-    name = 'hMC_Truth_R{}_{}'.format(jetR, obs_label)
-    hMC_Truth = getattr(self, name).Clone()
-    hMC_Truth.SetName('{}_tagging'.format(hMC_Truth.GetName()))
-
-    # Compute the tagging fraction for each pt bin
-    for bin in range(0, len(self.pt_bins_reported) - 1):
-      min_pt_truth = self.pt_bins_reported[bin]
-      max_pt_truth = self.pt_bins_reported[bin+1]
-
-      fraction_tagged = self.utils.tagging_rate(jetR, min_pt_truth, max_pt_truth,
-                                                hData2D_rebinned, hMC_Det_rebinned, hMC_Truth)
-
-      x = (min_pt_truth + max_pt_truth)/2.
-      bin = h.FindBin(x)
-      h.SetBinContent(bin, fraction_tagged)
-
-    fResult_name = getattr(self, 'fResult_name_R{}_{}'.format(jetR, obs_label))
-    fResult = ROOT.TFile(fResult_name, 'UPDATE')
-    h.Write()
-    fResult.Close()
 
   #################################################################################################
   # Unfold jet spectrum
@@ -401,6 +347,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       hUnfolded.Divide(hKinematicEfficiency)
 
       # Write result to file
+      # Note that in the case of SD, the first bin is the untagged splittings
       hUnfolded.Write()
 
       # Plot Pearson correlation coeffs for each iteration, to get a measure of
@@ -509,37 +456,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       fResult.Close()
 
       # Set different markers for each element on superimposed plot
-      if i == 1:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(20)
-      elif i == 2:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(21)
-      elif i == 3:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(22)
-      elif i == 4:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(23)
-      elif i == 5:
-        h.SetMarkerSize(2)
-        h.SetMarkerStyle(33)
-      elif i == 6:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(34)
-      elif i == 7:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(35)
-      elif i == 8:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(36)
+      if i < len(self.ColorArray):
+        h.SetMarkerStyle(self.MarkerArray[i])
+        h.SetMarkerColor(self.ColorArray[i])
+        h.SetLineColor(self.ColorArray[i])
       else:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(19)
-      h.SetMarkerColor(600-6+i)
+        h.SetMarkerStyle(self.MarkerArray[i%len(self.ColorArray)])
+        h.SetMarkerColor(self.ColorArray[i%len(self.ColorArray) - 2])
+        h.SetLineColor(self.ColorArray[i%len(self.ColorArray) - 2])
+      h.SetMarkerSize(1.5)
       h.SetLineStyle(1)
       h.SetLineWidth(2)
-      h.SetLineColor(600-6+i)
 
       # Doesn't work for some reason...
       #shift = 0.5*h.GetBinWidth(1)
@@ -707,37 +634,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       h.Scale(1., 'width')
 
-      if i == 1:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(20)
-      elif i == 2:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(21)
-      elif i == 3:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(22)
-      elif i == 4:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(23)
-      elif i == 5:
-        h.SetMarkerSize(2)
-        h.SetMarkerStyle(33)
-      elif i == 6:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(34)
-      elif i == 7:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(35)
-      elif i == 8:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(36)
+      if i < len(self.ColorArray):
+        h.SetMarkerStyle(self.MarkerArray[i])
+        h.SetMarkerColor(self.ColorArray[i])
+        h.SetLineColor(self.ColorArray[i])
       else:
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(19)
-      h.SetMarkerColor(600-6+i)
+        h.SetMarkerStyle(self.MarkerArray[i%len(self.ColorArray)])
+        h.SetMarkerColor(self.ColorArray[i%len(self.ColorArray) - 2])
+        h.SetLineColor(self.ColorArray[i%len(self.ColorArray) - 2])
+      h.SetMarkerSize(1.5)
       h.SetLineStyle(1)
       h.SetLineWidth(2)
-      h.SetLineColor(600-6+i)
 
       h.DrawCopy('PE X0 same')
 
@@ -789,13 +696,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     # Numerator -- cut on det-level input binning
     det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
-    min_pt_det = det_pt_bin_array[0]
-    max_pt_det = det_pt_bin_array[-1]
     det_bin_array = getattr(self, 'det_bin_array_{}'.format(obs_label))
-    min_obs_det = det_bin_array[0]
-    max_obs_det = det_bin_array[-1]
-    hResponse.GetAxis(0).SetRangeUser(min_pt_det, max_pt_det)
-    hResponse.GetAxis(2).SetRangeUser(min_obs_det, max_obs_det)
+    hResponse.GetAxis(0).SetRangeUser(det_pt_bin_array[0], det_pt_bin_array[-1])
+    hResponse.GetAxis(2).SetRangeUser(det_bin_array[0], det_bin_array[-1])
     hNumerator = hResponse.Projection(3, 1)
     hNumerator.SetName('{}_Numerator'.format(hNumerator.GetName()))
 
@@ -865,7 +768,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       name = 'hKinematicEfficiency_R{}_{}_{}-{}'.format(jetR, obs_label,
                                                         min_pt_truth, max_pt_truth)
       h.SetName(name)
-
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(self.MarkerArray[i])
       h.SetMarkerColor(self.ColorArray[i])
@@ -913,10 +815,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Plot various slices of the response matrix (from the THn)
   #################################################################################################
-  def plot_RM_slices(self, jetR, obs_label):
+  def plot_RM_slices(self, jetR, obs_label, grooming_setting):
 
     # (pt-det, pt-true, obs-det, obs-true)
-    name_response = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
+    name_response = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
     hResponse = getattr(self, name_response)
 
     # Fix pt-true, and plot the 2D observable response
@@ -926,7 +828,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
 
-      self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse)
+      self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting)
       
     # Plot pt-response (summed over substructure observable)
     self.plot_pt_response(jetR, obs_label, hResponse)
@@ -934,7 +836,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Plot 2D observable response for a fixed range of pt-truth
   #################################################################################################
-  def plot_obs_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse):
+  def plot_obs_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting):
 
     hResponse4D = hResponse.Clone()
     hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
@@ -951,6 +853,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                                               int(max_pt_truth)))
 
     hResponse_Obs_Normalized = self.utils.normalize_response_matrix(hResponse_Obs)
+    
+    # Set z-maximum in Soft Drop case, since otherwise the untagged bin will dominate the scale
+    if 'sd' in grooming_setting:
+      hResponse_Obs_Normalized.SetMaximum(0.3)
 
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)
 
