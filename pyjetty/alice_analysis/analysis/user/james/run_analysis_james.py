@@ -108,8 +108,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     # Initialize performance plotting class, and plot
     if self.is_pp:
     
-      self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, self.output_dir_performance, self.figure_approval_status)
-      
+      self.plotting_utils = plotting_utils.PlottingUtils(self.output_dir_performance, self.config_file)
       self.plot_single_performance(output_dir_performance)
       
     else:
@@ -118,18 +117,14 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       for R_max in self.max_distance:
       
         output_dir_performance = os.path.join(self.output_dir_performance, 'Rmax{}'.format(R_max))
-      
-        self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.main_data, self.main_response, output_dir_performance, self.figure_approval_status, R_max = R_max)
-        
+        self.plotting_utils = plotting_utils.PlottingUtils(output_dir_performance, self.config_file, R_max = R_max)
         self.plot_single_performance(output_dir_performance, R_max)
 
         # Plot for thermal model
         if self.do_thermal_closure and R_max == self.R_max:
           
           output_dir_performance = os.path.join(self.output_dir_performance, 'thermal')
-        
-          self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp, self.fThermal, self.fThermal, output_dir_performance, self.figure_approval_status, R_max = R_max, thermal = True)
-          
+          self.plotting_utils = plotting_utils.PlottingUtils(output_dir_performance, self.config_file, R_max = R_max, thermal = True)
           self.plot_single_performance(output_dir_performance, R_max)
 
   #----------------------------------------------------------------------
@@ -257,8 +252,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    if grooming_setting:
-      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = getattr(self, name)
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
@@ -289,7 +282,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
     if plot_pythia:
     
-      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
+      hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
       if hPythia:
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
@@ -331,14 +324,16 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       text = self.utils.formatted_grooming_label(grooming_setting)
       text_latex.DrawLatex(0.57, 0.59-delta, text)
       
-      text_latex.SetTextSize(0.04)
-      text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-      text_latex.DrawLatex(0.57, 0.52-delta, text)
-    
-      if plot_pythia:
+      if 'sd' in grooming_setting:
+        fraction_tagged = getattr(self, 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth))
         text_latex.SetTextSize(0.04)
-        text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+        text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
         text_latex.DrawLatex(0.57, 0.52-delta, text)
+    
+        if plot_pythia:
+          text_latex.SetTextSize(0.04)
+          text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+          text_latex.DrawLatex(0.57, 0.52-delta, text)
 
     myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
     self.utils.setup_legend(myLegend,0.035)
@@ -368,7 +363,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     fFinalResults.Close()
 
   #----------------------------------------------------------------------
-  def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth):
+  def pythia_prediction(self, jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth):
   
     plot_pythia_from_response = True
     plot_pythia_from_mateusz = False
@@ -376,9 +371,17 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     if plot_pythia_from_response:
     
       hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth, max_pt_truth)
-      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-      n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
-  
+      
+      if 'sd' in grooming_setting:
+      
+        # If SD, the untagged jets are in the first bin
+        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX()+1)
+        n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX()+1)
+        
+      else:
+        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX()+1)
+        n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
+
     elif plot_pythia_from_mateusz:
     
       fPythia_name = '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
@@ -567,8 +570,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         color = 416-2
             
       name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-      if grooming_setting:
-        fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
       h = getattr(self, name)
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(marker)
@@ -641,7 +642,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       
       if plot_pythia:
       
-        hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth)
+        hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
 
         plot_errors = False
         if plot_errors:

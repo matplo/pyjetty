@@ -12,6 +12,7 @@ from __future__ import print_function
 import os
 import sys
 import math
+import yaml
 
 # Data analysis and plotting
 import numpy as np
@@ -27,23 +28,28 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, observable='', is_pp=False, fnameData='', fnameMC='', output_dir='.',
-               figure_approval_status='', R_max = None, thermal = False, **kwargs):
+  def __init__(self, output_dir = '.', config_file = '', R_max = None, thermal = False, **kwargs):
     super(PlottingUtils, self).__init__(**kwargs)
     
-    self.observable = observable
-    self.is_pp = is_pp
-    
-    if fnameData:
-      self.fData = ROOT.TFile(fnameData, 'READ')
-    else:
-      self.fData = None
-      
-    self.fMC = ROOT.TFile(fnameMC, 'READ')
     self.output_dir = output_dir
-    self.figure_approval_status = figure_approval_status
     self.R_max = R_max
     self.thermal = thermal
+    
+    # Read config file
+    with open(config_file, 'r') as stream:
+      config = yaml.safe_load(stream)
+    
+    self.observable = config['analysis_observable']
+    self.is_pp = not 'constituent_subtractor' in config
+    self.figure_approval_status = config['figure_approval_status']
+
+    main_data = config['main_data']
+    main_response = config['main_response']
+    if main_data:
+      self.fData = ROOT.TFile(main_data, 'READ')
+    else:
+      self.fData = None
+    self.fMC = ROOT.TFile(main_response, 'READ')
     
     if self.R_max:
       self.suffix = '_Rmax{}'.format(self.R_max)
@@ -411,7 +417,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     if not self.fData:
       return
-
+      
     # (pt-det, pt-truth, obs-det, obs-truth)
     name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     hRM_obs = self.fMC.Get(name)
@@ -497,6 +503,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.scale_by_integral(hObs_det)
     hObs_det.Rebin(rebin_val_mcdet)
     hObs_det.Scale(1., 'width')
+    if 'sd' in grooming_setting:
+      hObs_det.GetXaxis().SetRange(0, hObs_det.GetNbinsX())
 
     # Get histogram of observable at MC-truth from RM
     if option == 'truth':
@@ -507,6 +515,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       self.scale_by_integral(hObs_truth)
       hObs_truth.Rebin(rebin_val_mctruth)
       hObs_truth.Scale(1., 'width')
+      if 'sd' in grooming_setting:
+        hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
       
     # Get histogram of theta_g in data, for given pt-det cut
     if option == 'det':
@@ -517,6 +527,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       self.scale_by_integral(hObs_data)
       hObs_data.Rebin(rebin_val_data)
       hObs_data.Scale(1., 'width')
+      if 'sd' in grooming_setting:
+        hObs_data.GetXaxis().SetRange(0, hObs_data.GetNbinsX())
 
     # Draw histogram
     c = ROOT.TCanvas('c','c: hist',600,450)
@@ -547,7 +559,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       leg.AddEntry(hObs_truth, "MC truth", "L")
     elif option == 'det':
       hObs_data.Draw('hist E same')
-      leg.AddEntry(hObs_data, "data", "L")
+      leg.AddEntry(hObs_data, "data", "PE")
 
     leg.Draw("same")
     
