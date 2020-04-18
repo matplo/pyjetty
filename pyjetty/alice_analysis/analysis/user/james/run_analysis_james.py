@@ -4,7 +4,7 @@ import sys
 import os
 import argparse
 from array import *
-import numpy
+import numpy as np
 import ROOT
 import yaml
 
@@ -222,6 +222,11 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
+    
+    # Construct histogram of tagging fraction, to write to file
+    if 'sd' in grooming_setting:
+      name = 'h_tagging_fraction_{}'.format(obs_label)
+      h_tagging = ROOT.TH1D(name, name, len(self.pt_bins_reported) - 1, array('d', self.pt_bins_reported))
 
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
     for bin in range(0, len(self.pt_bins_reported) - 1):
@@ -229,6 +234,20 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       max_pt_truth = self.pt_bins_reported[bin+1]
       
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
+      
+      # Fill tagging fraction
+      if 'sd' in grooming_setting:
+        fraction_tagged = getattr(self, 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth))
+        pt = (min_pt_truth + max_pt_truth)/2
+        h_tagging.Fill(pt, fraction_tagged)
+      
+    # Write tagging fraction to ROOT file
+    if 'sd' in grooming_setting:
+      output_dir = getattr(self, 'output_dir_final_results')
+      final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+      fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+      h_tagging.Write()
+      fFinalResults.Close()
       
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
@@ -253,6 +272,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     h = getattr(self, name)
+    h.SetName(name)
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -260,7 +280,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     h.SetLineWidth(2)
     h.SetLineColor(color)
     
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_sys = getattr(self, name)
+    h_sys.SetName(name)
     h_sys.SetLineColor(0)
     h_sys.SetFillColor(color)
     h_sys.SetFillColorAlpha(color, 0.3)
@@ -492,11 +514,11 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       up_list.append(float(row[3]))
 
     #x = array('d', x_list)
-    x = numpy.array(x_list)
-    x_err = numpy.zeros(n_bins_truth)
-    center = numpy.array(center_list)
-    low = numpy.subtract(center, numpy.array(low_list))
-    up = numpy.subtract(numpy.array(up_list), center)
+    x = np.array(x_list)
+    x_err = np.zeros(n_bins_truth)
+    center = np.array(center_list)
+    low = np.subtract(center, np.array(low_list))
+    up = np.subtract(np.array(up_list), center)
     
     g = ROOT.TGraphAsymmErrors(n_bins_truth, x, center, x_err, x_err, low, up)
     g.SetName('tgraph_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
