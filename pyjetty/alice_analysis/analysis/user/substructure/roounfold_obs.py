@@ -122,6 +122,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         config_name = self.obs_subconfig_list[i]
         obs_label = self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
+        grooming_setting = self.grooming_settings[i]
 
         pt_det_bins_name = 'pt_bins_det'
         if self.truncation:
@@ -144,12 +145,22 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         obs_bins_det = (self.obs_config_dict[config_name][det_bins_name])
         obs_bins_truth = (self.obs_config_dict[config_name][truth_bins_name])
         n_obs_bins_det = len(obs_bins_det) - 1
-        setattr(self, 'n_bins_det_{}'.format(obs_label), n_obs_bins_det)
         n_obs_bins_truth = len(obs_bins_truth) - 1
-        setattr(self, 'n_bins_truth_{}'.format(obs_label), n_obs_bins_truth)
         det_obs_bin_array = array('d',obs_bins_det)
-        setattr(self, 'det_bin_array_{}'.format(obs_label), det_obs_bin_array)
         truth_obs_bin_array = array('d',obs_bins_truth)
+        
+        # For SD, fill underflow bin to include untagged fraction in the unfolding
+        # If underflow is activated, create a new underflow bin for the observable
+        if grooming_setting:
+          if 'sd' in grooming_setting:
+            det_obs_bin_array.insert(0, det_obs_bin_array[0] - 0.1)
+            n_obs_bins_det += 1
+            truth_obs_bin_array.insert(0, truth_obs_bin_array[0] - 0.1)
+            n_obs_bins_truth += 1
+        
+        setattr(self, 'n_bins_det_{}'.format(obs_label), n_obs_bins_det)
+        setattr(self, 'n_bins_truth_{}'.format(obs_label), n_obs_bins_truth)
+        setattr(self, 'det_bin_array_{}'.format(obs_label), det_obs_bin_array)
         setattr(self, 'truth_bin_array_{}'.format(obs_label), truth_obs_bin_array)
 
         for jetR in self.jetR_list:
@@ -212,11 +223,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         # If underflow is activated, create a new underflow bin for the observable
         if grooming_setting:
           use_underflow = 'sd' in grooming_setting
-          if use_underflow:
-            det_bin_array.insert(0, det_bin_array[0] - 0.1)
-            n_bins_det += 1
-            truth_bin_array.insert(0, truth_bin_array[0] - 0.1)
-            n_bins_truth += 1
         else:
           use_underflow = False
 
