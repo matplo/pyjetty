@@ -191,6 +191,9 @@ class RunAnalysis(common_base.CommonBase):
       output_dir_systematics = self.create_output_subdir(output_dir, 'systematics')
       sys_root_filename = os.path.join(output_dir_systematics, 'fSystematics.root')
       fSystematics = ROOT.TFile(sys_root_filename, 'RECREATE')
+      
+      self.logfile = os.path.join(output_dir_systematics, 'log.txt')
+      open(self.logfile, 'w').close()
 
     if self.do_plot_final_result:
       output_dir_final = self.create_output_subdir(output_dir, 'final_results')
@@ -343,8 +346,11 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   def compute_systematics(self, jetR, obs_label, obs_setting, grooming_setting):
 
-    print( "Compute systematics for %s: R = %s, subobs = %s, grooming = %s" % 
-           (self.observable, jetR, obs_label, grooming_setting) )
+    text = 'Compute systematics for {}: R = {}, subobs = {}, grooming = {}'.format(
+            self.observable, jetR, obs_label, grooming_setting)
+    with open(self.logfile, 'a') as myfile:
+      myfile.write(text + '\n')
+    print(text)
 
     # Select final regularization parameter
     if self.use_max_reg_param:
@@ -385,8 +391,11 @@ class RunAnalysis(common_base.CommonBase):
       if self.use_max_reg_param:
         reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
                                                          min_pt_truth, max_pt_truth, maxbin)
-        print( "Optimal regularization parameter for pT=%i-%i determined to be %s = %i." %
-             (min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final) )
+        text = 'Optimal regularization parameter for pT={}-{} determined to be {} = {}.'.format(
+        min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final)
+        with open(self.logfile, 'a') as myfile:
+          myfile.write(text + '\n')
+        print(text)
 
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, maxbin, final=True)
