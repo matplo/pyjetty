@@ -109,7 +109,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     if self.is_pp:
     
       self.plotting_utils = plotting_utils.PlottingUtils(self.output_dir_performance, self.config_file)
-      self.plot_single_performance(output_dir_performance)
+      self.plot_single_performance(self.output_dir_performance)
       
     else:
       
