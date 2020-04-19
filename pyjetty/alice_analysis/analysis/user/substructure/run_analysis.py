@@ -137,6 +137,10 @@ class RunAnalysis(common_base.CommonBase):
       setattr(self, 'n_obs_bins_truth_{}'.format(obs_label), n_obs_bins_truth)
       truth_obs_bin_array = array('d',obs_bins_truth)
       setattr(self, 'truth_obs_bin_array_{}'.format(obs_label), truth_obs_bin_array)
+      
+      pt_bins_det = (self.obs_config_dict[config_name]['pt_bins_det'])
+      det_pt_bin_array = array('d',pt_bins_det)
+      setattr(self, 'det_pt_bin_array_{}'.format(obs_label), det_pt_bin_array)
 
     # List of systematic variations to perform
     self.systematics_list = config['systematics_list']
@@ -148,10 +152,8 @@ class RunAnalysis(common_base.CommonBase):
     if 'trkeff' in self.systematics_list:
       self.trkeff_response = config['trkeff_response']
 
-    if 'prior1' in self.systematics_list:
-      self.prior1_variation_parameter = config['prior1_variation_parameter']
-    if 'prior2' in self.systematics_list:
-      self.prior2_variation_parameter = config['prior2_variation_parameter']
+    self.prior1_variation_parameter = config['prior1_variation_parameter']
+    self.prior2_variation_parameter = config['prior2_variation_parameter']
       
     if 'subtraction1' in self.systematics_list:
       self.R_max1 = config['R_max_variation1']
@@ -194,6 +196,8 @@ class RunAnalysis(common_base.CommonBase):
       
       self.logfile = os.path.join(output_dir_systematics, 'log.txt')
       open(self.logfile, 'w').close()
+      
+      self.create_output_subdir(output_dir, 'unfolding_tests')
 
     if self.do_plot_final_result:
       output_dir_final = self.create_output_subdir(output_dir, 'final_results')
@@ -405,6 +409,64 @@ class RunAnalysis(common_base.CommonBase):
         f_tagging_name = 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth)
         f_tagged = getattr(self, '{}_{}'.format(f_tagging_name, reg_param_final))
         setattr(self, f_tagging_name, f_tagged)
+        
+      # Copy plots of final reg param, for convenience
+      self.copy_unfolding_tests(jetR, obs_label, reg_param_final, min_pt_truth, max_pt_truth)
+      
+  #----------------------------------------------------------------------
+  def copy_unfolding_tests(self, jetR, obs_label, reg_param_final, min_pt, max_pt):
+
+      outputdir_main = getattr(self, 'output_dir_main')
+      label = 'R{}_{}'.format(self.utils.remove_periods(jetR), obs_label)
+
+      # Make a folder for each obs_label and pt bin
+      outputdir = os.path.join(getattr(self, 'output_dir_unfolding_tests'), label)
+      outputdir = os.path.join(outputdir, '{}-{}'.format(min_pt, max_pt))
+      if not os.path.exists(outputdir):
+        os.makedirs(outputdir)
+
+      # Copy refolding test
+      outputdir_test = os.path.join(outputdir_main, 'Test_Refolding')
+      old_name = 'hFoldedTruth_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
+      new_name = 'hFoldedTruth_pt_{}_final{}'.format(label, self.file_format)
+      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      
+      pt_det_bins = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
+      pt_det_bins = pt_det_bins[pt_det_bins.index(min_pt) : pt_det_bins.index(max_pt) + 1]
+      for i in range(len(pt_det_bins)-1):
+        min_det_pt = int(pt_det_bins[i])
+        max_det_pt = int(pt_det_bins[i+1])
+        old_name = 'hFoldedTruth_{}_{}-{}_{}{}'.format(label, min_det_pt, max_det_pt, reg_param_final, self.file_format)
+        new_name = 'hFoldedTruth_{}_{}-{}_final{}'.format(label, min_det_pt, max_det_pt, self.file_format)
+        shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      
+      # Copy statistical closure test
+      outputdir_test = os.path.join(outputdir_main, 'Test_StatisticalClosure')
+      old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
+      new_name = 'hStatisticalClosure_pt_{}_final{}'.format(label, self.file_format)
+      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      old_name = 'hClosure_{}_{}-{}_{}{}'.format(label, min_pt, max_pt, reg_param_final, self.file_format)
+      new_name = 'hStatisticalClosure_{}_{}-{}_final{}'.format(label, min_pt, max_pt, self.file_format)
+      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      
+      # Copy shape closure test
+      parameter = self.utils.remove_periods(self.prior1_variation_parameter)
+      outputdir_test = os.path.join(outputdir_main, 'Test_ShapeClosure{}'.format(parameter))
+      old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
+      new_name = 'hShapeClosure{}_pt_{}_final{}'.format(parameter, label, self.file_format)
+      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      old_name = 'hClosure_{}_{}-{}_{}{}'.format(label, min_pt, max_pt, reg_param_final, self.file_format)
+      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(parameter, label, min_pt, max_pt, self.file_format)
+      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      
+      parameter = self.utils.remove_periods(self.prior2_variation_parameter)
+      outputdir_test = os.path.join(outputdir_main, 'Test_ShapeClosure{}'.format(parameter))
+      old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
+      new_name = 'hShapeClosure{}_pt_{}_final{}'.format(parameter, label, self.file_format)
+      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      old_name = 'hClosure_{}_{}-{}_{}{}'.format(label, min_pt, max_pt, reg_param_final, self.file_format)
+      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(parameter, label, min_pt, max_pt, self.file_format)
+      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
 
   #----------------------------------------------------------------------
   def load_2D_observables(self, jetR, obs_label, obs_setting, grooming_setting, reg_param):
