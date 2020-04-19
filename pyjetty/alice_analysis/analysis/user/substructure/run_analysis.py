@@ -6,7 +6,7 @@ This class steers analysis of generic jet substructure analyses which require 2D
 To use this class, the following should be done:
 
   - Produce a histogram of the data, with name h_[obs]_JetPt_R[R]_[subobs]_[grooming setting]
-    The grooming part is optional, and should be labeled e.g. zcut01_B0 — from CommonUtils::grooming_label({'sd'[zcut, beta]})
+    The grooming part is optional, and should be labeled e.g. zcut01_B0 — from CommonUtils::grooming_label({'sd':[zcut, beta]})
     For example: h_subjet_z_JetPt_R0.4_0.1
     For example: h_subjet_z_JetPt_R0.4_0.1_zcut01_B0
 
