@@ -210,12 +210,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         
         # For SD, fill underflow bin to include untagged fraction in the unfolding
         # If underflow is activated, create a new underflow bin for the observable
-        use_underflow =  'sd' in grooming_setting
-        if use_underflow:
-          det_bin_array.insert(0, det_bin_array[0] - 0.1)
-          n_bins_det += 1
-          truth_bin_array.insert(0, truth_bin_array[0] - 0.1)
-          n_bins_truth += 1
+        if grooming_setting:
+          use_underflow = 'sd' in grooming_setting
+          if use_underflow:
+            det_bin_array.insert(0, det_bin_array[0] - 0.1)
+            n_bins_det += 1
+            truth_bin_array.insert(0, truth_bin_array[0] - 0.1)
+            n_bins_truth += 1
+        else:
+          use_underflow = False
 
         # Rebin if requested, and write to file
         thn = self.fResponse.Get(name_thn)
@@ -861,7 +864,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hResponse_Obs_Normalized = self.utils.normalize_response_matrix(hResponse_Obs)
     
     # Set z-maximum in Soft Drop case, since otherwise the untagged bin will dominate the scale
-    if 'sd' in grooming_setting:
+    if grooming_setting and 'sd' in grooming_setting:
       hResponse_Obs_Normalized.SetMaximum(0.3)
 
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)

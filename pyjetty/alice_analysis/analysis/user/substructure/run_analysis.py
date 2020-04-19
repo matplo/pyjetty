@@ -6,7 +6,7 @@ This class steers analysis of generic jet substructure analyses which require 2D
 To use this class, the following should be done:
 
   - Produce a histogram of the data, with name h_[obs]_JetPt_R[R]_[subobs]_[grooming setting]
-    The grooming part is optional, and should be labeled e.g. zcut01_B0 — from CommonUtils::grooming_label({'sd':[zcut, beta]})
+    The grooming part is optional, and should be labeled e.g. zcut01_B0 — from CommonUtils::grooming_label({'sd'[zcut, beta]})
     For example: h_subjet_z_JetPt_R0.4_0.1
     For example: h_subjet_z_JetPt_R0.4_0.1_zcut01_B0
 
@@ -401,7 +401,7 @@ class RunAnalysis(common_base.CommonBase):
                                   min_pt_truth, max_pt_truth, maxbin, final=True)
                                   
       # Set SD tagging fraction for final reg parameter
-      if 'sd' in grooming_setting:
+      if grooming_setting and 'sd' in grooming_setting:
         f_tagging_name = 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth)
         f_tagged = getattr(self, '{}_{}'.format(f_tagging_name, reg_param_final))
         setattr(self, f_tagging_name, f_tagged)
@@ -608,7 +608,7 @@ class RunAnalysis(common_base.CommonBase):
         
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
     
-    if 'sd' in grooming_setting:
+    if grooming_setting and 'sd' in grooming_setting:
     
       # If SD, the untagged jets are in the first bin
       n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1)
