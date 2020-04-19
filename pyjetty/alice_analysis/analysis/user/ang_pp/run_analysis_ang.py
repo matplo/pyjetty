@@ -219,7 +219,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                               min_pt_truth, max_pt_truth)
     if grooming_setting:
       fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
-    h = getattr(self, name)
+    h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -237,6 +237,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     n_obs_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
+    if maxbin:
+      truth_bin_array = truth_bin_array[0:maxbin+1]
+      n_obs_bins_truth = len(truth_bin_array)-1
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(xtitle)
@@ -304,7 +307,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           ', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
         text_latex.DrawLatex(0.57, 0.52-delta, text)
 
-    myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
+    myLegend = ROOT.TLegend(0.25, 0.7, 0.45, 0.85)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
