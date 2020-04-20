@@ -3,13 +3,13 @@ import os
 import psutil
 import sys
 import array
+import time
 
 import ROOT
 ROOT.gROOT.SetBatch(True)
 
 class MemTrace(MPBase):
 	_instance = None
-	_reset_once_done = False
 
 	def __init__(self):
 		raise RuntimeError('Call instance() instead')
@@ -19,23 +19,19 @@ class MemTrace(MPBase):
 		if cls._instance is None:
 			pinfo('Creating new MemTrace instance')
 			cls._instance = cls.__new__(cls)
-			cls._instance._reset_once(**kwargs)
+			super(MemTrace, cls._instance).__init__(**kwargs)
+			cls._instance._process = psutil.Process(os.getpid())
+			cls._instance.event_number = 0
+			cls._instance.event_tree_name = 'mt'
+			cls._instance.process = psutil.Process(os.getpid())
+			cls._instance.trees = {}
+			cls._instance.fout = None
+			cls._instance.output_name='memtrace.root'
+			cls._instance.toffset = time.time()
+		cls._instance.configure_from_args(**kwargs)
 		return cls._instance
 
-	def _reset_once(self, **kwargs):
-		if self._reset_once_done == False:
-			pwarning('_reset_once')
-			self.configure_from_args(output_name='memtrace.root', fout=None)
-			self.event_number = 0
-			self.event_tree_name = 'mt'
-			super(MemTrace, self).__init__(**kwargs)
-			self._reset_once_done = True
-			self.process = psutil.Process(os.getpid())
-			self.trees = {}
-
 	def reset(self, **kwargs):
-		if self._reset_once_done == False:
-			self._reset_once(**kwargs)
 		self.configure_from_args(**kwargs)
 		self.reset_output()
 
@@ -52,7 +48,6 @@ class MemTrace(MPBase):
 
 	def snapshot(self, label='mem'):
 		cwd = ROOT.gDirectory.CurrentDirectory().GetPath()
-		self._reset_once()
 		new_key = False
 		try:
 			self.fout.cd()
@@ -64,12 +59,13 @@ class MemTrace(MPBase):
 			new_key = True
 		if new_key:
 			self.fout.cd()
-			self.trees[label] = ROOT.TNtuple(label, label, 'rss:vms')
+			self.trees[label] = ROOT.TNtuple(label, label, 'rss:vms:t')
 			pinfo('MemTrace - new tuple {}'.format(label), file=sys.stderr)
 		rss = self.process.memory_info().rss
 		vms = self.process.memory_info().vms
 		# n = self.trees[label].GetEntries()
-		self.trees[label].Fill(rss, vms)
+		ts = time.time() - self.toffset
+		self.trees[label].Fill(rss, vms, ts)
 		self._write_()
 		ROOT.gDirectory.cd(cwd)
 		# cwd.cd()
@@ -83,14 +79,22 @@ class MemTrace(MPBase):
 		last_rss = 0
 		last_vms = 0
 		for i,e in enumerate(tree):
+			if i == 0:
+				last_x = e.t
+				last_rss = e.rss * to_Gb
+				last_vms = e.vms * to_Gb
+				data_x.append(e.t)
+				data_yrss.append(e.rss * to_Gb)
+				data_yvms.append(e.vms * to_Gb)
 			if e.rss != last_rss or e.vms != last_vms:
 				data_x.append(last_x)
 				data_yrss.append(last_rss)
 				data_yvms.append(last_vms)
-				data_x.append(i)
+				data_x.append(e.t)
 				data_yrss.append(e.rss * to_Gb)
 				data_yvms.append(e.vms * to_Gb)
-			last_x   = i
+			# last_x   = i
+			last_x = e.t
 			last_rss = e.rss * to_Gb
 			last_vms = e.vms * to_Gb
 		data_x.append(last_x+1)
@@ -105,13 +109,13 @@ class MemTrace(MPBase):
 		f_vms = array.array('f', data_yvms)
 
 		gr_rss = ROOT.TGraph(len(data_x), f_x, f_rss)
-		gr_rss.SetName('gr_rss')
-		gr_rss.SetTitle('rss')
+		gr_rss.SetName('gr_rss_{}'.format(tree.GetName()))
+		gr_rss.SetTitle('rss {}'.format(tree.GetName()))
 		gr_rss.Write()
 
 		gr_vms = ROOT.TGraph(len(data_x), f_x, f_vms)
-		gr_vms.SetName('gr_vms')
-		gr_vms.SetTitle('vms')
+		gr_vms.SetName('gr_vms_{}'.format(tree.GetName()))
+		gr_vms.SetTitle('vms {}'.format(tree.GetName()))
 		gr_vms.Write()
 
 	def _write_(self):
