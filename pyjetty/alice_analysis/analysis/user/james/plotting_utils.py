@@ -238,7 +238,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     name = 'hJetPt_Truth_R{}Scaled'.format(jetR)
     histPtGen = self.fMC.Get(name)
     histPtGen.Rebin(10)
-    histPtGen.Scale(5./2)
     
     # Then, get the pT^gen spectrum for matched jets
     name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)

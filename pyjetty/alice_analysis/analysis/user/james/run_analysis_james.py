@@ -433,6 +433,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     h = thn.Projection(3)
     h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h.SetDirectory(0)
+    
+    for i in range(1, h.GetNbinsX() + 1):
+      h.SetBinError(i, 0)
 
     return h
 
