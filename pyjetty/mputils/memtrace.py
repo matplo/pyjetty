@@ -1,4 +1,4 @@
-from pyjetty.mputils import MPBase, pinfo, perror
+from pyjetty.mputils import MPBase, pinfo, perror, pwarning
 import os
 import psutil
 import sys
@@ -15,14 +15,16 @@ class MemTrace(MPBase):
 		raise RuntimeError('Call instance() instead')
 
 	@classmethod
-	def instance(cls):
+	def instance(cls, **kwargs):
 		if cls._instance is None:
 			pinfo('Creating new MemTrace instance')
 			cls._instance = cls.__new__(cls)
+			cls._instance._reset_once(**kwargs)
 		return cls._instance
 
 	def _reset_once(self, **kwargs):
 		if self._reset_once_done == False:
+			pwarning('_reset_once')
 			self.configure_from_args(output_name='memtrace.root', fout=None)
 			self.event_number = 0
 			self.event_tree_name = 'mt'
@@ -38,14 +40,20 @@ class MemTrace(MPBase):
 		self.reset_output()
 
 	def reset_output(self):
+		cwd = ROOT.gDirectory.CurrentDirectory()
+		ROOT.gDirectory.cd('/')
 		if self.fout is None:
 			self.fout = ROOT.TFile(self.output_name, 'recreate')
 		else:
 			self.fout.Close()
 			self.fout = ROOT.TFile(self.output_name, 'recreate')
+		pinfo('MemTrace.reset_output', self.output_name, 'path:', ROOT.gDirectory.GetPath())
+		cwd.cd()
 
 	def snapshot(self, label='mem'):
+		cwd = ROOT.gDirectory.CurrentDirectory().GetPath()
 		self._reset_once()
+		new_key = False
 		try:
 			self.fout.cd()
 		except:
@@ -53,6 +61,8 @@ class MemTrace(MPBase):
 		try: 
 			self.trees[label]
 		except KeyError:
+			new_key = True
+		if new_key:
 			self.fout.cd()
 			self.trees[label] = ROOT.TNtuple(label, label, 'rss:vms')
 			pinfo('MemTrace - new tuple {}'.format(label), file=sys.stderr)
@@ -61,6 +71,8 @@ class MemTrace(MPBase):
 		# n = self.trees[label].GetEntries()
 		self.trees[label].Fill(rss, vms)
 		self._write_()
+		ROOT.gDirectory.cd(cwd)
+		# cwd.cd()
 		
 	def write_as_graph(self, tree):
 		data_x = []
