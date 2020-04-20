@@ -79,7 +79,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     if self.observable == 'zg':
       return math.pow(obs_true, prior_variation_parameter)
     elif self.observable == 'theta_g':
-      return (1 + obs_true)
+      return (1 + prior_variation_parameter*(2*obs_true - 1))
     elif self.observable == 'subjet_z':
       return (1 + obs_true)
     elif self.observable == 'jet_axis':
