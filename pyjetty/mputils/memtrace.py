@@ -80,29 +80,18 @@ class MemTrace(MPBase):
 		last_vms = 0
 		for i,e in enumerate(tree):
 			if i == 0:
-				last_x = e.t
-				last_rss = e.rss * to_Gb
-				last_vms = e.vms * to_Gb
-				data_x.append(e.t)
-				data_yrss.append(e.rss * to_Gb)
-				data_yvms.append(e.vms * to_Gb)
-			if e.rss != last_rss or e.vms != last_vms:
-				data_x.append(last_x)
-				data_yrss.append(last_rss)
-				data_yvms.append(last_vms)
-				data_x.append(e.t)
-				data_yrss.append(e.rss * to_Gb)
-				data_yvms.append(e.vms * to_Gb)
-			# last_x   = i
+				data_x.append(e.t - 0.1)
+				data_yrss.append(0)
+				data_yvms.append(0)				
+			data_x.append(e.t)
+			data_yrss.append(e.rss * to_Gb)
+			data_yvms.append(e.vms * to_Gb)
+			last_rss = e.rss
+			last_vms = e.vms
 			last_x = e.t
-			last_rss = e.rss * to_Gb
-			last_vms = e.vms * to_Gb
-		data_x.append(last_x+1)
-		data_yrss.append(last_rss)
-		data_yvms.append(last_vms)
-		data_x.append(last_x+2)
-		data_yrss.append(0.0)
-		data_yvms.append(0.0)
+		data_x.append(e.t + 0.1)
+		data_yrss.append(0)
+		data_yvms.append(0)				
 
 		f_x = array.array('f', data_x)
 		f_rss = array.array('f', data_yrss)
