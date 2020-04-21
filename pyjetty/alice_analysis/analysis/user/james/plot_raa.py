@@ -41,15 +41,15 @@ class PlotRAA(common_base.CommonBase):
     #self.figure_approval_status = config['figure_approval_status']
     self.figure_approval_status = 'Work in progress'
     
-    self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_63515_62950_dev/RAA/'
+    self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
  
-    self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_53358/'
-    self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_63515_62950_dev/'
+    self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940/'
+    self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/69379_67256_66097-02/'
     
-    self.observables = ['theta_g', 'zg']
-    self.obs_label = 'zcut02_B0'
+    self.observables = ['zg']
+    self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
-    self.jetR = 0.4
+    self.jetR = 0.2
     self.min_pt = 60
     self.max_pt = 80
     
@@ -67,22 +67,29 @@ class PlotRAA(common_base.CommonBase):
     if observable == 'theta_g':
       self.xtitle = '#theta_{g}'
     if observable == 'zg':
-      self.xtitle = 'z_{g}'
-    self.ytitle = '#frac{{1}}{{#it{{N}}_{{jets, inc}}}} #frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
+      self.xtitle = '#it{z}_{g}'
+    self.ytitle = '#frac{{1}}{{#sigma_{{jets, inc}}}} #frac{{d#sigma}}{{d{}}}'.format(self.xtitle)
  
     self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
     self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
-    
-    self.main_result_name_AA = 'hmain_{}_R0.2_SD_{}_n3_{}-{}'.format(observable, self.obs_label, self.min_pt, self.max_pt)
-    self.sys_total_name_AA = 'hResult_{}_systotal_R0.2_SD_{}_n3_{}-{}'.format(observable, self.obs_label, self.min_pt, self.max_pt)
+    self.h_tagging_fraction_name = 'h_tagging_fraction_R{}_{}'.format(self.jetR, self.obs_label)
  
     self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
     self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
 
     self.h_main_pp = self.file_pp.Get(self.main_result_name)
     self.h_sys_pp = self.file_pp.Get(self.sys_total_name)
-    self.h_main_AA = self.file_AA.Get(self.main_result_name_AA)
-    self.h_sys_AA = self.file_AA.Get(self.sys_total_name_AA)
+    self.h_tagging_fraction_pp = self.file_pp.Get(self.h_tagging_fraction_name)
+    self.h_main_AA = self.file_AA.Get(self.main_result_name)
+    self.h_sys_AA = self.file_AA.Get(self.sys_total_name)
+    self.h_tagging_fraction_AA = self.file_AA.Get(self.h_tagging_fraction_name)
+    
+    pt = (self.min_pt + self.max_pt)/2
+    bin = self.h_tagging_fraction_pp.GetXaxis().FindBin(pt)
+    self.f_tagging_pp = self.h_tagging_fraction_pp.GetBinContent(bin)
+    pt = (self.min_pt + self.max_pt)/2
+    bin = self.h_tagging_fraction_AA.GetXaxis().FindBin(pt)
+    self.f_tagging_AA = self.h_tagging_fraction_AA.GetBinContent(bin)
 
     self.ymax = self.h_main_pp.GetMaximum()
     self.colors = [600-6, 632-4, 416-2]
@@ -151,14 +158,14 @@ class PlotRAA(common_base.CommonBase):
     self.h_sys_AA.SetFillStyle(1001)
     self.h_sys_AA.SetLineWidth(0)
       
-    xmin = self.h_sys_pp.GetBinLowEdge(1)
+    xmin = self.h_sys_pp.GetBinLowEdge(2)
     xmax = self.h_sys_pp.GetBinLowEdge(self.h_sys_pp.GetNbinsX()+1)
         
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.SetYTitle(self.ytitle)
-    myBlankHisto.SetMaximum(2*self.ymax)
+    myBlankHisto.SetMaximum(2.3*self.ymax)
     myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
     myBlankHisto.GetYaxis().SetTitleSize(0.065)
     myBlankHisto.GetYaxis().SetTitleOffset(1.4)
@@ -188,10 +195,10 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto2.GetYaxis().SetLabelFont(43)
     myBlankHisto2.GetYaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetNdivisions(505)
-    myBlankHisto2.GetYaxis().SetRangeUser(0., 2.)
+    myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
     myBlankHisto2.Draw()
   
-    line = ROOT.TLine(0,1,xmax,1)
+    line = ROOT.TLine(xmin,1,xmax,1)
     line.SetLineColor(920+2)
     line.SetLineStyle(2)
     line.Draw()
@@ -219,6 +226,11 @@ class PlotRAA(common_base.CommonBase):
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
+    
+    text_latex.SetTextSize(0.04)
+    text = '#it{{f}}_{{tagged}}^{{pp}} = {:.2f}, #it{{f}}_{{tagged}}^{{AA}} = {:.2f}'.format(self.f_tagging_pp, self.f_tagging_AA)
+    text_latex.DrawLatex(0.57, 0.57, text)
+
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.25, 0.87, text)
     
@@ -237,7 +249,8 @@ class PlotRAA(common_base.CommonBase):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.63, text)
     
-    self.formatted_grooming_label
+    text = self.formatted_grooming_label
+    text_latex.DrawLatex(0.25, 0.57, text)
     
     myLegend.Draw()
 
