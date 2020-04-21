@@ -225,7 +225,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     # Construct histogram of tagging fraction, to write to file
     if 'sd' in grooming_setting:
-      name = 'h_tagging_fraction_{}'.format(obs_label)
+      name = 'h_tagging_fraction_R{}_{}'.format(jetR, obs_label)
       h_tagging = ROOT.TH1D(name, name, len(self.pt_bins_reported) - 1, array('d', self.pt_bins_reported))
 
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
@@ -237,7 +237,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       
       # Fill tagging fraction
       if 'sd' in grooming_setting:
-        fraction_tagged = getattr(self, 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth))
+        fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
         pt = (min_pt_truth + max_pt_truth)/2
         h_tagging.Fill(pt, fraction_tagged)
       
@@ -347,7 +347,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       text_latex.DrawLatex(0.57, 0.59-delta, text)
       
       if 'sd' in grooming_setting:
-        fraction_tagged = getattr(self, 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth))
+        fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
         text_latex.SetTextSize(0.04)
         text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
         text_latex.DrawLatex(0.57, 0.52-delta, text)

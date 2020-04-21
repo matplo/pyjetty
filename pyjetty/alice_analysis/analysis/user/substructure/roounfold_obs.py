@@ -561,7 +561,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Get unfolded result in 1D, for fixed slice of pt
   #################################################################################################
-  def get_unfolded_result(self, jetR, obs_label, i, min_pt_truth, max_pt_truth, option = ''):
+  def get_unfolded_result(self, jetR, obs_label, i, min_pt_truth, max_pt_truth, option = '',
+                          scaling_option = 'width'):
 
     name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)
     h2D = getattr(self, name)
@@ -571,7 +572,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
     n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
-    h.Scale(1./n_jets_inclusive, 'width')
+    h.Scale(1./n_jets_inclusive, scaling_option)
 
     return h
 
@@ -1222,7 +1223,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       max_pt_truth = truth_pt_bin_array[bin+1]
       
       # Get unfolded result
-      hUnfolded_obs = self.get_unfolded_result(jetR, obs_label, reg_param_final, min_pt_truth, max_pt_truth)
+      hUnfolded_obs = self.get_unfolded_result(jetR, obs_label, reg_param_final, min_pt_truth,
+                                               max_pt_truth, scaling_option='')
       
       # Get MC truth projection
       hMC_Truth.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
