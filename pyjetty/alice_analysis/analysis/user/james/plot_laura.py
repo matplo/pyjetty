@@ -35,7 +35,7 @@ class PlotLaura(common_base.CommonBase):
     
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
  
-    self.observable = 'theta_g'
+    self.observable = 'zg'
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
     self.jetR = 0.4
@@ -208,7 +208,7 @@ class PlotLaura(common_base.CommonBase):
     pad2.cd()
           
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
-    myBlankHisto2.SetYTitle('#frac{Pb-Pb}{pp}')
+    myBlankHisto2.SetYTitle('')
     myBlankHisto2.SetXTitle(self.xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
     myBlankHisto2.GetXaxis().SetTitleFont(43)
