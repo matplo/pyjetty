@@ -43,15 +43,20 @@ class PlotRAA(common_base.CommonBase):
     
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
  
-    self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940/'
-    self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/69379_67256_66097-02/'
-    
-    self.observables = ['zg']
+    self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-sd/'
+    self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/67256-02-test/'
+    #self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/67256-04-test/'
+
+    self.observables = ['theta_g']
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
     self.jetR = 0.2
-    self.min_pt = 60
-    self.max_pt = 80
+    if self.jetR == 0.4:
+      self.min_pt = 80
+      self.max_pt = 100
+    else:
+      self.min_pt = 60
+      self.max_pt = 80
     
     if not os.path.exists(self.output_dir):
       os.makedirs(self.output_dir)
@@ -68,7 +73,7 @@ class PlotRAA(common_base.CommonBase):
       self.xtitle = '#theta_{g}'
     if observable == 'zg':
       self.xtitle = '#it{z}_{g}'
-    self.ytitle = '#frac{{1}}{{#sigma_{{jets, inc}}}} #frac{{d#sigma}}{{d{}}}'.format(self.xtitle)
+    self.ytitle = '#frac{{1}}{{#sigma_{{jet, inc}}}} #frac{{d#sigma}}{{d{}}}'.format(self.xtitle)
  
     self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
     self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
@@ -165,12 +170,29 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.SetYTitle(self.ytitle)
-    myBlankHisto.SetMaximum(2.3*self.ymax)
+    if observable == 'theta_g':
+      ymax = 3*self.ymax
+    else:
+      ymax = 2.3*self.ymax
+    myBlankHisto.SetMaximum(ymax)
     myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
     myBlankHisto.GetYaxis().SetTitleSize(0.065)
     myBlankHisto.GetYaxis().SetTitleOffset(1.4)
     myBlankHisto.GetYaxis().SetLabelSize(0.06)
     myBlankHisto.Draw('E')
+    
+    if observable == 'theta_g':
+      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, self.jetR-0.01)
+      rg_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'rg_axis_tf1', 505, '- S')
+      rg_axis.SetTitle('#it{R}_{g}')
+      rg_axis.SetTitleSize(25)
+      rg_axis.SetTitleFont(43)
+      rg_axis.SetTitleOffset(0.6)
+      rg_axis.SetLabelFont(43)
+      rg_axis.SetLabelSize(25)
+      rg_axis.SetTickSize(0.015)
+      rg_axis.SetLabelOffset(0.015)
+      rg_axis.Draw()
  
     c.cd()
     pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.3)
@@ -195,7 +217,11 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto2.GetYaxis().SetLabelFont(43)
     myBlankHisto2.GetYaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetNdivisions(505)
-    myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+    if observable == 'theta_g':
+      myBlankHisto2.GetYaxis().SetRangeUser(0., 2.49)
+    else:
+      myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+
     myBlankHisto2.Draw()
   
     line = ROOT.TLine(xmin,1,xmax,1)
@@ -221,7 +247,7 @@ class PlotRAA(common_base.CommonBase):
           
     pad1.cd()
     myLegend.AddEntry(self.h_main_pp, 'pp', 'PE')
-    myLegend.AddEntry(self.h_main_AA, 'Pb-Pb', 'PE')
+    myLegend.AddEntry(self.h_main_AA, 'Pb-Pb 0-10%', 'PE')
     myLegend.AddEntry(self.h_sys_pp, 'Sys. uncertainty', 'f')
     
     text_latex = ROOT.TLatex()
@@ -231,22 +257,20 @@ class PlotRAA(common_base.CommonBase):
     text = '#it{{f}}_{{tagged}}^{{pp}} = {:.2f}, #it{{f}}_{{tagged}}^{{AA}} = {:.2f}'.format(self.f_tagging_pp, self.f_tagging_AA)
     text_latex.DrawLatex(0.57, 0.57, text)
 
+    text_latex.SetTextSize(0.045)
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.25, 0.87, text)
     
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
-    text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.81, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.75, text)
     
     text = '#it{R} = ' + str(self.jetR) + '   | #eta_{jet}| < 0.5'
     text_latex.DrawLatex(0.25, 0.69, text)
     
     text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
-    text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.63, text)
     
     text = self.formatted_grooming_label

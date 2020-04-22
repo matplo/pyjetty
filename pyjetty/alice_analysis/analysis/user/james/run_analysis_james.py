@@ -657,7 +657,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
-          myBlankHisto2.GetYaxis().SetRangeUser(0., 2.)
+          myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(xmin,1,xmax,1)
@@ -795,6 +795,19 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     text_latex.DrawLatex(0.25, 0.63, text)
     
     myLegend.Draw()
+    
+    if self.observable == 'theta_g':
+      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, jetR-0.01)
+      rg_axis = ROOT.TGaxis(xmin, 2*ymax, xmax, 2*ymax, 'rg_axis_tf1', 505, '- S')
+      rg_axis.SetTitle('#it{R}_{g}')
+      rg_axis.SetTitleSize(25)
+      rg_axis.SetTitleFont(43)
+      rg_axis.SetTitleOffset(0.6)
+      rg_axis.SetLabelFont(43)
+      rg_axis.SetLabelSize(25)
+      rg_axis.SetTickSize(0.015)
+      rg_axis.SetLabelOffset(0.015)
+      rg_axis.Draw()
 
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:
