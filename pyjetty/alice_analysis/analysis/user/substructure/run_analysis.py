@@ -406,7 +406,7 @@ class RunAnalysis(common_base.CommonBase):
                                   
       # Set SD tagging fraction for final reg parameter
       if grooming_setting and 'sd' in grooming_setting:
-        f_tagging_name = 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth)
+        f_tagging_name = 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
         f_tagged = getattr(self, '{}_{}'.format(f_tagging_name, reg_param_final))
         setattr(self, f_tagging_name, f_tagged)
         
@@ -678,7 +678,7 @@ class RunAnalysis(common_base.CommonBase):
       
       if store_tagging_fraction:
         f_tagging = n_jets_tagged/n_jets_inclusive
-        f_tagging_name = 'tagging_fraction_{}_{}-{}_{}'.format(obs_label, min_pt_truth, max_pt_truth, reg_param)
+        f_tagging_name = 'tagging_fraction_R{}_{}_{}-{}_{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth, reg_param)
         setattr(self, f_tagging_name, f_tagging)
       
     else:
@@ -721,6 +721,8 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
     myBlankHisto.SetMaximum(1.7*h_total.GetMaximum())
+    if h_total.GetMaximum() > 100:
+      myBlankHisto.SetMaximum(50)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
