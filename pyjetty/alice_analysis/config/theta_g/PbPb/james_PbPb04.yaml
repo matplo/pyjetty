@@ -11,7 +11,7 @@
 # The analysis step is intended to run for a single observable block
 
 process_observables: ['theta_g', 'zg']
-jetR: [0.2, 0.4]
+jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
 reject_tracks_fraction: 0.02
@@ -54,14 +54,11 @@ theta_g:
       zcut: 0.2
       beta: 0
     pt_bins_truth: [5, 20, 30, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    pt_bins_det: [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
     obs_bins_truth: [0., 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0]
     obs_bins_det: [0., 0.1, 0.15, 0.19, 0.22, 0.25, 0.3, 0.35, 0.43, 0.53, 0.7, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 1.0]
-    reg_param:
-      0.2: 5
-      0.4: 3
 
 # config2:
 #   DynamicalGrooming:
@@ -121,8 +118,8 @@ zg:
       zcut: 0.2
       beta: 0
     pt_bins_truth: [5, 20, 30, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
+    pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 120]
+    pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
     obs_bins_truth: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     obs_bins_det: [0.2, 0.23, 0.26, 0.3, 0.34, 0.38, 0.42, 0.46, 0.5]
     obs_bins_det_sys_binning: [0.2, 0.22, 0.24, 0.26, 0.28, 0.3, 0.32, 0.34, 0.36, 0.38, 0.4, 0.42, 0.44, 0.46, 0.48, 0.5]
@@ -171,12 +168,12 @@ zg:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/67256-02-test'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/67256-04-test'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
-analysis_observable: 'theta_g'
+analysis_observable: 'zg'
 do_unfolding: True
-force_rebin: True
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
