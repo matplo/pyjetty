@@ -138,6 +138,7 @@ class ProcessMC(process_base.ProcessBase):
       
     self.fast_simulation = config['fast_simulation']
     self.dry_run = config['dry_run']
+    self.skip_prong_matching_histogram = False
     
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
@@ -407,6 +408,9 @@ class ProcessMC(process_base.ProcessBase):
   # Create theta_g response histograms
   #---------------------------------------------------------------
   def create_prong_matching_histograms(self, jetR, grooming_label):
+  
+    if self.skip_prong_matching_histogram:
+      return
   
     prong_list = ['leading', 'subleading']
     match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
@@ -1188,6 +1192,9 @@ class ProcessMC(process_base.ProcessBase):
   # Do prong-matching
   #---------------------------------------------------------------
   def fill_prong_matching_histograms(self, jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD'):
+    
+    if self.skip_prong_matching_histogram:
+      return False
     
     # Do grooming on pp-det jet, and get prongs
     jet_pp_det = jet_truth.python_info().match
