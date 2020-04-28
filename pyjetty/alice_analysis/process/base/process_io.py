@@ -33,7 +33,7 @@ class ProcessIO(common_base.CommonBase):
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', tree_dir='PWGHF_TreeCreator',
-               track_tree_name='tree_Particle', event_tree_name='tree_event_char', output_dir='', **kwargs):
+               track_tree_name='tree_Particle', event_tree_name='tree_event_char', output_dir='', is_pp=True, min_cent=0., max_cent=10., **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
@@ -42,10 +42,17 @@ class ProcessIO(common_base.CommonBase):
       self.tree_dir += '/'
     self.track_tree_name = track_tree_name
     self.event_tree_name = event_tree_name
-    self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
     if len(output_dir) and output_dir[-1] != '/':
       self.output_dir += '/'
     self.reset_dataframes()
+    
+    self.is_pp = is_pp
+    if self.is_pp:
+      self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
+    else:
+      self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej', 'centrality']
+      self.min_centrality = min_cent
+      self.max_centrality = max_cent
   
   #---------------------------------------------------------------
   # Clear dataframes
@@ -96,7 +103,11 @@ class ProcessIO(common_base.CommonBase):
       sys.exit('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
     self.event_df_orig = event_tree.pandas.df(self.event_columns)
     self.event_df_orig.reset_index(drop=True)
-    event_df = self.event_df_orig.query('is_ev_rej == 0')
+    if self.is_pp:
+      event_criteria = 'is_ev_rej == 0'
+    else:
+      event_criteria = 'is_ev_rej == 0 and centrality > @self.min_centrality and centrality < @self.max_centrality'
+    event_df = self.event_df_orig.query(event_criteria)
     event_df.reset_index(drop=True)
 
     # Load track tree into dataframe
