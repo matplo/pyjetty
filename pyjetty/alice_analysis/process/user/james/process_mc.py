@@ -481,22 +481,17 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for theta_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-    nbins = [30, 30, 100, 20]
+    nbins = [30, 30, 100, 100]
     min = [0., 0., 0., 0.]
     max = [150., 300., 1., 1.]
     name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     self.create_thn(name, title, dim, nbins, min, max)
     
-    name = 'hRelativeResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-    h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
-    setattr(self, name, h)
-    
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, int(3*jetR*100), -3*jetR, 3*jetR)
+    h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0., 1., 200, -2., 2.)
     h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('#theta_{g,det}-#theta_{g,truth}')
+    h.GetYaxis().SetTitle('#theta_{g,truth}')
+    h.GetZaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
     setattr(self, name, h)
 
   #---------------------------------------------------------------
@@ -512,22 +507,17 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for z_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-    nbins = [30, 30, 50, 20]
+    nbins = [30, 30, 50, 50]
     min = [0., 0., 0., 0.]
     max = [150., 300., 0.5, 0.5]
     name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     self.create_thn(name, title, dim, nbins, min, max)
 
-    name = 'hRelativeResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-    h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
-    setattr(self, name, h)
-
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, 100, -0.5, 0.5)
+    h = ROOT.TH3F(name, name, 30, 0, 300, 50, 0., 0.5, 200, -2., 2.)
     h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('z_{g,det}-z_{g,truth}')
+    h.GetYaxis().SetTitle('z_{g,truth}')
+    h.GetZaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
     setattr(self, name, h)
 
   #---------------------------------------------------------------
@@ -1164,16 +1154,10 @@ class ProcessMC(process_base.ProcessBase):
         
       if obs_truth > 1e-5:
         obs_resolution = (obs_det - obs_truth) / obs_truth
-        name = 'hRelativeResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
+        name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
         if not self.is_pp:
           name += '_Rmax{}'.format(R_max)
-        getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
-      
-      obs_resolution = obs_det - obs_truth
-      name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
-      if not self.is_pp:
-        name += '_Rmax{}'.format(R_max)
-      getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
+        getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_truth, obs_resolution)
       
       # Fill prong-matched response
       if not self.is_pp and R_max == self.main_R_max:
@@ -1182,12 +1166,10 @@ class ProcessMC(process_base.ProcessBase):
           name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
           getattr(self, name).Fill(x_array)
           
-          name = 'hRelativeResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
-          getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
+          if obs_truth > 1e-5:
+            name = 'hResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
+            getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_truth, obs_resolution)
           
-          name = 'hResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
-          getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
-
   #---------------------------------------------------------------
   # Do prong-matching
   #---------------------------------------------------------------
