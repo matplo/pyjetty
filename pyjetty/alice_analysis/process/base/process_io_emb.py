@@ -30,7 +30,8 @@ class ProcessIO_Emb(common_base.CommonBase):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, file_list='PbPb_file_list.txt', track_tree_name='tree_Particle', **kwargs):
+  def __init__(self, file_list='PbPb_file_list.txt', track_tree_name='tree_Particle',
+               min_cent=0., max_cent=10., **kwargs):
     super(ProcessIO_Emb, self).__init__(**kwargs)
     
     self.file_list = file_list
@@ -49,6 +50,9 @@ class ProcessIO_Emb(common_base.CommonBase):
     self.current_file_df = None
     self.current_file_nevents = 0
     self.current_event_index = 0
+    
+    self.min_centrality = min_cent
+    self.max_centrality = max_cent
       
     # Initialize by loading a file
     self.load_file()
@@ -77,7 +81,8 @@ class ProcessIO_Emb(common_base.CommonBase):
     self.list_of_files.remove(input_file)
     print('Opening Pb-Pb file: {}'.format(input_file))
 
-    io = process_io.ProcessIO(input_file=input_file, track_tree_name=self.track_tree_name)
+    io = process_io.ProcessIO(input_file=input_file, track_tree_name=self.track_tree_name,
+                              is_pp=False, min_cent=self.min_centrality, max_cent=self.max_centrality)
     self.current_file_df = io.load_data(offset_indices=True)
     self.current_file_nevents = len(self.current_file_df.index)
     self.current_event_index = 0
