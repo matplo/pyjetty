@@ -1,5 +1,6 @@
 %module fjtools
 %include "std_vector.i"
+%template(IntVector) std::vector<int>;
 %{
 	#define SWIG_FILE_WITH_INIT
 	// #include <Pythia8/Pythia.h>
