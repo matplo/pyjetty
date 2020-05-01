@@ -225,7 +225,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     
     # Construct histogram of tagging fraction, to write to file
     if 'sd' in grooming_setting:
-      name = 'h_tagging_fraction_{}'.format(obs_label)
+      name = 'h_tagging_fraction_R{}_{}'.format(jetR, obs_label)
       h_tagging = ROOT.TH1D(name, name, len(self.pt_bins_reported) - 1, array('d', self.pt_bins_reported))
 
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
@@ -237,7 +237,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       
       # Fill tagging fraction
       if 'sd' in grooming_setting:
-        fraction_tagged = getattr(self, 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth))
+        fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
         pt = (min_pt_truth + max_pt_truth)/2
         h_tagging.Fill(pt, fraction_tagged)
       
@@ -347,7 +347,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       text_latex.DrawLatex(0.57, 0.59-delta, text)
       
       if 'sd' in grooming_setting:
-        fraction_tagged = getattr(self, 'tagging_fraction_{}_{}-{}'.format(obs_label, min_pt_truth, max_pt_truth))
+        fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
         text_latex.SetTextSize(0.04)
         text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
         text_latex.DrawLatex(0.57, 0.52-delta, text)
@@ -657,7 +657,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
-          myBlankHisto2.GetYaxis().SetRangeUser(0., 2.)
+          myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(xmin,1,xmax,1)
@@ -795,6 +795,19 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     text_latex.DrawLatex(0.25, 0.63, text)
     
     myLegend.Draw()
+    
+    if self.observable == 'theta_g':
+      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, jetR-0.01)
+      rg_axis = ROOT.TGaxis(xmin, 2*ymax, xmax, 2*ymax, 'rg_axis_tf1', 505, '- S')
+      rg_axis.SetTitle('#it{R}_{g}')
+      rg_axis.SetTitleSize(25)
+      rg_axis.SetTitleFont(43)
+      rg_axis.SetTitleOffset(0.6)
+      rg_axis.SetLabelFont(43)
+      rg_axis.SetLabelSize(25)
+      rg_axis.SetTickSize(0.015)
+      rg_axis.SetLabelOffset(0.015)
+      rg_axis.Draw()
 
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:

@@ -121,7 +121,7 @@ class AnalysisUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, 
                         observable, prior_variation_parameter=0., use_underflow=False):
-    
+                            
     # I don't find any global bin index implementation, so I manually loop through axes
     for bin_0 in range(1, thn.GetAxis(0).GetNbins() + 1):
       if bin_0 % 5 == 0:
@@ -163,6 +163,11 @@ class AnalysisUtils(common_utils.CommonUtils):
                   obs_det = thn_rebinned.GetAxis(2).GetBinCenter(1)
                 if bin_3 == 0:
                   obs_true = thn_rebinned.GetAxis(3).GetBinCenter(1)
+                  if 'matched' in thn.GetName():
+                    if bin_2 == 0:
+                      content=1
+                    else:
+                      content=0
                 x_list = (pt_det, pt_true, obs_det, obs_true)
                 x = array('d', x_list)
 

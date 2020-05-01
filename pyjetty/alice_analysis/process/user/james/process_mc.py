@@ -138,6 +138,7 @@ class ProcessMC(process_base.ProcessBase):
       
     self.fast_simulation = config['fast_simulation']
     self.dry_run = config['dry_run']
+    self.skip_prong_matching_histogram = False
     
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
@@ -408,8 +409,11 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   def create_prong_matching_histograms(self, jetR, grooming_label):
   
+    if self.skip_prong_matching_histogram:
+      return
+  
     prong_list = ['leading', 'subleading']
-    match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
+    match_list = ['leading', 'subleading', 'ungroomed', 'outside']
 
     for R_max in self.max_distance:
       for prong in prong_list:
@@ -477,22 +481,17 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for theta_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-    nbins = [30, 30, 100, 20]
+    nbins = [30, 30, 100, 100]
     min = [0., 0., 0., 0.]
     max = [150., 300., 1., 1.]
     name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     self.create_thn(name, title, dim, nbins, min, max)
     
-    name = 'hRelativeResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-    h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
-    setattr(self, name, h)
-    
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, int(3*jetR*100), -3*jetR, 3*jetR)
+    h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0., 1., 200, -2., 2.)
     h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('#theta_{g,det}-#theta_{g,truth}')
+    h.GetYaxis().SetTitle('#theta_{g,truth}')
+    h.GetZaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
     setattr(self, name, h)
 
   #---------------------------------------------------------------
@@ -508,22 +507,17 @@ class ProcessMC(process_base.ProcessBase):
     # Create THn of response for z_g
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-    nbins = [30, 30, 50, 20]
+    nbins = [30, 30, 50, 50]
     min = [0., 0., 0., 0.]
     max = [150., 300., 0.5, 0.5]
     name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     self.create_thn(name, title, dim, nbins, min, max)
 
-    name = 'hRelativeResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-    h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
-    setattr(self, name, h)
-
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 300, 0, 300, 100, -0.5, 0.5)
+    h = ROOT.TH3F(name, name, 30, 0, 300, 50, 0., 0.5, 200, -2., 2.)
     h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('z_{g,det}-z_{g,truth}')
+    h.GetYaxis().SetTitle('z_{g,truth}')
+    h.GetZaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
     setattr(self, name, h)
 
   #---------------------------------------------------------------
@@ -1160,16 +1154,10 @@ class ProcessMC(process_base.ProcessBase):
         
       if obs_truth > 1e-5:
         obs_resolution = (obs_det - obs_truth) / obs_truth
-        name = 'hRelativeResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
+        name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
         if not self.is_pp:
           name += '_Rmax{}'.format(R_max)
-        getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
-      
-      obs_resolution = obs_det - obs_truth
-      name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
-      if not self.is_pp:
-        name += '_Rmax{}'.format(R_max)
-      getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
+        getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_truth, obs_resolution)
       
       # Fill prong-matched response
       if not self.is_pp and R_max == self.main_R_max:
@@ -1178,16 +1166,17 @@ class ProcessMC(process_base.ProcessBase):
           name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
           getattr(self, name).Fill(x_array)
           
-          name = 'hRelativeResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
-          getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
+          if obs_truth > 1e-5:
+            name = 'hResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
+            getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_truth, obs_resolution)
           
-          name = 'hResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, grooming_label, R_max)
-          getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_resolution)
-
   #---------------------------------------------------------------
   # Do prong-matching
   #---------------------------------------------------------------
   def fill_prong_matching_histograms(self, jet_truth, jet_det, jet_det_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD'):
+    
+    if self.skip_prong_matching_histogram:
+      return False
     
     # Do grooming on pp-det jet, and get prongs
     jet_pp_det = jet_truth.python_info().match
@@ -1352,38 +1341,32 @@ class ProcessMC(process_base.ProcessBase):
     # Leading prong
     getattr(self, 'hProngMatching_leading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_groomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_groomed_noprong, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaR_prong1)
     
     getattr(self, 'hProngMatching_leading_leading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_leading, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_subleading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_subleading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_groomed_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_groomed_noprong, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_ungroomed_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_ungroomed_notgroomed, deltaR_prong1)
     getattr(self, 'hProngMatching_leading_outside_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_outside, deltaR_prong1)
     
     getattr(self, 'hProngMatching_leading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaZ)
     getattr(self, 'hProngMatching_leading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaZ)
-    getattr(self, 'hProngMatching_leading_groomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_groomed_noprong, deltaZ)
     getattr(self, 'hProngMatching_leading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaZ)
     getattr(self, 'hProngMatching_leading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaZ)
 
     # Subleading prong
     getattr(self, 'hProngMatching_subleading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaR_prong2)
     getattr(self, 'hProngMatching_subleading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_groomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_groomed_noprong, deltaR_prong2)
     getattr(self, 'hProngMatching_subleading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaR_prong2)
     getattr(self, 'hProngMatching_subleading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaR_prong2)
 
     getattr(self, 'hProngMatching_subleading_leading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_leading, deltaR_prong2)
     getattr(self, 'hProngMatching_subleading_subleading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_subleading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_groomed_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_groomed_noprong, deltaR_prong2)
     getattr(self, 'hProngMatching_subleading_ungroomed_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_ungroomed_notgroomed, deltaR_prong2)
     getattr(self, 'hProngMatching_subleading_outside_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_outside, deltaR_prong2)
 
     getattr(self, 'hProngMatching_subleading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaZ)
     getattr(self, 'hProngMatching_subleading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaZ)
-    getattr(self, 'hProngMatching_subleading_groomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_groomed_noprong, deltaZ)
     getattr(self, 'hProngMatching_subleading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaZ)
     getattr(self, 'hProngMatching_subleading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaZ)
     
