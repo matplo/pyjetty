@@ -69,10 +69,13 @@ class JetAnalysisWithRho(JetAnalysis):
 		else:
 			self.bg_estimator.set_particles(self.particles)
 			self.rho = self.bg_estimator.rho()
+			self.sigma = self.bg_estimator.sigma()
 			self.cs = fj.ClusterSequenceArea(self.particles, self.jet_def, self.jet_area_def)
 			self.jets = fj.sorted_by_pt(self.jet_selector(self.cs.inclusive_jets()))
 			self.corr_jet_pt = [j.pt() - j.area() * self.rho for j in self.jets]
 
+	def corrected_pt(self, jet):
+		return jet.pt() - jet.area() * self.rho
 
 def matched_pt_constituent(c0, j1):
 	_pt = [c.pt() for i, c in enumerate(j1.constituents()) if c.user_index() == c0.user_index()]

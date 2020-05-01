@@ -10,10 +10,7 @@ import time
 
 import fastjet as fj
 import pythia8
-from recursivetools import pyrecursivetools as rt
-from lundplane import pylundplane as lund
-from pythiafjtools import pypythiafjtools as pyfj
-from mptools import pymptools as mp
+import fjcontrib as rt
 import fjext
 
 

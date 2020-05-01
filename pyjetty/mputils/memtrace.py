@@ -28,6 +28,7 @@ class MemTrace(MPBase):
 			cls._instance.fout = None
 			cls._instance.output_name='memtrace.root'
 			cls._instance.toffset = time.time()
+			cls._partial_write = False
 		cls._instance.configure_from_args(**kwargs)
 		return cls._instance
 
@@ -66,7 +67,8 @@ class MemTrace(MPBase):
 		# n = self.trees[label].GetEntries()
 		ts = time.time() - self.toffset
 		self.trees[label].Fill(rss, vms, ts)
-		self._write_()
+		if self._partial_write:
+			self._write_()
 		ROOT.gDirectory.cd(cwd)
 		# cwd.cd()
 		
@@ -79,19 +81,19 @@ class MemTrace(MPBase):
 		last_rss = 0
 		last_vms = 0
 		for i,e in enumerate(tree):
-			if i == 0:
-				data_x.append(e.t - 0.1)
-				data_yrss.append(0)
-				data_yvms.append(0)				
+			# if i == 0:
+			# 	data_x.append(e.t - 0.1)
+			# 	data_yrss.append(0)
+			# 	data_yvms.append(0)				
 			data_x.append(e.t)
 			data_yrss.append(e.rss * to_Gb)
 			data_yvms.append(e.vms * to_Gb)
 			last_rss = e.rss
 			last_vms = e.vms
 			last_x = e.t
-		data_x.append(e.t + 0.1)
-		data_yrss.append(0)
-		data_yvms.append(0)				
+		# data_x.append(e.t + 0.1)
+		# data_yrss.append(0)
+		# data_yvms.append(0)				
 
 		f_x = array.array('f', data_x)
 		f_rss = array.array('f', data_yrss)
