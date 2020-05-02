@@ -563,58 +563,21 @@ class RunAnalysis(common_base.CommonBase):
           self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
 
       elif systematic != 'main':
-        # Get systematic variation and plot ratio 
-
-        name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR, obs_label,
-                                                reg_param, min_pt_truth, max_pt_truth)
-        h_systematic = getattr(self, name)
-
-        name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label,
-                                                                 reg_param, min_pt_truth, max_pt_truth)
-        h_systematic_ratio_temp = hMain.Clone()
-        h_systematic_ratio_temp.SetName(name_ratio+'_temp')
-        h_systematic_ratio_temp.Divide(h_systematic)
-
-        if self.debug_level > 0:
-          print("Printing systematic variation ratio for", systematic) 
-          for i in range(1, h_systematic.GetNbinsX()+1):
-            print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
-                  "-- ratio:", h_systematic_ratio_temp.GetBinContent(i))
-
-        self.change_to_per(h_systematic_ratio_temp)
-        h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
-        del h_systematic_ratio_temp   # No longer need this -- prevents memory leaks
-        setattr(self, name_ratio, h_systematic_ratio)
+        # Get systematic variation and save percentage difference as attribte
+        h_systematic_ratio = self.construct_systematic_percentage(hMain, systematic, jetR, obs_label,
+                                                                  reg_param, min_pt_truth, max_pt_truth, maxbin)
 
       else:  # systematic == 'main':
         # Do the two reg param variations & average them
-
-        name = 'hRegParam1_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                       reg_param, min_pt_truth, max_pt_truth)
-        hSystematic_RegParam1 = getattr(self, name)
-        name_ratio = 'hSystematic_{}_RegParam1_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                                        reg_param, min_pt_truth, max_pt_truth)
-        hSystematic_RegParam1_ratio = hMain.Clone()
-        hSystematic_RegParam1_ratio.SetName(name_ratio)
-        hSystematic_RegParam1_ratio.Divide(hSystematic_RegParam1)
-        self.change_to_per(hSystematic_RegParam1_ratio)
-        setattr(self, name_ratio, hSystematic_RegParam1_ratio)
-
-        name = 'hRegParam2_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label, reg_param,
-                                                       min_pt_truth, max_pt_truth)
-        hSystematic_RegParam2 = getattr(self, name)
-        name_ratio = 'hSystematic_{}_RegParam2_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                                        reg_param, min_pt_truth, max_pt_truth)
-        hSystematic_RegParam2_ratio = hMain.Clone()
-        hSystematic_RegParam2_ratio.SetName(name_ratio)
-        hSystematic_RegParam2_ratio.Divide(hSystematic_RegParam2)
-        self.change_to_per(hSystematic_RegParam2_ratio)
-        setattr(self, name_ratio, hSystematic_RegParam2_ratio)
+        
+        h_systematic_ratio1 = self.construct_systematic_percentage(hMain, 'RegParam1', jetR, obs_label,
+                                                                  reg_param, min_pt_truth, max_pt_truth, maxbin)
+        h_systematic_ratio2 = self.construct_systematic_percentage(hMain, 'RegParam2', jetR, obs_label,
+                                                                  reg_param, min_pt_truth, max_pt_truth, maxbin)
 
         name = 'hSystematic_{}_RegParam_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
                                                                  reg_param, min_pt_truth, max_pt_truth)
-        h_systematic_ratio = self.truncate_hist(
-          self.build_average(hSystematic_RegParam1_ratio, hSystematic_RegParam2_ratio), maxbin, name)
+        h_systematic_ratio = self.build_average(h_systematic_ratio1, h_systematic_ratio2)
         setattr(self, name, h_systematic_ratio)
 
       h_list.append(h_systematic_ratio)
@@ -657,6 +620,34 @@ class RunAnalysis(common_base.CommonBase):
       # Plot systematic uncertainties, and write total systematic to a ROOT file
       self.plot_systematic_uncertainties(jetR, obs_label, obs_setting, grooming_setting,
                                          min_pt_truth, max_pt_truth, maxbin, h_list, hSystematic_Total)
+
+  #----------------------------------------------------------------------
+  # Get systematic variation and save percentage difference as attribte
+  def construct_systematic_percentage(self, hMain, systematic, jetR,
+                                      obs_label, reg_param, min_pt_truth,
+                                      max_pt_truth, maxbin):
+
+    name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR, obs_label,
+                                            reg_param, min_pt_truth, max_pt_truth)
+    h_systematic = getattr(self, name)
+
+    name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label,
+                                                             reg_param, min_pt_truth, max_pt_truth)
+    h_systematic_ratio_temp = hMain.Clone()
+    h_systematic_ratio_temp.SetName(name_ratio+'_temp')
+    h_systematic_ratio_temp.Divide(h_systematic)
+
+    if self.debug_level > 0:
+      print("Printing systematic variation ratio for", systematic)
+      for i in range(1, h_systematic.GetNbinsX()+1):
+        print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
+              "-- ratio:", h_systematic_ratio_temp.GetBinContent(i))
+
+    self.change_to_per(h_systematic_ratio_temp)
+    h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
+    del h_systematic_ratio_temp   # No longer need this -- prevents memory leaks
+    setattr(self, name_ratio, h_systematic_ratio)
+    return h_systematic_ratio
 
   #----------------------------------------------------------------------
   def get_obs_distribution(self, jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
