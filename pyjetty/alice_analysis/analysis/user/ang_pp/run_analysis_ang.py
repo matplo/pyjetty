@@ -377,8 +377,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       maxbins = [self.obs_max_bins(obs_label)[i] for obs_label in self.obs_labels]
 
       # Plot PYTHIA
-      self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth,
-                                              max_pt_truth, maxbins, plot_pythia=True, plot_ratio = True)
+      self.plot_observable_overlay_subconfigs(
+        i_config, jetR, overlay_list, min_pt_truth,
+        max_pt_truth, maxbins, plot_pythia=True, plot_ratio = True)
 
 
   #----------------------------------------------------------------------
@@ -477,7 +478,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(2*ymax)
+        myBlankHisto.SetMaximum(1.5*ymax)
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
@@ -512,7 +513,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
-          myBlankHisto2.GetYaxis().SetRangeUser(0.5, 2.)
+          myBlankHisto2.GetYaxis().SetRangeUser(0.7, 1.99)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(0,1,xmax,1)
@@ -540,11 +541,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
         if plot_pythia:
           hRatioSys.Divide(hPythia)
-          hRatioSys.SetLineColor(0)
-          hRatioSys.SetFillColor(color)
-          hRatioSys.SetFillColorAlpha(color, 0.3)
-          hRatioSys.SetFillStyle(1001)
-          hRatioSys.SetLineWidth(0)
+        hRatioSys.SetLineColor(0)
+        hRatioSys.SetFillColor(color)
+        hRatioSys.SetFillColorAlpha(color, 0.3)
+        hRatioSys.SetFillStyle(1001)
+        hRatioSys.SetLineWidth(0)
+        hRatioSys.SetMaximum(1.99)
           
         hRatioStat = h.Clone()
         hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
@@ -556,6 +558,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hRatioStat.SetLineStyle(1)
         hRatioStat.SetLineWidth(2)
         hRatioStat.SetLineColor(color)
+        hRatioStat.SetMaximum(1.99)
 
       pad1.cd()
       if plot_pythia:

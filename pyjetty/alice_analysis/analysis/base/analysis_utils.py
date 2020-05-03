@@ -149,7 +149,7 @@ class AnalysisUtils(common_utils.CommonUtils):
                 scale_factor = math.pow(pt_true, prior_variation_parameter)
                 
                 # Scale number of counts according to variation of observable prior
-                scale_factor *= self.prior_scale_factor_obs(obs_true, prior_variation_parameter)
+                scale_factor *= self.prior_scale_factor_obs(obs_true, content, prior_variation_parameter)
 
                 content = content*scale_factor
           
@@ -208,7 +208,7 @@ class AnalysisUtils(common_utils.CommonUtils):
             scale_factor = math.pow(pt, prior_variation_parameter)
             
             # Scale number of counts according to variation of observable prior
-            scale_factor *= self.prior_scale_factor_obs(obs, prior_variation_parameter)
+            scale_factor *= self.prior_scale_factor_obs(obs, old_content, prior_variation_parameter)
 
             content = old_content * scale_factor
             uncertainty = old_uncertainty * scale_factor
@@ -220,7 +220,7 @@ class AnalysisUtils(common_utils.CommonUtils):
   # Compute scale factor to vary prior of observable
   # This should be implemented in analysis_utils_obs.py
   #---------------------------------------------------------------
-  def prior_scale_factor_obs(self, obs_true, prior_variation_parameter):
+  def prior_scale_factor_obs(self, obs_true, content, prior_variation_parameter):
     raise NotImplementedError('Must define prior_scale_factor() in analysis_utils_obs.py!')
 
   #---------------------------------------------------------------

@@ -241,7 +241,8 @@ class RunAnalysis(common_base.CommonBase):
 
         # Plot result for each individial subconfiguration
         if self.do_plot_final_result:
-          self.plot_single_result(jetR, obs_label, obs_setting, grooming_setting) # You must implement this
+          # You must implement this
+          self.plot_single_result(jetR, obs_label, obs_setting, grooming_setting)
 
       # Plot final results for all subconfigs
       if self.do_plot_final_result:
@@ -287,11 +288,11 @@ class RunAnalysis(common_base.CommonBase):
       elif systematic == 'prong_matching':
         prong_matching_response = True
 
-      analysis = roounfold_obs.Roounfold_Obs(self.observable, data, response, self.config_file,
-                                             output_dir, self.file_format, rebin_response=rebin_response,
-                                             prior_variation_parameter=prior_variation_parameter,
-                                             truncation=truncation, binning=binning, R_max=R_max,
-                                             prong_matching_response=prong_matching_response)
+      analysis = roounfold_obs.Roounfold_Obs(
+        self.observable, data, response, self.config_file, output_dir, self.file_format,
+        rebin_response=rebin_response, prior_variation_parameter=prior_variation_parameter,
+        truncation=truncation, binning=binning, R_max=R_max,
+        prong_matching_response=prong_matching_response)
       analysis.roounfold_obs()
       
     # Unfold thermal closure test
@@ -300,10 +301,9 @@ class RunAnalysis(common_base.CommonBase):
       output_dir = getattr(self, 'output_dir_thermal_closure')
       rebin_response = self.check_rebin_response(output_dir)
       
-      analysis = roounfold_obs.Roounfold_Obs(self.observable, self.fThermal, self.fThermal, self.config_file,
-                                             output_dir, self.file_format,
-                                             rebin_response=rebin_response,
-                                             R_max=R_max, thermal_model = True)
+      analysis = roounfold_obs.Roounfold_Obs(
+        self.observable, self.fThermal, self.fThermal, self.config_file, output_dir,
+        self.file_format, rebin_response=rebin_response, R_max=R_max, thermal_model = True)
       analysis.roounfold_obs()
 
   #----------------------------------------------------------------------
@@ -333,12 +333,14 @@ class RunAnalysis(common_base.CommonBase):
 
       # Idiot checks
       if len(obs_max_reported) != len(self.pt_bins_reported)-1:
-        raise ValueError("Length of obs_max_reported {} should match number of pt_bins_reported {}".format(
+        raise ValueError(
+          "Length of obs_max_reported {} should match number of pt_bins_reported {}".format(
           obs_max_reported, self.pt_bins_reported))
 
       for val in obs_max_reported:
         if not val in obs_bins_truth:
-          raise ValueError("Final bin cutoff {} is not in the bin edges list {}".format(val, obs_bins_truth))
+          raise ValueError("Final bin cutoff {} is not in the bin edges list {}".format(
+            val, obs_bins_truth))
 
       obs_max_bins = [obs_bins_truth.index(i) for i in obs_max_reported]
 
@@ -393,8 +395,9 @@ class RunAnalysis(common_base.CommonBase):
       maxbin = self.obs_max_bins(obs_label)[i]
 
       if self.use_max_reg_param:
-        reg_param_final = self.determine_reg_param_final(jetR, obs_label, obs_setting, grooming_setting,
-                                                         min_pt_truth, max_pt_truth, maxbin)
+        reg_param_final = self.determine_reg_param_final(
+          jetR, obs_label, obs_setting, grooming_setting,
+          min_pt_truth, max_pt_truth, maxbin)
         text = 'Optimal regularization parameter for pT={}-{} determined to be {} = {}.'.format(
         min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final)
         with open(self.logfile, 'a') as myfile:
@@ -406,7 +409,8 @@ class RunAnalysis(common_base.CommonBase):
                                   
       # Set SD tagging fraction for final reg parameter
       if grooming_setting and 'sd' in grooming_setting:
-        f_tagging_name = 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
+        f_tagging_name = 'tagging_fraction_R{}_{}_{}-{}'.format(
+          jetR, obs_label, min_pt_truth, max_pt_truth)
         f_tagged = getattr(self, '{}_{}'.format(f_tagging_name, reg_param_final))
         setattr(self, f_tagging_name, f_tagged)
         
@@ -436,8 +440,10 @@ class RunAnalysis(common_base.CommonBase):
       for i in range(len(pt_det_bins)-1):
         min_det_pt = int(pt_det_bins[i])
         max_det_pt = int(pt_det_bins[i+1])
-        old_name = 'hFoldedTruth_{}_{}-{}_{}{}'.format(label, min_det_pt, max_det_pt, reg_param_final, self.file_format)
-        new_name = 'hFoldedTruth_{}_{}-{}_final{}'.format(label, min_det_pt, max_det_pt, self.file_format)
+        old_name = 'hFoldedTruth_{}_{}-{}_{}{}'.format(
+          label, min_det_pt, max_det_pt, reg_param_final, self.file_format)
+        new_name = 'hFoldedTruth_{}_{}-{}_final{}'.format(
+          label, min_det_pt, max_det_pt, self.file_format)
         shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
       
       # Copy statistical closure test
@@ -445,8 +451,10 @@ class RunAnalysis(common_base.CommonBase):
       old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
       new_name = 'hStatisticalClosure_pt_{}_final{}'.format(label, self.file_format)
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      old_name = 'hClosure_{}_{}-{}_{}{}'.format(label, min_pt, max_pt, reg_param_final, self.file_format)
-      new_name = 'hStatisticalClosure_{}_{}-{}_final{}'.format(label, min_pt, max_pt, self.file_format)
+      old_name = 'hClosure_{}_{}-{}_{}{}'.format(
+        label, min_pt, max_pt, reg_param_final, self.file_format)
+      new_name = 'hStatisticalClosure_{}_{}-{}_final{}'.format(
+        label, min_pt, max_pt, self.file_format)
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
       
       # Copy shape closure test
@@ -455,8 +463,10 @@ class RunAnalysis(common_base.CommonBase):
       old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
       new_name = 'hShapeClosure{}_pt_{}_final{}'.format(parameter, label, self.file_format)
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      old_name = 'hClosure_{}_{}-{}_{}{}'.format(label, min_pt, max_pt, reg_param_final, self.file_format)
-      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(parameter, label, min_pt, max_pt, self.file_format)
+      old_name = 'hClosure_{}_{}-{}_{}{}'.format(
+        label, min_pt, max_pt, reg_param_final, self.file_format)
+      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(
+        parameter, label, min_pt, max_pt, self.file_format)
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
       
       parameter = self.utils.remove_periods(self.prior2_variation_parameter)
@@ -464,8 +474,10 @@ class RunAnalysis(common_base.CommonBase):
       old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
       new_name = 'hShapeClosure{}_pt_{}_final{}'.format(parameter, label, self.file_format)
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      old_name = 'hClosure_{}_{}-{}_{}{}'.format(label, min_pt, max_pt, reg_param_final, self.file_format)
-      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(parameter, label, min_pt, max_pt, self.file_format)
+      old_name = 'hClosure_{}_{}-{}_{}{}'.format(
+        label, min_pt, max_pt, reg_param_final, self.file_format)
+      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(
+        parameter, label, min_pt, max_pt, self.file_format)
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
 
   #----------------------------------------------------------------------
@@ -561,14 +573,16 @@ class RunAnalysis(common_base.CommonBase):
             continue
         else:
           sys_label = systematic
-        name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, sys_label, jetR, obs_label,
-                                                               reg_param, min_pt_truth, max_pt_truth)
+        name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+          self.observable, sys_label, jetR, obs_label,
+          reg_param, min_pt_truth, max_pt_truth)
         h_systematic_ratio = getattr(self, name)
 
         if self.debug_level > 0:
           output_dir = getattr(self, 'output_dir_systematics')
-          name = 'hSystematic_{}_R{}_{}_{}-{}{}'.format(systematic, self.utils.remove_periods(jetR), obs_label,
-                                                      int(min_pt_truth), int(max_pt_truth), self.file_format)
+          name = 'hSystematic_{}_R{}_{}_{}-{}{}'.format(
+            systematic, self.utils.remove_periods(jetR), obs_label,
+            int(min_pt_truth), int(max_pt_truth), self.file_format)
           outputFilename = os.path.join(output_dir, name)
           self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
 
@@ -577,40 +591,60 @@ class RunAnalysis(common_base.CommonBase):
         
         # Combine certain systematics as average or max
         if systematic == 'main':
-          h_systematic_ratio = self.construct_systematic_average(hMain, 'RegParam', jetR, obs_label,
-                                    reg_param, min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
+          h_systematic_ratio = self.construct_systematic_average(
+            hMain, 'RegParam', jetR, obs_label, reg_param,
+            min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
         
         elif systematic in ['prior1', 'prior2']:
           if systematic == 'prior1':
-            h_systematic_ratio = self.construct_systematic_average(hMain, 'prior', jetR, obs_label,
-                            reg_param, min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+            h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'prior', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
           else:
             continue
         
         elif systematic in ['subtraction1', 'subtraction2']:
           if systematic == 'subtraction1':
-            h_systematic_ratio = self.construct_systematic_average(hMain, 'subtraction', jetR, obs_label,
-                            reg_param, min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+            h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'subtraction', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
           else:
             continue
         
         else:
-          h_systematic_ratio = self.construct_systematic_percentage(hMain, systematic, jetR, obs_label,
-                                                                  reg_param, min_pt_truth, max_pt_truth, maxbin)
+          h_systematic_ratio = self.construct_systematic_percentage(
+            hMain, systematic, jetR, obs_label, reg_param,
+            min_pt_truth, max_pt_truth, maxbin)
 
       h_list.append(h_systematic_ratio)
 
     if not final:
-          
-      # Add uncertainties in quadrature
-      name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
-                                                         reg_param, int(min_pt_truth), int(max_pt_truth))
+
+      # Add all unfolding systematics in quadrature
+      h_list_unfolding = []
+      unfolding_sys = ['RegParam', 'prior', 'truncation', 'binning']
+      for sys in unfolding_sys:
+        for h in h_list:
+          if sys in h.GetName():
+            h_list_unfolding.append(h)
+            break
+      name = 'hSystematic_Unfolding_R{}_{}_n{}_{}-{}'.format(
+        self.utils.remove_periods(jetR), obs_label,
+        reg_param, int(min_pt_truth), int(max_pt_truth))
+      hSystematic_Unfolding = self.add_in_quadrature(h_list_unfolding)
+      setattr(self, name, hSystematic_Unfolding)
+
+      # Add all systematic uncertainties in quadrature
+      name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
+        self.utils.remove_periods(jetR), obs_label,
+        reg_param, int(min_pt_truth), int(max_pt_truth))
       hSystematic_Total = self.add_in_quadrature(h_list)
       setattr(self, name, hSystematic_Total)
 
       # Attach total systematic to main result, and save as an attribute
-      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label, reg_param,
-                                                           int(min_pt_truth), int(max_pt_truth))
+      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
+        self.observable, jetR, obs_label, reg_param,
+        int(min_pt_truth), int(max_pt_truth))
       hResult_sys = self.truncate_hist(hMain.Clone(), maxbin, name)
       hResult_sys.SetDirectory(0)
       self.AttachErrToHist(hResult_sys, hSystematic_Total)
@@ -618,27 +652,32 @@ class RunAnalysis(common_base.CommonBase):
 
     else:
       # Save main result under name without reg param
-      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label, reg_param,
-                                                           int(min_pt_truth), int(max_pt_truth))
+      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
+        self.observable, jetR, obs_label, reg_param, 
+        int(min_pt_truth), int(max_pt_truth))
       hResult_sys = getattr(self, name)
-      name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                           int(min_pt_truth), int(max_pt_truth))
+      name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label,
+        int(min_pt_truth), int(max_pt_truth))
       setattr(self, name, hResult_sys)
 
       # Get total uncertainty plot from memory and save if desired
-      name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
-                                                         reg_param, int(min_pt_truth), int(max_pt_truth))
+      name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
+        self.utils.remove_periods(jetR), obs_label,
+        reg_param, int(min_pt_truth), int(max_pt_truth))
       hSystematic_Total = getattr(self, name)
       
       if self.debug_level > 0:
-        name = 'hSystematic_Total_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
-                                                       int(min_pt_truth), int(max_pt_truth), self.file_format)
+        name = 'hSystematic_Total_R{}_{}_{}-{}{}'.format(
+          self.utils.remove_periods(jetR), obs_label,
+          int(min_pt_truth), int(max_pt_truth), self.file_format)
         outputFilename = os.path.join(self.output_dir_systematics, name)
         self.utils.plot_hist(hSystematic_Total, outputFilename, 'P E')
 
       # Plot systematic uncertainties, and write total systematic to a ROOT file
-      self.plot_systematic_uncertainties(jetR, obs_label, obs_setting, grooming_setting,
-                                         min_pt_truth, max_pt_truth, maxbin, h_list, hSystematic_Total)
+      self.plot_systematic_uncertainties(
+        jetR, obs_label, obs_setting, grooming_setting,
+        min_pt_truth, max_pt_truth, maxbin, h_list, hSystematic_Total)
 
   #----------------------------------------------------------------------
   # Get systematic variation and save percentage difference as attribte
@@ -650,8 +689,9 @@ class RunAnalysis(common_base.CommonBase):
                                             reg_param, min_pt_truth, max_pt_truth)
     h_systematic = getattr(self, name)
 
-    name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label,
-                                                             reg_param, min_pt_truth, max_pt_truth)
+    name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+      self.observable, systematic, jetR, obs_label,
+      reg_param, min_pt_truth, max_pt_truth)
     h_systematic_ratio_temp = hMain.Clone()
     h_systematic_ratio_temp.SetName(name_ratio+'_temp')
     h_systematic_ratio_temp.Divide(h_systematic)
@@ -673,14 +713,18 @@ class RunAnalysis(common_base.CommonBase):
                                   reg_param, min_pt_truth, max_pt_truth,
                                   maxbin, takeMaxDev=False):
   
-    h_systematic_ratio1 = self.construct_systematic_percentage(hMain, '{}1'.format(sys_label), jetR, obs_label,
-                                                              reg_param, min_pt_truth, max_pt_truth, maxbin)
-    h_systematic_ratio2 = self.construct_systematic_percentage(hMain, '{}2'.format(sys_label), jetR, obs_label,
-                                                              reg_param, min_pt_truth, max_pt_truth, maxbin)
+    h_systematic_ratio1 = self.construct_systematic_percentage(
+      hMain, '{}1'.format(sys_label), jetR, obs_label, reg_param,
+      min_pt_truth, max_pt_truth, maxbin)
+    h_systematic_ratio2 = self.construct_systematic_percentage(
+      hMain, '{}2'.format(sys_label), jetR, obs_label,
+      reg_param, min_pt_truth, max_pt_truth, maxbin)
 
     name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, sys_label, jetR, obs_label,
                                                        reg_param, min_pt_truth, max_pt_truth)
-    h_systematic_ratio = self.build_average(h_systematic_ratio1, h_systematic_ratio2, takeMaxDev=takeMaxDev)
+    h_systematic_ratio = self.build_average(h_systematic_ratio1, h_systematic_ratio2,
+                                            takeMaxDev=takeMaxDev)
+    h_systematic_ratio.SetName(name)
     setattr(self, name, h_systematic_ratio)
     return h_systematic_ratio
 
@@ -704,7 +748,8 @@ class RunAnalysis(common_base.CommonBase):
       
       if store_tagging_fraction:
         f_tagging = n_jets_tagged/n_jets_inclusive
-        f_tagging_name = 'tagging_fraction_R{}_{}_{}-{}_{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth, reg_param)
+        f_tagging_name = 'tagging_fraction_R{}_{}_{}-{}_{}'.format(
+          jetR, obs_label, min_pt_truth, max_pt_truth, reg_param)
         setattr(self, f_tagging_name, f_tagging)
       
     else:
@@ -872,27 +917,29 @@ class RunAnalysis(common_base.CommonBase):
         self.obs_config_dict, obs_label, jetR)
 
     reg_params = range(min_reg_param, reg_param_final + 1)
-    names = ["hSystematic_Total_R{}_{}_n{}_{}-{}".format(self.utils.remove_periods(jetR), obs_label,
-                                                         reg_param, int(min_pt_truth), int(max_pt_truth))
-             for reg_param in reg_params]
+    names = ["hSystematic_Unfolding_R{}_{}_n{}_{}-{}".format(
+      self.utils.remove_periods(jetR), obs_label, reg_param, int(min_pt_truth),
+      int(max_pt_truth)) for reg_param in reg_params]
     hSys_list = [getattr(self, name) for name in names]
 
     # Obtain the statistical uncertainty histograms from disk
     fdir = os.path.join(self.output_dir_main, "Unfolded_stat_uncert",
                         "fResult_name_R%s_%s.root" % (jetR, obs_label))
     f = ROOT.TFile.Open(fdir, "READ")
-    names = ["hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % (self.observable, self.utils.remove_periods(jetR),
-                                                              obs_label, reg_param, min_pt_truth, max_pt_truth)
-             for reg_param in reg_params]
+    names = ["hUnfolded_%s_stat_uncert_R%s_%s_n%i_Pt%i-%i" % \
+             (self.observable, self.utils.remove_periods(jetR), obs_label,
+              reg_param, min_pt_truth, max_pt_truth) for reg_param in reg_params]
     hStat_list_untruncated = [f.Get(name) for name in names]
     hStat_list = [self.truncate_hist(h, maxbin, name+'_trunc')
                   for (h, name) in zip(hStat_list_untruncated, names)]
 
     # Add statistical and systematic uncertainties in quadrature
-    hUncert_list = [self.add_in_quadrature([hSys, hStat]) for (hSys, hStat) in zip(hSys_list, hStat_list)]
+    hUncert_list = [self.add_in_quadrature([hSys, hStat]) for (hSys, hStat)
+                    in zip(hSys_list, hStat_list)]
 
     # Sum total uncertainties per observable bin and return lowest value
-    hUncert_sum_list = [sum([h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1)]) for h in hUncert_list]
+    hUncert_sum_list = [sum([h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1)])
+                        for h in hUncert_list]
     index_min = min(range(len(hUncert_sum_list)), key=hUncert_sum_list.__getitem__)
     return index_min + min_reg_param
 

@@ -85,8 +85,8 @@ output_dir: "./TestAngR04_ptbin3"
 roounfold_path: "/home/ezra/RooUnfold/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: True
-force_rebin: True
+do_unfolding: False
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
