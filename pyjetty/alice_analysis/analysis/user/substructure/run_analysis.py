@@ -547,12 +547,22 @@ class RunAnalysis(common_base.CommonBase):
 
       if final:
         # Save plot of each systematic to directory
-        if systematic != 'main':
-          name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label,
-                                                             reg_param, min_pt_truth, max_pt_truth)
-        else:  # systematic == 'main':
-          name = 'hSystematic_{}_RegParam_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                                   reg_param, min_pt_truth, max_pt_truth)
+        if systematic == 'main':
+          sys_label = 'RegParam'
+        elif systematic in ['prior1', 'prior2']:
+          if systematic == 'prior1':
+            sys_label = 'prior'
+          else:
+            continue
+        elif systematic in ['subtraction1', 'subtraction2']:
+          if systematic == 'subtraction1':
+            sys_label = 'subtraction'
+          else:
+            continue
+        else:
+          sys_label = systematic
+        name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, sys_label, jetR, obs_label,
+                                                               reg_param, min_pt_truth, max_pt_truth)
         h_systematic_ratio = getattr(self, name)
 
         if self.debug_level > 0:
@@ -562,64 +572,36 @@ class RunAnalysis(common_base.CommonBase):
           outputFilename = os.path.join(output_dir, name)
           self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
 
-      elif systematic != 'main':
-        # Get systematic variation and plot ratio 
-
-        name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR, obs_label,
-                                                reg_param, min_pt_truth, max_pt_truth)
-        h_systematic = getattr(self, name)
-
-        name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label,
-                                                                 reg_param, min_pt_truth, max_pt_truth)
-        h_systematic_ratio_temp = hMain.Clone()
-        h_systematic_ratio_temp.SetName(name_ratio+'_temp')
-        h_systematic_ratio_temp.Divide(h_systematic)
-
-        if self.debug_level > 0:
-          print("Printing systematic variation ratio for", systematic) 
-          for i in range(1, h_systematic.GetNbinsX()+1):
-            print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
-                  "-- ratio:", h_systematic_ratio_temp.GetBinContent(i))
-
-        self.change_to_per(h_systematic_ratio_temp)
-        h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
-        del h_systematic_ratio_temp   # No longer need this -- prevents memory leaks
-        setattr(self, name_ratio, h_systematic_ratio)
-
-      else:  # systematic == 'main':
-        # Do the two reg param variations & average them
-
-        name = 'hRegParam1_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                       reg_param, min_pt_truth, max_pt_truth)
-        hSystematic_RegParam1 = getattr(self, name)
-        name_ratio = 'hSystematic_{}_RegParam1_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                                        reg_param, min_pt_truth, max_pt_truth)
-        hSystematic_RegParam1_ratio = hMain.Clone()
-        hSystematic_RegParam1_ratio.SetName(name_ratio)
-        hSystematic_RegParam1_ratio.Divide(hSystematic_RegParam1)
-        self.change_to_per(hSystematic_RegParam1_ratio)
-        setattr(self, name_ratio, hSystematic_RegParam1_ratio)
-
-        name = 'hRegParam2_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label, reg_param,
-                                                       min_pt_truth, max_pt_truth)
-        hSystematic_RegParam2 = getattr(self, name)
-        name_ratio = 'hSystematic_{}_RegParam2_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                                        reg_param, min_pt_truth, max_pt_truth)
-        hSystematic_RegParam2_ratio = hMain.Clone()
-        hSystematic_RegParam2_ratio.SetName(name_ratio)
-        hSystematic_RegParam2_ratio.Divide(hSystematic_RegParam2)
-        self.change_to_per(hSystematic_RegParam2_ratio)
-        setattr(self, name_ratio, hSystematic_RegParam2_ratio)
-
-        name = 'hSystematic_{}_RegParam_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                                                 reg_param, min_pt_truth, max_pt_truth)
-        h_systematic_ratio = self.truncate_hist(
-          self.build_average(hSystematic_RegParam1_ratio, hSystematic_RegParam2_ratio), maxbin, name)
-        setattr(self, name, h_systematic_ratio)
+      else:
+        # Get systematic variation and save percentage difference as attribte
+        
+        # Combine certain systematics as average or max
+        if systematic == 'main':
+          h_systematic_ratio = self.construct_systematic_average(hMain, 'RegParam', jetR, obs_label,
+                                    reg_param, min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
+        
+        elif systematic in ['prior1', 'prior2']:
+          if systematic == 'prior1':
+            h_systematic_ratio = self.construct_systematic_average(hMain, 'prior', jetR, obs_label,
+                            reg_param, min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+          else:
+            continue
+        
+        elif systematic in ['subtraction1', 'subtraction2']:
+          if systematic == 'subtraction1':
+            h_systematic_ratio = self.construct_systematic_average(hMain, 'subtraction', jetR, obs_label,
+                            reg_param, min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+          else:
+            continue
+        
+        else:
+          h_systematic_ratio = self.construct_systematic_percentage(hMain, systematic, jetR, obs_label,
+                                                                  reg_param, min_pt_truth, max_pt_truth, maxbin)
 
       h_list.append(h_systematic_ratio)
 
     if not final:
+          
       # Add uncertainties in quadrature
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
                                                          reg_param, int(min_pt_truth), int(max_pt_truth))
@@ -657,6 +639,50 @@ class RunAnalysis(common_base.CommonBase):
       # Plot systematic uncertainties, and write total systematic to a ROOT file
       self.plot_systematic_uncertainties(jetR, obs_label, obs_setting, grooming_setting,
                                          min_pt_truth, max_pt_truth, maxbin, h_list, hSystematic_Total)
+
+  #----------------------------------------------------------------------
+  # Get systematic variation and save percentage difference as attribte
+  def construct_systematic_percentage(self, hMain, systematic, jetR,
+                                      obs_label, reg_param, min_pt_truth,
+                                      max_pt_truth, maxbin):
+
+    name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR, obs_label,
+                                            reg_param, min_pt_truth, max_pt_truth)
+    h_systematic = getattr(self, name)
+
+    name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label,
+                                                             reg_param, min_pt_truth, max_pt_truth)
+    h_systematic_ratio_temp = hMain.Clone()
+    h_systematic_ratio_temp.SetName(name_ratio+'_temp')
+    h_systematic_ratio_temp.Divide(h_systematic)
+
+    if self.debug_level > 0:
+      print("Printing systematic variation ratio for", systematic)
+      for i in range(1, h_systematic.GetNbinsX()+1):
+        print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
+              "-- ratio:", h_systematic_ratio_temp.GetBinContent(i))
+
+    self.change_to_per(h_systematic_ratio_temp)
+    h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
+    del h_systematic_ratio_temp   # No longer need this -- prevents memory leaks
+    setattr(self, name_ratio, h_systematic_ratio)
+    return h_systematic_ratio
+
+  #----------------------------------------------------------------------
+  def construct_systematic_average(self, hMain, sys_label, jetR, obs_label,
+                                  reg_param, min_pt_truth, max_pt_truth,
+                                  maxbin, takeMaxDev=False):
+  
+    h_systematic_ratio1 = self.construct_systematic_percentage(hMain, '{}1'.format(sys_label), jetR, obs_label,
+                                                              reg_param, min_pt_truth, max_pt_truth, maxbin)
+    h_systematic_ratio2 = self.construct_systematic_percentage(hMain, '{}2'.format(sys_label), jetR, obs_label,
+                                                              reg_param, min_pt_truth, max_pt_truth, maxbin)
+
+    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, sys_label, jetR, obs_label,
+                                                       reg_param, min_pt_truth, max_pt_truth)
+    h_systematic_ratio = self.build_average(h_systematic_ratio1, h_systematic_ratio2, takeMaxDev=takeMaxDev)
+    setattr(self, name, h_systematic_ratio)
+    return h_systematic_ratio
 
   #----------------------------------------------------------------------
   def get_obs_distribution(self, jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
@@ -740,9 +766,17 @@ class RunAnalysis(common_base.CommonBase):
 
         h.DrawCopy('P X0 same')
 
-        legend_label = self.systematics_list[i]
-        if legend_label == 'main':
-          legend_label = 'reg param'
+        legend_label = ''
+        for systematic in self.systematics_list:
+          if systematic in h.GetName():
+            if systematic in ['prior1', 'prior2']:
+              legend_label = 'prior'
+            elif systematic in ['subtraction1', 'subtraction2']:
+              legend_label = 'subtraction'
+            else:
+              legend_label = systematic
+          elif 'RegParam' in h.GetName():
+            legend_label = 'reg param'
         leg.AddEntry(h, legend_label, 'P')
 
     h_total.SetLineStyle(1)
