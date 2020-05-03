@@ -88,7 +88,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       # Option 1: sharpening/smoothing the distributions
       #return math.pow(content, 1 + prior_variation_parameter)
       # Option 2: linear scaling of distributions
-      return (1 + prior_variation_parameter) * obs_true
+      return prior_variation_parameter * (2 * obs_true - 1) + 1
 
     # Else observable has not been implemented
     raise ValueError('No observable is defined in prior_scale_factor_obs()!')
