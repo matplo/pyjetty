@@ -139,6 +139,7 @@ class ProcessMC(process_base.ProcessBase):
     self.fast_simulation = config['fast_simulation']
     self.dry_run = config['dry_run']
     self.skip_prong_matching_histogram = False
+    self.skip_deltapt_RC_histograms = True
     
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
@@ -237,13 +238,14 @@ class ProcessMC(process_base.ProcessBase):
             h = ROOT.TH2F(name, name, 300, 0, 300, 400, -200., 200.)
             setattr(self, name, h)
             
-            name = 'hDeltaPt_RC_beforeCS_R{}_Rmax{}'.format(jetR, R_max)
-            h = ROOT.TH1F(name, name, 400, -200., 200.)
-            setattr(self, name, h)
-            
-            name = 'hDeltaPt_RC_afterCS_R{}_Rmax{}'.format(jetR, R_max)
-            h = ROOT.TH1F(name, name, 400, -200., 200.)
-            setattr(self, name, h)
+            if not self.skip_deltapt_RC_histograms:
+              name = 'hDeltaPt_RC_beforeCS_R{}_Rmax{}'.format(jetR, R_max)
+              h = ROOT.TH1F(name, name, 400, -200., 200.)
+              setattr(self, name, h)
+              
+              name = 'hDeltaPt_RC_afterCS_R{}_Rmax{}'.format(jetR, R_max)
+              h = ROOT.TH1F(name, name, 400, -200., 200.)
+              setattr(self, name, h)
       
             name = 'hDeltaR_ppdet_pptrue_R{}_Rmax{}'.format(jetR, R_max)
             h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
@@ -734,11 +736,12 @@ class ProcessMC(process_base.ProcessBase):
       getattr(self, 'hRho').Fill(rho)
     
     # Fill random cone delta-pt before constituent subtraction
-    R_max = self.max_distance[i]
-    self.fill_deltapt_RC_histogram(fj_particles_combined_beforeCS, rho, jetR, R_max, before_CS=True)
-        
-    # Fill random cone delta-pt after constituent subtraction
-    self.fill_deltapt_RC_histogram(fj_particles_combined, rho, jetR, R_max, before_CS=False)
+    if not self.skip_deltapt_RC_histograms:
+      R_max = self.max_distance[i]
+      self.fill_deltapt_RC_histogram(fj_particles_combined_beforeCS, rho, jetR, R_max, before_CS=True)
+          
+      # Fill random cone delta-pt after constituent subtraction
+      self.fill_deltapt_RC_histogram(fj_particles_combined, rho, jetR, R_max, before_CS=False)
     
   #---------------------------------------------------------------
   # Fill delta-pt histogram
