@@ -77,6 +77,9 @@ class JetAnalysisWithRho(JetAnalysis):
 	def corrected_pt(self, jet):
 		return jet.pt() - jet.area() * self.rho
 
+	def corrected_pt_plus_sigma(self, jet):
+		return jet.pt() - jet.area() * (self.rho + self.sigma)
+
 def matched_pt_constituent(c0, j1):
 	_pt = [c.pt() for i, c in enumerate(j1.constituents()) if c.user_index() == c0.user_index()]
 	if len(_pt) == 1:
