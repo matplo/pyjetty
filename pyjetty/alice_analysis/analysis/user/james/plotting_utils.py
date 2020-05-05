@@ -345,12 +345,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_obs_residual(self, jetR, obs_label, xtitle, pt_bins, relative=False):
 
-    if relative:
-      if self.observable == 'subjet_z' or self.observable == 'jet_axis':
-        return
-      name = 'hRelativeResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
+      return
     else:
-      name = 'hResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+      name = 'hResidual_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
@@ -472,7 +470,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     if self.observable == 'theta_g':
       rebin_val_mcdet = 5
-      rebin_val_mctruth = 1
+      rebin_val_mctruth = 5
       rebin_val_data = 5
     elif self.observable == 'zg':
       rebin_val_mcdet = 5
