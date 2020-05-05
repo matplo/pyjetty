@@ -468,7 +468,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   # If option='det', plot data and MC-det projections for fixed pt-det
   def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
 
-    ytitle = '#frac{{dN}}{{d{}}}'.format(xtitle)
+    ytitle = '#frac{{1}}{{N}} #frac{{dN}}{{d{}}}'.format(xtitle)
     
     if self.observable == 'theta_g':
       rebin_val_mcdet = 5
