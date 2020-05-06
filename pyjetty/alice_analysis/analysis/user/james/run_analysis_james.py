@@ -187,7 +187,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         min_pt = 80.
         max_pt = 100.
         prong_list = ['leading', 'subleading']
-        match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
+        match_list = ['leading', 'subleading', 'ungroomed', 'outside']
         for i, overlay_list in enumerate(self.plot_overlay_list):
           for prong in prong_list:
             for match in match_list:

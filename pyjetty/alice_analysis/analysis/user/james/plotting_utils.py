@@ -609,8 +609,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_delta_pt(self, jetR, pt_bins):
   
-    self.plot_delta_pt_RC(jetR, 'before')
-    self.plot_delta_pt_RC(jetR, 'after')
+    #self.plot_delta_pt_RC(jetR, 'before')
+    #self.plot_delta_pt_RC(jetR, 'after')
     self.plot_delta_pt_emb(jetR, pt_bins)
 
   #---------------------------------------------------------------
