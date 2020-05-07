@@ -273,10 +273,6 @@ class ProcessMC(process_base.ProcessBase):
       name = 'hZ_Det_R{}'.format(jetR)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
       setattr(self, name, h)
-            
-      name = 'hJetPt_Truth_R{}'.format(jetR)
-      h = ROOT.TH1F(name, name, 300, 0, 300)
-      setattr(self, name, h)
       
       for observable in self.observable_list:
 
@@ -297,10 +293,16 @@ class ProcessMC(process_base.ProcessBase):
               if self.thermal_model:
                 for R_max in self.max_distance:
                   name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.0)
+                  h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.0)
                   h.GetXaxis().SetTitle('p_{T,ch jet}')
                   h.GetYaxis().SetTitle('#theta_{g,ch}')
                   setattr(self, name, h)
+                  
+              name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, grooming_label)
+              h = ROOT.TH2F(name, name, 20, 0, 200, 100, 0, 1.0)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#theta_{g,ch}')
+              setattr(self, name, h)
 
         if observable == 'zg':
         
@@ -319,10 +321,16 @@ class ProcessMC(process_base.ProcessBase):
               if self.thermal_model:
                 for R_max in self.max_distance:
                   name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 0.5)
+                  h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 0.5)
                   h.GetXaxis().SetTitle('p_{T,ch jet}')
                   h.GetYaxis().SetTitle('z_{g,ch}')
                   setattr(self, name, h)
+                  
+              name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, grooming_label)
+              h = ROOT.TH2F(name, name, 20, 0, 200, 50, 0, 0.5)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('z_{g,ch}')
+              setattr(self, name, h)
               
         if observable == 'subjet_z':
 
@@ -770,85 +778,91 @@ class ProcessMC(process_base.ProcessBase):
     for constituent in jet.constituents():
       z = constituent.pt() / jet.pt()
       getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
-      
-    getattr(self, 'hJetPt_Truth_R{}'.format(jetR)).Fill(jet.pt())
+          
+    # Fill 2D histogram of truth (pt, obs)
+    hname = 'h_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
+    self.fill_observable_histograms(jet, jetR, hname)
 
   #---------------------------------------------------------------
   # Fill det jet histograms
   #---------------------------------------------------------------
   def fill_det_before_matching(self, jet, jetR, R_max):
     
-    jet_pt = jet.pt()
     if self.is_pp or self.fill_Rmax_indep_hists:
+      jet_pt = jet.pt()
       for constituent in jet.constituents():
         z = constituent.pt() / jet_pt
         getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet_pt, z)
       
     # Fill groomed histograms
     if self.thermal_model:
-      for grooming_setting in self.grooming_settings:
-            
-        grooming_label = self.utils.grooming_label(grooming_setting)
+      hname = 'h_{{}}_JetPt_R{}_{{}}_Rmax{}'.format(jetR, R_max)
+      self.fill_observable_histograms(jet, jetR, hname)
 
-        # Construct SD groomer, and groom jet
-        if 'sd' in grooming_setting:
-
-          zcut = grooming_setting['sd'][0]
-          beta = grooming_setting['sd'][1]
+  #---------------------------------------------------------------
+  # Fill 2D histogram of (pt, obs)
+  #---------------------------------------------------------------
+  def fill_observable_histograms(self, jet, jetR, hname):
+  
+    for grooming_setting in self.grooming_settings:
           
-          # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
-          sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-          jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-          reclusterer = fjcontrib.Recluster(jet_def_recluster)
-          sd.set_reclustering(True, reclusterer)
-          if self.debug_level > 2:
-            print('SoftDrop groomer is: {}'.format(sd.description()))
- 
-          jet_det_sd = sd.result(jet)
+      grooming_label = self.utils.grooming_label(grooming_setting)
+    
+      # Construct SD groomer, and groom jet
+      if 'sd' in grooming_setting:
 
-        # Construct Dynamical groomer, and groom jet
-        if 'dg' in grooming_setting:
-
-          a = grooming_setting['dg'][0]
-          
-          jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
-          dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
-          if self.debug_level > 2:
-            print('Dynamical groomer is: {}'.format(dy_groomer.description()))
-          
-          jet_det_dg_lund = dy_groomer.result(jet, a)
-          jet_det_dg = jet_det_dg_lund.pair()
-           
-        # Compute groomed observables
-        if 'sd' in grooming_setting:
-
-          # If both SD and DG are specified, first apply DG, then SD
-          if 'dg' in grooming_setting:
-            if jet_det_dg.has_constituents():
-              jet_det_groomed = sd.result(jet_det_dg)
-            else:
-              return
-          else:
-            jet_det_groomed = jet_det_sd
-          
-          theta_g_det = self.theta_g(jet_det_groomed, jetR)
-          zg_det = self.zg(jet_det_groomed)
-
-        elif 'dg' in grooming_setting:
-          jet_det_groomed = jet_det_dg
- 
-          theta_g_det = jet_det_dg_lund.Delta()/jetR
-          zg_det = jet_det_dg_lund.z()
-
-        # Fill histograms
-        observable = 'theta_g'
-        name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-        getattr(self, name).Fill(jet_pt, theta_g_det)
-         
-        observable = 'zg'
-        name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-        getattr(self, name).Fill(jet_pt, zg_det)
+        zcut = grooming_setting['sd'][0]
+        beta = grooming_setting['sd'][1]
         
+        # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
+        sd = fjcontrib.SoftDrop(beta, zcut, jetR)
+        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+        reclusterer = fjcontrib.Recluster(jet_def_recluster)
+        sd.set_reclustering(True, reclusterer)
+        if self.debug_level > 2:
+          print('SoftDrop groomer is: {}'.format(sd.description()))
+
+        jet_det_sd = sd.result(jet)
+
+      # Construct Dynamical groomer, and groom jet
+      if 'dg' in grooming_setting:
+
+        a = grooming_setting['dg'][0]
+        
+        jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+        dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
+        if self.debug_level > 2:
+          print('Dynamical groomer is: {}'.format(dy_groomer.description()))
+        
+        jet_det_dg_lund = dy_groomer.result(jet, a)
+        jet_det_dg = jet_det_dg_lund.pair()
+         
+      # Compute groomed observables
+      if 'sd' in grooming_setting:
+
+        # If both SD and DG are specified, first apply DG, then SD
+        if 'dg' in grooming_setting:
+          if jet_det_dg.has_constituents():
+            jet_det_groomed = sd.result(jet_det_dg)
+          else:
+            return
+        else:
+          jet_det_groomed = jet_det_sd
+        
+        theta_g_det = self.theta_g(jet_det_groomed, jetR)
+        zg_det = self.zg(jet_det_groomed)
+
+      elif 'dg' in grooming_setting:
+        jet_det_groomed = jet_det_dg
+
+        theta_g_det = jet_det_dg_lund.Delta()/jetR
+        zg_det = jet_det_dg_lund.z()
+
+      # Fill histograms
+      jet_pt = jet.pt()
+      getattr(self, hname.format('theta_g', grooming_label)).Fill(jet_pt, theta_g_det)
+      getattr(self,  hname.format('zg', grooming_label)).Fill(jet_pt, zg_det)
+      
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
   #---------------------------------------------------------------
