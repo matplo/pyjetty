@@ -122,7 +122,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     histDeltaJES.RebinX(4)
     histDeltaJESprof = histDeltaJES.ProfileX()
     histDeltaJESprof.GetXaxis().SetRangeUser(0., 200.)
-    histDeltaJESprof.GetYaxis().SetRangeUser(-0.8, 0.2)
+    histDeltaJESprof.GetYaxis().SetRangeUser(-0.5, 0.5)
     histDeltaJESprof.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
     outputFilename = os.path.join(self.output_dir, "jet/histDeltaJESprof_R{}.pdf".format(self.remove_periods(jetR)))
     histDeltaJESprof.SetMarkerStyle(21)
@@ -235,9 +235,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     # For each pT^gen, compute the fraction of matched pT^gen
     
     # First, get the pT^gen spectrum
-    name = 'hJetPt_Truth_R{}Scaled'.format(jetR)
-    histPtGen = self.fMC.Get(name)
-    histPtGen.Rebin(10)
+    name = 'h_{}_JetPt_Truth_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    histPtGen = self.fMC.Get(name).ProjectionX()
     
     # Then, get the pT^gen spectrum for matched jets
     name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
@@ -348,7 +347,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     if self.observable == 'subjet_z' or self.observable == 'jet_axis':
       return
     else:
-      name = 'hResidual_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
+      name = 'hResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
     
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
@@ -385,10 +384,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     leg.Draw('same')
     
-    if relative:
-      outputFilename = os.path.join(self.output_dir, 'residual_relative/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
-    else:
-      outputFilename = os.path.join(self.output_dir, 'residual/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+    outputFilename = os.path.join(self.output_dir, 'residual/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
     c_residual.SaveAs(outputFilename)
     c_residual.Close()
 
@@ -400,8 +396,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     h_residual_pt.SetName('{}_{}'.format(h_residual_pt.GetName(), label))
     
     h_residual_pt.GetXaxis().SetRangeUser(minPt, maxPt)
-    h_residual_pt.GetYaxis().SetRangeUser(-0.5, 0.5)
-    h = h_residual_pt.ProjectionY()
+    h_residual_pt.GetZaxis().SetRangeUser(-0.5, 0.5)
+    h = h_residual_pt.ProjectionZ()
     
     integral = h.Integral()
     if integral > 0:
@@ -441,6 +437,91 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       
       self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='truth')
       self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='det')
+
+  #---------------------------------------------------------------
+  def plot_obs_truth(self, jetR, obs_label, obs_setting, grooming_setting,
+                     xtitle, pt_bins):
+                     
+    name = 'h_{}_JetPt_Truth_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    h2D = self.fMC.Get(name)
+    
+    for i in range(0, len(pt_bins) - 1):
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      self.plot_truth_projection(h2D, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth)
+    
+  #---------------------------------------------------------------
+  def plot_truth_projection(self, h2D, jetR, obs_label, obs_setting,
+                            grooming_setting, xtitle, min_pt, max_pt):
+    
+    ytitle = '#frac{{1}}{{N}} #frac{{dN}}{{d{}}}'.format(xtitle)
+
+    # Get histogram of theta_g in data, for given pt-det cut
+    h2D.GetXaxis().SetRangeUser(min_pt, max_pt)
+    hObs_truth = h2D.ProjectionY()
+    hObs_truth.SetMarkerStyle(21)
+    hObs_truth.SetMarkerSize(1)
+    self.scale_by_integral(hObs_truth)
+    hObs_truth.Scale(1., 'width')
+    if 'sd' in grooming_setting:
+      hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
+
+    # Draw histogram
+    c = ROOT.TCanvas('c','c: hist',600,450)
+    c.cd()
+
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    leg = ROOT.TLegend(0.7,0.75,0.85,0.85, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    hObs_truth.GetYaxis().SetTitleOffset(1.5)
+    hObs_truth.SetMaximum(2.5*hObs_truth.GetMaximum())
+    hObs_truth.SetMinimum(0.)
+
+    hObs_truth.Draw('hist')
+    leg.AddEntry(hObs_truth, "MC truth", "L")
+    leg.Draw("same")
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.3, 0.85, text)
+    
+    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.3, 0.79, text)
+
+    text = str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}'
+    text_latex.DrawLatex(0.3, 0.73, text)
+
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text_latex.DrawLatex(0.3, 0.67, text)
+    
+    subobs_label = self.formatted_subobs_label(self.observable)
+    delta = 0.
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.3, 0.61, text)
+      delta = 0.07
+      
+    if grooming_setting:
+      text = self.formatted_grooming_label(grooming_setting)
+      text_latex.DrawLatex(0.3, 0.61-delta, text)
+
+    output_filename = os.path.join(self.output_dir, 'truth/h_{}_MC_R{}_{}_{}-{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
+    c.SaveAs(output_filename)
+    c.Close()
 
   #---------------------------------------------------------------
   def plot2D_obs_statistics(self, hObs_JetPt, jetR, obs_label):
@@ -937,17 +1018,3 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     output_filename = os.path.join(self.output_dir, 'prong_matching_correlation/{}.pdf'.format(hname_prefix))
     c.SaveAs(output_filename)
     c.Close()
-
-  #---------------------------------------------------------------
-  def plot_prong_N_vs_z(self, jetR, obs_label, tagged='tagged'):
-
-    name = 'hProngMatching_subleading_leading_N_{}_JetPtDet_R{}_{}_80-100{}Scaled'.format(tagged, jetR, obs_label, self.suffix)
-    h3D = self.fMC.Get(name)
-    
-    h2D = h3D.Project3D('yx')
-    h2D.GetXaxis().SetTitle('z')
-    h2D.GetYaxis().SetTitle('N_{tracks}^{subleading pp-det prong}')
-    h2D.GetXaxis().SetRangeUser(0, 0.5)
-    h2D.GetYaxis().SetRangeUser(0, 30)
-    outputFilename = os.path.join(self.output_dir, 'prong_matching_N_z/{}.pdf'.format(name))
-    self.plot_hist(h2D, outputFilename, 'colz')
