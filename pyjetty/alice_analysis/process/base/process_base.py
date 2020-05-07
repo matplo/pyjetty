@@ -120,7 +120,7 @@ class ProcessBase(common_base.CommonBase):
     if dR > 1e-5:
       return [np.log(1/dR), np.log(kt)]
     else:
-      return [sys.maxsize, np.log(kt)]
+      return [sys.maxsize, -sys.maxsize]
 
   #---------------------------------------------------------------
   # Return Lund coordinates [log(1/deltaR), log(1/kt)] of a DG jet
@@ -133,7 +133,7 @@ class ProcessBase(common_base.CommonBase):
     if dR > 1e-5:
       return [np.log(1/dR), np.log(kt)]
     else:
-      return [sys.maxsize, np.log(kt)]
+      return [sys.maxsize, -sys.maxsize]
     
   #---------------------------------------------------------------
   # Compare two jets and store matching candidates in user_info
