@@ -33,7 +33,9 @@ class ProcessIO(common_base.CommonBase):
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', tree_dir='PWGHF_TreeCreator',
-               track_tree_name='tree_Particle', event_tree_name='tree_event_char', output_dir='', is_pp=True, min_cent=0., max_cent=10., **kwargs):
+               track_tree_name='tree_Particle', event_tree_name='tree_event_char',
+               output_dir='', is_pp=True, min_cent=0., max_cent=10.,
+               use_ev_id_ext=False, **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
@@ -46,11 +48,23 @@ class ProcessIO(common_base.CommonBase):
       self.output_dir += '/'
     self.reset_dataframes()
     
+    self.use_ev_id_ext = use_ev_id_ext
+    if self.use_ev_id_ext:
+      self.unique_identifier =  ['run_number', 'ev_id', 'ev_id_ext']
+    else:
+      self.unique_identifier =  ['run_number', 'ev_id']
+    
     self.is_pp = is_pp
     if self.is_pp:
-      self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
+      if self.use_ev_id_ext:
+        self.event_columns = ['run_number', 'ev_id', 'ev_id_ext', 'z_vtx_reco', 'is_ev_rej']
+      else:
+        self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
     else:
-      self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej', 'centrality']
+      if self.use_ev_id_ext:
+        self.event_columns = ['run_number', 'ev_id', 'ev_id_ext', 'z_vtx_reco', 'is_ev_rej', 'centrality']
+      else:
+        self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej', 'centrality']
       self.min_centrality = min_cent
       self.max_centrality = max_cent
   
@@ -120,7 +134,7 @@ class ProcessIO(common_base.CommonBase):
     track_df_orig = track_tree.pandas.df()
 
     # Merge event info into track tree
-    self.track_df = pandas.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
+    self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)
     return self.track_df
 
   #---------------------------------------------------------------
@@ -188,7 +202,7 @@ class ProcessIO(common_base.CommonBase):
       # (i) Group the track dataframe by event
       #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
       track_df_grouped = None
-      track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
+      track_df_grouped = self.track_df.groupby(self.unique_identifier)
     
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
       df_fjparticles = None
