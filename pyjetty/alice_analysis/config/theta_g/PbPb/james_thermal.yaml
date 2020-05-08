@@ -35,7 +35,7 @@ constituent_subtractor:
   max_pt_correct: 100
   ghost_area: 0.01
 
-emb_file_list: '/rstorage/alice/data/LHC18qr/147-148/files.txt'
+emb_file_list: '/rstorage/alice/data/LHC18qr/413-414/files.txt'
 #emb_file_list: '/Users/jamesmulligan/Analysis_theta_g/test_LHC18qr/PbPb_file_list.txt'
 
 # Observable block
