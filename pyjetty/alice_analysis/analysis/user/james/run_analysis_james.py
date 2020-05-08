@@ -141,9 +141,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     self.create_output_subdir(output_dir_performance, 'jet')
     self.create_output_subdir(output_dir_performance, 'resolution')
     self.create_output_subdir(output_dir_performance, 'residual')
-    self.create_output_subdir(output_dir_performance, 'residual_relative')
     self.create_output_subdir(output_dir_performance, 'mc_projections_det')
     self.create_output_subdir(output_dir_performance, 'mc_projections_truth')
+    self.create_output_subdir(output_dir_performance, 'truth')
     self.create_output_subdir(output_dir_performance, 'data')
     self.create_output_subdir(output_dir_performance, 'lund')
     if not self.is_pp:
@@ -153,7 +153,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       self.create_output_subdir(output_dir_performance, 'prong_matching_deltaR')
       self.create_output_subdir(output_dir_performance, 'prong_matching_deltaZ')
       self.create_output_subdir(output_dir_performance, 'prong_matching_correlation')
-      self.create_output_subdir(output_dir_performance, 'prong_matching_N_z')
     
     # Generate performance plots
     for jetR in self.jetR_list:
@@ -176,9 +175,9 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
         self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_truth(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         
         if grooming_setting and self.observable != 'jet_axis':
           self.plotting_utils.plot_lund_plane(jetR, obs_label, grooming_setting)
@@ -189,7 +188,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         min_pt = 80.
         max_pt = 100.
         prong_list = ['leading', 'subleading']
-        match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
+        match_list = ['leading', 'subleading', 'ungroomed', 'outside']
         for i, overlay_list in enumerate(self.plot_overlay_list):
           for prong in prong_list:
             for match in match_list:
@@ -207,14 +206,6 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
 
           hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}'.format(jetR)
           self.plotting_utils.plot_prong_matching_correlation(jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
-
-        # Plot subobservable-dependent plots
-        for i, _ in enumerate(self.obs_subconfig_list):
-          obs_setting = self.obs_settings[i]
-          grooming_setting = self.grooming_settings[i]
-          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-          self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
-          self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'untagged')
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
