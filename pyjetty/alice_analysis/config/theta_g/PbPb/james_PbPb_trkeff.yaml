@@ -19,6 +19,7 @@ debug_level: 0
 dry_run: False
 fast_simulation: False
 #event_number_max: 1000
+use_ev_id_ext: True
 
 constituent_subtractor:
   max_distance: [0.25]

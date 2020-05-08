@@ -19,6 +19,7 @@ debug_level: 0
 dry_run: False
 fast_simulation: False
 #event_number_max: 1000
+use_ev_id_ext: True
 
 constituent_subtractor:
   max_distance: [0.05, 0.25, 0.7]
@@ -171,15 +172,15 @@ zg:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/67256-02-test'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/77468_partial'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'theta_g'
-do_unfolding: True
-force_rebin: True
-do_systematics: True
-do_plot_final_result: True
-do_plot_performance: False
+do_unfolding: False
+force_rebin: False
+do_systematics: False
+do_plot_final_result: False
+do_plot_performance: True
 figure_approval_status: 'Work in Progress'
 
 # List of which systematics to perform
@@ -204,10 +205,10 @@ R_max_variation1: 0.05
 R_max_variation2: 0.7
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18qr/65956/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_embedding/67256/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18qr/76667/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_embedding/77468_partial/AnalysisResultsFinal.root'
 #main_response: '/Users/jamesmulligan/Analysis_theta_g/test_process_output_pp_mc_embedded/1/AnalysisResults.root'
 trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_embedding_trkeff/68101/AnalysisResultsFinal.root'
 
 # Thermal closure test
-thermal_closure: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_thermal/68092/AnalysisResultsFinal.root'
+#thermal_closure: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_thermal/68092/AnalysisResultsFinal.root'
