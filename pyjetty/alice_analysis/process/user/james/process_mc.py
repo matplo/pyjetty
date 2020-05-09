@@ -222,12 +222,13 @@ class ProcessMC(process_base.ProcessBase):
   # Initialize histograms
   #---------------------------------------------------------------
   def initialize_output_objects_R(self, jetR):
-        
-      name = 'hJES_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
-      setattr(self, name, h)
       
       if self.is_pp:
+      
+          name = 'hJES_R{}'.format(jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+          setattr(self, name, h)
+      
           name = 'hDeltaR_All_R{}'.format(jetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
@@ -235,6 +236,10 @@ class ProcessMC(process_base.ProcessBase):
       else:
       
           for R_max in self.max_distance:
+          
+            name = 'hJES_R{}_Rmax{}'.format(jetR, R_max)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+            setattr(self, name, h)
           
             name = 'hDeltaPt_emb_R{}_Rmax{}'.format(jetR, R_max)
             h = ROOT.TH2F(name, name, 300, 0, 300, 400, -200., 200.)
@@ -871,6 +876,11 @@ class ProcessMC(process_base.ProcessBase):
   #---------------------------------------------------------------
   def fill_matching_histograms(self, jet_det, jetR, R_max):
       
+    if R_max:
+      suffix = '_Rmax{}'.format(R_max)
+    else:
+      suffix = ''
+      
     if jet_det.has_user_info():
       jet_truth = jet_det.python_info().match
       
@@ -878,9 +888,8 @@ class ProcessMC(process_base.ProcessBase):
         
         jet_pt_det_ungroomed = jet_det.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
-        if self.is_pp or self.fill_Rmax_indep_hists:
-          JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
-          getattr(self, 'hJES_R{}'.format(jetR)).Fill(jet_pt_truth_ungroomed, JES)
+        JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
+        getattr(self, 'hJES_R{}{}'.format(jetR, suffix)).Fill(jet_pt_truth_ungroomed, JES)
         
         if not self.is_pp:
         

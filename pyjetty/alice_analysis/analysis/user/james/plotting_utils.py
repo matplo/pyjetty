@@ -107,7 +107,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_JES(self, jetR):
     
-    name = 'hJES_R{}Scaled'.format(jetR)
+    name = 'hJES_R{}{}Scaled'.format(jetR, self.suffix)
     histDeltaJES = self.fMC.Get(name)
     histDeltaJES.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
     histDeltaJES.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
@@ -130,7 +130,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   # Plot JES shift distribution for various fixed pT-gen
   def plot_JES_proj(self, jetR, pt_bins):
     
-    name = 'hJES_R{}Scaled'.format(jetR)
+    name = 'hJES_R{}{}Scaled'.format(jetR, self.suffix)
     
     cJES = ROOT.TCanvas('cJES','cJES: hist',600,450)
     cJES.cd()
