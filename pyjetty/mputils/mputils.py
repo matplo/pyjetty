@@ -38,6 +38,8 @@ class ColorS(object):
 		return '\033[96m{}\033[00m'.format(ColorS.str(*s))
 	def light_gray(*s): 
 		return '\033[97m{}\033[00m'.format(ColorS.str(*s))
+	def no_color(*s): 
+		return '\033[00m{}\033[00m'.format(ColorS.str(*s))
 	def black(*s):
 		return '\033[98m{}\033[00m'.format(ColorS.str(*s))
 	def __init__(self):
@@ -69,6 +71,9 @@ def perror(*args, file=sys.stderr):
 
 def pinfo(*args, file=sys.stdout):
 	print(ColorS.green('[i]', *args), file=file)
+
+def pindent(*args, file=sys.stdout):
+	print(ColorS.no_color('   ', *args), file=file)
 
 # think about thread safe implementation
 # use unique file names... for example?

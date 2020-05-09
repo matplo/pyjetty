@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import argparse
+import os
 import hf_data_io as hfdio
 from pyjetty.mputils import perror, pinfo, pwarning
 import ROOT
@@ -24,6 +26,11 @@ class HFAnalysisInvMass(hfdio.HFAnalysis):
 		pinfo(self.fout.GetName(), 'written.')
 
 if __name__ == '__main__':
+	parser = argparse.ArgumentParser(description='D0 analysis on alice data', prog=os.path.basename(__file__))
+	parser.add_argument('-f', '--flist', help='file list to process', type=str, default=None, required=True)
+	parser.add_argument('-n', '--nfiles', help='max n files to process', type=int, default=0, required=False)
+	args = parser.parse_args()
+
 	hfaio = hfdio.HFAnalysisIO()
 
 	hfa = HFAnalysisInvMass(name = 'HFAnalysisInvMass')
@@ -43,6 +50,6 @@ if __name__ == '__main__':
 
 	# hfaio.load_file("./AnalysisResults.root")
 	# hfaio.execute_analyses()
-	hfaio.execute_analyses_on_file_list('./file_list.txt')
+	hfaio.execute_analyses_on_file_list(args.flist, args.nfiles)
 
 	hfa.finalize()

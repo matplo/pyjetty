@@ -1,6 +1,6 @@
 import ROOT
 import fastjet as fj
-from pyjetty.mputils import MPBase
+from pyjetty.mputils import MPBase, pwarning
 
 
 class RTreeWriter(MPBase):
@@ -13,6 +13,7 @@ class RTreeWriter(MPBase):
 									file_name="RTreeWriter.root", 
 									fout=None)
 		super(RTreeWriter, self).__init__(**kwargs)
+		self._warnings = []
 		if self.tree is None:
 			if self.fout is None:
 				print('[i] new file {}'.format(self.file_name))
@@ -27,6 +28,10 @@ class RTreeWriter(MPBase):
 			self.tree = ROOT.TTree(self.tree_name, self.tree_name)
 		self.branch_containers = {}
 
+	def add_warning(self, s):
+		if s not in self._warnings:
+			self._warnings.append(s)
+
 	def _fill_branch(self, bname, value):
 		b = self.tree.GetBranch(bname)
 		if not b:
@@ -38,6 +43,7 @@ class RTreeWriter(MPBase):
 			self.branch_containers[bname].push_back(value)
 
 	def fill_branch(self, bname, value, do_enumerate=False):
+		# print("FILL:", self.tree_name, bname, value)
 		if float == type(value) or int == type(value):
 			self._fill_branch(bname, value)
 			return
@@ -62,6 +68,14 @@ class RTreeWriter(MPBase):
 		if bool == type(value):
 			self._fill_branch(bname, value)
 			return
+		try:
+			_val = float(value)
+			self._fill_branch(bname, _val)
+			self.add_warning('converted {} to float for branch {}'.format(type(value), bname))
+			return			
+		except:
+			pass
+		self.add_warning('do not know how to fill tree {} branch {} for type {} - ignored'.format(self.tree_name, bname, type(value)))
 
 	def clear(self):
 		for k in self.branch_containers:
@@ -76,6 +90,10 @@ class RTreeWriter(MPBase):
 		self.fout.Write()
 		self.fout.Purge()
 		self.fout.Close()
+
+	def __del__(self):
+		for w in self._warnings:
+			pwarning(self.tree_name, ':', w)
 
 def example():
 	tw = RTreeWriter()

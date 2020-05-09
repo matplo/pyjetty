@@ -60,37 +60,50 @@ class HFAnalysisIO(MPBase):
 		if not os.path.exists(path):
 			pwarning('[w] file', path, 'does not exists.')
 			return
-		event_tree = uproot.open(path)[self.event_tree_name]
+		try:
+			event_tree = uproot.open(path)[self.event_tree_name]
+		except:
+			pwarning('error getting', self.event_tree_name, 'from file:', path)
+			return False
 		if not event_tree:
-			print('[e] Tree {} not found in file {}'.format(self.event_tree_name, path))
+			perror('Tree {} not found in file {}'.format(self.event_tree_name, path))
 			return False
 		event_df_orig = event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
 		event_df_orig.reset_index(drop=True)
 		event_df = event_df_orig.query('is_ev_rej == 0')
 		event_df.reset_index(drop=True)
 		# Load track tree into dataframe
-		track_tree = uproot.open(path)[self.tree_name]
+		try:
+			track_tree = uproot.open(path)[self.tree_name]
+		except:
+			pwarning('error getting', self.tree_name, 'from file:', path)
+			return False
 		if not track_tree:
-			print('[e] Tree {} not found in file {}'.format(tree_name, path))
+			perror('Tree {} not found in file {}'.format(tree_name, path))
 			return False
 		track_df_orig = track_tree.pandas.df()
 		# Merge event info into track tree
 		track_df = pd.merge(track_df_orig, event_df, on=['run_number', 'ev_id'])
 		self.track_df_grouped = track_df.groupby(['run_number','ev_id'])
 		# (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
+		return True
 
 	def execute_analyses(self):
 		[self.track_df_grouped.apply(a.analyze) for a in self.analyses]
 
-	def execute_analyses_on_file_list(self, file_list):
+	def execute_analyses_on_file_list(self, file_list, nfiles=0):
 		if os.path.exists(file_list):
 			with open(file_list) as f:
 				files = f.readlines()
+			if int(nfiles) > 0:
+				files = files[:nfiles]
+			for f in files:
+				fn = f.strip('\n')
+				pinfo('+file:', fn)
 			for f in tqdm.tqdm(files):
 				fn = f.strip('\n')
-				pinfo('processing file:', fn)
-				self.load_file(fn)
-				self.execute_analyses()
+				if self.load_file(fn):
+					self.execute_analyses()
 		else:
 			perror('file list does not exist', file_list)
 		pinfo('done.')
