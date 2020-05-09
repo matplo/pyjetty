@@ -814,14 +814,13 @@ class RunAnalysis(common_base.CommonBase):
         legend_label = ''
         for systematic in self.systematics_list:
           if systematic in h.GetName():
-            if systematic in ['prior1', 'prior2']:
-              legend_label = 'prior'
-            elif systematic in ['subtraction1', 'subtraction2']:
-              legend_label = 'subtraction'
-            else:
-              legend_label = systematic
+            legend_label = systematic
           elif 'RegParam' in h.GetName():
             legend_label = 'reg param'
+          elif 'prior' in h.GetName():
+            legend_label = 'prior'
+          elif 'subtraction' in h.GetName():
+            legend_label = 'subtraction'
         leg.AddEntry(h, legend_label, 'P')
 
     h_total.SetLineStyle(1)
