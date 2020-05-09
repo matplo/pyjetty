@@ -140,7 +140,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     # Create output subdirectories
     self.create_output_subdir(output_dir_performance, 'jet')
     self.create_output_subdir(output_dir_performance, 'resolution')
-    self.create_output_subdir(output_dir_performance, 'residual')
+    self.create_output_subdir(output_dir_performance, 'residual_pt')
+    self.create_output_subdir(output_dir_performance, 'residual_obs')
     self.create_output_subdir(output_dir_performance, 'mc_projections_det')
     self.create_output_subdir(output_dir_performance, 'mc_projections_truth')
     self.create_output_subdir(output_dir_performance, 'truth')
@@ -175,7 +176,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
+        self.plotting_utils.plot_obs_residual_pt(jetR, obs_label, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual_obs(jetR, obs_label, self.xtitle)
         self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_truth(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         

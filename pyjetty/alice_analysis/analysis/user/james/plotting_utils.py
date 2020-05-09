@@ -56,14 +56,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     else:
       self.suffix = ''
     
-    kGreen = 416
-    kBlue  = 600
-    kCyan  = 432
-    kAzure   = 860
-    kViolet  = 880
-    kMagenta = 616
-    kPink    = 900
-    self.ColorArray = [kBlue-4, kAzure+7, kCyan-2, kViolet-8, kBlue-6, kGreen+3, kPink]
+    self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
+                       ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
+                       ROOT.kOrange-3]
+    self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
     
     print(self)
 
@@ -342,7 +338,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     return histResolution
 
   #---------------------------------------------------------------
-  def plot_obs_residual(self, jetR, obs_label, xtitle, pt_bins, relative=False):
+  def plot_obs_residual_pt(self, jetR, obs_label, xtitle, pt_bins):
 
     if self.observable == 'subjet_z' or self.observable == 'jet_axis':
       return
@@ -351,7 +347,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
-    c_residual.SetBottomMargin(0.17)
+    c_residual.SetBottomMargin(0.2)
     
     leg = ROOT.TLegend(0.55,0.55,0.88,0.85, '')
     leg.SetFillColor(10)
@@ -364,8 +360,58 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
       
-      hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_pt_truth, max_pt_truth)
-      hResidual.SetMarkerStyle(20)
+      hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_pt_truth, max_pt_truth, option='pt')
+      hResidual.SetMarkerStyle(self.MarkerArray[i])
+      hResidual.SetMarkerColor(self.ColorArray[i])
+      hResidual.SetLineColor(self.ColorArray[i])
+      
+      if i == 0:
+      
+        hResidual.GetXaxis().SetTitleOffset(1.6);
+        hResidual.GetYaxis().SetTitle('Probability density')
+        hResidual.GetYaxis().SetRangeUser(0, 2.*hResidual.GetMaximum())
+        hResidual.DrawCopy('P E')
+        
+      else:
+
+        hResidual.DrawCopy('P E same')
+    
+      leg.AddEntry(hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+
+    leg.Draw('same')
+    
+    outputFilename = os.path.join(self.output_dir, 'residual_pt/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+    c_residual.SaveAs(outputFilename)
+    c_residual.Close()
+
+  #---------------------------------------------------------------
+  def plot_obs_residual_obs(self, jetR, obs_label, xtitle):
+
+    name = 'hResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    
+    c_residual = ROOT.TCanvas('c','c: hist',600,450)
+    c_residual.cd()
+    c_residual.SetBottomMargin(0.2)
+    
+    leg = ROOT.TLegend(0.55,0.55,0.88,0.85, '')
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.035)
+    
+    # Loop through pt slices, and plot final residual for each 1D distribution
+    min_pt = 80
+    max_pt = 100
+    if 'theta' in xtitle:
+      obs_true_list = [0., 0.05, 0.1, 0.2, 0.5, 1.]
+    else:
+      obs_true_list = [0.2, 0.3, 0.4, 0.5]
+    for i in range(0, len(obs_true_list) - 1):
+      min_obs_truth = obs_true_list[i]
+      max_obs_truth = obs_true_list[i+1]
+      
+      hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_obs_truth, max_obs_truth, option='obs', min_pt=min_pt, max_pt=max_pt)
+      hResidual.SetMarkerStyle(self.MarkerArray[i])
       hResidual.SetMarkerColor(self.ColorArray[i])
       hResidual.SetLineColor(self.ColorArray[i])
 
@@ -380,24 +426,33 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
         hResidual.DrawCopy('P E same')
 
-      leg.AddEntry(hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+      leg.AddEntry(hResidual, '{} = {}-{}'.format('{}^{{{}}}'.format(xtitle, 'truth'), min_obs_truth, max_obs_truth), 'P')
 
     leg.Draw('same')
     
-    outputFilename = os.path.join(self.output_dir, 'residual/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt, max_pt)
+    text_latex.DrawLatex(0.2, 0.8, text)
+    
+    outputFilename = os.path.join(self.output_dir, 'residual_obs/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
     c_residual.SaveAs(outputFilename)
     c_residual.Close()
 
   #---------------------------------------------------------------
   # Get residual for a fixed pT-gen
-  def get_residual_proj(self, name, label, minPt, maxPt):
+  def get_residual_proj(self, name, label, min, max, option='pt', min_pt=80., max_pt=100.):
     
     h_residual_pt = self.fMC.Get(name)
     h_residual_pt.SetName('{}_{}'.format(h_residual_pt.GetName(), label))
     
-    h_residual_pt.GetXaxis().SetRangeUser(minPt, maxPt)
+    if option == 'pt':
+      h_residual_pt.GetXaxis().SetRangeUser(min, max)
+    elif option == 'obs':
+      h_residual_pt.GetXaxis().SetRangeUser(min_pt, max_pt)
+      h_residual_pt.GetYaxis().SetRangeUser(min, max)
     h_residual_pt.GetZaxis().SetRangeUser(-0.5, 0.5)
-    h = h_residual_pt.ProjectionZ()
+    h = h_residual_pt.Project3D('z')
     
     integral = h.Integral()
     if integral > 0:
@@ -463,6 +518,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     hObs_truth.SetMarkerStyle(21)
     hObs_truth.SetMarkerSize(1)
     self.scale_by_integral(hObs_truth)
+    hObs_truth.Rebin(5)
     hObs_truth.Scale(1., 'width')
     if 'sd' in grooming_setting:
       hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
@@ -485,6 +541,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetFillStyle(1)
     leg.SetTextSize(0.04)
     
+    hObs_truth.GetYaxis().SetTitle(ytitle)
     hObs_truth.GetYaxis().SetTitleOffset(1.5)
     hObs_truth.SetMaximum(2.5*hObs_truth.GetMaximum())
     hObs_truth.SetMinimum(0.)
