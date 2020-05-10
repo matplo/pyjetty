@@ -141,6 +141,7 @@ class ProcessMC(process_base.ProcessBase):
     self.fast_simulation = config['fast_simulation']
     self.dry_run = config['dry_run']
     self.skip_deltapt_RC_histograms = True
+    self.fill_RM_histograms = True
     
     self.jet_matching_distance = config['jet_matching_distance']
     self.reject_tracks_fraction = config['reject_tracks_fraction']
@@ -294,9 +295,10 @@ class ProcessMC(process_base.ProcessBase):
                 self.create_theta_g_histograms(observable, jetR, grooming_label)
               else:
                 for R_max in self.max_distance:
-                  self.create_theta_g_histograms(observable, jetR, grooming_label, R_max)
-                  if R_max == self.main_R_max:
-                    self.create_theta_g_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
+                  if self.fill_RM_histograms:
+                    self.create_theta_g_histograms(observable, jetR, grooming_label, R_max)
+                    if R_max == self.main_R_max:
+                      self.create_theta_g_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
               
               if self.thermal_model:
                 for R_max in self.max_distance:
@@ -322,9 +324,10 @@ class ProcessMC(process_base.ProcessBase):
                 self.create_zg_histograms(observable, jetR, grooming_label)
               else:
                 for R_max in self.max_distance:
-                  self.create_zg_histograms(observable, jetR, grooming_label, R_max)
-                  if R_max == self.main_R_max:
-                    self.create_zg_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
+                  if self.fill_RM_histograms:
+                    self.create_zg_histograms(observable, jetR, grooming_label, R_max)
+                    if R_max == self.main_R_max:
+                      self.create_zg_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
 
               if self.thermal_model:
                 for R_max in self.max_distance:
@@ -1082,11 +1085,12 @@ class ProcessMC(process_base.ProcessBase):
           prong_match = False
         
         # Fill histograms
-        observable = 'theta_g'
-        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
-          
-        observable = 'zg'
-        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
+        if self.fill_RM_histograms:
+          observable = 'theta_g'
+          self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
+            
+          observable = 'zg'
+          self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
 
         # Fill jet axis difference
         if 'jet_axis' in self.observable_list:
