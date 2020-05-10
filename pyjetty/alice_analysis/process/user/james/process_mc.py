@@ -295,10 +295,9 @@ class ProcessMC(process_base.ProcessBase):
                 self.create_theta_g_histograms(observable, jetR, grooming_label)
               else:
                 for R_max in self.max_distance:
-                  if self.fill_RM_histograms:
-                    self.create_theta_g_histograms(observable, jetR, grooming_label, R_max)
-                    if R_max == self.main_R_max:
-                      self.create_theta_g_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
+                  self.create_theta_g_histograms(observable, jetR, grooming_label, R_max)
+                  if R_max == self.main_R_max:
+                    self.create_theta_g_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
               
               if self.thermal_model:
                 for R_max in self.max_distance:
@@ -324,10 +323,9 @@ class ProcessMC(process_base.ProcessBase):
                 self.create_zg_histograms(observable, jetR, grooming_label)
               else:
                 for R_max in self.max_distance:
-                  if self.fill_RM_histograms:
-                    self.create_zg_histograms(observable, jetR, grooming_label, R_max)
-                    if R_max == self.main_R_max:
-                      self.create_zg_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
+                  self.create_zg_histograms(observable, jetR, grooming_label, R_max)
+                  if R_max == self.main_R_max:
+                    self.create_zg_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
 
               if self.thermal_model:
                 for R_max in self.max_distance:
@@ -475,13 +473,14 @@ class ProcessMC(process_base.ProcessBase):
       suffix = ''
             
     # Create THn of response for theta_g
-    dim = 4;
-    title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-    nbins = [30, 20, 100, 100]
-    min = [0., 0., 0., 0.]
-    max = [150., 200., 1., 1.]
-    name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    self.create_thn(name, title, dim, nbins, min, max)
+    if self.fill_RM_histograms:
+      dim = 4;
+      title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
+      nbins = [30, 20, 100, 100]
+      min = [0., 0., 0., 0.]
+      max = [150., 200., 1., 1.]
+      name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
+      self.create_thn(name, title, dim, nbins, min, max)
     
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0., 1., 200, -2., 2.)
@@ -501,13 +500,14 @@ class ProcessMC(process_base.ProcessBase):
       suffix = ''
     
     # Create THn of response for z_g
-    dim = 4;
-    title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-    nbins = [30, 20, 50, 50]
-    min = [0., 0., 0., 0.]
-    max = [150., 200., 0.5, 0.5]
-    name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    self.create_thn(name, title, dim, nbins, min, max)
+    if self.fill_RM_histograms:
+      dim = 4;
+      title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
+      nbins = [30, 20, 50, 50]
+      min = [0., 0., 0., 0.]
+      max = [150., 200., 0.5, 0.5]
+      name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
+      self.create_thn(name, title, dim, nbins, min, max)
 
     name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
     h = ROOT.TH3F(name, name, 20, 0, 200, 50, 0., 0.5, 200, -2., 2.)
@@ -1085,12 +1085,11 @@ class ProcessMC(process_base.ProcessBase):
           prong_match = False
         
         # Fill histograms
-        if self.fill_RM_histograms:
-          observable = 'theta_g'
-          self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
-            
-          observable = 'zg'
-          self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
+        observable = 'theta_g'
+        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
+          
+        observable = 'zg'
+        self.fill_groomed_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, grooming_setting, self.obs_grooming_settings[observable], grooming_label, R_max, prong_match = prong_match)
 
         # Fill jet axis difference
         if 'jet_axis' in self.observable_list:
@@ -1162,12 +1161,13 @@ class ProcessMC(process_base.ProcessBase):
   
     if grooming_setting in obs_grooming_settings:
 
-      x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, obs_det, obs_truth])
-      x_array = array('d', x)
-      name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
-      if not self.is_pp:
-        name += '_Rmax{}'.format(R_max)
-      getattr(self, name).Fill(x_array)
+      if self.fill_RM_histograms:
+        x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, obs_det, obs_truth])
+        x_array = array('d', x)
+        name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, grooming_label)
+        if not self.is_pp:
+          name += '_Rmax{}'.format(R_max)
+        getattr(self, name).Fill(x_array)
         
       if obs_truth > 1e-5:
         obs_resolution = (obs_det - obs_truth) / obs_truth
