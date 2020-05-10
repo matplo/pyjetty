@@ -555,7 +555,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.3, 0.85, text)
     
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    if self.is_pp:
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    else:
+      text = 'Pb-Pb #sqrt{#it{s_{NN}}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.3, 0.79, text)
 
@@ -703,7 +706,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.3, 0.85, text)
     
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    if self.is_pp:
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    else:
+      text = 'Pb-Pb #sqrt{#it{s_{NN}}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.3, 0.79, text)
 
