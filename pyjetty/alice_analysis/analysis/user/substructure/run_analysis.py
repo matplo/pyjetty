@@ -947,7 +947,7 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   def change_to_per(self, h):
 
-    for bin in range(0, h.GetNbinsX()):
+    for bin in range(0, h.GetNbinsX()+2):
       content = h.GetBinContent(bin)
       content_new = math.fabs(1-content)
       h.SetBinContent(bin, content_new*100)
