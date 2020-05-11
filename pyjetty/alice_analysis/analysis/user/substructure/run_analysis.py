@@ -520,8 +520,10 @@ class RunAnalysis(common_base.CommonBase):
                                                  reg_param, systematic)
       name1D = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR,
                                             obs_label, reg_param, min_pt_truth, max_pt_truth)
+      store_tagging_fraction = (systematic == 'main')
       self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
-                                min_pt_truth, max_pt_truth, store_tagging_fraction=True)
+                                min_pt_truth, max_pt_truth,
+                                store_tagging_fraction=store_tagging_fraction)
 
       if systematic == 'main':
         # Get regularization parameter variations, and store as attributes
