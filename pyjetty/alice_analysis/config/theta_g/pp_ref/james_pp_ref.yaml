@@ -200,6 +200,7 @@ do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
 figure_approval_status: 'Work in Progress'
+use_ev_id_ext: False
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
