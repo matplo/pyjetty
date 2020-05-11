@@ -89,6 +89,16 @@ class PlotRAA(common_base.CommonBase):
     self.h_sys_AA = self.file_AA.Get(self.sys_total_name)
     self.h_tagging_fraction_AA = self.file_AA.Get(self.h_tagging_fraction_name)
     
+    integral_inclusive = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX()+1, 'width')
+    integral_reported = self.h_main_pp.Integral(2, self.h_main_pp.GetNbinsX()+1, 'width')
+    tagging_fraction = integral_reported / integral_inclusive
+    print('tagging fraction pp re-computed: {}'.format(tagging_fraction))
+    
+    integral_inclusive = self.h_main_AA.Integral(1, self.h_main_pp.GetNbinsX()+1, 'width')
+    integral_reported = self.h_main_AA.Integral(2, self.h_main_pp.GetNbinsX()+1, 'width')
+    tagging_fraction = integral_reported / integral_inclusive
+    print('tagging fraction AA re-computed: {}'.format(tagging_fraction))
+    
     pt = (self.min_pt + self.max_pt)/2
     bin = self.h_tagging_fraction_pp.GetXaxis().FindBin(pt)
     self.f_tagging_pp = self.h_tagging_fraction_pp.GetBinContent(bin)
