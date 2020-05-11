@@ -42,19 +42,19 @@ class PlotRAA(common_base.CommonBase):
     self.figure_approval_status = 'Work in progress'
     
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
- 
-    self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-sd/'
-    self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/67256-02-test/'
-    #self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/67256-04-test/'
 
     self.observables = ['theta_g']
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
     self.jetR = 0.2
     if self.jetR == 0.4:
+      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-04/'
+      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04/'
       self.min_pt = 80
       self.max_pt = 100
     else:
+      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-02/'
+      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-02/'
       self.min_pt = 60
       self.max_pt = 80
     
@@ -100,7 +100,7 @@ class PlotRAA(common_base.CommonBase):
     self.colors = [600-6, 632-4, 416-2]
     self.markers = [20, 21, 33]
     
-    name = 'hRAA_{}.pdf'.format(observable)
+    name = 'hRAA_{}_R{}.pdf'.format(observable, self.utils.remove_periods(self.jetR))
     self.output_filename = os.path.join(self.output_dir, name)
       
   #---------------------------------------------------------------
