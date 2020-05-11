@@ -926,7 +926,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     outdir = 'prong_matching_fraction_pt'
     if 'JetPtDet' in name_prefix:
       outdir = 'prong_matching_fraction_ptdet'
-    output_filename = os.path.join(self.output_dir, '{}/{}_{}.pdf'.format(outdir, name_prefix, i_overlay))
+    output_filename = os.path.join(self.output_dir, '{}/{}_{}.pdf'.format(outdir, self.remove_periods(name_prefix), i_overlay))
     c.SaveAs(output_filename)
     c.Close()
 
@@ -938,7 +938,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     ROOT.gPad.SetLeftMargin(0.2)
     ROOT.gPad.SetBottomMargin(0.15)
     
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0., jetR)
+    xmin = 0.
+    if plot_deltaz:
+      xmin = -jetR
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, xmin, jetR)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.GetYaxis().SetTitleOffset(1.2)
     max = 0.01
@@ -1008,9 +1011,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg.Draw('same')
 
     if plot_deltaz:
-        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaZ/{}.pdf'.format(name_prefix))
+        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaZ/{}.pdf'.format(self.remove_periods(name_prefix)))
     else:
-        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaR/{}.pdf'.format(name_prefix))
+        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaR/{}.pdf'.format(self.remove_periods(name_prefix)))
     c.SaveAs(output_filename)
     c.Close()
 
@@ -1078,6 +1081,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     leg.Draw('same')
 
-    output_filename = os.path.join(self.output_dir, 'prong_matching_correlation/{}.pdf'.format(hname_prefix))
+    output_filename = os.path.join(self.output_dir, 'prong_matching_correlation/{}.pdf'.format(self.remove_periods(hname_prefix)))
     c.SaveAs(output_filename)
     c.Close()

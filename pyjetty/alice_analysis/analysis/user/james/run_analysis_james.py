@@ -202,7 +202,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
               hname = 'hProngMatching_{}_{}_JetPtDet_R{}'.format(prong, match, jetR)
               self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
-              if 'subleading' in prong:
+              if 'subleading' in prong or 'leading' in prong:
                 hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
                 self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
 
