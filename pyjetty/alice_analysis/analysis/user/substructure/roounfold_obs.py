@@ -225,6 +225,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           use_underflow = 'sd' in grooming_setting
         else:
           use_underflow = False
+        if self.prong_matching_response:
+          use_underflow = False
 
         # Rebin if requested, and write to file
         thn = self.fResponse.Get(name_thn)
