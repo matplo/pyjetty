@@ -56,7 +56,7 @@ if __name__ == '__main__':
 	hfa.add_selection_range_abs('nsigTOF_K_0', 3)
 	hfa.add_selection_range_abs('nsigTOF_K_1', 3)
 	# hfa.add_selection_range('d_len', 0.05, 1e3)
-	hfa.add_selection_range('dca', 0.02, 1e3)
+	# hfa.add_selection_range('dca', 0.02, 1e3)
 
 	#hfa.add_selection_range('cos_p_xy', 0, 0.99)
 	#hfa.add_selection_range('d_len_xy', 0.1, 1e3)
