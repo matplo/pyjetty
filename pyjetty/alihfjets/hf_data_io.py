@@ -116,10 +116,11 @@ class HFAnalysisIO(MPBase):
 			self.pbar2.update(1)
 
 	def execute_analyses_on_file_list(self, file_list, nfiles=0):
-		self.pbar2 = tqdm.tqdm()
+		self.pbar2 = tqdm.tqdm(mininterval=20, maxinterval=60)
 		self.pbar2_mark = None
 		for a in self.analyses:
 			a.callback = self.update_status
+		print()
 		if os.path.exists(file_list):
 			with open(file_list) as f:
 				files = f.readlines()
