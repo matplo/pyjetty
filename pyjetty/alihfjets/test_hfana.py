@@ -36,15 +36,16 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='D0 analysis on alice data', prog=os.path.basename(__file__))
 	parser.add_argument('-f', '--flist', help='file list to process', type=str, default=None, required=True)
 	parser.add_argument('-n', '--nfiles', help='max n files to process', type=int, default=0, required=False)
+	parser.add_argument('-o', '--output', help="output name / file name in the end", type=str, default='test_hfana')
 	args = parser.parse_args()
 
 	hfaio = hfdio.HFAnalysisIO()
 
-	hfa = HFAnalysisInvMass(name = 'HFAnalysisInvMass')
+	hfa = HFAnalysisInvMass(name = args.output)
 	hfa.add_selection_range('pt_cand', 2, 1e3)
 	hfa.add_selection_range_abs('z_vtx_reco', 10)
-	hfa.add_selection_range('pt_prong0', 1, 1e3)
-	hfa.add_selection_range('pt_prong1', 1, 1e3)
+	hfa.add_selection_range('pt_prong0', 0.5, 1e3)
+	hfa.add_selection_range('pt_prong1', 0.5, 1e3)
 	hfa.add_selection_range_abs('eta_cand', 0.8)
 	hfa.add_selection_range_abs('nsigTPC_Pi_0', 3)
 	hfa.add_selection_range_abs('nsigTPC_Pi_1', 3)
@@ -54,6 +55,8 @@ if __name__ == '__main__':
 	hfa.add_selection_range_abs('nsigTOF_Pi_1', 3)
 	hfa.add_selection_range_abs('nsigTOF_K_0', 3)
 	hfa.add_selection_range_abs('nsigTOF_K_1', 3)
+	# hfa.add_selection_range('d_len', 0.05, 1e3)
+	hfa.add_selection_range('dca', 0.02, 1e3)
 
 	#hfa.add_selection_range('cos_p_xy', 0, 0.99)
 	#hfa.add_selection_range('d_len_xy', 0.1, 1e3)
