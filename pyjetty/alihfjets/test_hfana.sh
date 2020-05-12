@@ -26,7 +26,7 @@ if [ -e ${flist} ]; then
 	if [ -d ${outputdir} ]; then
 		cd ${outputdir}
 		if [ -x ${executable} ]; then
-			${executable} -f ${flist} -o ${output}
+			${HEPPY_DIR}/scripts/pipenv_heppy.sh run ${executable} -f ${flist} -o ${output}
 		else
 			echo "[e] no executable: ${executable}"
 		fi
