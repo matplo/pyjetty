@@ -2,7 +2,7 @@
 
 import argparse
 import os
-import hf_data_io as hfdio
+import pyjetty.alihfjets.hf_data_io as hfdio
 from pyjetty.mputils import perror, pinfo, pwarning, treewriter
 import ROOT
 ROOT.gROOT.SetBatch(True)
