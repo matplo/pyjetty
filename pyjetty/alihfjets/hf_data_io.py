@@ -7,7 +7,7 @@ import fjext
 import os
 import tqdm
 # from numba import jit
-import numexpr
+# import numexpr
 
 class HFAnalysis(MPBase):
 	def __init__(self, **kwargs):
