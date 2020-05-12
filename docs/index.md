@@ -10,9 +10,8 @@ git clone git@github.com:matplo/heppy.git
 cd ./heppy
 
 # we will build in virtualenv
+./scripts/pipenv_heppy.sh install numpy
 ./scripts/pipenv_heppy.sh --three shell
-pipenv install numpy
-
 # now build commands here... (root takes sometime)
 ./external/fastjet/build.sh
 ./external/lhapdf6/build.sh
