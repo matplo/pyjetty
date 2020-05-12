@@ -3,7 +3,7 @@
 #SBATCH --job-name=test_hfana
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
-#SBATCH --time=4:00:00
+#SBATCH --time=24:00:00
 
 id
 hostname
