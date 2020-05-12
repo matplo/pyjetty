@@ -15,7 +15,7 @@ cd ${outputdir}
 pwd
 
 cp -v ${flist} .
-split --additional-suffix=.flist -d -l 36 -a 5 ${flist}
+split --additional-suffix=.flist -d -l 5 -a 5 ${flist}
 
 job_lists=$(find $PWD -name "*.flist")
 
