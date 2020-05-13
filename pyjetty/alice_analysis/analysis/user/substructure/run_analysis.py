@@ -613,6 +613,23 @@ class RunAnalysis(common_base.CommonBase):
           else:
             continue
         
+        elif systematic == 'thermal_closure':
+          fname = 'nonclosure_{}-{}.root'.format(min_pt_truth, max_pt_truth)
+          outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
+          f_nonclosure = ROOT.TFile(os.path.join(outf_name, fname), 'READ')
+          h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
+          h_systematic_ratio_temp.SetDirectory(0)
+          f_nonclosure.Close()
+          
+          name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+            self.observable, systematic, jetR, obs_label,
+            reg_param, min_pt_truth, max_pt_truth)
+          self.change_to_per(h_systematic_ratio_temp)
+          h_systematic_ratio_temp.SetMinimum(0.)
+          h_systematic_ratio_temp.SetMaximum(1.5*h_systematic_ratio_temp.GetMaximum())
+          h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
+          setattr(self, name_ratio, h_systematic_ratio)
+        
         else:
           h_systematic_ratio = self.construct_systematic_percentage(
             hMain, systematic, jetR, obs_label, reg_param,
@@ -796,6 +813,8 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetMaximum(1.7*h_total.GetMaximum())
     if h_total.GetMaximum() > 100:
       myBlankHisto.SetMaximum(50)
+    if h_total.GetBinContent(h_total.GetNbinsX()) > 50:
+      myBlankHisto.SetMaximum(150)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
