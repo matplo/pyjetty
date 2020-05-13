@@ -39,14 +39,14 @@ class PlotRAA(common_base.CommonBase):
     #  config = yaml.safe_load(stream)
       
     #self.figure_approval_status = config['figure_approval_status']
-    self.figure_approval_status = 'Work in progress'
+    self.figure_approval_status = 'Preliminary'
     
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
 
-    self.observables = ['theta_g']
+    self.observables = ['zg']
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
-    self.jetR = 0.2
+    self.jetR = 0.4
     if self.jetR == 0.4:
       self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-04/'
       self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04/'
@@ -175,6 +175,8 @@ class PlotRAA(common_base.CommonBase):
       
     xmin = self.h_sys_pp.GetBinLowEdge(2)
     xmax = self.h_sys_pp.GetBinLowEdge(self.h_sys_pp.GetNbinsX()+1)
+    #if self.jetR == 0.4 and observable == 'theta_g':
+    #  xmax = self.h_sys_pp.GetBinLowEdge(self.h_sys_pp.GetNbinsX()-1)
         
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
@@ -192,7 +194,7 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto.Draw('E')
     
     if observable == 'theta_g':
-      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, self.jetR-0.01)
+      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, self.jetR*xmax-0.01)
       rg_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'rg_axis_tf1', 505, '- S')
       rg_axis.SetTitle('#it{R}_{g}')
       rg_axis.SetTitleSize(25)
