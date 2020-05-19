@@ -69,8 +69,6 @@ def main():
 	dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
 	print (dy_groomer.description())
 
-	# zero_split = fjcontrib.DynamicalGroomer._zero_split;
-
 	# event loop
 	for iev in tqdm.tqdm(range(args.nev)):
 		if not pythia.next():
@@ -84,9 +82,9 @@ def main():
 			tw.fill_branch('j', j)
 			for a in [0.1, 1.0, 2.0]:
 				dy_groomed = dy_groomer.result(j, a)
-				if dy_groomed.pair().pt() > 0:
-					tw.fill_branch('dg_{:.1f}'.format(a), dy_groomed.harder())
-					tw.fill_branch('dg_{:.1f}'.format(a), dy_groomed.softer())
+				# if dy_groomed.pair().pt() > 0:
+				# 	tw.fill_branch('dg_{:.1f}'.format(a), dy_groomed.harder())
+				# 	tw.fill_branch('dg_{:.1f}'.format(a), dy_groomed.softer())
 				tw.fill_branch('dg_{:.1f}'.format(a), dy_groomed)
 			max_pt_groomed = dy_groomer.max_pt_softer(j)
 			tw.fill_branch('max_pt', max_pt_groomed)
