@@ -1,0 +1,78 @@
+# Configuration for:
+#   (a) Processing of ROOT trees into histograms
+#   (b) Analysis of histograms into final result
+#
+# The observables are structured into observable blocks (e.g. theta_g, subjet_z, etc.)
+# each containing multiple individual subconfigurations (e.g. zcut, beta, subjetR, etc.),
+# where each subconfiguration corresponds to a single unfolded result.
+# One can also specify a list of jetR, which will be looped over.
+#
+# The process step is intended  to loop over all observables simultaneously
+# The analysis step is intended to run for a single observable block
+
+process_observables: ['theta_g', 'zg']
+jetR: [0.2, 0.4]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+prong_matching_threshold: 0.5
+debug_level: 0
+dry_run: False
+fast_simulation: False
+event_number_max: 100
+use_ev_id_ext: True
+
+thermal_model:
+  beta: 0.5
+  N_avg: 3000
+  sigma_N: 500
+
+constituent_subtractor:
+  max_distance: [0.05, 0.25, 0.7]
+  main_R_max: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+# Observable block
+theta_g:
+
+  common_settings:
+    xtitle: '#theta_{g}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#theta_{g}}'
+    pt_bins_reported: [40, 60, 80, 100]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3', 'config4']
+      
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+# Observable block
+zg:
+
+  common_settings:
+    xtitle: '#it{z}_{g}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
+    pt_bins_reported: [40, 60, 80, 100]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3', 'config4']
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+###############################################################################
+# Analysis parameters
+
+file_format: '.pdf'
+roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
+
+analysis_observable: 'zg'
+figure_approval_status: 'Work in Progress'
+  
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/85419'
+thermal_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/85419/AnalysisResultsFinal.root'

@@ -278,6 +278,62 @@ class ProcessBase(common_base.CommonBase):
       h.Fill('passed_all_cuts', jet_det_combined.pt(), 1)
 
   #---------------------------------------------------------------
+  # Set accepted jet matches for truth+background (i.e. no det-level)
+  #
+  # hname is the name of a matching QA histogram that will be created
+  # it can be anything you want, e.g. 'hJetMatchingQA_R{}'.format(jetR)
+  #---------------------------------------------------------------
+  def set_matches_AA_truth(self, jet_combined, jetR, hname):
+  
+    set_match = False
+    
+    # Create Pb-Pb matching QA histogram, if not already created
+    if not hasattr(self, hname):
+      bin_labels = ['all', 'has_matching_candidate', 'has_matching_unique_candidate', 'mc_fraction', 'deltaR_combined-truth', 'passed_all_cuts']
+      nbins = len(bin_labels)
+      h = ROOT.TH2F(hname, hname, nbins, 0, nbins,  30, 0., 300.)
+      for i in range(1, nbins+1):
+        h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
+      setattr(self, hname, h)
+    
+    h = getattr(self, hname)
+    h.Fill('all', jet_combined.pt(), 1)
+
+    # Check if combined jet has a pp-det match (uniqueness not currently enforced)
+    if jet_combined.has_user_info():
+    
+      h.Fill('has_matching_candidate', jet_combined.pt(), 1)
+
+      jet_info_combined = jet_combined.python_info()
+      jet_truth = jet_info_combined.closest_jet
+      set_match = True
+        
+      # Check that match is unique
+      if self.is_match_unique(jet_truth):
+        h.Fill('has_matching_unique_candidate', jet_combined.pt(), 1)
+      else:
+        set_match = False
+          
+      # Check matching distance between combined jet and pp-truth
+      if jet_combined.delta_R(jet_truth) < self.jet_matching_distance*jetR:
+        h.Fill('deltaR_combined-truth', jet_combined.pt(), 1)
+      else:
+        set_match = False
+
+      # Check if >50% of the pp-truth tracks are in the combined jet
+      mc_fraction = self.mc_fraction(jet_truth, jet_combined)
+      if mc_fraction > self.mc_fraction_threshold:
+        h.Fill('mc_fraction', jet_combined.pt(), 1)
+      else:
+        set_match = False
+             
+    # Set accepted match
+    if set_match:
+      jet_info_combined.match = jet_truth
+      jet_combined.set_python_info(jet_info_combined)
+      h.Fill('passed_all_cuts', jet_combined.pt(), 1)
+
+  #---------------------------------------------------------------
   # Return pt-fraction of tracks in jet_pp_det that are contained in jet_det_combined
   #---------------------------------------------------------------
   def mc_fraction(self, jet_pp_det, jet_det_combined):
