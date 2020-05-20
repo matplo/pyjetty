@@ -51,6 +51,37 @@ def fill_branches(tw, j, dy_groomer, alphas=[], sds=[]):
 		tw.fill_branch('sd{}_kt'.format(i), sd_info.z * j_sd.pt() * sd_info.dR)
 
 
+def fill_ncoll_branches(pythia, tw):
+	# The total number of separate sub-collisions.
+	tw.fill_branch('nCollTot', pythia.info.hiinfo.nCollTot())
+
+	# The number of separate non-diffractive sub collisions in the
+	# current event.
+	tw.fill_branch('nCollND', pythia.info.hiinfo.nCollND())
+
+	# The total number of non-diffractive sub collisions in the current event.
+	tw.fill_branch('nCollNDTot', pythia.info.hiinfo.nCollNDTot())
+
+	# The number of separate single diffractive projectile excitation
+	# sub collisions in the current event.
+	tw.fill_branch('nCollSDP', pythia.info.hiinfo.nCollSDP())
+
+	# The number of separate single diffractive target excitation sub
+	# collisions in the current event.
+	tw.fill_branch('nCollSDT', pythia.info.hiinfo.nCollSDT())
+
+	# The number of separate double diffractive sub collisions in the
+	# current event.
+	tw.fill_branch('nCollDD', pythia.info.hiinfo.nCollDD())
+
+	# The number of separate double diffractive sub collisions in the
+	# current event.
+	tw.fill_branch('nCollCD', pythia.info.hiinfo.nCollCD())
+
+	# The number of separate elastic sub collisions.
+	tw.fill_branch('nCollEL', pythia.info.hiinfo.nCollEL())
+
+
 def main():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
 	pyconf.add_standard_pythia_args(parser)
@@ -60,6 +91,7 @@ def main():
 	parser.add_argument('--output', default='{}.root'.format(os.path.basename(__file__)), type=str)
 	parser.add_argument('--min-jet-pt', help='jet pt selection', default=50., type=float)
 	parser.add_argument('--max-jet-pt', help='jet pt selection', default=1000., type=float)
+	parser.add_argument('--npart-min', help='minimum npart in Argantyr', default=2, type=int)
 	args = parser.parse_args()
 
 	if args.user_seed < 0:
@@ -88,6 +120,8 @@ def main():
 	parts_selector_h = fj.SelectorAbsEtaMax(max_eta_hadron)
 	jet_selector = fj.SelectorPtMin(args.min_jet_pt) & fj.SelectorPtMax(args.max_jet_pt) & fj.SelectorAbsEtaMax(max_eta_hadron - 1.05 * jet_R0)
 
+	parts_selector_cent = fj.SelectorAbsEtaMax(5.) & fj.SelectorAbsEtaMin(3.)
+
 	hepmc2output = '{}.hepmc2.dat'.format(args.output.replace('.root', ''))
 	pyhepmc2writer = pythiaext.Pythia8HepMC2Wrapper(hepmc2output)
 
@@ -97,6 +131,9 @@ def main():
 	tw = RTreeWriter(tree=t)
 	tch = ROOT.TTree('tch', 'tch')
 	twch = RTreeWriter(tree=tch)
+
+	te = ROOT.TTree('te', 'te')
+	twe = RTreeWriter(tree=te)
 
 	jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 1.0)
 	dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
@@ -113,22 +150,62 @@ def main():
 		if not pythia.next():
 			continue
 
+		twe.clear()
+		tw.clear()
+		twch.clear()
+
+		weight = pythia.info.weight()		
+		if args.py_PbPb:
+			# from main113.cc
+			# Also fill the number of (absorptively and diffractively)
+			# wounded nucleaons.
+			nw = pythia.info.hiinfo.nAbsTarg() + pythia.info.hiinfo.nDiffTarg() + pythia.info.hiinfo.nAbsProj() + pythia.info.hiinfo.nDiffProj()
+			fill_ncoll_branches(pythia, twe)
+		else:
+			nw = 2
+		twe.fill_branch('nw', nw)
+		twe.fill_branch('w', weight)
+
 		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, False)
 		parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
+
+		parts_pythia_ch = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, False)
+		parts_pythia_ch_selected = parts_selector_h(parts_pythia_ch)
+
+		nch_total = len(parts_pythia_ch)
+		twe.fill_branch('nch', nch_total)
+
+		ncharged_fwd = len(parts_selector_cent(parts_pythia_ch))
+		twe.fill_branch('nchfwd', ncharged_fwd)
+
+		twe.fill_branch('iev', iev)
+		if args.py_PbPb and args.npart_min > nw:
+			twe.fill_tree()
+			continue
+
+		if args.py_PbPb:
+			pyhepmc2writer.fillEvent(pythia)
+
+		# do the rest only if centrality right
+		tw.fill_branch('iev', iev)
+		tw.fill_branch('w', weight)
+		twch.fill_branch('iev', iev)
+		twch.fill_branch('w', weight)
+
 		jets_h = jet_selector(fj.sorted_by_pt(jet_def(parts_pythia_h)))
+		jets_h_ch = jet_selector(fj.sorted_by_pt(jet_def(parts_pythia_ch)))
 
 		[fill_branches(tw, j, dy_groomer, alphas=[0.1, 1.0, 2.0], sds=sds) for j in jets_h]
 		if len(jets_h) > 0:
 			tw.fill_tree()
-			pyhepmc2writer.fillEvent(pythia)
-
-		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, False)
-		parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
-		jets_h_ch = jet_selector(fj.sorted_by_pt(jet_def(parts_pythia_h)))
+			if args.py_PbPb is False:
+				pyhepmc2writer.fillEvent(pythia)
 
 		[fill_branches(twch, j, dy_groomer, alphas=[0.1, 1.0, 2.0], sds=sds) for j in jets_h_ch]
 		if len(jets_h_ch) > 0:
 			twch.fill_tree()
+
+		twe.fill_tree()
 
 	pythia.stat()
 	outf.Write()
