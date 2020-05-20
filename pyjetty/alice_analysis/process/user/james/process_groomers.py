@@ -526,7 +526,7 @@ class ProcessGroomers(process_base.ProcessBase):
         elif 'dg' in grooming_setting:
 
           if grooming_setting in self.obs_grooming_settings['theta_g']:
-            prong_match = self.fill_prong_matching_histograms(jet_truth, jet_combinede, jet_combined_dg_lund, [dy_groomer], jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'DG')
+            prong_match = self.fill_prong_matching_histograms(jet_truth, jet_combined, jet_combined_dg_lund, [dy_groomer], jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'DG')
 
         # Fill combined histograms
         hname = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)

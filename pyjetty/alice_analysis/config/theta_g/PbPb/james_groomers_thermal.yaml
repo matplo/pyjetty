@@ -47,6 +47,52 @@ theta_g:
       
   config1:
     SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+  config5:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+  
+  config6:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config7:
+    DynamicalGrooming:
+      a: 1.0
+
+  config8:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config9:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config10:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
       zcut: 0.2
       beta: 0
 
@@ -61,6 +107,52 @@ zg:
       - ['config1', 'config2', 'config3', 'config4']
 
   config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+  config5:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+  
+  config6:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config7:
+    DynamicalGrooming:
+      a: 1.0
+
+  config8:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config9:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config10:
+    DynamicalGrooming:
+      a: 0.1
     SoftDrop:
       zcut: 0.2
       beta: 0
@@ -77,6 +169,52 @@ kappa:
 
   config1:
     SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+  config5:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+  
+  config6:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config7:
+    DynamicalGrooming:
+      a: 1.0
+
+  config8:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config9:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config10:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
       zcut: 0.2
       beta: 0
       
@@ -91,6 +229,52 @@ tf:
       - ['config1', 'config2', 'config3', 'config4']
 
   config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+  config5:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+  
+  config6:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config7:
+    DynamicalGrooming:
+      a: 1.0
+
+  config8:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config9:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config10:
+    DynamicalGrooming:
+      a: 0.1
     SoftDrop:
       zcut: 0.2
       beta: 0
