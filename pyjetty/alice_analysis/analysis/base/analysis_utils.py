@@ -89,7 +89,8 @@ class AnalysisUtils(common_utils.CommonUtils):
   def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, label,
                      n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array,
                      n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array,
-                     observable, prior_variation_parameter=0., use_underflow=False):
+                     observable, prior_variation_parameter=0., use_underflow=False,
+                     do_roounfoldresponse=True):
   
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, 
@@ -98,13 +99,15 @@ class AnalysisUtils(common_utils.CommonUtils):
     for i in range(0, 4):
       thn_rebinned.GetAxis(i).SetTitle(thn.GetAxis(i).GetTitle())
     
-    # Create empty RooUnfoldResponse with specified binning
-    hist_measured = thn_rebinned.Projection(2, 0)
-    hist_measured.SetName('hist_measured_%s' % label)
-    hist_truth = thn_rebinned.Projection(3, 1)
-    hist_truth.SetName('hist_truth_%s' % label)
-    roounfold_response = ROOT.RooUnfoldResponse(hist_measured, hist_truth, name_roounfold, 
-                                                name_roounfold) # Sets up binning
+    roounfold_response = None
+    if do_roounfoldresponse:
+      # Create empty RooUnfoldResponse with specified binning
+      hist_measured = thn_rebinned.Projection(2, 0)
+      hist_measured.SetName('hist_measured_%s' % label)
+      hist_truth = thn_rebinned.Projection(3, 1)
+      hist_truth.SetName('hist_truth_%s' % label)
+      roounfold_response = ROOT.RooUnfoldResponse(
+        hist_measured, hist_truth, name_roounfold, name_roounfold) # Sets up binning
     
     # Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold -- we have to do it manually
     #roounfold_response.UseOverflow(True)
@@ -178,13 +181,15 @@ class AnalysisUtils(common_utils.CommonUtils):
             thn_rebinned.Fill(x, content)
             #print('Fill ({}, {}, {}, {}) to response'.format(pt_det, pt_true, obs_det, obs_true))
             
-            # RooUnfoldResponse should be filled (pt_det, obs_det, pt_true, obs_true)
-            roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
+            if roounfold_response:
+              # RooUnfoldResponse should be filled (pt_det, obs_det, pt_true, obs_true)
+              roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
 
     print('writing response...')
     f = ROOT.TFile(response_file_name, 'UPDATE')
     thn_rebinned.Write()
-    roounfold_response.Write()
+    if roounfold_response:
+      roounfold_response.Write()
     f.Close()
     print('done')
 

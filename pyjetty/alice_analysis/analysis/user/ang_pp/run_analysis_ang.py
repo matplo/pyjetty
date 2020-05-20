@@ -192,7 +192,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
-      
+
+      if min_pt_truth == 40 and (jetR == 0.2 or jetR == 0.4):
+        # Only want to compare to girth with \beta=1
+        if obs_label == '1':
+          self.plot_obs_comp(jetR, obs_label, obs_setting, grooming_setting,
+                             min_pt_truth, max_pt_truth, maxbin)
+
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
                       min_pt_truth, max_pt_truth, maxbin, plot_pythia=False):
@@ -245,7 +251,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myBlankHisto.SetXTitle(xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(3*h.GetMaximum())
+    myBlankHisto.SetMaximum(2.5*h.GetMaximum())
     if self.observable == 'subjet_z' or self.observable == 'jet_axis':
       myBlankHisto.SetMaximum(1.7*h.GetMaximum())
     myBlankHisto.SetMinimum(0.)
@@ -280,7 +286,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.8, text)
 
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text = str(min_pt_truth) + ' < #it{p}_{T}^{jet, ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.57, 0.73, text)
 
     text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
@@ -338,11 +344,182 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     fFinalResults.Close()
 
   #----------------------------------------------------------------------
-  def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin):
+  # Get unfolded data from the previous preliminary result (40-60 GeV/c)
+  def get_h_prelim(self, jetR):
+    
+    if jetR == 0.2:
+      xedges = [0., 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.12]
+      yvals = [2.8805, 11.8859, 17.3133, 17.6165, 15.2212, 12.9774, 9.09631, 2.48633]
+      yerror = [3.04995, 12.3439, 17.8915, 17.8674, 15.634, 13.3525, 9.5341, 2.61768]
+    else:  #jetR == 0.4:
+      xedges = [0, 0.02, 0.03, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.18, 0.22]
+      yvals = [0.606421, 2.81986, 5.97325, 9.7937, 9.88466, 8.58086, 6.15517, 4.63912, 2.3044, 0.697384]
+      yerror = [0.720461, 2.90586, 6.02786, 9.91835, 9.99039, 8.64553, 6.26801, 4.683, 2.32949, 0.720461]
+    xedges_scaled = array('d', [round(val / jetR, 2) for val in xedges])
+    setattr(self, "xedges_prev_prelim_%s" % jetR, xedges_scaled)
+    yvals_scaled = [yvals[i] * (xedges[i+1]-xedges[i]) / (xedges_scaled[i+1]-xedges_scaled[i])
+                    for i in range(0, len(yvals))]
+    yerror_scaled = [yerror[i] * (xedges[i+1]-xedges[i]) / (xedges_scaled[i+1]-xedges_scaled[i])
+                     for i in range(0, len(yerror))]
+    error = [yerror_scaled[i] - yvals_scaled[i] for i in range(0, len(yerror))]
+    name = "ALI−PREL−339374"
+    hComp = ROOT.TH1D(name, name, len(yvals), xedges_scaled)
+    for i in range(1, len(xedges), 1):
+      hComp.SetBinContent(i, yvals_scaled[i-1])
+      hComp.SetBinError(i, error[i-1])
+
+    return hComp
+
+  #----------------------------------------------------------------------
+  def plot_obs_comp(self, jetR, obs_label, obs_setting, grooming_setting,
+                    min_pt_truth, max_pt_truth, maxbin):
+    
+    # Scale both distributions by integrals
+    scale_by_int = True
+
+    name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
+    c = ROOT.TCanvas(name, name, 600, 450)
+    c.Draw()
+    
+    c.cd()
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    xtitle = getattr(self, 'xtitle')
+    ytitle = getattr(self, 'ytitle')
+    color = 600-6
+    
+    # Get histograms
+    name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
+                                              min_pt_truth, max_pt_truth)
+    if grooming_setting:
+      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+    h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+    h.SetMarkerSize(1.5)
+    h.SetMarkerStyle(20)
+    h.SetMarkerColor(color)
+    h.SetLineStyle(1)
+    h.SetLineWidth(2)
+    h.SetLineColor(color)
+    if scale_by_int:
+      h.Scale(1/h.Integral())
+    
+    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    h_sys.SetLineColor(0)
+    h_sys.SetFillColor(color)
+    h_sys.SetFillColorAlpha(color, 0.3)
+    h_sys.SetFillStyle(1001)
+    h_sys.SetLineWidth(0)
+    if scale_by_int:
+      h_sys.Scale(1/h_sys.Integral())
+    
+    n_obs_bins_truth = self.n_bins_truth(obs_label)
+    truth_bin_array = self.truth_bin_array(obs_label)
+    if maxbin:
+      truth_bin_array = truth_bin_array[0:maxbin+1]
+      if jetR == 0.2:
+        truth_bin_array[-1] = 0.6
+      n_obs_bins_truth = len(truth_bin_array)-1
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.SetYTitle(ytitle)
+    if scale_by_int:
+      myBlankHisto.SetYTitle(ytitle + ' / #int(' + ytitle + ')')
+    myBlankHisto.SetMaximum(2*h.GetMaximum())
+    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
+      myBlankHisto.SetMaximum(1.5*h.GetMaximum())
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.Draw("E")
+
+    hComp = self.get_h_prelim(jetR)
+
+    #formatting
+    hComp.SetFillStyle(0)
+    hComp.SetMarkerSize(1.5)
+    hComp.SetMarkerStyle(21)
+    hComp.SetMarkerColor(1)
+    hComp.SetLineColor(1)
+    hComp.SetLineWidth(1)
+    if scale_by_int:
+      hComp.Scale(1/hComp.Integral())
+
+    hComp.Draw('PE2 same')    
+    h_sys.DrawCopy('E2 same')
+    h.DrawCopy('PE X0 same')
   
-    hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth, max_pt_truth, maxbin)
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.57, 0.87, text)
+    
+    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.57, 0.8, text)
+
+    text = str(min_pt_truth) + ' < #it{p}_{T}^{jet, ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.DrawLatex(0.57, 0.73, text)
+
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
+    text_latex.DrawLatex(0.57, 0.66, text)
+    
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    delta = 0.
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.57, 0.59, text)
+      delta = 0.07
+    
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting)
+      text_latex.DrawLatex(0.57, 0.59-delta, text)
+      
+      text_latex.SetTextSize(0.04)
+      text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
+      text_latex.DrawLatex(0.57, 0.52-delta, text)
+
+    myLegend = ROOT.TLegend(0.25, 0.7, 0.45, 0.85)
+    self.utils.setup_legend(myLegend,0.035)
+    myLegend.AddEntry(h, 'This measurement', 'pe')
+    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+    myLegend.AddEntry(hComp, 'ALI-PREL-339374', 'pe')
+    myLegend.Draw()
+
+    name = 'hUnfoldedComp_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR),
+                                                 obs_label, int(min_pt_truth),
+                                                 int(max_pt_truth), self.file_format)
+    output_dir = getattr(self, 'output_dir_final_results')
+    output_dir_single = output_dir + '/single_results'
+    if not os.path.exists(output_dir_single):
+      os.mkdir(output_dir_single)
+    outputFilename = os.path.join(output_dir_single, name)
+    c.SaveAs(outputFilename)
+    c.Close()
+
+    # Write result to ROOT file
+    final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+    fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+    h.Write()
+    h_sys.Write()
+    hComp.Write()
+    fFinalResults.Close()
+
+  #----------------------------------------------------------------------
+  def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth,
+                        max_pt_truth, maxbin, overlay=False):
+  
+    hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth,
+                                            max_pt_truth, maxbin, overlay)
     n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-    n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
+    n_jets_tagged = hPythia.Integral(hPythia.FindBin(
+      self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
 
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
     hPythia.Scale(1./n_jets_inclusive, 'width')
@@ -350,18 +527,47 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     return [hPythia, fraction_tagged_pythia]
 
   #----------------------------------------------------------------------
-  def get_pythia_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, maxbin):
-  
+  def get_pythia_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth,
+                               maxbin, overlay=False):
+
     output_dir = getattr(self, 'output_dir_main')
-    file = os.path.join(output_dir, 'response.root')
-    f = ROOT.TFile(file, 'READ')
+
+    prev_prelim = False
+    if overlay and (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
+      prev_prelim = True
+      # Need to rebin response for the binning used by previous preliminary result
+      filepath = os.path.join(output_dir, 'response_prev_prelim.root')
+
+      if not os.path.exists(filepath):
+        # Create rebinned THn with these binnings, and write to file
+        print("Rebinning response matrix for previous preliminary masurement...")
+        name_thn = self.utils.name_thn(self.observable, jetR, obs_label)
+        name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
+        name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, obs_label)
+        thn = ROOT.TFile(self.main_response, 'READ').Get(name_thn)
+        thn.SetName(name_thn)
+        label = 'R{}_{}'.format(jetR, obs_label)
+        pt_bins_truth = array('d', [5, 20, 40, 60, 80, 100, 150, 200])
+        pt_bins_det = array('d', [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150])
+        obs_bins = getattr(self, "xedges_prev_prelim_%s" % jetR)
+        self.utils.rebin_response(
+          filepath, thn, name_thn_rebinned, name_roounfold, label, len(pt_bins_det)-1,
+          pt_bins_det, len(obs_bins)-1, obs_bins, len(pt_bins_truth)-1, pt_bins_truth,
+          len(obs_bins)-1, obs_bins, self.observable, do_roounfoldresponse=False)
+    else:
+      filepath = os.path.join(output_dir, 'response.root')
+    f = ROOT.TFile(filepath, 'READ')
 
     thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
     thn = f.Get(thn_name)
     thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
-    name = 'hPythia_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    h = self.truncate_hist(thn.Projection(3), maxbin, name)
+    name = 'hPythia_{}_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    if prev_prelim:
+      h = thn.Projection(3)
+    else:
+      h = self.truncate_hist(thn.Projection(3), maxbin, name)
     h.SetDirectory(0)
 
     return h
@@ -386,6 +592,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth,
                                          max_pt_truth, maxbins, plot_pythia=False,
                                          plot_nll=False, plot_ratio=False):
+
+    # Flag to plot ratio all on the same scale, 0 to 2.2
+    plot_ratio_same_scale = True
 
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
     if plot_ratio:
@@ -444,10 +653,24 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         marker_pythia = 32
         color = 416-2
 
-      name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name = 'hmain_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       if grooming_setting:
         fraction_tagged = getattr(self, name+'_fraction_tagged')
-      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+
+      if (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
+        # Use previous preliminary result
+        h = self.get_h_prelim(jetR)
+        # Move error bars to different histogram
+        h_sys = h.Clone()
+        h_sys.SetNameTitle("hSysPrelim%s", "hSysPrelim%s")
+        for i in range(1, h.GetNbinsX()+1, 1):
+          h.SetBinError(i, 0.)
+      else:
+        h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+        h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
+          self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+
       h.SetDirectory(0)
       h.SetMarkerSize(1.5)
       h.SetMarkerStyle(marker)
@@ -456,8 +679,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h.SetLineWidth(2)
       h.SetLineColor(color)
       
-      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
       h_sys.SetFillColor(color)
       h_sys.SetFillColorAlpha(color, 0.3)
@@ -472,18 +693,40 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         if maxbin:
-          xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]
+          if (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
+            xmax = getattr(self, "xedges_prev_prelim_%s" % jetR)[-1]
+          else:
+            xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(xtitle)
-        myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+        myBlankHisto.GetYaxis().SetTitleOffset(1.3)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(1.5*ymax)
+        if jetR == 0.2:
+          if min_pt_truth == 20:
+            myBlankHisto.SetMaximum(1.1*ymax)
+          elif min_pt_truth == 40:
+            myBlankHisto.SetMaximum(1.2*ymax)
+          elif min_pt_truth == 60:
+            myBlankHisto.SetMaximum(1.15*ymax)
+          else:
+            myBlankHisto.SetMaximum(1.3*ymax)
+        elif jetR == 0.4:
+          if min_pt_truth == 20:
+            myBlankHisto.SetMaximum(1.5*ymax)
+          elif min_pt_truth == 40:
+            myBlankHisto.SetMaximum(1.4*ymax)
+          elif min_pt_truth == 60:
+            myBlankHisto.SetMaximum(1.15*ymax)
+          else:
+            myBlankHisto.SetMaximum(1.5*ymax)
+        else:
+          myBlankHisto.SetMaximum(1.5*ymax)
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
           myBlankHisto.GetYaxis().SetTitleSize(0.065)
-          myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+          myBlankHisto.GetYaxis().SetTitleOffset(1.1)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
         myBlankHisto.Draw('E')
         
@@ -513,7 +756,33 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
-          myBlankHisto2.GetYaxis().SetRangeUser(0.7, 1.99)
+          if plot_ratio_same_scale:
+            if jetR == 0.2:
+              myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.75)
+            elif jetR == 0.4:
+              myBlankHisto2.GetYaxis().SetRangeUser(0, 1.99)
+            else: 
+              myBlankHisto2.GetYaxis().SetRangeUser(0, 2.2)
+          elif jetR == 0.2:
+            if min_pt_truth == 20:
+              myBlankHisto2.GetYaxis().SetRangeUser(0.6, 1.75)
+            elif min_pt_truth == 40:
+              myBlankHisto2.GetYaxis().SetRangeUser(0.78, 1.299)
+            elif min_pt_truth == 60:
+              myBlankHisto2.GetYaxis().SetRangeUser(0.55, 1.499)
+            else: 
+              myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.99)
+          elif jetR == 0.4:
+            if min_pt_truth == 20:
+              myBlankHisto2.GetYaxis().SetRangeUser(0.81, 1.72)
+            elif min_pt_truth == 40:
+              myBlankHisto2.GetYaxis().SetRangeUser(0.7, 2.1)
+            elif min_pt_truth == 60:
+              myBlankHisto2.GetYaxis().SetRangeUser(0.75, 1.55)
+            else: 
+              myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.99)
+          else: 
+            myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.99)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(0,1,xmax,1)
@@ -523,7 +792,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       
       if plot_pythia:
         hPythia, fraction_tagged_pythia = self.pythia_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin)
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay=True)
 
         plot_errors = False
         if plot_errors:
@@ -609,7 +878,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
     text_latex.DrawLatex(0.25, 0.69, text)
     
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text = str(min_pt_truth) + ' < #it{p}_{T}^{jet, ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.63, text)
     
