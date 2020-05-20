@@ -10,7 +10,7 @@
 # The process step is intended  to loop over all observables simultaneously
 # The analysis step is intended to run for a single observable block
 
-process_observables: ['theta_g', 'zg']
+process_observables: ['theta_g', 'zg', 'kappa', 'tf']
 jetR: [0.2, 0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
@@ -56,6 +56,36 @@ zg:
   common_settings:
     xtitle: '#it{z}_{g}'
     ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{z}_{g}}'
+    pt_bins_reported: [40, 60, 80, 100]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3', 'config4']
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+# Observable block
+kappa:
+
+  common_settings:
+    xtitle: '#kappa'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#kappa}'
+    pt_bins_reported: [40, 60, 80, 100]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3', 'config4']
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+      
+# Observable block
+tf:
+
+  common_settings:
+    xtitle: '#it{t}_{f}'
+    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#it{t}_{f}}'
     pt_bins_reported: [40, 60, 80, 100]
     plot_overlay_list:
       - ['config1', 'config2', 'config3', 'config4']

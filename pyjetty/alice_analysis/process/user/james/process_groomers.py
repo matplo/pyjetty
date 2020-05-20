@@ -196,7 +196,12 @@ class ProcessGroomers(process_base.ProcessBase):
             
       for observable in self.observable_list:
 
-        if observable == 'kappa':
+        if observable in ['kappa', 'tf']:
+        
+          if observable == 'kappa':
+            label = '#kappa_{ch}'
+          if observable == 'kappa':
+            label = '#it{t}_{f}'
         
           for grooming_setting in self.obs_grooming_settings[observable]:
             if grooming_setting:
@@ -205,39 +210,17 @@ class ProcessGroomers(process_base.ProcessBase):
               # TH3 for combined jets
               for R_max in self.max_distance:
                 name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 5, 0.5, 5.5)
+                h = ROOT.TH3F(name, name, 30, 0, 300, 50, 0, 0.5, 5, 0.5, 5.5)
                 h.GetXaxis().SetTitle('p_{T,ch jet}')
-                h.GetYaxis().SetTitle('#kappa_{ch}')
+                h.GetYaxis().SetTitle(label)
                 h.GetZaxis().SetTitle('flag')
                 setattr(self, name, h)
                  
               # TH2 for truth jets
               name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, grooming_label)
-              h = ROOT.TH2F(name, name, 30, 0, 300, 100, 0, 1.0)
+              h = ROOT.TH2F(name, name, 30, 0, 300, 50, 0, 0.5)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('#kappa_{ch}')
-              setattr(self, name, h)
-        
-        if observable == 'tf':
-        
-          for grooming_setting in self.obs_grooming_settings[observable]:
-            if grooming_setting:
-              grooming_label = self.utils.grooming_label(grooming_setting)
-
-              # TH3 for combined jets
-              for R_max in self.max_distance:
-                name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 5, 0.5, 5.5)
-                h.GetXaxis().SetTitle('p_{T,ch jet}')
-                h.GetYaxis().SetTitle('t_{f,ch}')
-                h.GetZaxis().SetTitle('flag')
-                setattr(self, name, h)
-               
-              # TH2 for truth jets
-              name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, grooming_label)
-              h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('t_{f,ch}')
+              h.GetYaxis().SetTitle(label)
               setattr(self, name, h)
               
       # Create prong matching histograms
@@ -546,17 +529,17 @@ class ProcessGroomers(process_base.ProcessBase):
             prong_match = self.fill_prong_matching_histograms(jet_truth, jet_combinede, jet_combined_dg_lund, [dy_groomer], jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'DG')
 
         # Fill combined histograms
-        name = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
+        hname = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
         x = ([jet_pt_truth_ungroomed, zg_combined, theta_g_combined, prong_match])
         x_array = array('d', x)
-        getattr(self, name).Fill(x_array)
+        getattr(self, hname).Fill(x_array)
         
         if 'kappa' in self.observable_list:
-          name = 'h_kappa_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
+          hname = 'h_kappa_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
           getattr(self, hname).Fill(jet_pt_truth_ungroomed, kappa_combined, prong_match)
         
         if 'tf' in self.observable_list:
-          name = 'h_tf_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
+          hname = 'h_tf_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
           getattr(self, hname).Fill(jet_pt_truth_ungroomed, tf_combined, prong_match)
         
         # Fill truth histograms
