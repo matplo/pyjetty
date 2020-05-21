@@ -22,8 +22,8 @@ fast_simulation: False
 use_ev_id_ext: True
 
 thermal_model:
-  beta: 0.4
-  N_avg: 2500
+  beta: 0.5      # 0.4
+  N_avg: 3000    # 2500
   sigma_N: 500
 
 constituent_subtractor:
