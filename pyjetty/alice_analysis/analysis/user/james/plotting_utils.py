@@ -60,6 +60,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
                        ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
                        ROOT.kOrange-3]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
+    self.OpenMarkerArray = [24, 25, 26, 32, 27, 28]
     
     print(self)
 
@@ -107,8 +108,11 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_JES(self, jetR):
     
-    name = 'hJES_R{}{}Scaled'.format(jetR, self.suffix)
+    name = 'hJES_R{}Scaled'.format(jetR)
     histDeltaJES = self.fMC.Get(name)
+    if not histDeltaJES:
+      name = 'hJES_R{}{}Scaled'.format(jetR, self.suffix)
+      histDeltaJES = self.fMC.Get(name)
     histDeltaJES.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
     histDeltaJES.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
     histDeltaJES.GetXaxis().SetRangeUser(0., 200.)
@@ -130,8 +134,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   # Plot JES shift distribution for various fixed pT-gen
   def plot_JES_proj(self, jetR, pt_bins):
     
+    #name = 'hJES_R{}Scaled'.format(jetR)
     name = 'hJES_R{}{}Scaled'.format(jetR, self.suffix)
-    
+
     cJES = ROOT.TCanvas('cJES','cJES: hist',600,450)
     cJES.cd()
     cJES.SetBottomMargin(0.2)
@@ -413,7 +418,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_obs_truth, max_obs_truth, option='obs', min_pt=min_pt, max_pt=max_pt)
       hResidual.SetMarkerStyle(self.MarkerArray[i])
       hResidual.SetMarkerColor(self.ColorArray[i])
-      hResidual.SetLineColor(self.ColorArray[i])
+      hResidual.SetLineColor(0)
+      if self.thermal:
+        hResidual.SetMarkerStyle(self.OpenMarkerArray[i])
 
       if i == 0:
       
@@ -883,6 +890,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       
       if subconfig_name == overlay_list[0]:
         marker = 20
+        if self.thermal:
+          marker = 21
       elif subconfig_name == overlay_list[1]:
         marker = 21
       elif i > 1 and subconfig_name == overlay_list[2]:
@@ -916,6 +925,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hMatchedFraction_vs_pt.SetMarkerStyle(marker)
       hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[i])
       hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i])
+      if self.thermal:
+        hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[len(self.ColorArray)-i-2])
+        hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[len(self.ColorArray)-i-2])
       hMatchedFraction_vs_pt.DrawCopy('P same')
       myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
         
@@ -998,6 +1010,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hUnmatched_vs_pt = hFraction_vs_pt.Project3D('z')
       hUnmatched_vs_pt.SetName('hUnmatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
       hUnmatched_vs_pt.SetLineColor(self.ColorArray[i])
+      hUnmatched_vs_pt.SetLineWidth(4)
+      if self.thermal:
+        hUnmatched_vs_pt.SetLineColor(self.ColorArray[len(self.ColorArray)-i-2])
       if max < hUnmatched_vs_pt.GetMaximum():
         max = hUnmatched_vs_pt.GetMaximum()
         myBlankHisto.SetMaximum(max)

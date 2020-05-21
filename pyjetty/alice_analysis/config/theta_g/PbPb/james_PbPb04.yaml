@@ -94,16 +94,16 @@ zg:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04-85419'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
-analysis_observable: 'theta_g'
+analysis_observable: 'zg'
 do_unfolding: True
-force_rebin: True
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Work in Progress'
+figure_approval_status: 'Preliminary'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning, subtraction1, subtraction2, prong_matching]
@@ -116,7 +116,8 @@ systematics_list:
   - binning
   - subtraction1
   - subtraction2
-  - prong_matching
+#  - prong_matching
+  - thermal_closure
   
 # Prior variation parameters
 prior1_variation_parameter: 0.5
@@ -133,4 +134,4 @@ main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_em
 trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_embedding_trkeff/79921/AnalysisResultsFinal.root'
 
 # Thermal closure test
-thermal_closure: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_thermal/79063/AnalysisResultsFinal.root'
+thermal_closure: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_thermal/85419/AnalysisResultsFinal.root'

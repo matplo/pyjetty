@@ -24,7 +24,7 @@ theta_g:
   common_settings:
     xtitle: '#theta_{g}'
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#theta_{g}}'
-    pt_bins_reported: [20, 40, 60, 80, 100]
+    pt_bins_reported: [60, 80]
     max_reg_param: 10
     plot_overlay_list:
       - ['config2', 'config5', 'config6']
@@ -40,21 +40,21 @@ theta_g:
       zcut: 0.2
       beta: 0
     pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 80, 100, 120]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
     obs_bins_truth: [0., 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0]
-    obs_bins_det: [0., 0.1, 0.15, 0.19, 0.22, 0.25, 0.3, 0.35, 0.43, 0.53, 0.7, 1.0]
+    obs_bins_det: [0., 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 1.0]
 
-  config2:
-    DynamicalGrooming:
-      a: 0.1
-    pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
-    obs_bins_truth: [0., 0.07, 0.11, 0.15, 0.2, 0.25, 0.3, 0.4, 0.6, 1.0]
-    obs_bins_det: [0., 0.05, 0.10, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0]
-    obs_bins_det_sys_binning: [0., 0.04, 0.09, 0.12, 0.15, 0.18, 0.21, 0.25, 0.3, 0.36, 0.42, 0.5, 0.6, 0.8, 1.0]
+# config2:
+#   DynamicalGrooming:
+#     a: 0.1
+#   pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
+#   pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
+#   pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
+#   obs_bins_truth: [0., 0.07, 0.11, 0.15, 0.2, 0.25, 0.3, 0.4, 0.6, 1.0]
+#   obs_bins_det: [0., 0.05, 0.10, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0]
+#   obs_bins_det_sys_binning: [0., 0.04, 0.09, 0.12, 0.15, 0.18, 0.21, 0.25, 0.3, 0.36, 0.42, 0.5, 0.6, 0.8, 1.0]
 
 # config3:
 #   DynamicalGrooming:
@@ -82,25 +82,25 @@ theta_g:
 #   obs_bins_det: [0., 0.05, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.5]
 #   obs_bins_det_sys_binning: [0., 0.05, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46,  0.5]
       
-  config5:
-    DynamicalGrooming:
-      a: 1.0
-    pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
-    obs_bins_truth: [0., 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0]
-    obs_bins_det: [0., 0.13, 0.22, 0.31, 0.4, 0.49, 0.58, 0.67, 0.75, 0.85, 1.0]
-    obs_bins_det_sys_binning: [0., 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0]
+# config5:
+#   DynamicalGrooming:
+#     a: 1.0
+#   pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
+#   pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
+#   pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
+#   obs_bins_truth: [0., 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0]
+#   obs_bins_det: [0., 0.13, 0.22, 0.31, 0.4, 0.49, 0.58, 0.67, 0.75, 0.85, 1.0]
+#   obs_bins_det_sys_binning: [0., 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0]
 
-  config6:
-    DynamicalGrooming:
-      a: 2.0
-    pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
-    obs_bins_truth: [0., 0.3, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
-    obs_bins_det: [0., 0.25, 0.35, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 1.0]
-    obs_bins_det_sys_binning: [0., 0.3, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
+# config6:
+#   DynamicalGrooming:
+#     a: 2.0
+#   pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
+#   pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
+#   pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
+#   obs_bins_truth: [0., 0.3, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
+#   obs_bins_det: [0., 0.25, 0.35, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 1.0]
+#   obs_bins_det_sys_binning: [0., 0.3, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.9, 1.0]
 
 # Observable block
 zg:
@@ -108,7 +108,7 @@ zg:
   common_settings:
     xtitle: '#it{z}_{g}'
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#it{z}_{g}}'
-    pt_bins_reported: [20, 40, 60, 80, 100]
+    pt_bins_reported: [60, 80]
     max_reg_param: 10
     plot_overlay_list:
       - ['config2', 'config5', 'config6']
@@ -190,16 +190,16 @@ zg:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-02'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'theta_g'
-do_unfolding: False
-force_rebin: False
+do_unfolding: True
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Work in Progress'
+figure_approval_status: 'Preliminary'
 use_ev_id_ext: False
 
 # List of which systematics to perform
