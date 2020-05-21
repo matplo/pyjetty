@@ -43,10 +43,10 @@ class PlotRAA(common_base.CommonBase):
     
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
 
-    self.observables = ['zg']
+    self.observables = ['theta_g']
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
-    self.jetR = 0.4
+    self.jetR = 0.2
     if self.jetR == 0.4:
       self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-04/'
       self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04/'
@@ -136,16 +136,16 @@ class PlotRAA(common_base.CommonBase):
     c.Draw()
     
     c.cd()
-    pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
+    pad1 = ROOT.TPad('myPad', 'The pad',0,0.4,1,1)
     pad1.SetLeftMargin(0.2)
-    pad1.SetTopMargin(0.07)
+    pad1.SetTopMargin(0.08)
     pad1.SetRightMargin(0.04)
     pad1.SetBottomMargin(0.)
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
-    self.utils.setup_legend(myLegend,0.04)
+    myLegend = ROOT.TLegend(0.25,0.65,0.45,0.85)
+    self.utils.setup_legend(myLegend,0.05)
     
     self.h_main_pp.SetMarkerSize(1.5)
     self.h_main_pp.SetMarkerStyle(self.markers[0])
@@ -183,13 +183,14 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.SetYTitle(self.ytitle)
     if observable == 'theta_g':
-      ymax = 3*self.ymax
+      ymax = 1.9*self.ymax
     else:
       ymax = 2.3*self.ymax
     myBlankHisto.SetMaximum(ymax)
     myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
     myBlankHisto.GetYaxis().SetTitleSize(0.065)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+    myBlankHisto.GetYaxis().SetTitleSize(0.08)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.15)
     myBlankHisto.GetYaxis().SetLabelSize(0.06)
     myBlankHisto.Draw('E')
     
@@ -199,19 +200,20 @@ class PlotRAA(common_base.CommonBase):
       rg_axis.SetTitle('#it{R}_{g}')
       rg_axis.SetTitleSize(25)
       rg_axis.SetTitleFont(43)
-      rg_axis.SetTitleOffset(0.6)
+      rg_axis.SetTitleOffset(0.62)
       rg_axis.SetLabelFont(43)
       rg_axis.SetLabelSize(25)
-      rg_axis.SetTickSize(0.015)
-      rg_axis.SetLabelOffset(0.015)
+      rg_axis.SetTickSize(0.025)
+      rg_axis.SetLabelOffset(0.016)
       rg_axis.Draw()
  
     c.cd()
-    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.3)
+    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.4)
     pad2.SetTopMargin(0)
-    pad2.SetBottomMargin(0.4)
+    pad2.SetBottomMargin(0.3)
     pad2.SetLeftMargin(0.2)
     pad2.SetRightMargin(0.04)
+    pad2.SetTicks(0,1)
     pad2.Draw()
     pad2.cd()
           
@@ -220,21 +222,24 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto2.SetXTitle(self.xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
     myBlankHisto2.GetXaxis().SetTitleFont(43)
-    myBlankHisto2.GetXaxis().SetTitleOffset(4.)
+    myBlankHisto2.GetXaxis().SetTitleOffset(3.)
     myBlankHisto2.GetXaxis().SetLabelFont(43)
     myBlankHisto2.GetXaxis().SetLabelSize(25)
-    myBlankHisto2.GetYaxis().SetTitleSize(20)
+    myBlankHisto2.GetYaxis().SetTitleSize(25)
     myBlankHisto2.GetYaxis().SetTitleFont(43)
-    myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
+    myBlankHisto2.GetYaxis().SetTitleOffset(2.)
     myBlankHisto2.GetYaxis().SetLabelFont(43)
     myBlankHisto2.GetYaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetNdivisions(505)
     if observable == 'theta_g':
-      myBlankHisto2.GetYaxis().SetRangeUser(0., 2.49)
+      if self.jetR == 0.2:
+        myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+      else:
+        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.49)
     else:
       myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
 
-    myBlankHisto2.Draw()
+    myBlankHisto2.Draw('')
   
     line = ROOT.TLine(xmin,1,xmax,1)
     line.SetLineColor(920+2)
@@ -265,28 +270,28 @@ class PlotRAA(common_base.CommonBase):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     
-    text_latex.SetTextSize(0.04)
+    text_latex.SetTextSize(0.05)
     text = '#it{{f}}_{{tagged}}^{{pp}} = {:.2f}, #it{{f}}_{{tagged}}^{{AA}} = {:.2f}'.format(self.f_tagging_pp, self.f_tagging_AA)
-    text_latex.DrawLatex(0.57, 0.57, text)
+    text_latex.DrawLatex(0.57, 0.39, text)
 
-    text_latex.SetTextSize(0.045)
+    text_latex.SetTextSize(0.06)
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.25, 0.87, text)
+    text_latex.DrawLatex(0.57, 0.84, text)
     
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
-    text_latex.DrawLatex(0.25, 0.81, text)
+    text_latex.DrawLatex(0.57, 0.77, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.DrawLatex(0.25, 0.75, text)
+    text_latex.DrawLatex(0.57, 0.7, text)
     
     text = '#it{R} = ' + str(self.jetR) + '   | #eta_{jet}| < 0.5'
-    text_latex.DrawLatex(0.25, 0.69, text)
+    text_latex.DrawLatex(0.57, 0.63, text)
     
     text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.25, 0.63, text)
+    text_latex.DrawLatex(0.57, 0.56, text)
     
     text = self.formatted_grooming_label
-    text_latex.DrawLatex(0.25, 0.57, text)
+    text_latex.DrawLatex(0.57, 0.47, text)
     
     myLegend.Draw()
 
