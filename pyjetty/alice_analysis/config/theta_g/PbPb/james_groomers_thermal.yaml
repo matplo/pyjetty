@@ -18,8 +18,8 @@ prong_matching_threshold: 0.5
 debug_level: 0
 dry_run: False
 fast_simulation: False
-event_number_max: 100
-use_ev_id_ext: True
+#event_number_max: 100
+use_ev_id_ext: False
 
 thermal_model:
   beta: 0.5
