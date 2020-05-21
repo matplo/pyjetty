@@ -43,7 +43,7 @@ class PlotRAA(common_base.CommonBase):
     
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
 
-    self.observables = ['theta_g']
+    self.observables = ['zg']
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
     self.jetR = 0.2
@@ -141,6 +141,7 @@ class PlotRAA(common_base.CommonBase):
     pad1.SetTopMargin(0.08)
     pad1.SetRightMargin(0.04)
     pad1.SetBottomMargin(0.)
+    #pad1.SetLogy()
     pad1.Draw()
     pad1.cd()
 
@@ -183,9 +184,12 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.SetYTitle(self.ytitle)
     if observable == 'theta_g':
-      ymax = 1.9*self.ymax
+      if self.jetR == 0.2:
+        ymax = 1.9*self.ymax
+      else:
+        ymax = 2.5*self.ymax
     else:
-      ymax = 2.3*self.ymax
+      ymax = 3.*self.ymax
     myBlankHisto.SetMaximum(ymax)
     myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
     myBlankHisto.GetYaxis().SetTitleSize(0.065)
@@ -235,9 +239,9 @@ class PlotRAA(common_base.CommonBase):
       if self.jetR == 0.2:
         myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
       else:
-        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.49)
+        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.1)
     else:
-      myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+      myBlankHisto2.GetYaxis().SetRangeUser(0.4, 1.6)
 
     myBlankHisto2.Draw('')
   
@@ -272,26 +276,26 @@ class PlotRAA(common_base.CommonBase):
     
     text_latex.SetTextSize(0.05)
     text = '#it{{f}}_{{tagged}}^{{pp}} = {:.2f}, #it{{f}}_{{tagged}}^{{AA}} = {:.2f}'.format(self.f_tagging_pp, self.f_tagging_AA)
-    text_latex.DrawLatex(0.57, 0.39, text)
+    text_latex.DrawLatex(0.56, 0.39, text)
 
     text_latex.SetTextSize(0.06)
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.57, 0.84, text)
+    text_latex.DrawLatex(0.56, 0.84, text)
     
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
-    text_latex.DrawLatex(0.57, 0.77, text)
+    text_latex.DrawLatex(0.56, 0.77, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.DrawLatex(0.57, 0.7, text)
+    text_latex.DrawLatex(0.56, 0.7, text)
     
     text = '#it{R} = ' + str(self.jetR) + '   | #eta_{jet}| < 0.5'
-    text_latex.DrawLatex(0.57, 0.63, text)
+    text_latex.DrawLatex(0.56, 0.63, text)
     
     text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.57, 0.56, text)
+    text_latex.DrawLatex(0.56, 0.56, text)
     
     text = self.formatted_grooming_label
-    text_latex.DrawLatex(0.57, 0.47, text)
+    text_latex.DrawLatex(0.56, 0.47, text)
     
     myLegend.Draw()
 
