@@ -33,6 +33,7 @@ from pyjetty.alice_analysis.process.base import jet_info
 from pyjetty.alice_analysis.process.base import process_base
 from pyjetty.alice_analysis.process.base import thermal_generator
 from pyjetty.mputils import CEventSubtractor
+from pyjetty.mputils import RTreeWriter
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -104,6 +105,7 @@ class ProcessGroomers(process_base.ProcessBase):
     self.mc_fraction_threshold = config['mc_fraction_threshold']
     self.prong_matching_threshold = config['prong_matching_threshold']
     self.use_ev_id_ext = config['use_ev_id_ext']
+    self.main_R_max = config['constituent_subtractor']['main_R_max']
     
     if 'thermal_model' in config:
       self.thermal_model = True
@@ -229,6 +231,10 @@ class ProcessGroomers(process_base.ProcessBase):
           grooming_label = self.utils.grooming_label(grooming_setting)
           self.create_prong_matching_histograms(jetR, grooming_label)
             
+      # Create tree to store splitting info for all groomers
+      self.t = ROOT.TTree('t', 't')
+      self.tw = RTreeWriter(tree=self.t)
+              
   #---------------------------------------------------------------
   # Create theta_g response histograms
   #---------------------------------------------------------------
@@ -299,7 +305,10 @@ class ProcessGroomers(process_base.ProcessBase):
     if type(fj_particles_truth) != fj.vectorPJ:
       print('fj_particles type mismatch -- skipping event')
       return
-        
+      
+    # Clear event in tree
+    self.tw.clear()
+  
     # If Pb-Pb, construct embedded event (do this once, for all jetR)
         
     # If thermal model, generate a thermal event and add it to the det-level particle list
@@ -378,6 +387,8 @@ class ProcessGroomers(process_base.ProcessBase):
         
         self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched,
                           jetR, R_max = R_max)
+                          
+    self.tw.fill_tree()
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
@@ -504,6 +515,7 @@ class ProcessGroomers(process_base.ProcessBase):
           zg_combined = jet_combined_dg_lund.z()
           zg_truth = jet_truth_dg_lund.z()
        
+        # Fill some variables
         if 'kappa' in self.observable_list:
           kappa_combined = self.kappa(zg_combined, theta_g_combined)
           kappa_truth = self.kappa(zg_truth, theta_g_truth)
@@ -555,6 +567,20 @@ class ProcessGroomers(process_base.ProcessBase):
           if 'tf' in self.observable_list:
             hname = 'h_tf_JetPt_Truth_R{}_{}'.format(jetR, grooming_label)
             getattr(self, hname).Fill(jet_pt_truth_ungroomed, tf_truth)
+            
+        # Fill tree
+        if R_max == self.main_R_max:
+        
+          if grooming_setting == self.grooming_settings[0]:
+            self.tw.fill_branch('R{}_jet_pt_truth_ungroomed'.format(jetR), jet_pt_truth_ungroomed)
+            self.tw.fill_branch('R{}_jet_pt_combined_ungroomed'.format(jetR), jet_pt_combined_ungroomed)
+            
+          label = 'R{}_Rmax{}_{}'.format(jetR, R_max, grooming_label)
+          jet_pt_combined_groomed = jet_combined_groomed.pt()
+          self.tw.fill_branch('{}_jet_pt_combined_groomed'.format(label), jet_pt_combined_groomed)
+          self.tw.fill_branch('{}_zg_combined'.format(label), zg_combined)
+          self.tw.fill_branch('{}_theta_g_combined'.format(label), theta_g_combined)
+          self.tw.fill_branch('{}_prong_matching_flag'.format(label), prong_match)
           
   #---------------------------------------------------------------
   # Do prong-matching
