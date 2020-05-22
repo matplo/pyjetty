@@ -182,9 +182,9 @@ class ProcessGroomers(process_base.ProcessBase):
             # THn for combined jets
             dim = 4;
             title = ['p_{T,ch jet}', '#it{z}_{g,ch}', '#theta_{g,ch}', 'flag']
-            nbins = [30, 50, 100, 5]
+            nbins = [30, 50, 100, 8]
             min = [0., 0., 0., 0.5]
-            max = [300., 0.5, 1., 5.5]
+            max = [300., 0.5, 1., 8.5]
             name = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
             self.create_thn(name, title, dim, nbins, min, max)
           
@@ -212,7 +212,7 @@ class ProcessGroomers(process_base.ProcessBase):
               # TH3 for combined jets
               for R_max in self.max_distance:
                 name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                h = ROOT.TH3F(name, name, 30, 0, 300, 50, 0, 0.5, 5, 0.5, 5.5)
+                h = ROOT.TH3F(name, name, 30, 0, 300, 50, 0, 0.5, 8, 0.5, 8.5)
                 h.GetXaxis().SetTitle('p_{T,ch jet}')
                 h.GetYaxis().SetTitle(label)
                 h.GetZaxis().SetTitle('flag')
@@ -248,24 +248,36 @@ class ProcessGroomers(process_base.ProcessBase):
         for match in match_list:
 
           name = 'hProngMatching_{}_{}_JetPt_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 20, 0., 2*jetR)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 15, -0.4, 1.1, 20, 0., 2*jetR)
           h.GetXaxis().SetTitle('p_{T,truth}')
           h.GetYaxis().SetTitle('Prong matching fraction')
           h.GetZaxis().SetTitle('#Delta R_{prong}')
           setattr(self, name, h)
           
           name = 'hProngMatching_{}_{}_JetPtZ_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 50, -0.5, 0.5)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 15, -0.4, 1.1, 50, -0.5, 0.5)
           h.GetXaxis().SetTitle('p_{T,truth}')
           h.GetYaxis().SetTitle('Prong matching fraction')
           h.GetZaxis().SetTitle('#Delta z_{prong}')
           setattr(self, name, h)
 
       name = 'hProngMatching_subleading-leading_correlation_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
-      h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 15, -0.4, 1.1)
-      h.GetXaxis().SetTitle('p_{T,pp-det}')
+      h = ROOT.TH3F(name, name, 30, 0, 300, 15, -0.4, 1.1, 15, -0.4, 1.1)
+      h.GetXaxis().SetTitle('p_{T,truth}')
       h.GetYaxis().SetTitle('Prong matching fraction, leading_subleading')
       h.GetZaxis().SetTitle('Prong matching fraction, subleading_leading')
+      setattr(self, name, h)
+      
+      name = 'hProngMatching_truth_groomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
+      h = ROOT.TH2F(name, name, 30, 0, 300, 15, -0.4, 1.1)
+      h.GetXaxis().SetTitle('p_{T,truth}')
+      h.GetYaxis().SetTitle('Prong matching fraction, truth_groomed')
+      setattr(self, name, h)
+      
+      name = 'hProngMatching_truth2_groomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
+      h = ROOT.TH2F(name, name, 30, 0, 300, 15, -0.4, 1.1)
+      h.GetXaxis().SetTitle('p_{T,truth}')
+      h.GetYaxis().SetTitle('Prong matching fraction, truth2_groomed')
       setattr(self, name, h)
       
   #---------------------------------------------------------------
@@ -758,12 +770,26 @@ class ProcessGroomers(process_base.ProcessBase):
     # Plot correlation of matched pt fraction for leading-subleading and subleading-leading
     getattr(self, 'hProngMatching_subleading-leading_correlation_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_truth.pt(), matched_pt_leading_subleading, matched_pt_subleading_leading)
     
+    # Plot fraction of groomed pp truth pt that is contained in groomed combined jet
+    if has_parents_truth and has_parents_combined:
+      matched_pt_truth_groomed = fjtools.matched_pt(jet_combined_groomed, jet_truth_groomed)
+      getattr(self, 'hProngMatching_truth_groomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_truth_groomed)
+      
+      matched_pt_truth2_groomed = fjtools.matched_pt(jet_combined_groomed, jet_truth_prong2)
+      getattr(self, 'hProngMatching_truth2_groomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_truth2_groomed)
+    
+    # Plot initial fraction of subleading truth prong pt in combined ungroomed prong
+    # To do...
+     
     #  Return flag based on where >50% of subleading matched pt resides:
     #    1: subleading
     #    2: leading
     #    3: ungroomed
     #    4: outside
     #    5: other (i.e. 50% is not in any of the above)
+    #    6: pp-truth passed grooming, but combined jet failed grooming
+    #    7: combined jet passed grooming, but pp-truth failed grooming
+    #    8: both pp-truth and combined jet failed SoftDrop
     if matched_pt_subleading_subleading > self.prong_matching_threshold:
       return 1
     elif matched_pt_subleading_leading > self.prong_matching_threshold:
@@ -772,8 +798,17 @@ class ProcessGroomers(process_base.ProcessBase):
       return 3
     elif matched_pt_subleading_outside > self.prong_matching_threshold:
       return 4
-    else:
+    elif matched_pt_leading_leading >= 0.:
       return 5
+    elif matched_pt_leading_leading == -0.1:
+      return 6
+    elif matched_pt_leading_leading == -0.2:
+      return 7
+    elif matched_pt_leading_leading == -0.3:
+      return 8
+    else:
+      print('Warning -- flag not specified!')
+      return -1
         
   #---------------------------------------------------------------
   # Compute theta_g
