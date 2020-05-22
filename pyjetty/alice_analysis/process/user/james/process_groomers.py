@@ -473,8 +473,8 @@ class ProcessGroomers(process_base.ProcessBase):
           if self.debug_level > 2:
             print('Dynamical groomer is: {}'.format(dy_groomer.description()))
           
-          jet_combined_dg_lund = dy_groomer.result(jet_combined, a)
-          jet_truth_dg_lund = dy_groomer.result(jet_truth, a)
+          jet_combined_dg_lund = self.utils.dy_groom(dy_groomer, jet_combined, a)
+          jet_truth_dg_lund = self.utils.dy_groom(dy_groomer, jet_truth, a)
           
           jet_combined_dg = jet_combined_dg_lund.pair()
           jet_truth_dg = jet_truth_dg_lund.pair()
@@ -594,7 +594,7 @@ class ProcessGroomers(process_base.ProcessBase):
       
         # Assumes groomer_list = [sd, dy_groomer]
         a = grooming_setting['dg'][0]
-        jet_truth_dg_lund = groomer_list[1].result(jet_truth, a)
+        jet_truth_dg_lund = self.utils.dy_groom(groomer_list[1], jet_truth, a)
         jet_truth_dg = jet_truth_dg_lund.pair()
         jet_truth_groomed = groomer_list[0].result(jet_truth_dg)
       
@@ -618,7 +618,7 @@ class ProcessGroomers(process_base.ProcessBase):
     elif type == 'DG':
       
       a = grooming_setting['dg'][0]
-      jet_truth_groomed_lund = groomer_list[0].result(jet_truth, a)
+      jet_truth_groomed_lund = self.utils.dy_groom(groomer_list[0], jet_truth, a)
     
       # Dynamical grooming returns a fjcontrib::LundGenerator
       #   The prongs can be retrieved directly from this object.

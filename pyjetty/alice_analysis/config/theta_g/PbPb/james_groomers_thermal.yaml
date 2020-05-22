@@ -95,6 +95,37 @@ theta_g:
     SoftDrop:
       zcut: 0.2
       beta: 0
+  
+  config11:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config12:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config13:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config14:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config16:
+    DynamicalGrooming:
+      a: 'min_tf'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'min_tf'
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
 
 # Observable block
 zg:
@@ -155,6 +186,37 @@ zg:
       a: 0.1
     SoftDrop:
       zcut: 0.2
+      beta: 0
+      
+  config11:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config12:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config13:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config14:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config16:
+    DynamicalGrooming:
+      a: 'min_tf'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'min_tf'
+    SoftDrop:
+      zcut: 0.1
       beta: 0
 
 # Observable block
@@ -218,6 +280,37 @@ kappa:
       zcut: 0.2
       beta: 0
       
+  config11:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config12:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config13:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config14:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config16:
+    DynamicalGrooming:
+      a: 'min_tf'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'min_tf'
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+      
 # Observable block
 tf:
 
@@ -277,6 +370,37 @@ tf:
       a: 0.1
     SoftDrop:
       zcut: 0.2
+      beta: 0
+      
+  config11:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config12:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config13:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config14:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config16:
+    DynamicalGrooming:
+      a: 'min_tf'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'min_tf'
+    SoftDrop:
+      zcut: 0.1
       beta: 0
 
 ###############################################################################
