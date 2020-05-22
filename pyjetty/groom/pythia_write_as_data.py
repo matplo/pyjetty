@@ -141,7 +141,7 @@ def main():
 		t_p = ROOT.TNtuple('tree_Particle', 'tree_Particle', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
 	else:
 		t_p = ROOT.TNtuple('tree_Particle_gen', 'tree_Particle_gen', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
-	t_e = ROOT.TNtuple('tree_event_char', 'tree_event_char', 'run_number:ev_id:z_vtx_reco:is_ev_rej:weight:npart:nch:nchfwd:nchselect')
+	t_e = ROOT.TNtuple('tree_event_char', 'tree_event_char', 'run_number:ev_id:z_vtx_reco:is_ev_rej:weight:sigma:npart:nch:nchfwd:nchselect')
 
 	run_number = args.run_number
 	ev_id = 0
@@ -166,6 +166,8 @@ def main():
 			nw = 2
 		twe.fill_branch('nw', nw)
 		twe.fill_branch('w', weight)
+		sigma = pythia.info.sigmaGen()
+		twe.fill_branch('sigma', sigma)
 
 		# parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, False)
 		# parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
@@ -194,7 +196,7 @@ def main():
 			pyp = pythiafjext.getPythia8Particle(p)
 			t_p.Fill(float(run_number), float(ev_id), p.perp(), p.eta(), p.phi(), pyp.id())
 
-		t_e.Fill(float(run_number), float(ev_id), 0, 0, weight, nw, nch_total, ncharged_fwd, ncharged_selected)
+		t_e.Fill(float(run_number), float(ev_id), 0, 0, weight, sigma, nw, nch_total, ncharged_fwd, ncharged_selected)
 		twe.fill_tree()
 
 	pythia.stat()
