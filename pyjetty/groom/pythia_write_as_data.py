@@ -127,10 +127,10 @@ def main():
 	outf = ROOT.TFile(args.output, 'recreate')
 	outf.cd()
 
-	t = ROOT.TTree('t', 't')
-	tw = RTreeWriter(tree=t)
-	tch = ROOT.TTree('tch', 'tch')
-	twch = RTreeWriter(tree=tch)
+	# t = ROOT.TTree('t', 't')
+	# tw = RTreeWriter(tree=t)
+	# tch = ROOT.TTree('tch', 'tch')
+	# twch = RTreeWriter(tree=tch)
 
 	te = ROOT.TTree('te', 'te')
 	twe = RTreeWriter(tree=te)
