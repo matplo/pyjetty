@@ -94,7 +94,7 @@ def main():
 	parser.add_argument('--npart-min', help='minimum npart in Argantyr', default=2, type=int)
 	parser.add_argument('--as-data', help='write as data - tree naming convention', action='store_true', default=False)
 	parser.add_argument('--run-number', help='set run number', default=1)
-	parser.add_argument('--part-min-pt', help='minimum pt of a particle', default=0.15)
+	parser.add_argument('--part-min-pt', help='minimum pt of a particle', default=0.15, type=float)
 	args = parser.parse_args()
 
 	if args.user_seed < 0:
