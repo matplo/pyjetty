@@ -25,6 +25,7 @@ def main():
 	parser.add_argument('--user-seed', help='pythia seed', default=1111, type=int)
 	parser.add_argument('--output', default="output.root", type=str)
 	parser.add_argument('--beta', help='sd beta', default=0, type=float)
+	parser.add_argument('--jetR', help='jet radius', default=0.4, type=float)
 	args = parser.parse_args()
 
 	if args.user_seed < 0:
@@ -41,7 +42,7 @@ def main():
 	fj.ClusterSequence.print_banner()
 	print()
 	# set up our jet definition and a jet selector
-	jet_R0 = 0.4
+	jet_R0 = args.jetR
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 	print(jet_def)
 
@@ -65,7 +66,7 @@ def main():
 		if not pythia.next():
 			continue
 
-		parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], add_particle_info = True)
+		parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
 		parts_pythia_p_selected = parts_selector_p(parts_pythia_p)
 
 		hstatus = pythia.forceHadronLevel()
@@ -73,10 +74,10 @@ def main():
 			pwarning('forceHadronLevel false event', iev)
 			continue
 		# parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kHadron, pythiafjext.kCharged])
-		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], add_particle_info = True)
+		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
 		parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
 
-		parts_pythia_hch = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], add_particle_info = True)
+		parts_pythia_hch = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, True)
 		parts_pythia_hch_selected = parts_selector_h(parts_pythia_hch)
 
 		# pinfo('debug partons...')
