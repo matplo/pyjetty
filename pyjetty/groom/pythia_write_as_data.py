@@ -152,8 +152,8 @@ def main():
 			continue
 
 		twe.clear()
-		tw.clear()
-		twch.clear()
+		# tw.clear()
+		# twch.clear()
 
 		weight = pythia.info.weight()		
 		if args.py_PbPb:
