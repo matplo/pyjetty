@@ -32,7 +32,7 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io, process_utils, jet_info, process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers import deltaR, lambda_beta_kappa, pT_bin
+from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa, pT_bin
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)

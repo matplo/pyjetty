@@ -9,7 +9,7 @@ Ezra Lesser (elesser@berkeley.edu)
 import numpy as np
 from math import pi
 
-
+''' Not needed: use instead pjet1.delta_R(pjet2)
 # Return \Delta{R} between two fastjet.PsuedoJet objects  
 def deltaR(pjet1, pjet2):
 
@@ -21,11 +21,11 @@ def deltaR(pjet1, pjet2):
     phi1 += 2*pi
 
   return np.sqrt( (pjet1.eta() - pjet2.eta())**2 + (phi1 - pjet2.phi())**2 )
-
+'''
 
 # Return jet angularity for fastjet.PseudoJet object
 def lambda_beta_kappa(jet, jetR, beta, kappa):
-  return sum( [ (constit.pt() / jet.pt())**kappa * (deltaR(jet, constit) / jetR)**beta 
+  return sum( [ (constit.pt() / jet.pt())**kappa * (jet.delta_R(constit) / jetR)**beta 
                 for constit in jet.constituents() ] )
 
 
