@@ -93,7 +93,7 @@ def main():
 	parser.add_argument('--max-jet-pt', help='jet pt selection', default=1000., type=float)
 	parser.add_argument('--npart-min', help='minimum npart in Argantyr', default=2, type=int)
 	parser.add_argument('--as-data', help='write as data - tree naming convention', action='store_true', default=False)
-	parser.add_argument('--run-number', help='set run number', default=1)
+	parser.add_argument('--run-number', help='set run number', default=1, type=int)
 	parser.add_argument('--part-min-pt', help='minimum pt of a particle', default=0.15, type=float)
 	args = parser.parse_args()
 
@@ -192,9 +192,9 @@ def main():
 
 		for p in parts_pythia_ch_selected:
 			pyp = pythiafjext.getPythia8Particle(p)
-			t_p.Fill(run_number, ev_id, p.perp(), p.eta(), p.phi(), pyp.id())
+			t_p.Fill(float(run_number), float(ev_id), p.perp(), p.eta(), p.phi(), pyp.id())
 
-		t_e.Fill(run_number, ev_id, 0, 0, weight, nw, nch_total, ncharged_fwd, ncharged_selected)
+		t_e.Fill(float(run_number), float(ev_id), 0, 0, weight, nw, nch_total, ncharged_fwd, ncharged_selected)
 		twe.fill_tree()
 
 	pythia.stat()
