@@ -4,14 +4,14 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-160
+#SBATCH --array=1-280
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 # Center of mass energy in GeV
 ECM=5020
 
 # Number of events per pT-hat bin (for statistics)
-NEV_DESIRED=1600000
+NEV_DESIRED=1400000
 
 # Array of the jet radii for which to generate events
 JETR_ARR=(0.2 0.4)
@@ -21,7 +21,7 @@ PTHAT_BINS=(5 7 9 12 16 21 28 36 45 57 70 85 99 115 132 150 169 190 212 235)
 echo "Number of pT-hat bins: ${#PTHAT_BINS[@]}"
 
 # Currently we have 8 nodes * 20 cores active
-NCORES=160
+NCORES=280
 NEV_PER_JOB=$(( $NEV_DESIRED * ${#PTHAT_BINS[@]} / $NCORES ))
 echo "Number of events per job: $NEV_PER_JOB"
 NCORES_PER_BIN=$(( $NCORES / ${#PTHAT_BINS[@]} ))
@@ -31,11 +31,11 @@ BIN=$(( ($SLURM_ARRAY_TASK_ID - 1) / $NCORES_PER_BIN + 1))
 CORE_IN_BIN=$(( ($SLURM_ARRAY_TASK_ID - 1) % $NCORES_PER_BIN + 1))
 PTHAT_MIN=${PTHAT_BINS[$(( $BIN - 1 ))]}
 if [ $BIN -lt ${#PTHAT_BINS[@]} ]; then
-    USE_PTHAT_MAX=$true
+    USE_PTHAT_MAX=true
 	PTHAT_MAX=${PTHAT_BINS[$BIN]}
 	echo "Calculating bin $BIN (pThat=[$PTHAT_MIN,$PTHAT_MAX]) with core number $CORE_IN_BIN"
 else
-    USE_PTHAT_MAX=$false
+    USE_PTHAT_MAX=false
 	echo "Calculating bin $BIN (pThat_min=$PTHAT_MIN) with core number $CORE_IN_BIN"
 fi
 

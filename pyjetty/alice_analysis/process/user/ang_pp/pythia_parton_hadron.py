@@ -70,8 +70,7 @@ def main():
     tw = RTreeWriter(tree=t)
 
     # event loop
-    nskipped = 0
-    for iev in tqdm.tqdm(range(args.nev)):
+    for iev in range(args.nev):  #tqdm.tqdm(range(args.nev)):
         if not pythia.next():
             continue
 
@@ -81,7 +80,6 @@ def main():
         hstatus = pythia.forceHadronLevel()
         if not hstatus:
             #pwarning('forceHadronLevel false event', iev)
-            nskipped += 1
             continue
         # parts_pythia_h = pythiafjext.vectorize_select(
         #     pythia, [pythiafjext.kHadron, pythiafjext.kCharged])
@@ -106,9 +104,9 @@ def main():
         #   print(pyp.name())
 
         # parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
-        jets_p = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_p)))
-        jets_h = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_h)))
-        jets_ch_h = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_hch)))
+        jets_p = fj.sorted_by_pt(jet_def(parts_pythia_p))
+        jets_h = fj.sorted_by_pt(jet_def(parts_pythia_h))
+        jets_ch_h = fj.sorted_by_pt(jet_def(parts_pythia_hch))
 
         if not args.sd_beta is None:
             sd = fjcontrib.SoftDrop(args.sd_beta, 0.1, jet_R0)
