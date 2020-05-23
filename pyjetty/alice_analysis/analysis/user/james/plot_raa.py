@@ -4,7 +4,7 @@ import sys
 import os
 import argparse
 from array import *
-import numpy
+import numpy as np
 import ROOT
 import yaml
 
@@ -126,9 +126,7 @@ class PlotRAA(common_base.CommonBase):
       self.label_list = []
       self.observable_name_list = []
       self.sublabel_list = []
-      self.x_list = []
-      self.ratio_lower_list = []
-      self.ratio_upper_list = []
+      self.prediction_g_list = []
       
       self.prediction_types = [name for name in list(config.keys())]
       for type in self.prediction_types:
@@ -144,9 +142,19 @@ class PlotRAA(common_base.CommonBase):
             self.observable_name_list.append(theory['observable'])
 
             self.sublabel_list.append(theory_prediction['sublabel'])
-            self.x_list.append(theory_prediction['x'])
-            self.ratio_lower_list.append(theory_prediction['ratio_lower'])
-            self.ratio_upper_list.append(theory_prediction['ratio_upper'])
+            x = np.array(theory_prediction['x'])
+            ratio_lower = np.array(theory_prediction['ratio_lower'])
+            ratio_upper = np.array(theory_prediction['ratio_upper'])
+            if 'ratio' in theory_prediction:
+              ratio = np.array(theory_prediction['ratio'])
+            else:
+              ratio = (ratio_lower + ratio_upper) / 2.
+            
+            n = len(theory_prediction['x'])
+            xerr = np.zeros(n)
+
+            g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+            self.prediction_g_list.append(g)
         
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -301,6 +309,17 @@ class PlotRAA(common_base.CommonBase):
     pad2.cd()
     h_ratio_sys.DrawCopy('E2 same')
     h_ratio.DrawCopy('PE X0 same')
+    
+    if self.plot_theory:
+    
+      for i, g in enumerate(self.prediction_g_list):
+
+        g.SetFillColor(921)
+        g.SetFillColorAlpha(921, 0.65)
+        g.Draw("3 same")
+        
+      self.label_list = []
+      self.sublabel_list = []
           
     pad1.cd()
     myLegend.AddEntry(self.h_main_pp, 'pp', 'PE')
