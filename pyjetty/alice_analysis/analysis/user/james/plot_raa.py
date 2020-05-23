@@ -38,25 +38,17 @@ class PlotRAA(common_base.CommonBase):
     #with open(self.config_file, 'r') as stream:
     #  config = yaml.safe_load(stream)
       
-    #self.figure_approval_status = config['figure_approval_status']
-    self.figure_approval_status = 'Preliminary'
+    self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/'
+    self.observables = ['theta_g', 'zg']
+    self.jetR_list = [0.2, 0.4]
+    self.plot_theory = False
     
-    self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
-
-    self.observables = ['zg']
+    self.colors = [600-6, 632-4, 416-2]
+    self.markers = [20, 21, 33]
+    
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
-    self.jetR = 0.2
-    if self.jetR == 0.4:
-      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-04/'
-      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04/'
-      self.min_pt = 80
-      self.max_pt = 100
-    else:
-      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-02/'
-      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-02/'
-      self.min_pt = 60
-      self.max_pt = 80
+    self.figure_approval_status = 'Preliminary'
     
     if not os.path.exists(self.output_dir):
       os.makedirs(self.output_dir)
@@ -64,7 +56,18 @@ class PlotRAA(common_base.CommonBase):
   #---------------------------------------------------------------
   # Initialize config file into class members
   #---------------------------------------------------------------
-  def init_observable(self, observable):
+  def init_observable(self, observable, jetR):
+  
+    if jetR == 0.2:
+      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-02/'
+      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-02/'
+      self.min_pt = 60
+      self.max_pt = 80
+    elif jetR == 0.4:
+      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-04/'
+      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04/'
+      self.min_pt = 80
+      self.max_pt = 100
   
     self.file_pp_name = os.path.join(self.filedir_pp_name, '{}/final_results/fFinalResults.root'.format(observable))
     self.file_AA_name = os.path.join(self.filedir_AA_name, '{}/final_results/fFinalResults.root'.format(observable))
@@ -75,9 +78,9 @@ class PlotRAA(common_base.CommonBase):
       self.xtitle = '#it{z}_{g}'
     self.ytitle = '#frac{{1}}{{#sigma_{{jet, inc}}}} #frac{{d#sigma}}{{d{}}}'.format(self.xtitle)
  
-    self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
-    self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
-    self.h_tagging_fraction_name = 'h_tagging_fraction_R{}_{}'.format(self.jetR, self.obs_label)
+    self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(observable, jetR, self.obs_label, self.min_pt, self.max_pt)
+    self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, self.obs_label, self.min_pt, self.max_pt)
+    self.h_tagging_fraction_name = 'h_tagging_fraction_R{}_{}'.format(jetR, self.obs_label)
  
     self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
     self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
@@ -107,10 +110,11 @@ class PlotRAA(common_base.CommonBase):
     self.f_tagging_AA = self.h_tagging_fraction_AA.GetBinContent(bin)
 
     self.ymax = self.h_main_pp.GetMaximum()
-    self.colors = [600-6, 632-4, 416-2]
-    self.markers = [20, 21, 33]
     
-    name = 'hRAA_{}_R{}.pdf'.format(observable, self.utils.remove_periods(self.jetR))
+    if self.plot_theory:
+      name = 'hRAA_{}_R{}_Theory.pdf'.format(observable, self.utils.remove_periods(jetR))
+    else:
+      name = 'hRAA_{}_R{}.pdf'.format(observable, self.utils.remove_periods(jetR))
     self.output_filename = os.path.join(self.output_dir, name)
       
   #---------------------------------------------------------------
@@ -119,15 +123,16 @@ class PlotRAA(common_base.CommonBase):
   def plot_raa(self):
   
     for observable in self.observables:
+      for jetR in self.jetR_list:
   
-      self.init_observable(observable)
-      self.plot_final_result(observable)
-  
+        self.init_observable(observable, jetR)
+        self.plot_final_result(observable, jetR)
+
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
   #----------------------------------------------------------------------
-  def plot_final_result(self, observable):
-    print('Plot final results for {}: R = {}, {}'.format(observable, self.jetR, self.obs_label))
+  def plot_final_result(self, observable, jetR):
+    print('Plot final results for {}: R = {}, {}'.format(observable, jetR, self.obs_label))
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -176,7 +181,7 @@ class PlotRAA(common_base.CommonBase):
       
     xmin = self.h_sys_pp.GetBinLowEdge(2)
     xmax = self.h_sys_pp.GetBinLowEdge(self.h_sys_pp.GetNbinsX()+1)
-    #if self.jetR == 0.4 and observable == 'theta_g':
+    #if jetR == 0.4 and observable == 'theta_g':
     #  xmax = self.h_sys_pp.GetBinLowEdge(self.h_sys_pp.GetNbinsX()-1)
         
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
@@ -184,7 +189,7 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.SetYTitle(self.ytitle)
     if observable == 'theta_g':
-      if self.jetR == 0.2:
+      if jetR == 0.2:
         ymax = 1.9*self.ymax
       else:
         ymax = 2.5*self.ymax
@@ -199,7 +204,7 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto.Draw('E')
     
     if observable == 'theta_g':
-      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, self.jetR*xmax-0.01)
+      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, jetR*xmax-0.01)
       rg_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'rg_axis_tf1', 505, '- S')
       rg_axis.SetTitle('#it{R}_{g}')
       rg_axis.SetTitleSize(25)
@@ -236,7 +241,7 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto2.GetYaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetNdivisions(505)
     if observable == 'theta_g':
-      if self.jetR == 0.2:
+      if jetR == 0.2:
         myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
       else:
         myBlankHisto2.GetYaxis().SetRangeUser(0., 2.1)
@@ -288,7 +293,7 @@ class PlotRAA(common_base.CommonBase):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(0.56, 0.7, text)
     
-    text = '#it{R} = ' + str(self.jetR) + '   | #eta_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
     text_latex.DrawLatex(0.56, 0.63, text)
     
     text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
