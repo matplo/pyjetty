@@ -59,8 +59,11 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def delta_R(self, jet, eta, phi):
   
-    delta_phi = jet.phi() - phi
+    delta_phi = np.abs(jet.phi() - phi)
     delta_eta = jet.eta() - eta
+
+    if delta_phi > np.pi:
+      delta_phi = 2*np.pi - delta_phi
     
     deltaR = np.sqrt(delta_phi*delta_phi + delta_eta*delta_eta)
     return deltaR
