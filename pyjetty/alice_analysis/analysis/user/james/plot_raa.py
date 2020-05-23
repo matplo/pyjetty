@@ -37,10 +37,12 @@ class PlotRAA(common_base.CommonBase):
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/'
     self.observables = ['theta_g']
     self.jetR_list = [0.2, 0.4]
+    self.plot_data = True
     self.plot_theory = True
     
     self.colors = [600-6, 632-4, 416-2]
     self.markers = [20, 21, 33]
+    self.theory_colors  = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kOrange+7, ROOT.kPink+1, 1]
     
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
@@ -119,6 +121,10 @@ class PlotRAA(common_base.CommonBase):
         config_file = 'theory_predictions_rg.yaml'
       if observable == 'zg':
         config_file = 'theory_predictions_zg.yaml'
+        
+      # Get binning, for re-binning
+      bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[1:]
+      self.bin_array = array('d', bin_edges)
 
       with open(config_file, 'r') as stream:
         config = yaml.safe_load(stream)
@@ -138,24 +144,83 @@ class PlotRAA(common_base.CommonBase):
           config_jetR = theory_prediction['jetR']
           if config_jetR == jetR:
             
-            self.label_list.append(theory['label'])
             self.observable_name_list.append(theory['observable'])
-
-            self.sublabel_list.append(theory_prediction['sublabel'])
-            x = np.array(theory_prediction['x'])
-            ratio_lower = np.array(theory_prediction['ratio_lower'])
-            ratio_upper = np.array(theory_prediction['ratio_upper'])
-            if 'ratio' in theory_prediction:
-              ratio = np.array(theory_prediction['ratio'])
-            else:
-              ratio = (ratio_lower + ratio_upper) / 2.
+            plot_list = theory['plot_list']
             
-            n = len(theory_prediction['x'])
-            xerr = np.zeros(n)
+            if type == 'lbnl':
+            
+              x = np.array(theory_prediction['x'])
+              y_pp = np.array(theory_prediction['y_pp'])
+              
+              n = len(x)
+              xerr = np.zeros(n)
+              
+              if 'f_q' in theory_prediction:
+                f_q = theory_prediction['f_q']
+                f_q_min = theory_prediction['f_q_min']
+                f_q_max = theory_prediction['f_q_max']
+                y_AA_quark = np.array(theory_prediction['y_AA_quark'])
+                y_AA_gluon = np.array(theory_prediction['y_AA_gluon'])
+                
+                y_AA = f_q*y_AA_quark + (1-f_q)*y_AA_gluon
+                y_AA_min = f_q_min*y_AA_quark + (1-f_q_min)*y_AA_gluon
+                y_AA_max = f_q_max*y_AA_quark + (1-f_q_max)*y_AA_gluon
+                
+                ratio = np.divide(y_AA, y_pp)
+                ratio_lower = np.divide(y_AA_min, y_pp)
+                ratio_upper = np.divide(y_AA_max, y_pp)
+                
+                g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+                g.SetName('g_{}'.format(prediction))
+                
+                if prediction in plot_list:
+                  self.prediction_g_list.append(g)
+                  self.label_list.append(theory['label'])
+                  self.sublabel_list.append(theory_prediction['sublabel'])
+                
+              else:
+                y_AA = np.array(theory_prediction['y_AA'])
+                ratio = np.divide(y_AA, y_pp)
+                
+                g = ROOT.TGraph(n, x, ratio)
+                g.SetName('g_{}'.format(prediction))
+                
+                if prediction in plot_list:
+                  self.prediction_g_list.append(g)
+                  self.label_list.append(theory['label'])
+                  self.sublabel_list.append(theory_prediction['sublabel'])
+              
+            elif type == 'hybrid_model':
+            
+              xbins = theory_prediction['xbins']
+              ratio_lower = np.array(theory_prediction['ratio_lower'])
+              ratio_upper = np.array(theory_prediction['ratio_upper'])
+              if 'ratio' in theory_prediction:
+                ratio = np.array(theory_prediction['ratio'])
+              else:
+                ratio = (ratio_lower + ratio_upper) / 2.
 
-            g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
-            self.prediction_g_list.append(g)
-        
+              # Rebin (I don't find any easy way to do this...so I
+              #        construct TH1, rebin, and then extract array)
+              #x_array = array('d', np.array(xbins))
+              #h_ratio = ROOT.TH1F('h_ratio', 'h_ratio', len(x), x_array)
+              #for i, y in enumerate(ratio):
+              #  h_ratio.SetBinContent(i+1, ratio[i])
+              #h_ratio.Rebin(len(self.bin_array)-1, 'bins', self.bin_array)
+              #
+              #x = h_ratio.GetXaxis().GetXbins().GetArray()
+              #print(x)
+                            
+              n = len(self.bin_array)
+              xerr = np.zeros(n)
+
+              g = ROOT.TGraphAsymmErrors(n, np.array(xbins), ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+              
+              if prediction in plot_list:
+                self.prediction_g_list.append(g)
+                self.label_list.append(theory['label'])
+                self.sublabel_list.append(theory_prediction['sublabel'])
+                
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
   #----------------------------------------------------------------------
@@ -264,6 +329,9 @@ class PlotRAA(common_base.CommonBase):
     pad2.SetTicks(0,1)
     pad2.Draw()
     pad2.cd()
+    
+    ratio_legend = ROOT.TLegend(0.45,0.65,0.75,0.95)
+    self.utils.setup_legend(ratio_legend,0.05)
           
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
     myBlankHisto2.SetYTitle('#frac{Pb-Pb}{pp}')
@@ -301,26 +369,38 @@ class PlotRAA(common_base.CommonBase):
     h_ratio_sys.Divide(self.h_sys_pp)
 
     pad1.cd()
-    self.h_sys_pp.DrawCopy('E2 same')
-    self.h_sys_AA.DrawCopy('E2 same')
-    self.h_main_pp.DrawCopy('PE X0 same')
-    self.h_main_AA.DrawCopy('PE X0 same')
+    if self.plot_data:
+      self.h_sys_pp.DrawCopy('E2 same')
+      self.h_sys_AA.DrawCopy('E2 same')
+      self.h_main_pp.DrawCopy('PE X0 same')
+      self.h_main_AA.DrawCopy('PE X0 same')
       
     pad2.cd()
-    h_ratio_sys.DrawCopy('E2 same')
-    h_ratio.DrawCopy('PE X0 same')
-    
+
     if self.plot_theory:
     
       for i, g in enumerate(self.prediction_g_list):
 
-        g.SetFillColor(921)
-        g.SetFillColorAlpha(921, 0.65)
-        g.Draw("3 same")
+        color = self.theory_colors[i]
+        g.SetLineColor(color)
+        g.SetLineWidth(2)
+        g.SetFillColor(color)
+        #g.SetFillColorAlpha(color, 0.65)
+        if type(g) == ROOT.TGraphAsymmErrors:
+          g.Draw("3 same")
+        elif type(g) == ROOT.TGraph:
+          g.Draw("same")
         
-      self.label_list = []
-      self.sublabel_list = []
-          
+        label = self.label_list[i]
+        sublabel = self.sublabel_list[i]
+        ratio_legend.AddEntry(g, '{}, {}'.format(label, sublabel), 'L')
+     
+    ratio_legend.Draw()
+     
+    if self.plot_data:
+      h_ratio_sys.DrawCopy('E2 same')
+      h_ratio.DrawCopy('PE X0 same')
+   
     pad1.cd()
     myLegend.AddEntry(self.h_main_pp, 'pp', 'PE')
     myLegend.AddEntry(self.h_main_AA, 'Pb-Pb 0-10%', 'PE')
