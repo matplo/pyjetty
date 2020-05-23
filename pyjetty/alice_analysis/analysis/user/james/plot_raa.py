@@ -33,15 +33,11 @@ class PlotRAA(common_base.CommonBase):
   # Initialize config file into class members
   #---------------------------------------------------------------
   def initialize(self):
-    
-    # Read config file
-    #with open(self.config_file, 'r') as stream:
-    #  config = yaml.safe_load(stream)
       
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/'
-    self.observables = ['theta_g', 'zg']
+    self.observables = ['theta_g']
     self.jetR_list = [0.2, 0.4]
-    self.plot_theory = False
+    self.plot_theory = True
     
     self.colors = [600-6, 632-4, 416-2]
     self.markers = [20, 21, 33]
@@ -116,7 +112,42 @@ class PlotRAA(common_base.CommonBase):
     else:
       name = 'hRAA_{}_R{}.pdf'.format(observable, self.utils.remove_periods(jetR))
     self.output_filename = os.path.join(self.output_dir, name)
+    
+    # Get theory predictions
+    if self.plot_theory:
+      if observable == 'theta_g':
+        config_file = 'theory_predictions_rg.yaml'
+      if observable == 'zg':
+        config_file = 'theory_predictions_zg.yaml'
+
+      with open(config_file, 'r') as stream:
+        config = yaml.safe_load(stream)
+              
+      self.label_list = []
+      self.observable_name_list = []
+      self.sublabel_list = []
+      self.x_list = []
+      self.ratio_lower_list = []
+      self.ratio_upper_list = []
       
+      self.prediction_types = [name for name in list(config.keys())]
+      for type in self.prediction_types:
+      
+        theory = config[type]
+        configs = [name for name in list(theory.keys()) if 'config' in name ]
+        for prediction in configs:
+          theory_prediction = theory[prediction]
+          config_jetR = theory_prediction['jetR']
+          if config_jetR == jetR:
+            
+            self.label_list.append(theory['label'])
+            self.observable_name_list.append(theory['observable'])
+
+            self.sublabel_list.append(theory_prediction['sublabel'])
+            self.x_list.append(theory_prediction['x'])
+            self.ratio_lower_list.append(theory_prediction['ratio_lower'])
+            self.ratio_upper_list.append(theory_prediction['ratio_upper'])
+        
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
   #----------------------------------------------------------------------
