@@ -168,17 +168,13 @@ class PlotRAA(common_base.CommonBase):
                 ratio = np.divide(y_AA, y_pp)
                 ratio_lower = np.divide(y_AA_min, y_pp)
                 ratio_upper = np.divide(y_AA_max, y_pp)
-                
                 g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
-                g.SetName('g_{}'.format(prediction))
-                
+
               else:
                 y_AA = np.array(theory_prediction['y_AA'])
                 ratio = np.divide(y_AA, y_pp)
-                
                 g = ROOT.TGraph(n, x, ratio)
-                g.SetName('g_{}'.format(prediction))
-            
+
             elif type == 'caucal':
                         
               x = np.array(theory_prediction['x'])
@@ -188,13 +184,16 @@ class PlotRAA(common_base.CommonBase):
               
               n = len(x)
               xerr = np.zeros(n)
-
               g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio_neg_unc_tot, ratio_pos_unc_tot)
-              g.SetName('g_{}'.format(prediction))
             
             elif type == 'hybrid_model':
             
-              xbins = theory_prediction['xbins']
+              #y_pp
+              #y_pp_err
+              #y_AA_lower
+              #y_AA_upper
+
+              xbins = np.array(theory_prediction['xbins'])
               ratio_lower = np.array(theory_prediction['ratio_lower'])
               ratio_upper = np.array(theory_prediction['ratio_upper'])
               if 'ratio' in theory_prediction:
@@ -213,8 +212,10 @@ class PlotRAA(common_base.CommonBase):
               #x = h_ratio.GetXaxis().GetXbins().GetArray()
               #print(x)
                             
-              n = len(self.bin_array)
+              #n = len(self.bin_array)
+              n = len(xbins)
               xerr = np.zeros(n)
+              g = ROOT.TGraphAsymmErrors(n, xbins, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
 
             if prediction in plot_list:
               self.prediction_g_list.append(g)
