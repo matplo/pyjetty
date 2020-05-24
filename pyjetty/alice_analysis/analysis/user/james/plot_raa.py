@@ -35,7 +35,7 @@ class PlotRAA(common_base.CommonBase):
   def initialize(self):
       
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/'
-    self.observables = ['theta_g']
+    self.observables = ['zg', 'theta_g']
     self.jetR_list = [0.2, 0.4]
     self.plot_data = True
     self.plot_theory = True
@@ -144,7 +144,6 @@ class PlotRAA(common_base.CommonBase):
           config_jetR = theory_prediction['jetR']
           if config_jetR == jetR:
             
-            self.observable_name_list.append(theory['observable'])
             plot_list = theory['plot_list']
             
             if type == 'lbnl':
@@ -173,23 +172,26 @@ class PlotRAA(common_base.CommonBase):
                 g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
                 g.SetName('g_{}'.format(prediction))
                 
-                if prediction in plot_list:
-                  self.prediction_g_list.append(g)
-                  self.label_list.append(theory['label'])
-                  self.sublabel_list.append(theory_prediction['sublabel'])
-                
               else:
                 y_AA = np.array(theory_prediction['y_AA'])
                 ratio = np.divide(y_AA, y_pp)
                 
                 g = ROOT.TGraph(n, x, ratio)
                 g.SetName('g_{}'.format(prediction))
-                
-                if prediction in plot_list:
-                  self.prediction_g_list.append(g)
-                  self.label_list.append(theory['label'])
-                  self.sublabel_list.append(theory_prediction['sublabel'])
+            
+            elif type == 'caucal':
+                        
+              x = np.array(theory_prediction['x'])
+              ratio = np.array(theory_prediction['ratio'])
+              ratio_neg_unc_tot = np.array(theory_prediction['ratio_neg_unc_tot'])
+              ratio_pos_unc_tot = np.array(theory_prediction['ratio_pos_unc_tot'])
               
+              n = len(x)
+              xerr = np.zeros(n)
+
+              g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio_neg_unc_tot, ratio_pos_unc_tot)
+              g.SetName('g_{}'.format(prediction))
+            
             elif type == 'hybrid_model':
             
               xbins = theory_prediction['xbins']
@@ -214,12 +216,11 @@ class PlotRAA(common_base.CommonBase):
               n = len(self.bin_array)
               xerr = np.zeros(n)
 
-              g = ROOT.TGraphAsymmErrors(n, np.array(xbins), ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
-              
-              if prediction in plot_list:
-                self.prediction_g_list.append(g)
-                self.label_list.append(theory['label'])
-                self.sublabel_list.append(theory_prediction['sublabel'])
+            if prediction in plot_list:
+              self.prediction_g_list.append(g)
+              self.label_list.append(theory['label'])
+              self.sublabel_list.append(theory_prediction['sublabel'])
+              self.observable_name_list.append(theory['observable'])
                 
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
