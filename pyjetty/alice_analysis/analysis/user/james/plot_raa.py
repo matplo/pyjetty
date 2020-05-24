@@ -35,15 +35,17 @@ class PlotRAA(common_base.CommonBase):
   def initialize(self):
       
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/'
-    self.observables = ['theta_g']
+    self.observables = ['zg', 'theta_g']
     self.jetR_list = [0.2, 0.4]
     self.plot_data = True
     self.plot_theory = True
     
     self.colors = [600-6, 632-4]
     self.markers = [20, 21, 33]
-    self.theory_colors  = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kOrange+7, ROOT.kPink+1, 416-2, 1]
-    
+    self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1]
+    self.line_style = [1, 1, 1, 1, 9, 1]
+    self.line_width = [4, 4, 4, 4, 6, 4]
+             
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
     self.figure_approval_status = 'Preliminary'
@@ -186,11 +188,26 @@ class PlotRAA(common_base.CommonBase):
               xerr = np.zeros(n)
               g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio_neg_unc_tot, ratio_pos_unc_tot)
             
+            elif type == 'guangyou':
+            
+              x = np.array(theory_prediction['x'])
+              ratio = np.array(theory_prediction['ratio'])
+
+              n = len(x)
+              g = ROOT.TGraph(n, x, ratio)
+            
             elif type == 'hybrid_model':
             
-              xbins = np.array(theory_prediction['xbins'])
+              #x = np.array(theory_prediction['xbins'])
+              #ratio_lower = np.array(theory_prediction['ratio_lower'])
+              #ratio_upper = np.array(theory_prediction['ratio_upper'])
+              #if 'ratio' in theory_prediction:
+              #  ratio = np.array(theory_prediction['ratio'])
+              #else:
+              #  ratio = (ratio_lower + ratio_upper) / 2.
               
               # Get distributions
+              xbins = np.array(theory_prediction['xbins'])
               y_pp = np.array(theory_prediction['y_pp'])
               y_pp_err = np.array(theory_prediction['y_pp_err'])
               y_AA_lower = np.array(theory_prediction['y_AA_lower'])
@@ -212,6 +229,7 @@ class PlotRAA(common_base.CommonBase):
               n = len(x)
               xerr = np.zeros(n)
               g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
+              #g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
 
             if prediction in plot_list:
               self.prediction_g_list.append(g)
@@ -270,7 +288,7 @@ class PlotRAA(common_base.CommonBase):
     c.Draw()
     
     c.cd()
-    pad1 = ROOT.TPad('myPad', 'The pad',0,0.4,1,1)
+    pad1 = ROOT.TPad('myPad', 'The pad',0,0.45,1,1)
     pad1.SetLeftMargin(0.2)
     pad1.SetTopMargin(0.08)
     pad1.SetRightMargin(0.04)
@@ -280,7 +298,7 @@ class PlotRAA(common_base.CommonBase):
     pad1.cd()
 
     myLegend = ROOT.TLegend(0.25,0.65,0.45,0.85)
-    self.utils.setup_legend(myLegend,0.05)
+    self.utils.setup_legend(myLegend,0.055)
     
     self.h_main_pp.SetMarkerSize(1.5)
     self.h_main_pp.SetMarkerStyle(self.markers[0])
@@ -346,16 +364,16 @@ class PlotRAA(common_base.CommonBase):
       rg_axis.Draw()
  
     c.cd()
-    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.4)
+    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.45)
     pad2.SetTopMargin(0)
-    pad2.SetBottomMargin(0.3)
+    pad2.SetBottomMargin(0.21)
     pad2.SetLeftMargin(0.2)
     pad2.SetRightMargin(0.04)
     pad2.SetTicks(0,1)
     pad2.Draw()
     pad2.cd()
     
-    ratio_legend = ROOT.TLegend(0.45,0.65,0.75,0.95)
+    ratio_legend = ROOT.TLegend(0.4,0.67,0.55,0.97)
     self.utils.setup_legend(ratio_legend,0.05)
           
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
@@ -363,7 +381,7 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto2.SetXTitle(self.xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
     myBlankHisto2.GetXaxis().SetTitleFont(43)
-    myBlankHisto2.GetXaxis().SetTitleOffset(3.)
+    myBlankHisto2.GetXaxis().SetTitleOffset(1.9)
     myBlankHisto2.GetXaxis().SetLabelFont(43)
     myBlankHisto2.GetXaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetTitleSize(25)
@@ -374,11 +392,11 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto2.GetYaxis().SetNdivisions(505)
     if observable == 'theta_g':
       if jetR == 0.2:
-        myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.3)
       else:
         myBlankHisto2.GetYaxis().SetRangeUser(0., 2.1)
     else:
-      myBlankHisto2.GetYaxis().SetRangeUser(0.4, 1.6)
+      myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
 
     myBlankHisto2.Draw('')
   
@@ -389,9 +407,14 @@ class PlotRAA(common_base.CommonBase):
       
     h_ratio = self.h_main_AA.Clone()
     h_ratio.Divide(self.h_main_pp)
-      
+    ratio_color = ROOT.kGray+3
+    h_ratio.SetMarkerColor(ratio_color)
+    h_ratio.SetLineColor(ratio_color)
+
     h_ratio_sys = self.h_sys_AA.Clone()
     h_ratio_sys.Divide(self.h_sys_pp)
+    h_ratio_sys.SetFillColor(ratio_color)
+    h_ratio_sys.SetFillColorAlpha(ratio_color, 0.3)
 
     pad1.cd()
     if self.plot_data:
@@ -403,23 +426,24 @@ class PlotRAA(common_base.CommonBase):
     pad2.cd()
 
     if self.plot_theory:
-    
+
       for i, g in enumerate(self.prediction_g_list):
+              
+        label = self.label_list[i]
+        sublabel = self.sublabel_list[i]
 
         color = self.theory_colors[i]
         g.SetLineColor(color)
-        g.SetLineWidth(2)
         g.SetFillColor(color)
-        #g.SetFillColorAlpha(color, 0.65)
         if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
           g.Draw("3 same")
+          ratio_legend.AddEntry(g, '{}, {}'.format(label, sublabel), 'F')
         elif type(g) == ROOT.TGraph:
+          g.SetLineStyle(self.line_style[i])
+          g.SetLineWidth(6)
           g.Draw("same")
-        
-        label = self.label_list[i]
-        sublabel = self.sublabel_list[i]
-        ratio_legend.AddEntry(g, '{}, {}'.format(label, sublabel), 'L')
-     
+          ratio_legend.AddEntry(g, '{}, {}'.format(label, sublabel), 'L')
+
     ratio_legend.Draw()
      
     if self.plot_data:
@@ -434,28 +458,28 @@ class PlotRAA(common_base.CommonBase):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     
-    text_latex.SetTextSize(0.05)
+    text_latex.SetTextSize(0.055)
     text = '#it{{f}}_{{tagged}}^{{pp}} = {:.2f}, #it{{f}}_{{tagged}}^{{AA}} = {:.2f}'.format(self.f_tagging_pp, self.f_tagging_AA)
-    text_latex.DrawLatex(0.56, 0.39, text)
+    text_latex.DrawLatex(0.56, 0.36, text)
 
-    text_latex.SetTextSize(0.06)
+    text_latex.SetTextSize(0.065)
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.56, 0.84, text)
+    text_latex.DrawLatex(0.56, 0.83, text)
     
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
-    text_latex.DrawLatex(0.56, 0.77, text)
+    text_latex.DrawLatex(0.56, 0.75, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.DrawLatex(0.56, 0.7, text)
+    text_latex.DrawLatex(0.56, 0.67, text)
     
     text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
-    text_latex.DrawLatex(0.56, 0.63, text)
+    text_latex.DrawLatex(0.56, 0.6, text)
     
     text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.56, 0.56, text)
+    text_latex.DrawLatex(0.56, 0.53, text)
     
     text = self.formatted_grooming_label
-    text_latex.DrawLatex(0.56, 0.47, text)
+    text_latex.DrawLatex(0.56, 0.44, text)
     
     myLegend.Draw()
 

@@ -79,8 +79,7 @@ hybrid_model:
 lbnl:
   label: 'Yuan et al.'
   observable: 'theta_g'
-  plot_list: ['config1', 'config2', 'config6', 'config7']
-  #plot_list: ['config1', 'config2', 'config4', 'config6', 'config7', 'config9']
+  plot_list: ['config1', 'config2', 'config4', 'config6', 'config7', 'config9']
   #plot_list: ['config1', 'config2', 'config3', 'config4', 'config5', 'config6', 'config7', 'config8', 'config9', 'config10']
 
   config1:
