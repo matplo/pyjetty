@@ -37,7 +37,7 @@ class PlotRAA(common_base.CommonBase):
     self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/'
     self.observables = ['theta_g']
     self.jetR_list = [0.2, 0.4]
-    self.plot_data = False
+    self.plot_data = True
     self.plot_theory = True
     
     self.colors = [600-6, 632-4]
@@ -195,30 +195,23 @@ class PlotRAA(common_base.CommonBase):
               y_pp_err = np.array(theory_prediction['y_pp_err'])
               y_AA_lower = np.array(theory_prediction['y_AA_lower'])
               y_AA_upper = np.array(theory_prediction['y_AA_upper'])
+              y_AA = (y_AA_lower + y_AA_upper) / 2.
               
               # Rebin distributions
-              x, y_pp = self.rebin_arrays(xbins, y_pp)
-              _, y_pp_err = self.rebin_arrays(xbins, y_pp_err)
-              _, y_AA_lower = self.rebin_arrays(xbins, y_AA_lower)
-              _, y_AA_upper = self.rebin_arrays(xbins, y_AA_upper)
+              x, y_pp, y_pp_err = self.rebin_arrays(xbins, y_pp, y_pp_err)
+              _, y_AA, y_AA_err = self.rebin_arrays(xbins, y_AA, y_AA-y_AA_lower)
 
               # Form ratio and propagate uncertainty
-              y_AA = (y_AA_lower + y_AA_upper) / 2.
-              y_AA_lower_fraction = np.divide(y_AA - y_AA_lower, y_AA)
-              y_AA_upper_fraction = np.divide(y_AA_upper - y_AA, y_AA)
               y_pp_err_fraction = np.divide(y_pp_err, y_pp)
+              y_AA_err_fraction = np.divide(y_AA_err, y_AA)
               
               ratio = np.divide(y_AA, y_pp)
-              ratio_lower_fraction = np.sqrt(np.square(y_AA_lower_fraction) + np.square(y_pp_err_fraction))
-              ratio_upper_fraction = np.sqrt(np.square(y_AA_upper_fraction) + np.square(y_pp_err_fraction))
-            
-              ratio_lower = np.multiply(ratio, ratio_lower_fraction)
-              ratio_upper = np.multiply(ratio, ratio_upper_fraction)
+              ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
+              ratio_err = np.multiply(ratio, ratio_err_fraction)
     
-              print(x)
               n = len(x)
               xerr = np.zeros(n)
-              g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio_lower, ratio_upper)
+              g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
 
             if prediction in plot_list:
               self.prediction_g_list.append(g)
@@ -235,20 +228,23 @@ class PlotRAA(common_base.CommonBase):
   # I don't find any easy way to do this...so I
   #        construct TH1, rebin, and then extract array)
   #----------------------------------------------------------------------
-  def rebin_arrays(self, x, y):
+  def rebin_arrays(self, x, y, yerr):
 
     x_array = array('d', x)
     h = ROOT.TH1F('h', 'h', len(x)-1, x_array)
     for i, content in enumerate(y):
       h.SetBinContent(i+1, y[i])
+      h.SetBinError(i+1, yerr[i])
     h_rebinned = h.Rebin(len(self.bin_array)-1, 'h_rebinned', self.bin_array)
     x_rebinned = []
     y_rebinned = []
+    y_err_rebinned = []
     for i in range(len(self.bin_array)-1):
       x_rebinned.append(h_rebinned.GetBinCenter(i+1))
       y_rebinned.append(h_rebinned.GetBinContent(i+1))
+      y_err_rebinned.append(h_rebinned.GetBinError(i+1))
       
-    return (np.array(x_rebinned), np.array(y_rebinned))
+    return (np.array(x_rebinned), np.array(y_rebinned), np.array(y_err_rebinned))
     
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -415,7 +411,7 @@ class PlotRAA(common_base.CommonBase):
         g.SetLineWidth(2)
         g.SetFillColor(color)
         #g.SetFillColorAlpha(color, 0.65)
-        if type(g) == ROOT.TGraphAsymmErrors:
+        if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
           g.Draw("3 same")
         elif type(g) == ROOT.TGraph:
           g.Draw("same")
