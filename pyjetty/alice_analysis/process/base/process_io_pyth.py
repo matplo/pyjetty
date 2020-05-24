@@ -39,8 +39,8 @@ class ProcessIO(common_base.CommonBase):
     self.tree_name = tree_name
     self.reset_dataframes()
 
-    self.MPIoff_columns = ['p_pt', 'p_eta', 'p_phi']
-    self.MPIon_columns = ['ch_pt', 'ch_eta', 'ch_phi']
+    self.MPIoff_columns = ['iev', 'p_pt', 'p_eta', 'p_phi']
+    self.MPIon_columns = ['iev', 'ch_pt', 'ch_eta', 'ch_phi']
     for beta in betas:
       self.MPIoff_columns.append('l_p_%s' % str(beta).replace('.',''))
       self.MPIon_columns.append('l_ch_%s' % str(beta).replace('.',''))
@@ -79,13 +79,22 @@ class ProcessIO(common_base.CommonBase):
     MPIoff_tree = uproot.open(self.input_file_MPIoff)[self.tree_name]
     if not MPIoff_tree:
       sys.exit('Tree {} not found in file {}'.format(self.tree_name, self.input_file_MPIoff))
-    self.MPIoff_df = MPIoff_tree.pandas.df(self.MPIoff_columns)
+    MPIoff_df = MPIoff_tree.pandas.df(self.MPIoff_columns)
+    print(MPIoff_df)
 
     # Load MPI on tree into dataframe
     MPIon_tree = uproot.open(self.input_file_MPIon)[self.tree_name]
     if not MPIon_tree:
       sys.exit('Tree {} not found in file {}'.format(self.tree_name, self.input_file_MPIon))
     self.MPIon_df = MPIon_tree.pandas.df(self.MPIon_columns)
+    print(self.MPIon_df)
+
+    # MPI on has fewer successful events than MPI off. Need to drop from MPI off
+    bool_drop_list = list(~MPIoff_df["iev"].isin(self.MPIon_df["iev"]))
+    i_drop_list = [ i for i,val in enumerate(bool_drop_list) if val ]
+    self.MPIoff_df = MPIoff_df.drop(i_drop_list)
+    print(len(self.MPIoff_df), len(self.MPIon_df))
+    exit()
 
     # Merge event info into track tree
     self.track_df = self.MPIoff_df.join(self.MPIon_df)
