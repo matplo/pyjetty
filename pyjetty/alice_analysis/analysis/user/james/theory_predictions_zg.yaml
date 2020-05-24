@@ -26,7 +26,7 @@ caucal:
 hybrid_model:
   label: 'Pablos et al.'
   observable: 'zg'
-  plot_list: ['config1', 'config3']
+  plot_list: ['config1', 'config2', 'config3', 'config4']
 
   config1:
     jetR: 0.2
