@@ -47,7 +47,7 @@ class PlotRAA(common_base.CommonBase):
     self.line_width = [4, 4, 4, 4, 6, 4]
              
     self.obs_label = 'SD_zcut02_B0'
-    self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #beta=0'
+    self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #it{#beta}=0'
     self.figure_approval_status = 'Preliminary'
     
     if not os.path.exists(self.output_dir):
@@ -73,10 +73,10 @@ class PlotRAA(common_base.CommonBase):
     self.file_AA_name = os.path.join(self.filedir_AA_name, '{}/final_results/fFinalResults.root'.format(observable))
 
     if observable == 'theta_g':
-      self.xtitle = '#theta_{g}'
+      self.xtitle = '#it{#theta}_{g}'
     if observable == 'zg':
       self.xtitle = '#it{z}_{g}'
-    self.ytitle = '#frac{{1}}{{#sigma_{{jet, inc}}}} #frac{{d#sigma}}{{d{}}}'.format(self.xtitle)
+    self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
  
     self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(observable, jetR, self.obs_label, self.min_pt, self.max_pt)
     self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(observable, jetR, self.obs_label, self.min_pt, self.max_pt)
@@ -377,11 +377,11 @@ class PlotRAA(common_base.CommonBase):
     self.utils.setup_legend(ratio_legend,0.05)
           
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
-    myBlankHisto2.SetYTitle('#frac{Pb-Pb}{pp}')
+    myBlankHisto2.SetYTitle('#frac{Pb#font[122]{-}Pb}{pp}')
     myBlankHisto2.SetXTitle(self.xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
     myBlankHisto2.GetXaxis().SetTitleFont(43)
-    myBlankHisto2.GetXaxis().SetTitleOffset(1.9)
+    myBlankHisto2.GetXaxis().SetTitleOffset(1.95)
     myBlankHisto2.GetXaxis().SetLabelFont(43)
     myBlankHisto2.GetXaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetTitleSize(25)
@@ -452,7 +452,7 @@ class PlotRAA(common_base.CommonBase):
    
     pad1.cd()
     myLegend.AddEntry(self.h_main_pp, 'pp', 'PE')
-    myLegend.AddEntry(self.h_main_AA, 'Pb-Pb 0-10%', 'PE')
+    myLegend.AddEntry(self.h_main_AA, 'Pb#font[122]{-}Pb 0#font[122]{-}10%', 'PE')
     myLegend.AddEntry(self.h_sys_pp, 'Sys. uncertainty', 'f')
     
     text_latex = ROOT.TLatex()
@@ -472,7 +472,7 @@ class PlotRAA(common_base.CommonBase):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(0.56, 0.67, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
     text_latex.DrawLatex(0.56, 0.6, text)
     
     text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
