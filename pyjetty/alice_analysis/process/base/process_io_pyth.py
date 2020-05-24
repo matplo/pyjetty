@@ -42,8 +42,8 @@ class ProcessIO(common_base.CommonBase):
     self.MPIoff_columns = ['p_pt', 'p_eta', 'p_phi']
     self.MPIon_columns = ['ch_pt', 'ch_eta', 'ch_phi']
     for beta in betas:
-      self.MPIoff_columns,append('l_p_%s' % str(beta).replace('.',''))
-      self.MPIon_columns,append('l_ch_%s' % str(beta).replace('.',''))
+      self.MPIoff_columns.append('l_p_%s' % str(beta).replace('.',''))
+      self.MPIon_columns.append('l_ch_%s' % str(beta).replace('.',''))
   
   #---------------------------------------------------------------
   # Clear dataframes
@@ -57,16 +57,15 @@ class ProcessIO(common_base.CommonBase):
   # Optionally, remove a certain random fraction of tracks
   #---------------------------------------------------------------
   def load_data(self):
-    
-    self.reject_tracks_fraction = reject_tracks_fraction
+
     self.reset_dataframes()
 
     print('Convert ROOT trees to pandas dataframes...')
     print('    tree_name = {}'.format(self.tree_name))
 
-    self.track_df = self.load_dataframe()
+    self.ang_jets_df = self.load_dataframe()
 
-    return df_fjparticles
+    return self.ang_jets_df
   
   #---------------------------------------------------------------
   # Convert ROOT TTree to pandas dataframe

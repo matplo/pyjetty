@@ -31,7 +31,7 @@ import fjcontrib
 import fjext
 
 # Analysis utilities
-from pyjetty.alice_analysis.process.base import process_io, process_utils, process_base
+from pyjetty.alice_analysis.process.base import process_io_pyth, process_utils, process_base
 from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa, pT_bin
 
 # Prevent ROOT from stealing focus when plotting
@@ -63,10 +63,10 @@ class process_ang_data(process_base.ProcessBase):
     # of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
     for jetR in self.jetR_list:
-      inf_MPIon = "PythiaResults_R%s.root" % str(jetR)
-      inf_MPIoff = "PythiaResults_R%s_MPIoff.root" % str(jetR)
-      io = process_io.ProcessIO(input_file_MPIon=inf_MPIon, input_file_MPIoff=inf_MPIoff,
-                                betas=self.beta_list)
+      inf_MPIon = self.input_dir + "PythiaResults_R%s.root" % str(jetR)
+      inf_MPIoff = self.input_dir + "PythiaResults_R%s_MPIoff.root" % str(jetR)
+      io = process_io_pyth.ProcessIO(input_file_MPIon=inf_MPIon, input_file_MPIoff=inf_MPIoff,
+                                     betas=self.beta_list)
       self.df_ang_jets = io.load_data()
       print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -137,7 +137,7 @@ class process_ang_data(process_base.ProcessBase):
 
       for beta in self.beta_list:
 
-        label = "R%s_%s" % (str(jetR), str(beta))
+        label = ("R%s_%s" % (str(jetR), str(beta))).replace('.', '')
 
         name = 'hResponse_ang_p_%s' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
@@ -168,8 +168,8 @@ class process_ang_data(process_base.ProcessBase):
 
         # Create THn of response
         dim = 4
-        title = ['p_{T}^{jet, ch}', 'p_{T}^{jet, parton}', 
-                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
+        title = ['p_{T}^{jet, parton}', 'p_{T}^{jet, ch}',
+                 '#lambda_{#beta}^{parton}', '#lambda_{#beta}^{ch}']
         nbins = [10, 20, 100, 100]
         min_li = [0.,   0.,   0.,  0.]
         max_li = [100., 200., 1.0, 1.0]
@@ -191,7 +191,10 @@ class process_ang_data(process_base.ProcessBase):
   #---------------------------------------------------------------
   def analyzeJets(self, jetR):
 
-    for ang_jets in self.df_ang_jets.iterrows():
+    for index, ang_jets in self.df_ang_jets.iterrows():
+
+      if abs(ang_jets["ch_eta"]) > 0.9:
+        continue
 
       self.fillJetHistograms(ang_jets, jetR)
 
@@ -211,7 +214,7 @@ class process_ang_data(process_base.ProcessBase):
     getattr(self, "hJetPt_p_%s" % label).Fill(ang_jets["p_pt"])
 
     jet_pt_res = (ang_jets["p_pt"] - ang_jets["ch_pt"]) / ang_jets["p_pt"]
-    getattr(self, "hJetPtRes_%s" % label).Fill(jet_pt_res)
+    getattr(self, "hJetPtRes_%s" % label).Fill(ang_jets["p_pt"], jet_pt_res)
 
     getattr(self, 'hResponse_JetPt_%s' % label).Fill(ang_jets["p_pt"], ang_jets["ch_pt"])
 
@@ -223,24 +226,28 @@ class process_ang_data(process_base.ProcessBase):
 
     label = ("R%s_%s" % (str(jetR), str(beta))).replace('.', '')
 
-    getattr(self, 'hResponse_ang_p_%s' % label).Fill(ang_jets["l_p"], ang_jets["l_ch"])
-    getattr(self, 'hAng_JetPt_ch_%s' % label).Fill(ang_jets["ch_pt"], ang_jets["l_ch"])
-    getattr(self, 'hAng_JetPt_p_%s' % label).Fill(ang_jets["p_pt"], ang_jets["l_p"])
+    b = str(beta).replace('.', '')
+    l_p = ang_jets["l_p_%s" % b]
+    l_ch = ang_jets["l_ch_%s" % b]
 
-    res = (ang_jets["l_p"] - ang_jets["l_ch"]) / ang_jets["l_p"]
-    getattr(self, "hAngResidual_JetPt_%s" % label).Fill(res)
+    getattr(self, 'hResponse_ang_p_%s' % label).Fill(l_p, l_ch)
+    getattr(self, 'hAng_JetPt_ch_%s' % label).Fill(ang_jets["ch_pt"], l_ch)
+    getattr(self, 'hAng_JetPt_p_%s' % label).Fill(ang_jets["p_pt"], l_p)
 
-    getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(
-      ang_jets["ch_pt"], ang_jets["p_pt"], ang_jets["l_ch"], ang_jets["l_p"])
+    if l_p != 0:
+      res = (l_p - l_ch) / l_p
+      getattr(self, "hAngResidual_JetPt_%s" % label).Fill(ang_jets["p_pt"], res)
 
+    x = array('d', [ang_jets["p_pt"], ang_jets["ch_pt"], l_p, l_ch])
+    getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(x)
 
 ##################################################################
 if __name__ == '__main__':
   # Define arguments
   parser = argparse.ArgumentParser(description='Plot analysis histograms')
-  parser.add_argument('-f', '--inputFile', action='store',
-                      type=str, metavar='inputFile',
-                      default='AnalysisResults.root',
+  parser.add_argument('-i', '--inputDir', action='store',
+                      type=str, metavar='inputDir',
+                      default='./',
                       help='Path of ROOT file containing TTrees')
   parser.add_argument('-c', '--configFile', action='store',
                       type=str, metavar='configFile',
@@ -255,14 +262,14 @@ if __name__ == '__main__':
   args = parser.parse_args()
   
   print('Configuring...')
-  print('inputFile: \'{0}\''.format(args.inputFile))
+  print('inputDir: \'{0}\''.format(args.inputDir))
   print('configFile: \'{0}\''.format(args.configFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
   print('----------------------------------------------------------------')
   
   # If invalid inputFile is given, exit
-  if not os.path.exists(args.inputFile):
-    print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
+  if not os.path.exists(args.inputDir):
+    print('Directory \"{0}\" does not exist! Exiting!'.format(args.inputDir))
     sys.exit(0)
   
   # If invalid configFile is given, exit
@@ -270,6 +277,6 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = process_ang_data(input_file=args.inputFile, config_file=args.configFile, 
+  analysis = process_ang_data(input_dir=args.inputDir, config_file=args.configFile, 
                               output_dir=args.outputDir)
   analysis.process_ang_data()
