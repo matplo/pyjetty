@@ -16,6 +16,7 @@ import sys
 import argparse
 import math
 import time
+from tqdm import tqdm
 
 # Data analysis and plotting
 import uproot
@@ -191,7 +192,7 @@ class process_ang_data(process_base.ProcessBase):
   #---------------------------------------------------------------
   def analyzeJets(self, jetR):
 
-    for index, ang_jets in self.df_ang_jets.iterrows():
+    for index, ang_jets in tqdm(self.df_ang_jets.iterrows()):
 
       if abs(ang_jets["ch_eta"]) > 0.9:
         continue

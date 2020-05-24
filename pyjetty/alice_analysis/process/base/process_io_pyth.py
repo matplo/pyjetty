@@ -32,11 +32,13 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input_file_MPIon='', input_file_MPIoff='', tree_name='t', betas=[], **kwargs):
+  def __init__(self, input_file_MPIon='', input_file_MPIoff='', mergebetween=False,
+               tree_name='t', betas=[], **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file_MPIon = input_file_MPIon
     self.input_file_MPIoff = input_file_MPIoff
     self.tree_name = tree_name
+    self.merge_between = mergebetween
     self.reset_dataframes()
 
     self.MPIoff_columns = ['iev', 'p_pt', 'p_eta', 'p_phi']
@@ -75,27 +77,35 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   def load_dataframe(self):
 
-    # Load MPI off tree into dataframe
-    MPIoff_tree = uproot.open(self.input_file_MPIoff)[self.tree_name]
-    if not MPIoff_tree:
-      sys.exit('Tree {} not found in file {}'.format(self.tree_name, self.input_file_MPIoff))
-    MPIoff_df = MPIoff_tree.pandas.df(self.MPIoff_columns)
-    print(MPIoff_df)
+    if self.merge_between:
+      # Load MPI off tree into dataframe
+      MPIoff_tree = uproot.open(self.input_file_MPIoff)[self.tree_name]
+      if not MPIoff_tree:
+        sys.exit('Tree {} not found in file {}'.format(self.tree_name, self.input_file_MPIoff))
+      MPIoff_df = MPIoff_tree.pandas.df(self.MPIoff_columns)
+      print(MPIoff_df)
 
-    # Load MPI on tree into dataframe
-    MPIon_tree = uproot.open(self.input_file_MPIon)[self.tree_name]
-    if not MPIon_tree:
-      sys.exit('Tree {} not found in file {}'.format(self.tree_name, self.input_file_MPIon))
-    self.MPIon_df = MPIon_tree.pandas.df(self.MPIon_columns)
-    print(self.MPIon_df)
+      # Load MPI on tree into dataframe
+      MPIon_tree = uproot.open(self.input_file_MPIon)[self.tree_name]
+      if not MPIon_tree:
+        sys.exit('Tree {} not found in file {}'.format(self.tree_name, self.input_file_MPIon))
+      self.MPIon_df = MPIon_tree.pandas.df(self.MPIon_columns)
+      print(self.MPIon_df)
 
-    # MPI on has fewer successful events than MPI off. Need to drop from MPI off
-    bool_drop_list = list(~MPIoff_df["iev"].isin(self.MPIon_df["iev"]))
-    i_drop_list = [ i for i,val in enumerate(bool_drop_list) if val ]
-    self.MPIoff_df = MPIoff_df.drop(i_drop_list)
-    print(len(self.MPIoff_df), len(self.MPIon_df))
-    exit()
+      # MPI on has fewer successful events than MPI off. Need to drop from MPI off
+      bool_drop_list = list(~MPIoff_df["iev"].isin(self.MPIon_df["iev"]))
+      i_drop_list = [ i for i,val in enumerate(bool_drop_list) if val ]
+      self.MPIoff_df = MPIoff_df.drop(i_drop_list)
 
-    # Merge event info into track tree
-    self.track_df = self.MPIoff_df.join(self.MPIon_df)
-    return self.track_df
+      # Merge trees
+      self.jets_df = self.MPIoff_df.join(self.MPIon_df)
+
+    else:
+      # Load MPI off tree into dataframe
+      columns = self.MPIoff_columns + self.MPIon_columns[1:]
+      MPIoff_tree = uproot.open(self.input_file_MPIoff)[self.tree_name]
+      if not MPIoff_tree:
+        sys.exit('Tree {} not found in file {}'.format(self.tree_name, self.input_file_MPIoff))
+      self.jets_df = MPIoff_tree.pandas.df(columns)
+
+    return self.jets_df
