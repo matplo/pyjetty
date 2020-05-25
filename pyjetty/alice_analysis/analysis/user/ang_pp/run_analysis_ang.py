@@ -349,33 +349,52 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     if jetR == 0.2:
       xedges = [0., 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.12]
-      yvals = [2.8805, 11.8859, 17.3133, 17.6165, 15.2212, 12.9774, 9.09631, 2.48633]
-      yerror = [3.04995, 12.3439, 17.8915, 17.8674, 15.634, 13.3525, 9.5341, 2.61768]
+      yvals = [2.892837, 11.9108, 17.3579, 17.65965, 15.25709, 13.00818, 9.1359, 2.471203]
+      staterror = [0.09723696, 0.2879163, 0.3482209, 0.3487025, 0.3212577,
+                   0.2975396, 0.2503627, 0.06595427]
+      syserrorl = [0.1654749, 0.4376057, 0.536369, 0.1987916, 0.3712922,
+                   0.3223265, 0.3906225, 0.1588837]
+      syserrorh = [0.1673992, 0.4359767, 0.5354239, 0.200042, 0.3804927,
+                   0.3368305, 0.3948841, 0.1588432]
     else:  #jetR == 0.4:
       xedges = [0, 0.02, 0.03, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.18, 0.22]
-      yvals = [0.606421, 2.81986, 5.97325, 9.7937, 9.88466, 8.58086, 6.15517, 4.63912, 2.3044, 0.697384]
-      yerror = [0.720461, 2.90586, 6.02786, 9.91835, 9.99039, 8.64553, 6.26801, 4.683, 2.32949, 0.720461]
+      yvals = [0.6078014, 2.815131, 5.960223, 9.770085, 9.899658, 8.603309,
+               6.119539, 4.60788, 2.300467, 0.7015587]
+      staterror = [0.0430097, 0.1299623, 0.1900576, 0.1710785, 0.1712931, 0.1581808,
+                   0.1320032, 0.1172254, 0.059633, 0.03359087]
+      syserrorl = [0.1025423, 0.1138034, 0.04146903, 0.096956, 0.06155705, 0.06077894,
+                   0.08091901, 0.06775198, 0.03015912, 0.04115888]
+      syserrorh = [0.1024212, 0.1204349, 0.07618093, 0.1491075, 0.07706482, 0.03761498,
+                   0.1431532, 0.1033103, 0.02661073, 0.0411509]
+
+    # Scale values by R due to observable definition
     xedges_scaled = array('d', [round(val / jetR, 2) for val in xedges])
     setattr(self, "xedges_prev_prelim_%s" % jetR, xedges_scaled)
-    yvals_scaled = [yvals[i] * (xedges[i+1]-xedges[i]) / (xedges_scaled[i+1]-xedges_scaled[i])
+    scale_factor = [(xedges[i+1]-xedges[i]) / (xedges_scaled[i+1]-xedges_scaled[i])
                     for i in range(0, len(yvals))]
-    yerror_scaled = [yerror[i] * (xedges[i+1]-xedges[i]) / (xedges_scaled[i+1]-xedges_scaled[i])
-                     for i in range(0, len(yerror))]
-    error = [yerror_scaled[i] - yvals_scaled[i] for i in range(0, len(yerror))]
-    name = "ALI−PREL−339374"
-    hComp = ROOT.TH1D(name, name, len(yvals), xedges_scaled)
-    for i in range(1, len(xedges), 1):
-      hComp.SetBinContent(i, yvals_scaled[i-1])
-      hComp.SetBinError(i, error[i-1])
+    yvals_scaled = [yvals[i] * scale_factor[i] for i in range(0, len(yvals))]
+    staterror_scaled = [staterror[i] * scale_factor[i] for i in range(0, len(staterror))]
+    syserrorl_scaled = [syserrorl[i] * scale_factor[i] for i in range(0, len(syserrorl))]
+    syserrorh_scaled = [syserrorh[i] * scale_factor[i] for i in range(0, len(syserrorh))]
 
-    return hComp
+    # Create histograms
+    name = "ALI−PREL−339374"
+    hCompStat = ROOT.TH1D(name, name, len(yvals), xedges_scaled)
+    hCompSys = ROOT.TH1D(name+'_sys', name+'_sys', len(yvals), xedges_scaled)
+    for i in range(1, len(xedges), 1):
+      hCompStat.SetBinContent(i, yvals_scaled[i-1])
+      hCompSys.SetBinContent(i, yvals_scaled[i-1])
+      hCompStat.SetBinError(i, staterror_scaled[i-1])
+      hCompSys.SetBinError(i, max(syserrorl_scaled[i-1], syserrorh_scaled[i-1]))
+
+    return hCompStat, hCompSys
 
   #----------------------------------------------------------------------
   def plot_obs_comp(self, jetR, obs_label, obs_setting, grooming_setting,
                     min_pt_truth, max_pt_truth, maxbin):
     
     # Scale both distributions by integrals
-    scale_by_int = True
+    scale_by_int = False
 
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -439,19 +458,26 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
-    hComp = self.get_h_prelim(jetR)
+    hCompStat, hCompSys = self.get_h_prelim(jetR)
 
     #formatting
-    hComp.SetFillStyle(0)
-    hComp.SetMarkerSize(1.5)
-    hComp.SetMarkerStyle(21)
-    hComp.SetMarkerColor(1)
-    hComp.SetLineColor(1)
-    hComp.SetLineWidth(1)
+    hCompStat.SetFillStyle(0)
+    hCompStat.SetMarkerSize(1.5)
+    hCompStat.SetMarkerStyle(21)
+    hCompStat.SetMarkerColor(1)
+    hCompStat.SetLineColor(1)
+    hCompStat.SetLineWidth(1)
+    hCompSys.SetLineColor(0)
+    hCompSys.SetFillColor(1)
+    hCompSys.SetFillColorAlpha(1, 0.3)
+    hCompSys.SetFillStyle(1001)
+    hCompSys.SetLineWidth(0)
     if scale_by_int:
-      hComp.Scale(1/hComp.Integral())
+      hCompStat.Scale(1/hCompStat.Integral())
+      hCompSys.Scale(1/hCompSys.Integral())
 
-    hComp.Draw('PE2 same')    
+    hCompSys.Draw('E2 same')
+    hCompStat.Draw('PE X0 same')
     h_sys.DrawCopy('E2 same')
     h.DrawCopy('PE X0 same')
   
@@ -489,7 +515,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'This measurement', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
-    myLegend.AddEntry(hComp, 'ALI-PREL-339374', 'pe')
+    myLegend.AddEntry(hCompStat, 'ALI-PREL-339374', 'pe')
     myLegend.Draw()
 
     name = 'hUnfoldedComp_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR),
@@ -508,7 +534,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
     h.Write()
     h_sys.Write()
-    hComp.Write()
+    hCompStat.Write()
+    hCompSys.Write()
     fFinalResults.Close()
 
   #----------------------------------------------------------------------
@@ -660,9 +687,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       if (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
         # Use previous preliminary result
-        h = self.get_h_prelim(jetR)
+        h, h_sys = self.get_h_prelim(jetR)
         # Move error bars to different histogram
-        h_sys = h.Clone()
         h_sys.SetNameTitle("hSysPrelim%s", "hSysPrelim%s")
         for i in range(1, h.GetNbinsX()+1, 1):
           h.SetBinError(i, 0.)
