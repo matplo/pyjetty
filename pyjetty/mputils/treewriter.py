@@ -14,6 +14,7 @@ class RTreeWriter(MPBase):
 	_fj_psj_type = type(fj.PseudoJet())
 	_fj_psj_vector_type = type(fj.vectorPJ())
 	_fj_LundDeclustering_type = get_LundDeclusteringType()
+	# _fj_sdinfo = type(fjcontrib.SDinfo())
 	def __init__(self, **kwargs):
 		self.configure_from_args(	tree=None, 
 									tree_name=None,
@@ -85,7 +86,7 @@ class RTreeWriter(MPBase):
 										's1' : value.harder(),
 										's2' : value.softer(),
 										'tf' : value.z() * value.Delta() * value.Delta()
-									});
+									})
 			return
 		if bool == type(value):
 			self._fill_branch(bname, value)
