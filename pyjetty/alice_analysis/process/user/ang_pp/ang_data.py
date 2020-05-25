@@ -32,7 +32,7 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io, process_utils, process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers import deltaR, lambda_beta_kappa, pT_bin
+from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa, pT_bin
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -125,13 +125,14 @@ class process_ang_data(process_base.ProcessBase):
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('dN/dp_{T}')
       setattr(self, name, h)
-      
+
+      '''
       name = 'hM_JetPt_R%s' % jetR
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('m_{ch jet}')
       setattr(self, name, h)
-
+      '''
       
       for beta in self.beta_list:
 
@@ -186,15 +187,6 @@ class process_ang_data(process_base.ProcessBase):
         h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
         setattr(self, name, h)
 
-
-        '''
-        name = 'hThetaG_JetPt_R{}_B{}_Rebinned'.format(jetR, beta)
-        h = ROOT.TH2F(name, name, n_pt_bins_det, det_pt_bin_array, n_rg_bins_det, det_rg_bin_array)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('#theta_{g,ch}')
-        setattr(self, name, h)
-        '''
-
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
   #---------------------------------------------------------------
@@ -205,27 +197,27 @@ class process_ang_data(process_base.ProcessBase):
     
     for jetR in self.jetR_list:
       
-      for beta in self.beta_list:
-      
-        # Set jet definition and a jet selector
-        jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-        jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-        print('jet definition is:', jet_def)
-        print('jet selector is:', jet_selector,'\n')
+      # Set jet definition and a jet selector
+      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      print('jet definition is:', jet_def)
+      print('jet selector is:', jet_selector,'\n')
         
-        # Define SoftDrop settings
-        sd = fjcontrib.SoftDrop(self.sd_beta, self.sd_zcut, jetR)
-        print('SoftDrop groomer is: {}'.format(sd.description()));
+      # Define SoftDrop settings
+      sd = fjcontrib.SoftDrop(self.sd_beta, self.sd_zcut, jetR)
+      print('SoftDrop groomer is: {}'.format(sd.description()));
+      
+      for beta in self.beta_list:
 
         # Use list comprehension to do jet-finding and fill histograms
-        result = [self.analyzeJets(fj_particles, jet_def, jet_selector, sd, beta)
+        result = [self.analyzeJets(fj_particles, jet_def, jet_selector, beta, sd)
                   for fj_particles in self.df_fjparticles]
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles, jet_def, jet_selector, sd, beta):
+  def analyzeJets(self, fj_particles, jet_def, jet_selector, beta, sd):
     
     # Do jet finding
     cs = fj.ClusterSequence(fj_particles, jet_def)
@@ -288,7 +280,7 @@ class process_ang_data(process_base.ProcessBase):
     '''
 
     getattr(self, 'hJetPt_R%s' % str(jetR)).Fill(jet_pt)
-    getattr(self, 'hM_JetPt_R%s' % str(jetR)).Fill(jet_pt, jet.m())
+    #getattr(self, 'hM_JetPt_R%s' % str(jetR)).Fill(jet_pt, jet.m())
 
 
 ##################################################################

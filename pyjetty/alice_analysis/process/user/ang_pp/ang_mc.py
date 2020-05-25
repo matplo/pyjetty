@@ -32,7 +32,7 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io, process_utils, jet_info, process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers import deltaR, lambda_beta_kappa, pT_bin
+from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa, pT_bin
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -492,8 +492,9 @@ class process_ang_mc(process_base.ProcessBase):
       getattr(self, ("hLambda_pT%i-%i_%s_mcdet_SD" % (pTmin, pTmax, label)).replace('.', '')).Fill(l_sd_det)
     '''
 
-    lambda_resolution = (l_det - l_tru) / l_tru
-    getattr(self, 'hAngResidual_JetPt_%s' % label).Fill(jet_pt_truth, lambda_resolution)
+    if l_tru != 0:
+      lambda_resolution = (l_det - l_tru) / l_tru
+      getattr(self, 'hAngResidual_JetPt_%s' % label).Fill(jet_pt_truth, lambda_resolution)
 
     # Observable plots
     getattr(self, 'hAng_JetPt_det_%s' % label).Fill(jet_pt_det, l_det)
