@@ -232,9 +232,11 @@ class ProcessGroomers(process_base.ProcessBase):
           self.create_prong_matching_histograms(jetR, grooming_label)
             
       # Create tree to store splitting info for all groomers
-      self.t = ROOT.TTree('t', 't')
-      self.tw = RTreeWriter(tree=self.t)
-              
+      self.fill_tree = False
+      if self.fill_tree:
+        self.t = ROOT.TTree('t', 't')
+        self.tw = RTreeWriter(tree=self.t)
+                
   #---------------------------------------------------------------
   # Create theta_g response histograms
   #---------------------------------------------------------------
@@ -319,7 +321,8 @@ class ProcessGroomers(process_base.ProcessBase):
       return
       
     # Clear event in tree
-    self.tw.clear()
+    if self.fill_tree:
+      self.tw.clear()
   
     # If Pb-Pb, construct embedded event (do this once, for all jetR)
         
@@ -399,8 +402,9 @@ class ProcessGroomers(process_base.ProcessBase):
         
         self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched,
                           jetR, R_max = R_max)
-                          
-    self.tw.fill_tree()
+    
+    if self.fill_tree:
+      self.tw.fill_tree()
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
@@ -581,18 +585,20 @@ class ProcessGroomers(process_base.ProcessBase):
             getattr(self, hname).Fill(jet_pt_truth_ungroomed, tf_truth)
             
         # Fill tree
-        if R_max == self.main_R_max:
-        
-          if grooming_setting == self.grooming_settings[0]:
-            self.tw.fill_branch('R{}_jet_pt_truth_ungroomed'.format(jetR), jet_pt_truth_ungroomed)
-            self.tw.fill_branch('R{}_jet_pt_combined_ungroomed'.format(jetR), jet_pt_combined_ungroomed)
-            
-          label = 'R{}_Rmax{}_{}'.format(jetR, R_max, grooming_label)
-          jet_pt_combined_groomed = jet_combined_groomed.pt()
-          self.tw.fill_branch('{}_jet_pt_combined_groomed'.format(label), jet_pt_combined_groomed)
-          self.tw.fill_branch('{}_zg_combined'.format(label), zg_combined)
-          self.tw.fill_branch('{}_theta_g_combined'.format(label), theta_g_combined)
-          self.tw.fill_branch('{}_prong_matching_flag'.format(label), prong_match)
+        if self.fill_tree:
+
+          if R_max == self.main_R_max:
+          
+            if grooming_setting == self.grooming_settings[0]:
+              self.tw.fill_branch('R{}_jet_pt_truth_ungroomed'.format(jetR), jet_pt_truth_ungroomed)
+              self.tw.fill_branch('R{}_jet_pt_combined_ungroomed'.format(jetR), jet_pt_combined_ungroomed)
+              
+            label = 'R{}_Rmax{}_{}'.format(jetR, R_max, grooming_label)
+            jet_pt_combined_groomed = jet_combined_groomed.pt()
+            self.tw.fill_branch('{}_jet_pt_combined_groomed'.format(label), jet_pt_combined_groomed)
+            self.tw.fill_branch('{}_zg_combined'.format(label), zg_combined)
+            self.tw.fill_branch('{}_theta_g_combined'.format(label), theta_g_combined)
+            self.tw.fill_branch('{}_prong_matching_flag'.format(label), prong_match)
           
   #---------------------------------------------------------------
   # Do prong-matching
