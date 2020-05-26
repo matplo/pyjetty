@@ -6,13 +6,32 @@ import fastjet as fj
 import fjext
 
 
-class DataEvent(MPBase):
-	def __init__(self, **kwargs):
-		super(DataEvent, self).__init__(**kwargs)
-		# self.particles = particles
-		# self.run_number = run_number
-		# self.ev_id = ev_id
+#class DataEvent(MPBase):
+#	def __init__(self, **kwargs):
+#		kwargs['name'] = 'noUniqueName'
+#		super(DataEvent, self).__init__(**kwargs)
+#		# self.particles = particles
+#		# self.run_number = run_number
+#		# self.ev_id = ev_id
 
+# with less overhead
+class DataEvent(object):
+	def __init__(self, **kwargs):
+		for key, value in kwargs.items():
+			self.__setattr__(key, value)
+	def configure_from_args(self, **kwargs):
+		for key, value in kwargs.items():
+			self.__setattr__(key, value)
+
+	def __str__(self):
+		s = []
+		s.append('[i] DataEvent')
+		for a in self.__dict__:
+			sval = str(getattr(self, a))
+			if len(sval) > 200:
+				sval = sval[:200]
+			s.append('   {} = {}'.format(str(a), sval))
+		return '\n'.join(s)
 
 class DataFileIO(MPBase):
 	def __init__(self, **kwargs):
