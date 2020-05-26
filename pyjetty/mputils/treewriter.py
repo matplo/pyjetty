@@ -51,6 +51,16 @@ class RTreeWriter(MPBase):
 			# print('filling branch:', bname, 'at', b)
 			self.branch_containers[bname].push_back(value)
 
+	def fill_branches_attribs(self, o, attr_list=[], prefix=''):
+		if len(attr_list) == 0:
+			attr_list = o.__dict__
+		for a in attr_list:
+			self.fill_branch(prefix+a, getattr(o, a))
+
+	def fill_branches(self, **kwargs):
+		for a in kwargs:
+			self.fill_branch(bname=a, value=kwargs[a])
+
 	def fill_branch(self, bname, value, do_enumerate=False):
 		# print("FILL:", self.tree_name, bname, value)
 		if float == type(value) or int == type(value):
