@@ -644,8 +644,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.66, 0.65, 0.8, 0.85)
-    self.utils.setup_legend(myLegend, 0.035)
+    myLegend = ROOT.TLegend(0.57, 0.63, 0.85, 0.9)
+    self.utils.setup_legend(myLegend, 0.045)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = self.get_maximum(name, overlay_list)
@@ -741,7 +741,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if min_pt_truth == 20:
             myBlankHisto.SetMaximum(1.5*ymax)
           elif min_pt_truth == 40:
-            myBlankHisto.SetMaximum(1.4*ymax)
+            myBlankHisto.SetMaximum(1.3*ymax)
           elif min_pt_truth == 60:
             myBlankHisto.SetMaximum(1.15*ymax)
           else:
@@ -786,7 +786,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             if jetR == 0.2:
               myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.75)
             elif jetR == 0.4:
-              myBlankHisto2.GetYaxis().SetRangeUser(0, 1.99)
+              myBlankHisto2.GetYaxis().SetRangeUser(0.5, 2.2)
             else: 
               myBlankHisto2.GetYaxis().SetRangeUser(0, 2.2)
           elif jetR == 0.2:
@@ -907,7 +907,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text = str(min_pt_truth) + ' < #it{p}_{T}^{jet, ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.63, text)
-    
+
     myLegend.Draw()
 
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, 
@@ -917,11 +917,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR),
                                                  int(min_pt_truth), int(max_pt_truth),
                                                  i_config, self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results') + '/all_results'
+
+
+    output_dir = getattr(self, 'output_dir_final_results')
     if not os.path.exists(output_dir):
       os.mkdir(output_dir)
-    outputFilename = os.path.join(output_dir, name)
+    outputFilename = os.path.join(output_dir, 'all_results', name)
     c.SaveAs(outputFilename)
+
+    # Write result to ROOT file
+    final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+    fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+    c.Write()
+
     c.Close()
 
   #----------------------------------------------------------------------
