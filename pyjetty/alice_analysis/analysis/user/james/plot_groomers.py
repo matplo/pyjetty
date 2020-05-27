@@ -196,10 +196,12 @@ class PlotGroomers(common_base.CommonBase):
                           grooming_setting, min_pt, max_pt, output_dir):
     
     if observable == 'theta_g':
+      xmin = 0.
       xmax = 1.
       axis = 2
       rebin_value = 5
     elif observable == 'zg':
+      xmin = 0.
       xmax = 0.5
       axis = 1
       rebin_value = 5
@@ -218,31 +220,75 @@ class PlotGroomers(common_base.CommonBase):
     #  print('Integral is 0, check for problem')
     
     # Draw histogram
-    c = ROOT.TCanvas('c','c: hist',600,450)
+    c = ROOT.TCanvas('c','c: hist', 600, 650)
     c.cd()
-    ROOT.gPad.SetLeftMargin(0.2)
-    ROOT.gPad.SetBottomMargin(0.15)
+    
+    pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
+    pad1.SetLeftMargin(0.2)
+    pad1.SetTopMargin(0.04)
+    pad1.SetRightMargin(0.04)
+    pad1.SetBottomMargin(0.)
+    pad1.Draw()
+    pad1.cd()
+    
+    leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
+    self.utils.setup_legend(leg, 0.04)
 
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0, xmax)
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, xmin, xmax)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.GetXaxis().SetTitleOffset(1.4)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.6)
-    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.SetMinimum(0.01)
     myBlankHisto.GetXaxis().SetTitle(self.xtitle)
+    myBlankHisto.GetXaxis().SetTitleSize(30)
+    myBlankHisto.GetXaxis().SetTitleFont(43)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.95)
+    myBlankHisto.GetXaxis().SetLabelFont(43)
+    myBlankHisto.GetXaxis().SetLabelSize(25)
+    myBlankHisto.GetYaxis().SetTitleSize(25)
+    myBlankHisto.GetYaxis().SetTitleFont(43)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.7)
+    myBlankHisto.GetYaxis().SetLabelFont(43)
+    myBlankHisto.GetYaxis().SetLabelSize(25)
+    myBlankHisto.GetYaxis().SetNdivisions(505)
     ytitle = '#frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
     myBlankHisto.GetYaxis().SetTitle(ytitle)
-    myBlankHisto.Draw()
+    myBlankHisto.Draw('E')
+    
+    c.cd()
+    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.3)
+    pad2.SetTopMargin(0)
+    pad2.SetBottomMargin(0.35)
+    pad2.SetLeftMargin(0.2)
+    pad2.SetRightMargin(0.04)
+    pad2.SetTicks(0,1)
+    pad2.Draw()
+    pad2.cd()
+    
+    myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
+    ytitle = '#frac{Embedded}{Truth}'
+    myBlankHisto2.SetYTitle(ytitle)
+    myBlankHisto2.SetXTitle(self.xtitle)
+    myBlankHisto2.GetXaxis().SetTitleSize(30)
+    myBlankHisto2.GetXaxis().SetTitleFont(43)
+    myBlankHisto2.GetXaxis().SetTitleOffset(3.5)
+    myBlankHisto2.GetXaxis().SetLabelFont(43)
+    myBlankHisto2.GetXaxis().SetLabelSize(25)
+    myBlankHisto2.GetYaxis().SetTitleSize(25)
+    myBlankHisto2.GetYaxis().SetTitleFont(43)
+    myBlankHisto2.GetYaxis().SetTitleOffset(2.)
+    myBlankHisto2.GetYaxis().SetLabelFont(43)
+    myBlankHisto2.GetYaxis().SetLabelSize(25)
+    myBlankHisto2.GetYaxis().SetNdivisions(505)
+    myBlankHisto2.SetMinimum(0.61)
+    myBlankHisto2.SetMaximum(1.39)
+    myBlankHisto2.Draw('')
     
     h_stack = ROOT.THStack('h_stack', 'stacked')
-    
-    leg = ROOT.TLegend(0.65,0.55,0.8,0.8)
-    self.utils.setup_legend(leg, 0.032)
-    
-    legend_list = ['subleading', 'leading', 'ungroomed', 'outside', 'other',
+    h_sum = None
+    legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other',
                    'combined fail', 'truth fail', 'both fail']
     
     # Loop over each flag
-    for i in range(8):
+    for i in range(len(legend_list)):
       flag = i+1
       h4D.GetAxis(3).SetRange(flag, flag)
       h4D.GetAxis(2).SetRangeUser(self.min_theta, 1)
@@ -255,10 +301,15 @@ class PlotGroomers(common_base.CommonBase):
       h1D.SetLineColor(self.ColorArray[i])
       h1D.SetFillColor(self.ColorArray[i])
       h1D.SetLineWidth(2)
-      h1D.GetYaxis().SetTitleOffset(1.5)
 
       h_stack.Add(h1D);
       leg.AddEntry(h1D, legend_list[i], 'F')
+      
+      if i == 0:
+        h_sum = h1D.Clone()
+        h_sum.Sumw2()
+      else:
+        h_sum.Add(h1D.Clone())
     
     # Draw truth histogram
     h3D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
@@ -270,9 +321,10 @@ class PlotGroomers(common_base.CommonBase):
     h1D_truth.Rebin(rebin_value)
     h1D_truth.SetLineColor(1)
     h1D_truth.SetLineWidth(2)
-    myBlankHisto.SetMaximum(2*h1D_truth.GetMaximum())
+    myBlankHisto.SetMaximum(2.3*h1D_truth.GetMaximum())
     leg.AddEntry(h1D_truth, 'Truth', 'L')
     
+    pad1.cd()
     leg.Draw('same')
     h_stack.Draw('same')
     h1D_truth.Draw('same')
@@ -281,28 +333,46 @@ class PlotGroomers(common_base.CommonBase):
     text_latex.SetNDC()
     
     x = 0.23
-    y = 0.85
-    text_latex.SetTextSize(0.04)
+    y = 0.9
+    text_latex.SetTextSize(0.05)
     text = 'PYTHIA8 embedded in thermal background'
     text_latex.DrawLatex(x, y, text)
         
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
-    text_latex.DrawLatex(x, y-0.05, text)
+    text_latex.DrawLatex(x, y-0.06, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.DrawLatex(x, y-0.1, text)
+    text_latex.DrawLatex(x, y-0.12, text)
     
     text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
-    text_latex.DrawLatex(x, y-0.15, text)
-    
-    text = self.utils.formatted_grooming_label(grooming_setting)
-    text_latex.DrawLatex(x, y-0.2, text)
-    
+    text_latex.DrawLatex(x, y-0.18, text)
+   
     text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
     text_latex.DrawLatex(x, y-0.25, text)
+   
+    text = self.utils.formatted_grooming_label(grooming_setting)
+    text_latex.DrawLatex(x, y-0.32, text)
+    
+    if self.min_theta > 1e-3:
+      text = '#Delta#it{{R}} > {}'.format(self.min_theta*jetR)
+      text_latex.DrawLatex(x, y-0.38, text)
+    
+    pad2.cd()
+    h_ratio = h_sum.Clone()
+    h_ratio.SetMarkerStyle(21)
+    h_ratio.SetMarkerColor(1)
+    h_ratio.Divide(h1D_truth)
+    if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
+      myBlankHisto2.SetMaximum(1.2*h_ratio.GetMaximum())
+    h_ratio.Draw('PE same')
+    
+    line = ROOT.TLine(xmin,1,xmax,1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.Draw('same')
 
-    output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}.pdf'.format(self.utils.grooming_label(grooming_setting),
-                                          observable, obs_label, min_pt, max_pt))
+    output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}_dR{}.pdf'.format(self.utils.grooming_label(grooming_setting),
+                                          obs_label, min_pt, max_pt, self.utils.remove_periods(self.min_theta*jetR)))
     c.SaveAs(output_filename)
     c.Close()
 
