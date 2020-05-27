@@ -51,33 +51,16 @@ class PlotGroomers(common_base.CommonBase):
     with open(config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     
-    self.observable = config['analysis_observable']
+    self.observables = config['process_observables']
     thermal_data = config['main_response']
     self.fMC = ROOT.TFile(thermal_data, 'READ')
     
     self.max_distance = config['constituent_subtractor']['max_distance']
     self.R_max = config['constituent_subtractor']['main_R_max']
-
-    # Get the sub-configs
-    self.jetR_list = config['jetR']
-    self.obs_config_dict = config[self.observable]
-    self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
-    self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
-    self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
-    self.obs_labels = [self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
-                       for i in range(len(self.obs_subconfig_list))]
-    self.xtitle = self.obs_config_dict['common_settings']['xtitle']
-    self.ytitle = self.obs_config_dict['common_settings']['ytitle']
-    self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
-
-    # Create output dirs
+    
     self.file_format = config['file_format']
     self.output_dir = config['output_dir']
-    self.output_dir = os.path.join(self.output_dir, self.observable)
-    if not os.path.exists(self.output_dir):
-      os.makedirs(self.output_dir)
 
-    self.plot_overlay_list = self.obs_config_dict['common_settings']['plot_overlay_list']
     self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
                        ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
                        ROOT.kOrange-3]
@@ -87,60 +70,96 @@ class PlotGroomers(common_base.CommonBase):
     print(self)
 
   #---------------------------------------------------------------
+  def init_observable(self, observable):
+    
+    with open(self.config_file, 'r') as stream:
+      config = yaml.safe_load(stream)
+    
+    # Get the sub-configs
+    self.jetR_list = config['jetR']
+    self.obs_config_dict = config[observable]
+    self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
+    self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
+    self.obs_settings = self.utils.obs_settings(observable, self.obs_config_dict, self.obs_subconfig_list)
+    self.obs_labels = [self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i])
+                       for i in range(len(self.obs_subconfig_list))]
+    self.xtitle = self.obs_config_dict['common_settings']['xtitle']
+    self.ytitle = self.obs_config_dict['common_settings']['ytitle']
+    self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
+    self.plot_overlay_list = self.obs_config_dict['common_settings']['plot_overlay_list']
+
+    # Create output dirs
+    output_dir = os.path.join(self.output_dir, observable)
+    if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
+
+  #---------------------------------------------------------------
   def plot_groomers(self):
   
-    # Plot for each R_max
-    for R_max in self.max_distance:
-    
-      # Generate performance plots
-      for jetR in self.jetR_list:
+    # Loop through all observables
+    for observable in self.observables:
+      self.init_observable(observable)
+  
+      # Plot for each R_max
+      for R_max in self.max_distance:
       
-        output_dir = os.path.join(self.output_dir, 'jetR{}'.format(jetR))
-        output_dir = os.path.join(output_dir, 'Rmax{}'.format(R_max))
-
-        # Create output subdirectories
-        self.create_output_subdir(output_dir, 'money_plot')
-        self.create_output_subdir(output_dir, 'delta_pt')
-        self.create_output_subdir(output_dir, 'prong_matching_fraction_pt')
-        self.create_output_subdir(output_dir, 'prong_matching_deltaR')
-        self.create_output_subdir(output_dir, 'prong_matching_deltaZ')
-        self.create_output_subdir(output_dir, 'prong_matching_correlation')
+        # Plot for each R
+        for jetR in self.jetR_list:
         
-        self.plotting_utils = plotting_utils.PlottingUtils(output_dir, self.config_file, R_max=R_max,
-                                                           thermal = False, groomer_studies = True)
-    
-        # Plot some subobservable-independent performance plots
-        self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
+          # Create output dir
+          output_dir = os.path.join(self.output_dir, observable)
+          output_dir = os.path.join(output_dir, 'jetR{}'.format(jetR))
+          output_dir = os.path.join(output_dir, 'Rmax{}'.format(R_max))
+          self.create_output_subdir(output_dir, 'money_plot')
         
-        # Plot subobservable-dependent performance plots
-        for i, _ in enumerate(self.obs_subconfig_list):
+          # Plot money plot for all observables
+          for i, _ in enumerate(self.obs_subconfig_list):
 
-          obs_setting = self.obs_settings[i]
-          grooming_setting = self.grooming_settings[i]
-          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+            obs_setting = self.obs_settings[i]
+            grooming_setting = self.grooming_settings[i]
+            obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
-          #self.plot_money_plot(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+            #self.plot_money_plot(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
 
-        # Plot prong matching histograms
-        self.prong_match_threshold = 0.5
-        min_pt = 80.
-        max_pt = 100.
-        prong_list = ['leading', 'subleading']
-        match_list = ['leading', 'subleading', 'ungroomed', 'outside']
-        for i, overlay_list in enumerate(self.plot_overlay_list):
-          for prong in prong_list:
-            for match in match_list:
+          # Plot performance plots only once
+          if observable == 'theta_g':
 
-              hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
-              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
-              self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=False)
+            # Create output subdirectories
+            output_dir = os.path.join(self.output_dir, 'performance')
+            output_dir = os.path.join(output_dir, 'jetR{}'.format(jetR))
+            output_dir = os.path.join(output_dir, 'Rmax{}'.format(R_max))
+            self.create_output_subdir(output_dir, 'delta_pt')
+            self.create_output_subdir(output_dir, 'prong_matching_fraction_pt')
+            self.create_output_subdir(output_dir, 'prong_matching_deltaR')
+            self.create_output_subdir(output_dir, 'prong_matching_deltaZ')
+            self.create_output_subdir(output_dir, 'prong_matching_correlation')
+            
+            self.plotting_utils = plotting_utils.PlottingUtils(output_dir, self.config_file, R_max=R_max,
+                                                               thermal = False, groomer_studies = True)
+        
+            # Plot some subobservable-independent performance plots
+            self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
 
-              if 'subleading' in prong or 'leading' in prong:
-                hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
-                self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
+            # Plot prong matching histograms
+            self.prong_match_threshold = 0.5
+            min_pt = 80.
+            max_pt = 100.
+            prong_list = ['leading', 'subleading']
+            match_list = ['leading', 'subleading', 'ungroomed', 'outside']
+            for i, overlay_list in enumerate(self.plot_overlay_list):
+              for prong in prong_list:
+                for match in match_list:
 
-          hname = 'hProngMatching_subleading-leading_correlation_JetPt_R{}'.format(jetR)
-          self.plotting_utils.plot_prong_matching_correlation(jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+                  hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
+                  self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+                  self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=False)
+
+                  if 'subleading' in prong or 'leading' in prong:
+                    hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
+                    self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
+
+              hname = 'hProngMatching_subleading-leading_correlation_JetPt_R{}'.format(jetR)
+              self.plotting_utils.plot_prong_matching_correlation(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
   #---------------------------------------------------------------
   def plot_obs_projections(self, jetR, R_max, obs_label, obs_setting, grooming_setting, xtitle, pt_bins):

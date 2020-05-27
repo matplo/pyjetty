@@ -43,9 +43,11 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     with open(config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     
-    self.observable = config['analysis_observable']
     self.is_pp = not 'constituent_subtractor' in config
-    self.figure_approval_status = config['figure_approval_status']
+    if 'analysis_observable' in config:
+      self.observable = config['analysis_observable']
+    if 'figure_approval_status' in config:
+      self.figure_approval_status = config['figure_approval_status']
 
     main_data = config['main_data']
     main_response = config['main_response']
@@ -986,7 +988,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     c.Close()
 
   #---------------------------------------------------------------
-  def plot_prong_matching_delta(self, i, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold, min_pt, max_pt, plot_deltaz=False):
+  def plot_prong_matching_delta(self, i_overlay, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold, min_pt, max_pt, plot_deltaz=False):
 
     c = ROOT.TCanvas("c","c: hist",600,450)
     c.cd()
@@ -1077,25 +1079,34 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
 
-    text_latex.SetTextSize(0.055)
-    text = 'ALICE Performance'
-    text_latex.DrawLatex(0.23, 0.85, text)
-   
-    text_latex.SetTextSize(0.04)
-    text = 'PYTHIA8 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
-    text_latex.DrawLatex(0.23, 0.8, text)
-    
+    if self.groomer_studies:
+      x = 0.23
+      y = 0.85
+      text_latex.SetTextSize(0.04)
+      text = 'PYTHIA8 embedded in thermal background'
+      text_latex.DrawLatex(x, y, text)
+    else:
+      x = 0.26
+      y = 0.8
+      text_latex.SetTextSize(0.055)
+      text = 'ALICE Performance'
+      text_latex.DrawLatex(x, y+0.05, text)
+      
+      text_latex.SetTextSize(0.04)
+      text = 'PYTHIA8 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
+      text_latex.DrawLatex(x, y, text)
+        
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
-    text_latex.DrawLatex(0.23, 0.75, text)
+    text_latex.DrawLatex(x, y-0.05, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.DrawLatex(0.23, 0.7, text)
+    text_latex.DrawLatex(x, y-0.1, text)
     
     text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
-    text_latex.DrawLatex(0.23, 0.65, text)
+    text_latex.DrawLatex(x, y-0.15, text)
     
     text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{pp-det} < ' + str(int(max_pt)) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.23, 0.6, text)
+    text_latex.DrawLatex(x, y-0.2, text)
     
     text_latex.SetTextSize(0.04)
     text = 'PYTHIA subleading prong '
@@ -1106,14 +1117,14 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text_latex.DrawLatex(0.23, 0.42, text)
 
     if plot_deltaz:
-        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaZ/{}.pdf'.format(self.remove_periods(name_prefix)))
+        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaZ/{}_{}.pdf'.format(self.remove_periods(name_prefix), i_overlay))
     else:
-        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaR/{}.pdf'.format(self.remove_periods(name_prefix)))
+        output_filename = os.path.join(self.output_dir, 'prong_matching_deltaR/{}_{}.pdf'.format(self.remove_periods(name_prefix), i_overlay))
     c.SaveAs(output_filename)
     c.Close()
 
   #---------------------------------------------------------------
-  def plot_prong_matching_correlation(self, jetR, hname_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold):
+  def plot_prong_matching_correlation(self, i_overlay, jetR, hname_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold):
 
     c = ROOT.TCanvas("c","c: hist",600,450)
     c.cd()
@@ -1169,6 +1180,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     leg.Draw('same')
 
-    output_filename = os.path.join(self.output_dir, 'prong_matching_correlation/{}.pdf'.format(self.remove_periods(hname_prefix)))
+    output_filename = os.path.join(self.output_dir, 'prong_matching_correlation/{}_{}.pdf'.format(self.remove_periods(hname_prefix), i_overlay))
     c.SaveAs(output_filename)
     c.Close()
