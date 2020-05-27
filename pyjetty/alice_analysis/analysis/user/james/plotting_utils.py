@@ -28,12 +28,16 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, output_dir = '.', config_file = '', R_max = None, thermal = False, **kwargs):
+  def __init__(self, output_dir = '.', config_file = '', R_max = None, thermal = False, groomer_studies = False, **kwargs):
     super(PlottingUtils, self).__init__(**kwargs)
     
     self.output_dir = output_dir
     self.R_max = R_max
     self.thermal = thermal
+    self.groomer_studies = groomer_studies
+    
+    self.scaled_suffix = ''
+    #self.scaled_suffix = 'Scaled'
     
     # Read config file
     with open(config_file, 'r') as stream:
@@ -59,7 +63,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
                        ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
                        ROOT.kOrange-3]
-    self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
+    self.MarkerArray = [20, 21, 22, 23, 34, 33, 24, 25, 26, 32]
     self.OpenMarkerArray = [24, 25, 26, 32, 27, 28]
     
     print(self)
@@ -68,9 +72,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_DeltaR(self, jetR, jet_matching_distance):
 
     if self.is_pp:
-      name = 'hDeltaR_All_R{}{}Scaled'.format(jetR, self.suffix)
+      name = 'hDeltaR_All_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
     else:
-      name = 'hDeltaR_combined_ppdet_R{}{}Scaled'.format(jetR, self.suffix)
+      name = 'hDeltaR_combined_ppdet_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
     h = self.fMC.Get(name)
     
     c = ROOT.TCanvas("c","c: hist",600,450)
@@ -108,10 +112,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_JES(self, jetR):
     
-    name = 'hJES_R{}Scaled'.format(jetR)
+    name = 'hJES_R{}{}'.format(jetR, self.scaled_suffix)
     histDeltaJES = self.fMC.Get(name)
     if not histDeltaJES:
-      name = 'hJES_R{}{}Scaled'.format(jetR, self.suffix)
+      name = 'hJES_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
       histDeltaJES = self.fMC.Get(name)
     histDeltaJES.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
     histDeltaJES.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
@@ -135,7 +139,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_JES_proj(self, jetR, pt_bins):
     
     #name = 'hJES_R{}Scaled'.format(jetR)
-    name = 'hJES_R{}{}Scaled'.format(jetR, self.suffix)
+    name = 'hJES_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
 
     cJES = ROOT.TCanvas('cJES','cJES: hist',600,450)
     cJES.cd()
@@ -197,9 +201,11 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
   #---------------------------------------------------------------
   def plotJER(self, jetR, obs_label):
+  
+    return
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_4d = self.fMC.Get(name)
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
@@ -232,15 +238,17 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   
   #---------------------------------------------------------------
   def plot_jet_reco_efficiency(self, jetR, obs_label):
+  
+    return
     
     # For each pT^gen, compute the fraction of matched pT^gen
     
     # First, get the pT^gen spectrum
-    name = 'h_{}_JetPt_Truth_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, obs_label, self.scaled_suffix)
     histPtGen = self.fMC.Get(name).ProjectionX()
     
     # Then, get the pT^gen spectrum for matched jets
-    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_4d = self.fMC.Get(name)
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
@@ -264,7 +272,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       
   #---------------------------------------------------------------
   def plot_obs_resolution(self, jetR, obs_label, xtitle, pt_bins):
-    
+    return
     c_resolution = ROOT.TCanvas('cres_{}'.format(obs_label),'cres_{}: hist'.format(obs_label),600,450)
     c_resolution.cd()
     c_resolution.SetBottomMargin(0.17)
@@ -284,7 +292,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.setup_legend(myLegend,0.035)
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_4d = self.fMC.Get(name)
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
@@ -348,7 +356,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     if self.observable == 'subjet_z' or self.observable == 'jet_axis':
       return
     else:
-      name = 'hResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+      name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
@@ -392,7 +400,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_obs_residual_obs(self, jetR, obs_label, xtitle):
 
-    name = 'hResidual_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
@@ -469,18 +477,18 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
   #---------------------------------------------------------------
   def plot_obs_projections(self, jetR, obs_label, obs_setting, grooming_setting, xtitle, pt_bins):
-
+    return
     if not self.fData:
       return
       
     # (pt-det, pt-truth, obs-det, obs-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_obs = self.fMC.Get(name)
     if hRM_obs.GetSumw2() is 0:
       hRM_obs.Sumw2()
     
     if self.thermal:
-      name = 'h_{}_JetPt_R{}_{}{}Scaled'.format(self.observable, jetR, obs_label, self.suffix)
+      name = 'h_{}_JetPt_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     else:
       name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     hObs_JetPt = self.fData.Get(name)
@@ -504,7 +512,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_obs_truth(self, jetR, obs_label, obs_setting, grooming_setting,
                      xtitle, pt_bins):
                      
-    name = 'h_{}_JetPt_Truth_R{}_{}Scaled'.format(self.observable, jetR, obs_label)
+    name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, obs_label, self.scaled_suffix)
     h2D = self.fMC.Get(name)
     
     for i in range(0, len(pt_bins) - 1):
@@ -747,7 +755,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_lund_plane(self, jetR, obs_label, grooming_setting):
 
-    name = 'hLundPlane_R{}_{}{}Scaled'.format(jetR, obs_label, self.suffix)
+    name = 'hLundPlane_R{}_{}{}{}'.format(jetR, obs_label, self.suffix, self.scaled_suffix)
     hLund = self.fMC.Get(name)
     
     hLund.GetXaxis().SetRangeUser(np.log(1/jetR), 5)
@@ -767,7 +775,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_delta_pt_RC(self, jetR, CS_label):
   
-    name = 'hDeltaPt_RC_{}CS_R{}{}Scaled'.format(CS_label, jetR, self.suffix)
+    name = 'hDeltaPt_RC_{}CS_R{}{}{}'.format(CS_label, jetR, self.suffix, self.scaled_suffix)
     hDeltaPt = self.fMC.Get(name)
     hDeltaPt.SetMarkerStyle(21)
     hDeltaPt.SetMarkerSize(2)
@@ -792,7 +800,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_delta_pt_emb(self, jetR, pt_bins):
   
-    name = 'hDeltaPt_emb_R{}{}Scaled'.format(jetR, self.suffix)
+    name = 'hDeltaPt_emb_R{}{}'.format(jetR, self.suffix)
     
     c = ROOT.TCanvas('c','c: hist',600,450)
     c.cd()
@@ -867,18 +875,24 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0., 200.)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.2)
-    myBlankHisto.SetMaximum(1.2)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.4)
+    myBlankHisto.SetMaximum(1.61)
     myBlankHisto.SetMinimum(0.)
-    myBlankHisto.GetYaxis().SetTitle('Fraction tagged')
+    myBlankHisto.GetYaxis().SetTitle('Subleading prong purity')
     myBlankHisto.Draw()
     
-    myLegend = ROOT.TLegend(0.55,0.3,0.85,0.5)
-    self.setup_legend(myLegend,0.035)
+    if self.groomer_studies:
+      myLegend = ROOT.TLegend(0.55,0.65,0.75,0.82)
+      self.setup_legend(myLegend,0.035)
+    else:
+      myLegend = ROOT.TLegend(0.45,0.2,0.75,0.4)
+      self.setup_legend(myLegend,0.035)
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
 
+    i_reset = 0
     for i, subconfig_name in enumerate(obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
@@ -888,21 +902,14 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       grooming_setting = grooming_settings[i]
       obs_label = self.obs_label(obs_setting, grooming_setting)
       
-      if subconfig_name == overlay_list[0]:
-        marker = 20
-        if self.thermal:
-          marker = 21
-      elif subconfig_name == overlay_list[1]:
-        marker = 21
-      elif i > 1 and subconfig_name == overlay_list[2]:
-        marker = 33
-      else:
-        marker = 34
-      
-      name = '{}_{}{}Scaled'.format(name_prefix, obs_label, self.suffix)
+      name = '{}_{}{}{}'.format(name_prefix, obs_label, self.suffix, self.scaled_suffix)
       hFraction_vs_pt = self.fMC.Get(name)
       xtitle = hFraction_vs_pt.GetXaxis().GetTitle()
-      myBlankHisto.GetXaxis().SetTitle(xtitle)
+      #myBlankHisto.GetXaxis().SetTitle(xtitle)
+      if self.groomer_studies:
+        myBlankHisto.GetXaxis().SetTitle('#it{p}_{T,ch jet}^{PYTHIA} (GeV/#it{c})')
+      else:
+        myBlankHisto.GetXaxis().SetTitle('#it{p}_{T,ch jet}^{pp-det} (GeV/#it{c})')
       
       epsilon = 1e-5
       min_bin = hFraction_vs_pt.GetYaxis().FindBin(0. + epsilon)
@@ -922,9 +929,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hMatchedFraction_vs_pt = hMatched_vs_pt.Clone()
       hMatchedFraction_vs_pt.SetName(name_fraction)
       hMatchedFraction_vs_pt.Divide(hTotal_vs_pt)
-      hMatchedFraction_vs_pt.SetMarkerStyle(marker)
-      hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[i])
-      hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i])
+      hMatchedFraction_vs_pt.SetMarkerStyle(self.MarkerArray[i_reset])
+      hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[i_reset])
+      hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i_reset])
+      i_reset += 1
       if self.thermal:
         hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[len(self.ColorArray)-i-2])
         hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[len(self.ColorArray)-i-2])
@@ -935,6 +943,41 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     myLegend.Draw('same')
 
+    line = ROOT.TLine(0, 1, 200, 1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.SetLineWidth(4)
+    line.Draw()
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+
+    if self.groomer_studies:
+      x = 0.2
+      y = 0.85
+      text_latex.SetTextSize(0.04)
+      text = 'PYTHIA8 embedded in thermal background'
+      text_latex.DrawLatex(x, y, text)
+    else:
+      x = 0.26
+      y = 0.8
+      text_latex.SetTextSize(0.055)
+      text = 'ALICE Performance'
+      text_latex.DrawLatex(x, y+0.05, text)
+      
+      text_latex.SetTextSize(0.04)
+      text = 'PYTHIA8 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
+      text_latex.DrawLatex(x, y, text)
+        
+    text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
+    text_latex.DrawLatex(x, y-0.05, text)
+
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.DrawLatex(x, y-0.1, text)
+    
+    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
+    text_latex.DrawLatex(x, y-0.15, text)
+    
     outdir = 'prong_matching_fraction_pt'
     if 'JetPtDet' in name_prefix:
       outdir = 'prong_matching_fraction_ptdet'
@@ -955,29 +998,34 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       xmin = -jetR
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, xmin, jetR)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.4)
+    if jetR == 0.2:
+      myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+    else:
+      myBlankHisto.GetYaxis().SetTitleOffset(1.2)
     max = 0.01
-    myBlankHisto.SetMaximum(max)
+    myBlankHisto.SetMaximum(2*max)
     myBlankHisto.SetMinimum(0.)
     if plot_deltaz:
-        myBlankHisto.GetXaxis().SetTitle('#Delta z_{prong}')
-        myBlankHisto.GetYaxis().SetTitle('#frac{dN}{d#Delta z_{prong}}')
+        myBlankHisto.GetXaxis().SetTitle('#Delta#it{z}_{prong}')
+        myBlankHisto.GetYaxis().SetTitle('#frac{d#it{N}}{d#Delta #it{z}_{prong}}')
     else:
-        myBlankHisto.GetXaxis().SetTitle('#Delta R_{prong}')
-        myBlankHisto.GetYaxis().SetTitle('#frac{dN}{d#Delta R_{prong}}')
+        myBlankHisto.GetXaxis().SetTitle('#Delta#it{R}_{PYTHIA, PYTHIA#oplusPb#font[122]{-}Pb}^{subleading prong}')
+        myBlankHisto.GetYaxis().SetTitle('#frac{d#it{N}}{d#Delta #it{R}_{prong}}')
     myBlankHisto.Draw()
     
-    leg = ROOT.TLegend(0.55,0.3,0.85,0.5)
-    self.setup_legend(leg,0.035)
+    leg = ROOT.TLegend(0.57,0.58,0.7,0.75)
+    self.setup_legend(leg,0.032)
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
     
+    i_reset = 0
     for i, subconfig_name in enumerate(obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
         continue
-        
+
       obs_setting = obs_settings[i]
       grooming_setting = grooming_settings[i]
       obs_label = self.obs_label(obs_setting, grooming_setting)
@@ -991,7 +1039,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       else:
         marker = 34
       
-      name = '{}_{}{}Scaled'.format(name_prefix, obs_label, self.suffix)
+      name = '{}_{}{}{}'.format(name_prefix, obs_label, self.suffix, self.scaled_suffix)
       hFraction_vs_pt = self.fMC.Get(name)
 
       epsilon = 1e-5
@@ -1009,21 +1057,53 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hFraction_vs_pt.GetYaxis().SetRange(min_frac_bin, max_frac_bin)
       hUnmatched_vs_pt = hFraction_vs_pt.Project3D('z')
       hUnmatched_vs_pt.SetName('hUnmatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
-      hUnmatched_vs_pt.SetLineColor(self.ColorArray[i])
+      hUnmatched_vs_pt.SetLineColor(self.ColorArray[i_reset])
+      i_reset += 1
       hUnmatched_vs_pt.SetLineWidth(4)
       if self.thermal:
         hUnmatched_vs_pt.SetLineColor(self.ColorArray[len(self.ColorArray)-i-2])
       if max < hUnmatched_vs_pt.GetMaximum():
         max = hUnmatched_vs_pt.GetMaximum()
-        myBlankHisto.SetMaximum(max)
+        if jetR == 0.2:
+          myBlankHisto.SetMaximum(2.4*max)
+        else:
+          myBlankHisto.SetMaximum(1.9*max)
       hUnmatched_vs_pt.Draw('L hist same')
       leg.AddEntry(hUnmatched_vs_pt, self.formatted_grooming_label(grooming_setting), 'L')
       h_list.append(hUnmatched_vs_pt)
-
-    text = 'p_{{T}} = {} - {} GeV/c'.format(int(min_pt), int(max_pt))
-    leg.AddEntry(None, text, '')
     
     leg.Draw('same')
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+
+    text_latex.SetTextSize(0.055)
+    text = 'ALICE Performance'
+    text_latex.DrawLatex(0.23, 0.85, text)
+   
+    text_latex.SetTextSize(0.04)
+    text = 'PYTHIA8 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
+    text_latex.DrawLatex(0.23, 0.8, text)
+    
+    text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
+    text_latex.DrawLatex(0.23, 0.75, text)
+
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.DrawLatex(0.23, 0.7, text)
+    
+    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
+    text_latex.DrawLatex(0.23, 0.65, text)
+    
+    text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{pp-det} < ' + str(int(max_pt)) + ' GeV/#it{c}'
+    text_latex.DrawLatex(0.23, 0.6, text)
+    
+    text_latex.SetTextSize(0.04)
+    text = 'PYTHIA subleading prong '
+    text_latex.DrawLatex(0.23, 0.5, text)
+    text = 'tagged in PYTHIA#oplusPb#font[122]{-}Pb'
+    text_latex.DrawLatex(0.23, 0.46, text)
+    text = 'leading prong'
+    text_latex.DrawLatex(0.23, 0.42, text)
 
     if plot_deltaz:
         output_filename = os.path.join(self.output_dir, 'prong_matching_deltaZ/{}.pdf'.format(self.remove_periods(name_prefix)))
@@ -1054,25 +1134,17 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
     
+    i_reset = 0
     for i, subconfig_name in enumerate(obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
         continue
-        
+
       obs_setting = obs_settings[i]
       grooming_setting = grooming_settings[i]
       obs_label = self.obs_label(obs_setting, grooming_setting)
-      
-      if subconfig_name == overlay_list[0]:
-        marker = 20
-      elif subconfig_name == overlay_list[1]:
-        marker = 21
-      elif i > 1 and subconfig_name == overlay_list[2]:
-        marker = 33
-      else:
-        marker = 34
 
-      name = '{}_{}{}Scaled'.format(hname_prefix, obs_label, self.suffix)
+      name = '{}_{}{}{}'.format(hname_prefix, obs_label, self.suffix, self.scaled_suffix)
       hFraction_vs_pt = self.fMC.Get(name)
 
       epsilon = 1e-5
@@ -1087,9 +1159,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hMatchedFraction_vs_pt = hMatched_vs_pt.Clone()
       hMatchedFraction_vs_pt.SetName('hMatchedFraction_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
       hMatchedFraction_vs_pt.Divide(hTotal_vs_pt)
-      hMatchedFraction_vs_pt.SetMarkerStyle(marker)
-      hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[i])
-      hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i])
+      hMatchedFraction_vs_pt.SetMarkerStyle(self.MarkerArray[i_reset])
+      hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[i_reset])
+      hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i_reset])
+      i_reset += 1
       hMatchedFraction_vs_pt.Draw('P same')
       leg.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
       h_list.append(hMatchedFraction_vs_pt)
