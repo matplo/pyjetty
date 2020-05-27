@@ -63,7 +63,7 @@ class PlotGroomers(common_base.CommonBase):
 
     self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
                        ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
-                       ROOT.kOrange-3]
+                       ROOT.kOrange-3, ROOT.kGray]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
     self.OpenMarkerArray = [24, 25, 26, 32, 27, 28]
     
@@ -110,7 +110,6 @@ class PlotGroomers(common_base.CommonBase):
           output_dir = os.path.join(self.output_dir, observable)
           output_dir = os.path.join(output_dir, 'jetR{}'.format(jetR))
           output_dir = os.path.join(output_dir, 'Rmax{}'.format(R_max))
-          self.create_output_subdir(output_dir, 'money_plot')
         
           # Plot money plot for all observables
           for i, _ in enumerate(self.obs_subconfig_list):
@@ -118,16 +117,17 @@ class PlotGroomers(common_base.CommonBase):
             obs_setting = self.obs_settings[i]
             grooming_setting = self.grooming_settings[i]
             obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+            self.create_output_subdir(output_dir, self.utils.grooming_label(grooming_setting))
+            
 
-            #self.plot_money_plot(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+
+            self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir)
 
           # Plot performance plots only once
           if observable == 'theta_g':
 
             # Create output subdirectories
             output_dir = os.path.join(self.output_dir, 'performance')
-            output_dir = os.path.join(output_dir, 'jetR{}'.format(jetR))
-            output_dir = os.path.join(output_dir, 'Rmax{}'.format(R_max))
             self.create_output_subdir(output_dir, 'delta_pt')
             self.create_output_subdir(output_dir, 'prong_matching_fraction_pt')
             self.create_output_subdir(output_dir, 'prong_matching_deltaR')
@@ -162,167 +162,118 @@ class PlotGroomers(common_base.CommonBase):
               self.plotting_utils.plot_prong_matching_correlation(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
   #---------------------------------------------------------------
-  def plot_obs_projections(self, jetR, R_max, obs_label, obs_setting, grooming_setting, xtitle, pt_bins):
-    return
-    if not self.fData:
-      return
+  def plot_money_plot(self, observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir):
       
-    # (pt-det, pt-truth, obs-det, obs-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}'.format(self.observable, jetR, obs_label, R_max)
-    hRM_obs = self.fMC.Get(name)
-    if hRM_obs.GetSumw2() is 0:
-      hRM_obs.Sumw2()
-    
-    name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(self.observable, jetR, obs_label, R_max)
-    hObs_JetPt = self.fData.Get(name)
-    if hObs_JetPt.GetSumw2() is 0:
-      hObs_JetPt.Sumw2()
-
-    # Plot 2D statistics in data
-    self.plot2D_obs_statistics(hObs_JetPt.Clone(), jetR, obs_label)
-      
-    # Loop through pt slices, and plot:
-    #   (a) MC-det and MC-truth 1D distributions, for fixed pt-truth
-    #   (b) MC-det and data 1D distributions, for fixed pt-det
-    for i in range(0, len(pt_bins) - 1):
-      min_pt_truth = pt_bins[i]
-      max_pt_truth = pt_bins[i+1]
-      
-      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='truth')
-      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='det')
+    if observable in ['zg', 'theta_g']:
+      # (pt, zg, theta_g, flag)
+      #  Flag based on where >50% of subleading matched pt resides:
+      #    1: subleading
+      #    2: leading
+      #    3: ungroomed
+      #    4: outside
+      #    5: other (i.e. 50% is not in any of the above)
+      #    6: pp-truth passed grooming, but combined jet failed grooming
+      #    7: combined jet passed grooming, but pp-truth failed grooming
+      #    8: both pp-truth and combined jet failed SoftDrop
+      name = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, obs_label, R_max)
+      h4D = self.fMC.Get(name)
+      if h4D.GetSumw2() is 0:
+        h4D.Sumw2()
+        
+      # Loop through pt slices, and plot 1D projection onto observable
+      for i in range(0, len(self.pt_bins_reported) - 1):
+        min_pt_truth = self.pt_bins_reported[i]
+        max_pt_truth = self.pt_bins_reported[i+1]
+        
+        self.plot_obs_projection(observable, h4D.Clone(), jetR, obs_label, obs_setting,
+                                 grooming_setting, min_pt_truth, max_pt_truth, output_dir)
 
   #---------------------------------------------------------------
-  # If option='truth', plot MC-truth and MC-det projections for fixed pt-true
-  # If option='det', plot data and MC-det projections for fixed pt-det
-  def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
-
-    ytitle = '#frac{{1}}{{N}} #frac{{dN}}{{d{}}}'.format(xtitle)
-    
-    if self.observable == 'theta_g':
-      rebin_val_mcdet = 5
-      rebin_val_mctruth = 5
-      rebin_val_data = 5
-    elif self.observable == 'zg':
-      rebin_val_mcdet = 5
-      rebin_val_mctruth = 2
-      rebin_val_data = 10
-    elif self.observable == 'subjet_z':
-      rebin_val_mcdet = 2
-      rebin_val_mctruth = 1
-      rebin_val_data = 2
-    elif self.observable == 'jet_axis':
-      rebin_val_mcdet = 2
-      rebin_val_mctruth = 1
-      rebin_val_data = 5
-      
-    # Get RM, for a given pt cut
-    if option == 'det':
-      hRM.GetAxis(0).SetRangeUser(min_pt, max_pt)
-    if option == 'truth':
-      hRM.GetAxis(1).SetRangeUser(min_pt, max_pt)
-    
-    # Get histogram of observable at MC-det from RM
-    hObs_det = hRM.Projection(2)
-    hObs_det.SetName('hObs_det_{}'.format(obs_label))
-    hObs_det.GetYaxis().SetTitle(ytitle)
-    hObs_det.SetLineColor(2)
-    hObs_det.SetLineWidth(2)
-    self.scale_by_integral(hObs_det)
-    hObs_det.Rebin(rebin_val_mcdet)
-    hObs_det.Scale(1., 'width')
-    if 'sd' in grooming_setting:
-      hObs_det.GetXaxis().SetRange(0, hObs_det.GetNbinsX())
-
-    # Get histogram of observable at MC-truth from RM
-    if option == 'truth':
-      hObs_truth = hRM.Projection(3)
-      hObs_truth.SetName('hObs_truth_{}'.format(obs_label))
-      hObs_truth.SetLineColor(4)
-      hObs_truth.SetLineWidth(2)
-      self.scale_by_integral(hObs_truth)
-      hObs_truth.Rebin(rebin_val_mctruth)
-      hObs_truth.Scale(1., 'width')
-      if 'sd' in grooming_setting:
-        hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
-      
-    # Get histogram of theta_g in data, for given pt-det cut
-    if option == 'det':
-      hObs_JetPt.GetXaxis().SetRangeUser(min_pt, max_pt)
-      hObs_data = hObs_JetPt.ProjectionY()
-      hObs_data.SetMarkerStyle(21)
-      hObs_data.SetMarkerSize(1)
-      self.scale_by_integral(hObs_data)
-      hObs_data.Rebin(rebin_val_data)
-      hObs_data.Scale(1., 'width')
-      if 'sd' in grooming_setting:
-        hObs_data.GetXaxis().SetRange(0, hObs_data.GetNbinsX())
+  def plot_obs_projection(self, observable, h4D, jetR, obs_label, obs_setting,
+                          grooming_setting, min_pt, max_pt, output_dir):
+  
+    # Set pt range
+    h4D.GetAxis(0).SetRangeUser(min_pt, max_pt)
 
     # Draw histogram
     c = ROOT.TCanvas('c','c: hist',600,450)
     c.cd()
+    ROOT.gPad.SetLeftMargin(0.2)
+    ROOT.gPad.SetBottomMargin(0.15)
 
-    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-    myPad.SetLeftMargin(0.2)
-    myPad.SetTopMargin(0.07)
-    myPad.SetRightMargin(0.04)
-    myPad.SetBottomMargin(0.13)
-    myPad.Draw()
-    myPad.cd()
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0, 1.)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.4)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.6)
+    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.GetXaxis().SetTitle(self.xtitle)
+    ytitle = '#frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
+    myBlankHisto.GetYaxis().SetTitle(ytitle)
+    myBlankHisto.Draw()
     
-    leg = ROOT.TLegend(0.7,0.75,0.85,0.85, "")
-    leg.SetFillColor(10)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(1)
-    leg.SetTextSize(0.04)
+    #h_stack = ROOT.THStack('h_stack', 'stacked')
     
-    hObs_det.GetYaxis().SetTitleOffset(1.5)
-    hObs_det.SetMaximum(2.5*hObs_det.GetMaximum())
-    hObs_det.SetMinimum(0.)
+    leg = ROOT.TLegend(0.6,0.55,0.75,0.8)
+    self.utils.setup_legend(leg, 0.032)
+    
+    h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
+                # (removed from memory?)
+    
+    legend_list = ['subleading', 'leading', 'ungroomed', 'outside', 'other',
+                   'combined fail', 'truth fail', 'both fail']
+    
+    # Loop over each flag
+    for i in range(8):
+      flag = i+1
+      h4D.GetAxis(3).SetRange(flag, flag)
 
-    hObs_det.Draw('hist')
-    leg.AddEntry(hObs_det, "MC det", "L")
-    if option == 'truth':
-      hObs_truth.Draw('hist same')
-      leg.AddEntry(hObs_truth, "MC truth", "L")
-    elif option == 'det':
-      hObs_data.Draw('hist E same')
-      leg.AddEntry(hObs_data, "data", "PE")
+      # Project onto 1D
+      if observable == 'theta_g':
+        h1D = h4D.Projection(2)
+        h1D.SetName('h1D_{}'.format(i))
+      elif observable == 'zg':
+        h1D = h4D.Projection(1)
+        h1D.SetName('h1D_{}'.format(i))
 
-    leg.Draw("same")
+      h1D.SetLineColor(self.ColorArray[i])
+      h1D.SetLineWidth(2)
+      h1D.GetYaxis().SetTitleOffset(1.5)
+      if i == 0:
+        myBlankHisto.SetMaximum(2*h1D.GetMaximum())
+
+      h1D.Draw('hist same')
+      #h_stack.Add(h1D);
+      leg.AddEntry(h1D, legend_list[i], 'L')
+      leg.Draw('same')
+    
+    #h_stack.Draw()
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.3, 0.85, text)
     
-    if self.is_pp:
-      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-    else:
-      text = 'Pb-Pb #sqrt{#it{s_{NN}}} = 5.02 TeV'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.3, 0.79, text)
+    x = 0.23
+    y = 0.85
+    text_latex.SetTextSize(0.04)
+    text = 'PYTHIA8 embedded in thermal background'
+    text_latex.DrawLatex(x, y, text)
+        
+    text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
+    text_latex.DrawLatex(x, y-0.05, text)
 
-    if option == 'truth':
-      text = str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}'
-    elif option == 'det':
-      text = str(min_pt) + ' < #it{p}_{T, ch jet}^{det} < ' + str(max_pt) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.3, 0.73, text)
-
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
-    text_latex.DrawLatex(0.3, 0.67, text)
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.DrawLatex(x, y-0.1, text)
     
-    subobs_label = self.formatted_subobs_label(self.observable)
-    delta = 0.
-    if subobs_label:
-      text = '{} = {}'.format(subobs_label, obs_setting)
-      text_latex.DrawLatex(0.3, 0.61, text)
-      delta = 0.07
-      
-    if grooming_setting:
-      text = self.formatted_grooming_label(grooming_setting)
-      text_latex.DrawLatex(0.3, 0.61-delta, text)
+    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
+    text_latex.DrawLatex(x, y-0.15, text)
+    
+    text = self.utils.formatted_grooming_label(grooming_setting)
+    text_latex.DrawLatex(x, y-0.2, text)
+    
+    text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{pp-det} < ' + str(int(max_pt)) + ' GeV/#it{c}'
+    text_latex.DrawLatex(x, y-0.25, text)
 
-    output_filename = os.path.join(self.output_dir, 'mc_projections_{}/h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
+    output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}.pdf'.format(self.utils.grooming_label(grooming_setting),
+                                          observable, obs_label, min_pt, max_pt))
     c.SaveAs(output_filename)
     c.Close()
 
