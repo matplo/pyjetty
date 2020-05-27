@@ -1,7 +1,7 @@
 # Processing parameters
 #jetR: [0.2, 0.4]
 jetR: [0.4]
-betas: [0.5, 1, 1.5, 2, 3]
+betas: [1, 1.5, 2, 3]
 
 # Initial detector-level binnings. Distributions are rebinned via configs before unfolding
 n_pt_bins: 195
@@ -27,7 +27,7 @@ ang:
 
   common_settings:
     xtitle: '#lambda_{#beta}'
-    ytitle: '#frac{1}{#it{N}_{jets, inc}} #frac{d#it{N}}{d#lambda_{#beta}}'
+    ytitle: '#frac{1}{#sigma_{jet}} #frac{d#sigma}{d#lambda_{#beta}}'
     pt_bins_reported: [60, 80]
     plot_overlay_list:
       - ['config_R0.4_B1', 'config_R0.4_B1.5', 'config_R0.4_B2', 'config_R0.4_B3']
@@ -90,7 +90,7 @@ force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Work in Progress'
+figure_approval_status: 'Preliminary'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
