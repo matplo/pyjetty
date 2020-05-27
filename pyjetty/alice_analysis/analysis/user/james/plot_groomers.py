@@ -61,9 +61,7 @@ class PlotGroomers(common_base.CommonBase):
     self.file_format = config['file_format']
     self.output_dir = config['output_dir']
 
-    self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
-                       ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
-                       ROOT.kOrange-3, ROOT.kGray]
+    self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
     self.OpenMarkerArray = [24, 25, 26, 32, 27, 28]
     
@@ -180,28 +178,52 @@ class PlotGroomers(common_base.CommonBase):
       if h4D.GetSumw2() is 0:
         h4D.Sumw2()
         
+      name = 'h_theta_g_zg_JetPt_Truth_R{}_{}'.format(jetR, obs_label)
+      h3D_truth = self.fMC.Get(name)
+      if h3D_truth.GetSumw2() is 0:
+        h3D_truth.Sumw2()
+        
       # Loop through pt slices, and plot 1D projection onto observable
       for i in range(0, len(self.pt_bins_reported) - 1):
         min_pt_truth = self.pt_bins_reported[i]
         max_pt_truth = self.pt_bins_reported[i+1]
         
-        self.plot_obs_projection(observable, h4D.Clone(), jetR, obs_label, obs_setting,
+        self.plot_obs_projection(observable, h4D.Clone(), h3D_truth.Clone(), jetR, obs_label, obs_setting,
                                  grooming_setting, min_pt_truth, max_pt_truth, output_dir)
 
   #---------------------------------------------------------------
-  def plot_obs_projection(self, observable, h4D, jetR, obs_label, obs_setting,
+  def plot_obs_projection(self, observable, h4D, h3D_truth, jetR, obs_label, obs_setting,
                           grooming_setting, min_pt, max_pt, output_dir):
-  
+    
+    if observable == 'theta_g':
+      xmax = 1.
+      axis = 2
+      rebin_value = 5
+    elif observable == 'zg':
+      xmax = 0.5
+      axis = 1
+      rebin_value = 5
+
+    # Optional: cut on dR
+    self.min_theta = 0.
+
     # Set pt range
     h4D.GetAxis(0).SetRangeUser(min_pt, max_pt)
-
+    
+    # Normalize by integral
+    #integral = h4D.Projection(axis).Integral()
+    #if integral > 0:
+    #  h4D.Scale(1./integral)
+    #else:
+    #  print('Integral is 0, check for problem')
+    
     # Draw histogram
     c = ROOT.TCanvas('c','c: hist',600,450)
     c.cd()
     ROOT.gPad.SetLeftMargin(0.2)
     ROOT.gPad.SetBottomMargin(0.15)
 
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0, 1.)
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0, xmax)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.GetXaxis().SetTitleOffset(1.4)
     myBlankHisto.GetYaxis().SetTitleOffset(1.6)
@@ -211,13 +233,10 @@ class PlotGroomers(common_base.CommonBase):
     myBlankHisto.GetYaxis().SetTitle(ytitle)
     myBlankHisto.Draw()
     
-    #h_stack = ROOT.THStack('h_stack', 'stacked')
+    h_stack = ROOT.THStack('h_stack', 'stacked')
     
-    leg = ROOT.TLegend(0.6,0.55,0.75,0.8)
+    leg = ROOT.TLegend(0.65,0.55,0.8,0.8)
     self.utils.setup_legend(leg, 0.032)
-    
-    h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
-                # (removed from memory?)
     
     legend_list = ['subleading', 'leading', 'ungroomed', 'outside', 'other',
                    'combined fail', 'truth fail', 'both fail']
@@ -226,27 +245,37 @@ class PlotGroomers(common_base.CommonBase):
     for i in range(8):
       flag = i+1
       h4D.GetAxis(3).SetRange(flag, flag)
+      h4D.GetAxis(2).SetRangeUser(self.min_theta, 1)
 
       # Project onto 1D
-      if observable == 'theta_g':
-        h1D = h4D.Projection(2)
-        h1D.SetName('h1D_{}'.format(i))
-      elif observable == 'zg':
-        h1D = h4D.Projection(1)
-        h1D.SetName('h1D_{}'.format(i))
-
+      h1D = h4D.Projection(axis)
+      h1D.SetName('h1D_{}'.format(i))
+      h1D.Rebin(rebin_value)
+        
       h1D.SetLineColor(self.ColorArray[i])
+      h1D.SetFillColor(self.ColorArray[i])
       h1D.SetLineWidth(2)
       h1D.GetYaxis().SetTitleOffset(1.5)
-      if i == 0:
-        myBlankHisto.SetMaximum(2*h1D.GetMaximum())
 
-      h1D.Draw('hist same')
-      #h_stack.Add(h1D);
-      leg.AddEntry(h1D, legend_list[i], 'L')
-      leg.Draw('same')
+      h_stack.Add(h1D);
+      leg.AddEntry(h1D, legend_list[i], 'F')
     
-    #h_stack.Draw()
+    # Draw truth histogram
+    h3D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
+    h3D_truth.GetZaxis().SetRangeUser(self.min_theta, 1)
+    if observable == 'theta_g':
+      h1D_truth = h3D_truth.Project3D('z')
+    elif observable == 'zg':
+      h1D_truth = h3D_truth.Project3D('y')
+    h1D_truth.Rebin(rebin_value)
+    h1D_truth.SetLineColor(1)
+    h1D_truth.SetLineWidth(2)
+    myBlankHisto.SetMaximum(2*h1D_truth.GetMaximum())
+    leg.AddEntry(h1D_truth, 'Truth', 'L')
+    
+    leg.Draw('same')
+    h_stack.Draw('same')
+    h1D_truth.Draw('same')
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -269,7 +298,7 @@ class PlotGroomers(common_base.CommonBase):
     text = self.utils.formatted_grooming_label(grooming_setting)
     text_latex.DrawLatex(x, y-0.2, text)
     
-    text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{pp-det} < ' + str(int(max_pt)) + ' GeV/#it{c}'
+    text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
     text_latex.DrawLatex(x, y-0.25, text)
 
     output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}.pdf'.format(self.utils.grooming_label(grooming_setting),
