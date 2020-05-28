@@ -60,6 +60,8 @@ class PlotGroomers(common_base.CommonBase):
     
     self.file_format = config['file_format']
     self.output_dir = config['output_dir']
+    
+    self.min_theta_list = config['min_theta_list']
 
     self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
@@ -85,6 +87,17 @@ class PlotGroomers(common_base.CommonBase):
     self.ytitle = self.obs_config_dict['common_settings']['ytitle']
     self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
     self.plot_overlay_list = self.obs_config_dict['common_settings']['plot_overlay_list']
+    
+    if observable == 'theta_g':
+      self.xmin = 0.
+      self.xmax = 1.
+      self.axis = 2
+      self.rebin_value = 5
+    elif observable == 'zg':
+      self.xmin = 0.
+      self.xmax = 0.5
+      self.axis = 1
+      self.rebin_value = 5
 
     # Create output dirs
     output_dir = os.path.join(self.output_dir, observable)
@@ -116,10 +129,12 @@ class PlotGroomers(common_base.CommonBase):
             grooming_setting = self.grooming_settings[i]
             obs_label = self.utils.obs_label(obs_setting, grooming_setting)
             self.create_output_subdir(output_dir, self.utils.grooming_label(grooming_setting))
-            
-
-
+            self.set_zmin(observable, grooming_setting)
+                
             self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir)
+           
+          self.create_output_subdir(output_dir, 'ratios')
+          self.plot_money_ratios(observable, output_dir, jetR)
 
           # Plot performance plots only once
           if observable == 'theta_g':
@@ -188,27 +203,15 @@ class PlotGroomers(common_base.CommonBase):
         min_pt_truth = self.pt_bins_reported[i]
         max_pt_truth = self.pt_bins_reported[i+1]
         
-        self.plot_obs_projection(observable, h4D.Clone(), h3D_truth.Clone(), jetR, obs_label, obs_setting,
-                                 grooming_setting, min_pt_truth, max_pt_truth, output_dir)
+        for min_theta in self.min_theta_list:
+          self.plot_obs_projection(observable, h4D.Clone(), h3D_truth.Clone(), min_theta,
+                                 jetR, obs_label, obs_setting, grooming_setting,
+                                 min_pt_truth, max_pt_truth, output_dir)
 
   #---------------------------------------------------------------
-  def plot_obs_projection(self, observable, h4D, h3D_truth, jetR, obs_label, obs_setting,
+  def plot_obs_projection(self, observable, h4D, h3D_truth, min_theta, jetR, obs_label, obs_setting,
                           grooming_setting, min_pt, max_pt, output_dir):
     
-    if observable == 'theta_g':
-      xmin = 0.
-      xmax = 1.
-      axis = 2
-      rebin_value = 5
-    elif observable == 'zg':
-      xmin = 0.
-      xmax = 0.5
-      axis = 1
-      rebin_value = 5
-
-    # Optional: cut on dR
-    self.min_theta = 0.
-
     # Set pt range
     h4D.GetAxis(0).SetRangeUser(min_pt, max_pt)
     
@@ -234,7 +237,7 @@ class PlotGroomers(common_base.CommonBase):
     leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
     self.utils.setup_legend(leg, 0.04)
 
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, xmin, xmax)
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetMinimum(0.01)
     myBlankHisto.GetXaxis().SetTitle(self.xtitle)
@@ -291,12 +294,14 @@ class PlotGroomers(common_base.CommonBase):
     for i in range(len(legend_list)):
       flag = i+1
       h4D.GetAxis(3).SetRange(flag, flag)
-      h4D.GetAxis(2).SetRangeUser(self.min_theta, 1)
+      h4D.GetAxis(2).SetRangeUser(min_theta, 1)
+      if observable == 'zg':
+        h4D.GetAxis(1).SetRangeUser(self.zmin, self.xmax)
 
       # Project onto 1D
-      h1D = h4D.Projection(axis)
+      h1D = h4D.Projection(self.axis)
       h1D.SetName('h1D_{}'.format(i))
-      h1D.Rebin(rebin_value)
+      h1D.Rebin(self.rebin_value)
         
       h1D.SetLineColor(self.ColorArray[i])
       h1D.SetFillColor(self.ColorArray[i])
@@ -313,12 +318,15 @@ class PlotGroomers(common_base.CommonBase):
     
     # Draw truth histogram
     h3D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
-    h3D_truth.GetZaxis().SetRangeUser(self.min_theta, 1)
+    h3D_truth.GetZaxis().SetRangeUser(min_theta, 1)
+    if observable == 'zg':
+      h3D_truth.GetYaxis().SetRangeUser(self.zmin, self.xmax)
+
     if observable == 'theta_g':
       h1D_truth = h3D_truth.Project3D('z')
     elif observable == 'zg':
       h1D_truth = h3D_truth.Project3D('y')
-    h1D_truth.Rebin(rebin_value)
+    h1D_truth.Rebin(self.rebin_value)
     h1D_truth.SetLineColor(1)
     h1D_truth.SetLineWidth(2)
     myBlankHisto.SetMaximum(2.3*h1D_truth.GetMaximum())
@@ -353,11 +361,12 @@ class PlotGroomers(common_base.CommonBase):
     text = self.utils.formatted_grooming_label(grooming_setting)
     text_latex.DrawLatex(x, y-0.32, text)
     
-    if self.min_theta > 1e-3:
-      text = '#Delta#it{{R}} > {}'.format(self.min_theta*jetR)
+    if min_theta > 1e-3:
+      text = '#Delta#it{{R}} > {}'.format(min_theta*jetR)
       text_latex.DrawLatex(x, y-0.38, text)
     
     pad2.cd()
+    setattr(self, 'h_ratio_{}'.format(obs_label), None)
     h_ratio = h_sum.Clone()
     h_ratio.SetMarkerStyle(21)
     h_ratio.SetMarkerColor(1)
@@ -365,16 +374,149 @@ class PlotGroomers(common_base.CommonBase):
     if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
       myBlankHisto2.SetMaximum(1.2*h_ratio.GetMaximum())
     h_ratio.Draw('PE same')
+    setattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio)
     
-    line = ROOT.TLine(xmin,1,xmax,1)
+    line = ROOT.TLine(self.xmin,1,self.xmax,1)
     line.SetLineColor(920+2)
     line.SetLineStyle(2)
     line.Draw('same')
 
     output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}_dR{}.pdf'.format(self.utils.grooming_label(grooming_setting),
-                                          obs_label, min_pt, max_pt, self.utils.remove_periods(self.min_theta*jetR)))
+                                          obs_label, min_pt, max_pt, self.utils.remove_periods(min_theta*jetR)))
     c.SaveAs(output_filename)
     c.Close()
+
+  #---------------------------------------------------------------
+  # Plot ratio of money plot for each groomer
+  #---------------------------------------------------------------
+  def plot_money_ratios(self, observable, output_dir, jetR):
+  
+    for min_theta in self.min_theta_list:
+  
+      for i_overlay, overlay_list in enumerate(self.plot_overlay_list):
+
+        # Loop through pt slices, and plot 1D projection onto observable
+        for i in range(0, len(self.pt_bins_reported) - 1):
+          min_pt_truth = self.pt_bins_reported[i]
+          max_pt_truth = self.pt_bins_reported[i+1]
+          
+          self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth)
+ 
+  #---------------------------------------------------------------
+  # Plot ratio of money plot for each groomer
+  #---------------------------------------------------------------
+  def plot_money_ratio(self, observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt, max_pt):
+ 
+    self.utils.set_plotting_options()
+    ROOT.gROOT.ForceStyle()
+
+    # Draw histogram
+    c = ROOT.TCanvas('c','c: hist', 600, 450)
+    c.cd()
+    
+    pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    pad1.SetLeftMargin(0.2)
+    pad1.SetTopMargin(0.08)
+    pad1.SetRightMargin(0.04)
+    pad1.SetBottomMargin(0.2)
+    pad1.SetTicks(0,1)
+    pad1.Draw()
+    pad1.cd()
+  
+    leg = ROOT.TLegend(0.6,0.62,0.8,0.8)
+    self.utils.setup_legend(leg, 0.04)
+    
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, self.xmin, self.xmax)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.SetXTitle(self.xtitle)
+    myBlankHisto.SetYTitle('#frac{Embedded}{Truth}')
+    myBlankHisto.SetMaximum(2.49)
+    myBlankHisto.SetMinimum(0.01) # Don't draw 0 on top panel
+    myBlankHisto.GetXaxis().SetTitleSize(0.06)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.2)
+    myBlankHisto.GetXaxis().SetLabelSize(0.05)
+    myBlankHisto.GetYaxis().SetTitleSize(0.05)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+    myBlankHisto.GetYaxis().SetLabelSize(0.05)
+    myBlankHisto.Draw('E')
+  
+    i_reset = 0
+    for i, subconfig_name in enumerate(self.obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+
+      obs_setting = self.obs_settings[i]
+      grooming_setting = self.grooming_settings[i]
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      self.set_zmin(observable, grooming_setting)
+      
+      h_ratio = getattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR))
+      h_ratio.SetMarkerStyle(0)
+      h_ratio.SetLineStyle(0)
+      h_ratio.SetLineColor(0)
+      h_ratio.SetFillColor(self.ColorArray[i_reset])
+      h_ratio.SetFillColorAlpha(self.ColorArray[i_reset], 0.75)
+      
+      if h_ratio.GetMaximum() > 0.5*myBlankHisto.GetMaximum():
+        myBlankHisto.SetMaximum(2*h_ratio.GetMaximum())
+
+
+      i_reset += 1
+      h_ratio.SetLineWidth(2)
+      h_ratio.Draw('E3 same')
+      
+      leg.AddEntry(h_ratio, self.utils.formatted_grooming_label(grooming_setting), 'F')
+
+    leg.Draw('same')
+    
+    line = ROOT.TLine(self.xmin,1,self.xmax,1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.Draw('same')
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    
+    x = 0.23
+    y = 0.87
+    dy = 0.05
+    text_latex.SetTextSize(0.04)
+    text = 'PYTHIA8 embedded in thermal background'
+    text_latex.DrawLatex(x, y, text)
+    
+    text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
+    text_latex.DrawLatex(x, y-dy, text)
+
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.DrawLatex(x, y-2*dy, text)
+    
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR)
+    text_latex.DrawLatex(x, y-3*dy, text)
+  
+    text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
+    text_latex.DrawLatex(x, y-4*dy-0.02, text)
+    
+    if min_theta > 1e-3:
+      text = '#Delta#it{{R}} > {}'.format(min_theta*jetR)
+      text_latex.DrawLatex(x, y-5*dy-0.04, text)
+  
+    output_filename = os.path.join(output_dir, 'ratios/money_plot_ratio_{}-{}_dR{}_{}.pdf'.format(
+                                   min_pt, max_pt, self.utils.remove_periods(min_theta*jetR),
+                                   i_overlay))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  # Set xmin for zg
+  #---------------------------------------------------------------
+  def set_zmin(self, observable, grooming_setting):
+  
+    if observable == 'zg':
+      self.zmin = 0.
+      for key, value in grooming_setting.items():
+        if key == 'sd' and np.abs(value[1]) < 1e-3:
+          self.zmin = value[0]
 
   #---------------------------------------------------------------
   # Create a single output subdirectory
