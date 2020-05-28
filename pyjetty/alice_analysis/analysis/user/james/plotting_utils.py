@@ -36,8 +36,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.thermal = thermal
     self.groomer_studies = groomer_studies
     
-    self.scaled_suffix = ''
-    #self.scaled_suffix = 'Scaled'
+    self.scaled_suffix = 'Scaled'
+    if groomer_studies:
+      self.scaled_suffix = ''
     
     # Read config file
     with open(config_file, 'r') as stream:
@@ -77,6 +78,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       name = 'hDeltaR_All_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
     else:
       name = 'hDeltaR_combined_ppdet_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
+      
     h = self.fMC.Get(name)
     
     c = ROOT.TCanvas("c","c: hist",600,450)
@@ -593,7 +595,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       delta = 0.07
       
     if grooming_setting:
-      text = self.formatted_grooming_label(grooming_setting)
+      text = self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies)
       text_latex.DrawLatex(0.3, 0.61-delta, text)
 
     output_filename = os.path.join(self.output_dir, 'truth/h_{}_MC_R{}_{}_{}-{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
@@ -747,7 +749,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       delta = 0.07
       
     if grooming_setting:
-      text = self.formatted_grooming_label(grooming_setting)
+      text = self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies)
       text_latex.DrawLatex(0.3, 0.61-delta, text)
 
     output_filename = os.path.join(self.output_dir, 'mc_projections_{}/h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
@@ -802,7 +804,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_delta_pt_emb(self, jetR, pt_bins):
   
-    name = 'hDeltaPt_emb_R{}{}'.format(jetR, self.suffix)
+    name = 'hDeltaPt_emb_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
     
     c = ROOT.TCanvas('c','c: hist',600,450)
     c.cd()
@@ -874,11 +876,14 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     c.cd()
     ROOT.gPad.SetLeftMargin(0.15)
     ROOT.gPad.SetBottomMargin(0.15)
+    c.GetPad(0).SetTicks(0,1)
     
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, 0., 200.)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.4)
     myBlankHisto.GetXaxis().SetTitleOffset(1.4)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+    myBlankHisto.GetXaxis().SetTitleSize(0.05)
+    myBlankHisto.GetYaxis().SetTitleSize(0.055)
     myBlankHisto.SetMaximum(1.61)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.GetYaxis().SetTitle('Subleading prong purity')
@@ -888,8 +893,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       myLegend = ROOT.TLegend(0.55,0.65,0.75,0.82)
       self.setup_legend(myLegend,0.035)
     else:
-      myLegend = ROOT.TLegend(0.45,0.2,0.75,0.4)
-      self.setup_legend(myLegend,0.035)
+      myLegend = ROOT.TLegend(0.42,0.2,0.75,0.4)
+      self.setup_legend(myLegend,0.043)
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
@@ -939,7 +944,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[len(self.ColorArray)-i-2])
         hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[len(self.ColorArray)-i-2])
       hMatchedFraction_vs_pt.DrawCopy('P same')
-      myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
+      myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies), 'P')
         
       h_list.append(hMatchedFraction_vs_pt)
 
@@ -958,17 +963,17 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       x = 0.2
       y = 0.85
       text_latex.SetTextSize(0.04)
-      text = 'PYTHIA8 embedded in thermal background'
+      text = 'PYTHIA8 Monash 2013 embedded in thermal background'
       text_latex.DrawLatex(x, y, text)
     else:
-      x = 0.26
+      x = 0.23
       y = 0.8
       text_latex.SetTextSize(0.055)
       text = 'ALICE Performance'
       text_latex.DrawLatex(x, y+0.05, text)
       
       text_latex.SetTextSize(0.04)
-      text = 'PYTHIA8 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
+      text = 'PYTHIA8 Monash 2013 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
       text_latex.DrawLatex(x, y, text)
         
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -994,6 +999,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     c.cd()
     ROOT.gPad.SetLeftMargin(0.2)
     ROOT.gPad.SetBottomMargin(0.15)
+    c.GetPad(0).SetTicks(0,1)
     
     xmin = 0.
     if plot_deltaz:
@@ -1005,6 +1011,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       myBlankHisto.GetYaxis().SetTitleOffset(1.4)
     else:
       myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+    myBlankHisto.GetXaxis().SetTitleSize(0.05)
+    myBlankHisto.GetYaxis().SetTitleSize(0.05)
     max = 0.01
     myBlankHisto.SetMaximum(2*max)
     myBlankHisto.SetMinimum(0.)
@@ -1016,8 +1024,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         myBlankHisto.GetYaxis().SetTitle('#frac{d#it{N}}{d#Delta #it{R}_{prong}}')
     myBlankHisto.Draw()
     
-    leg = ROOT.TLegend(0.57,0.58,0.7,0.75)
-    self.setup_legend(leg,0.032)
+    leg = ROOT.TLegend(0.54,0.58,0.67,0.75)
+    self.setup_legend(leg,0.035)
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
@@ -1071,7 +1079,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         else:
           myBlankHisto.SetMaximum(1.9*max)
       hUnmatched_vs_pt.Draw('L hist same')
-      leg.AddEntry(hUnmatched_vs_pt, self.formatted_grooming_label(grooming_setting), 'L')
+      leg.AddEntry(hUnmatched_vs_pt, self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies), 'L')
       h_list.append(hUnmatched_vs_pt)
     
     leg.Draw('same')
@@ -1086,14 +1094,14 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       text = 'PYTHIA8 embedded in thermal background'
       text_latex.DrawLatex(x, y, text)
     else:
-      x = 0.26
+      x = 0.23
       y = 0.8
       text_latex.SetTextSize(0.055)
       text = 'ALICE Performance'
       text_latex.DrawLatex(x, y+0.05, text)
       
       text_latex.SetTextSize(0.04)
-      text = 'PYTHIA8 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
+      text = 'PYTHIA8 Monash 2013 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
       text_latex.DrawLatex(x, y, text)
         
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -1175,7 +1183,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[i_reset])
       i_reset += 1
       hMatchedFraction_vs_pt.Draw('P same')
-      leg.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting), 'P')
+      leg.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting, not self.groomer_studies), 'P')
       h_list.append(hMatchedFraction_vs_pt)
 
     leg.Draw('same')

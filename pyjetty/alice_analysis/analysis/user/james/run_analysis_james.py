@@ -207,7 +207,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
                 self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
 
           hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}'.format(jetR)
-          self.plotting_utils.plot_prong_matching_correlation(jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+          self.plotting_utils.plot_prong_matching_correlation(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
