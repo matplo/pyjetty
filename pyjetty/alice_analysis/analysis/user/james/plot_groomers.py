@@ -190,38 +190,71 @@ class PlotGroomers(common_base.CommonBase):
       #    8: both pp-truth and combined jet failed SoftDrop
       name = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, obs_label, R_max)
       h4D = self.fMC.Get(name)
-      if h4D.GetSumw2() is 0:
-        h4D.Sumw2()
+      h4D.Sumw2()
         
       name = 'h_theta_g_zg_JetPt_Truth_R{}_{}'.format(jetR, obs_label)
       h3D_truth = self.fMC.Get(name)
-      if h3D_truth.GetSumw2() is 0:
-        h3D_truth.Sumw2()
         
       # Loop through pt slices, and plot 1D projection onto observable
       for i in range(0, len(self.pt_bins_reported) - 1):
-        min_pt_truth = self.pt_bins_reported[i]
-        max_pt_truth = self.pt_bins_reported[i+1]
+        min_pt = self.pt_bins_reported[i]
+        max_pt = self.pt_bins_reported[i+1]
+        
+        # Set pt range
+        h4D.GetAxis(0).SetRangeUser(min_pt, max_pt)
+        h3D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
         
         for min_theta in self.min_theta_list:
-          self.plot_obs_projection(observable, h4D.Clone(), h3D_truth.Clone(), min_theta,
+          self.plot_obs_projection(observable, h4D, h3D_truth, min_theta,
                                  jetR, obs_label, obs_setting, grooming_setting,
-                                 min_pt_truth, max_pt_truth, output_dir)
+                                 min_pt, max_pt, output_dir)
 
   #---------------------------------------------------------------
   def plot_obs_projection(self, observable, h4D, h3D_truth, min_theta, jetR, obs_label, obs_setting,
                           grooming_setting, min_pt, max_pt, output_dir):
     
-    # Set pt range
-    h4D.GetAxis(0).SetRangeUser(min_pt, max_pt)
+    # Reset projections for normalization
     
-    # Normalize by integral
-    #integral = h4D.Projection(axis).Integral()
-    #if integral > 0:
-    #  h4D.Scale(1./integral)
-    #else:
-    #  print('Integral is 0, check for problem')
+    # zg
+    h4D.GetAxis(1).SetRangeUser(-10, self.xmax)
+    h3D_truth.GetYaxis().SetRangeUser(-10, self.xmax)
     
+    # Theta
+    h4D.GetAxis(2).SetRangeUser(-10, 1)
+    h3D_truth.GetZaxis().SetRangeUser(-10, 1)
+
+    # Flag
+    h4D.GetAxis(3).SetRange(0, 11)
+    
+    # Set RAA (optionally) due to theta_g cut from jet quenching
+    if observable == 'zg':
+      self.RAA = 0.5
+    else:
+      self.RAA = 1.
+
+    # Get normalization for embeddeed case
+    h_normalization = h4D.Projection(self.axis)
+    h_normalization.SetName('h_normalization_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    N_inclusive_emb = h_normalization.Integral()/self.RAA
+    if N_inclusive_emb < 1e-3:
+      print('Emb Integral is 0, check for problem')
+      return
+      
+    # Get normalization for truth case
+    if observable == 'theta_g':
+      h_normalization_truth = h3D_truth.Project3D('z')
+    elif observable == 'zg':
+      h_normalization_truth = h3D_truth.Project3D('y')
+    h_normalization_truth.SetName('h_normalization_truth_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    N_inclusive_truth = h_normalization_truth.Integral()
+    if N_inclusive_truth < 1e-3:
+      print('Truth Integral is 0, check for problem')
+      return
+      
+    # Set theta cut
+    h4D.GetAxis(2).SetRangeUser(min_theta, 1)
+    h3D_truth.GetZaxis().SetRangeUser(min_theta, 1)
+
     # Draw histogram
     c = ROOT.TCanvas('c','c: hist', 600, 650)
     c.cd()
@@ -252,8 +285,7 @@ class PlotGroomers(common_base.CommonBase):
     myBlankHisto.GetYaxis().SetLabelFont(43)
     myBlankHisto.GetYaxis().SetLabelSize(25)
     myBlankHisto.GetYaxis().SetNdivisions(505)
-    ytitle = '#frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
-    myBlankHisto.GetYaxis().SetTitle(ytitle)
+    myBlankHisto.GetYaxis().SetTitle(self.ytitle)
     myBlankHisto.Draw('E')
     
     c.cd()
@@ -294,7 +326,6 @@ class PlotGroomers(common_base.CommonBase):
     for i in range(len(legend_list)):
       flag = i+1
       h4D.GetAxis(3).SetRange(flag, flag)
-      h4D.GetAxis(2).SetRangeUser(min_theta, 1)
       if observable == 'zg':
         h4D.GetAxis(1).SetRangeUser(self.zmin, self.xmax)
 
@@ -302,31 +333,29 @@ class PlotGroomers(common_base.CommonBase):
       h1D = h4D.Projection(self.axis)
       h1D.SetName('h1D_{}'.format(i))
       h1D.Rebin(self.rebin_value)
+      h1D.Scale(1./N_inclusive_emb, 'width')
         
       h1D.SetLineColor(self.ColorArray[i])
       h1D.SetFillColor(self.ColorArray[i])
       h1D.SetLineWidth(2)
 
-      h_stack.Add(h1D);
+      h_stack.Add(h1D)
       leg.AddEntry(h1D, legend_list[i], 'F')
       
       if i == 0:
         h_sum = h1D.Clone()
-        h_sum.Sumw2()
+        h_sum.SetName('h_sum_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
       else:
-        h_sum.Add(h1D.Clone())
+        h_sum.Add(h1D)
     
     # Draw truth histogram
-    h3D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
-    h3D_truth.GetZaxis().SetRangeUser(min_theta, 1)
-    if observable == 'zg':
-      h3D_truth.GetYaxis().SetRangeUser(self.zmin, self.xmax)
-
     if observable == 'theta_g':
       h1D_truth = h3D_truth.Project3D('z')
     elif observable == 'zg':
+      h3D_truth.GetYaxis().SetRangeUser(self.zmin, self.xmax)
       h1D_truth = h3D_truth.Project3D('y')
     h1D_truth.Rebin(self.rebin_value)
+    h1D_truth.Scale(1./N_inclusive_truth, 'width')
     h1D_truth.SetLineColor(1)
     h1D_truth.SetLineWidth(2)
     myBlankHisto.SetMaximum(2.3*h1D_truth.GetMaximum())
@@ -334,8 +363,8 @@ class PlotGroomers(common_base.CommonBase):
     
     pad1.cd()
     leg.Draw('same')
-    h_stack.Draw('same')
-    h1D_truth.Draw('same')
+    h_stack.Draw('same hist')
+    h1D_truth.Draw('same hist')
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
