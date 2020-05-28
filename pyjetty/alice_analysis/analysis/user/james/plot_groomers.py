@@ -228,7 +228,7 @@ class PlotGroomers(common_base.CommonBase):
     
     # Set RAA (optionally) due to theta_g cut from jet quenching
     if observable == 'zg':
-      self.RAA = 0.5
+      self.RAA = 1-min_theta
     else:
       self.RAA = 1.
 
