@@ -556,11 +556,12 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
     pad1.SetBottomMargin(0.13)
     if plot_ratio:
       pad1.SetBottomMargin(0.)
+    pad1.SetTicks(0,1)
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
-    self.utils.setup_legend(myLegend,0.035)
+    myLegend = ROOT.TLegend(0.45,0.33,0.61,0.57)
+    self.utils.setup_legend(myLegend,0.05)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = self.get_maximum(name, overlay_list)
@@ -612,6 +613,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
+        myBlankHisto.GetXaxis().SetTitleSize(0.085)
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
         myBlankHisto.SetYTitle(ytitle)
@@ -619,8 +621,8 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
-          myBlankHisto.GetYaxis().SetTitleSize(0.065)
-          myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+          myBlankHisto.GetYaxis().SetTitleSize(0.075)
+          myBlankHisto.GetYaxis().SetTitleOffset(1.2)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
         myBlankHisto.Draw('E')
         
@@ -633,6 +635,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
           pad2.SetBottomMargin(0.4)
           pad2.SetLeftMargin(0.2)
           pad2.SetRightMargin(0.04)
+          pad2.SetTicks(0,1)
           pad2.Draw()
           pad2.cd()
           
@@ -644,7 +647,7 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
           myBlankHisto2.GetXaxis().SetTitleOffset(4.)
           myBlankHisto2.GetXaxis().SetLabelFont(43)
           myBlankHisto2.GetXaxis().SetLabelSize(25)
-          myBlankHisto2.GetYaxis().SetTitleSize(20)
+          myBlankHisto2.GetYaxis().SetTitleSize(25)
           myBlankHisto2.GetYaxis().SetTitleFont(43)
           myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
           myBlankHisto2.GetYaxis().SetLabelFont(43)
@@ -757,35 +760,37 @@ class RunAnalysisJames(run_analysis.RunAnalysis):
       if subobs_label:
         text += '{} = {}'.format(subobs_label, obs_setting)
       if grooming_setting:
-        text += self.utils.formatted_grooming_label(grooming_setting)
+        text += self.utils.formatted_grooming_label(grooming_setting, verbose=True)
       myLegend.AddEntry(h, '{}'.format(text), 'pe')
         
     pad1.cd()
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
-      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
+      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash 2013', 'l')
     if plot_nll:
       myLegend.AddEntry(g, 'NLL', 'l')
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.25, 0.87, text)
     
+    text_latex.SetTextSize(0.07)
+    x = 0.25
+    y = 0.86
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(x, y, text)
+    
+    text_latex.SetTextSize(0.055)
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.81, text)
+    text_latex.DrawLatex(x, y-0.06, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.75, text)
+    text_latex.DrawLatex(x, y-0.12, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
-    text_latex.DrawLatex(0.25, 0.69, text)
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR)
+    text_latex.DrawLatex(x, y-0.18, text)
     
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.63, text)
+    text_latex.DrawLatex(x, y-0.24, text)
     
     myLegend.Draw()
     
