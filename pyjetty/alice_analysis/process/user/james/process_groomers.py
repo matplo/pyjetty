@@ -112,7 +112,9 @@ class ProcessGroomers(process_base.ProcessBase):
       beta = config['thermal_model']['beta']
       N_avg = config['thermal_model']['N_avg']
       sigma_N = config['thermal_model']['sigma_N']
-      self.thermal_generator = thermal_generator.ThermalGenerator(N_avg, sigma_N, beta)
+      eta_max = config['thermal_model']['eta_max']
+      self.thermal_generator = thermal_generator.ThermalGenerator(N_avg = N_avg, sigma_N = sigma_N,
+                                                                  beta = beta, eta_max=eta_max)
     else:
       self.thermal_model = False
      
@@ -250,17 +252,17 @@ class ProcessGroomers(process_base.ProcessBase):
         for match in match_list:
 
           name = 'hProngMatching_{}_{}_JetPt_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 30, 0, 300, 15, -0.4, 1.1, 20, 0., 2*jetR)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 15, -0.4, 1.1, 100, 0., 1)
           h.GetXaxis().SetTitle('p_{T,truth}')
           h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta R_{prong}')
+          h.GetZaxis().SetTitle('#Delta R_{prong}/R_{g}')
           setattr(self, name, h)
           
           name = 'hProngMatching_{}_{}_JetPtZ_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 30, 0, 300, 15, -0.4, 1.1, 50, -0.5, 0.5)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 15, -0.4, 1.1, 200, -0.5, 0.5)
           h.GetXaxis().SetTitle('p_{T,truth}')
           h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta z_{prong}')
+          h.GetZaxis().SetTitle('#Delta z_{prong}/z')
           setattr(self, name, h)
 
       name = 'hProngMatching_subleading-leading_correlation_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
@@ -448,14 +450,14 @@ class ProcessGroomers(process_base.ProcessBase):
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
   def fill_groomed_jet_matches(self, grooming_setting, jet_combined, jetR, R_max):
-       
+
     grooming_label = self.utils.grooming_label(grooming_setting)
        
     if jet_combined.has_user_info():
       jet_truth = jet_combined.python_info().match
      
       if jet_truth:
-     
+
         jet_pt_combined_ungroomed = jet_combined.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
         
@@ -490,11 +492,15 @@ class ProcessGroomers(process_base.ProcessBase):
             print('Dynamical groomer is: {}'.format(dy_groomer.description()))
           
           jet_combined_dg_lund = self.utils.dy_groom(dy_groomer, jet_combined, a)
+          if not jet_combined_dg_lund:
+            return
           jet_truth_dg_lund = self.utils.dy_groom(dy_groomer, jet_truth, a)
+          if not jet_truth_dg_lund:
+            return
           
           jet_combined_dg = jet_combined_dg_lund.pair()
           jet_truth_dg = jet_truth_dg_lund.pair()
-            
+          
         # Compute groomed observables
         if 'sd' in grooming_setting:
 
@@ -613,6 +619,9 @@ class ProcessGroomers(process_base.ProcessBase):
         # Assumes groomer_list = [sd, dy_groomer]
         a = grooming_setting['dg'][0]
         jet_truth_dg_lund = self.utils.dy_groom(groomer_list[1], jet_truth, a)
+        if not jet_truth_dg_lund:
+          return
+          
         jet_truth_dg = jet_truth_dg_lund.pair()
         jet_truth_groomed = groomer_list[0].result(jet_truth_dg)
       
@@ -634,9 +643,13 @@ class ProcessGroomers(process_base.ProcessBase):
       has_parents_combined = jet_combined_groomed.has_parents(jet_combined_prong1, jet_combined_prong2)
 
     elif type == 'DG':
+    
+      z_combined = jet_combined_groomed.z()
       
       a = grooming_setting['dg'][0]
       jet_truth_groomed_lund = self.utils.dy_groom(groomer_list[0], jet_truth, a)
+      if not jet_truth_groomed_lund:
+        return
     
       # Dynamical grooming returns a fjcontrib::LundGenerator
       #   The prongs can be retrieved directly from this object.
@@ -653,6 +666,21 @@ class ProcessGroomers(process_base.ProcessBase):
       # Get the fastjet::PseudoJets from the fjcontrib::LundGenerators
       jet_truth_groomed = jet_truth_groomed_lund.pair()
       jet_combined_groomed = jet_combined_groomed.pair()
+      
+      # Check that groomed truth jet doesn't contain any background tracks
+      problem = False
+      for constituent in jet_truth_groomed.constituents():
+        if constituent.user_index() < 0:
+          problem = True
+      if problem:
+        print(grooming_setting)
+        print(dir(jet_truth_groomed_lund))
+        print('pair: {}'.format(jet_truth_groomed_lund.pair()))
+        print('kappa: {}'.format(jet_truth_groomed_lund.kappa()))
+        print('groomed constituents: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
+        print('jet constituents: {}'.format([track.user_index() for track in jet_truth.constituents()]))
+        print('prong1 constituents: {}'.format([track.user_index() for track in jet_truth_prong1.constituents()]))
+        print('prong2 constituents: {}'.format([track.user_index() for track in jet_truth_prong2.constituents()]))
           
     if self.debug_level > 1:
 
@@ -678,6 +706,8 @@ class ProcessGroomers(process_base.ProcessBase):
     deltaR_prong1 = -1.
     deltaR_prong2 = -1.
     deltaZ = -1.
+    rg_truth = -1.
+    zg_truth = -1.
     if has_parents_truth and has_parents_combined:
     
         # Subleading jet pt-matching
@@ -716,7 +746,28 @@ class ProcessGroomers(process_base.ProcessBase):
         # --------------------------
         deltaR_prong1 = jet_combined_prong1.delta_R(jet_truth_prong1)
         deltaR_prong2 = jet_combined_prong2.delta_R(jet_truth_prong2)
-        deltaZ = self.zg(jet_combined_groomed) - self.zg(jet_truth_groomed)
+        if 'SD' in type:
+          deltaZ = self.zg(jet_combined_groomed) - self.zg(jet_truth_groomed)
+          rg_truth = jetR*self.theta_g(jet_truth_groomed, jetR)
+          zg_truth = self.zg(jet_truth_groomed)
+          
+        elif 'DG' in type:
+          deltaZ = z_combined - jet_truth_groomed_lund.z()
+          rg_truth = jet_truth_groomed_lund.Delta()
+          zg_truth = jet_truth_groomed_lund.z()
+        
+        if rg_truth  < 1e-5:
+          print('rg_truth: {}'.format(rg_truth))
+          print(grooming_setting)
+          if 'SD' not in type:
+            print('pair: {}'.format(jet_truth_groomed_lund.pair()))
+            print('kappa: {}'.format(jet_truth_groomed_lund.kappa()))
+          print('groomed constituents: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
+          print('groomed constituent eta: {}'.format([track.eta() for track in jet_truth_groomed.constituents()]))
+          print('groomed constituent phi: {}'.format([track.phi() for track in jet_truth_groomed.constituents()]))
+          print('jet constituents: {}'.format([track.user_index() for track in jet_truth.constituents()]))
+          print('prong1 constituents: {}'.format([track.user_index() for track in jet_truth_prong1.constituents()]))
+          print('prong2 constituents: {}'.format([track.user_index() for track in jet_truth_prong2.constituents()]))
         
         if self.debug_level > 1:
         
@@ -752,26 +803,26 @@ class ProcessGroomers(process_base.ProcessBase):
         matched_pt_leading_leading = matched_pt_leading_subleading = matched_pt_leading_ungroomed_notgroomed = matched_pt_leading_outside = matched_pt_subleading_leading = matched_pt_subleading_subleading = matched_pt_subleading_ungroomed_notgroomed = matched_pt_subleading_outside = -0.3
 
     # Leading prong
-    getattr(self, 'hProngMatching_leading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaR_prong1)
+    getattr(self, 'hProngMatching_leading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaR_prong1/rg_truth)
+    getattr(self, 'hProngMatching_leading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaR_prong1/rg_truth)
+    getattr(self, 'hProngMatching_leading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaR_prong1/rg_truth)
+    getattr(self, 'hProngMatching_leading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaR_prong1/rg_truth)
     
-    getattr(self, 'hProngMatching_leading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaZ)
-    getattr(self, 'hProngMatching_leading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaZ)
-    getattr(self, 'hProngMatching_leading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaZ)
-    getattr(self, 'hProngMatching_leading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaZ)
+    getattr(self, 'hProngMatching_leading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaZ/zg_truth)
+    getattr(self, 'hProngMatching_leading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaZ/zg_truth)
+    getattr(self, 'hProngMatching_leading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaZ/zg_truth)
+    getattr(self, 'hProngMatching_leading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaZ/zg_truth)
 
     # Subleading prong
-    getattr(self, 'hProngMatching_subleading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaR_prong2)
+    getattr(self, 'hProngMatching_subleading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaR_prong2/rg_truth)
+    getattr(self, 'hProngMatching_subleading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaR_prong2/rg_truth)
+    getattr(self, 'hProngMatching_subleading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaR_prong2/rg_truth)
+    getattr(self, 'hProngMatching_subleading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaR_prong2/rg_truth)
 
-    getattr(self, 'hProngMatching_subleading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaZ)
-    getattr(self, 'hProngMatching_subleading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaZ)
-    getattr(self, 'hProngMatching_subleading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaZ)
-    getattr(self, 'hProngMatching_subleading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaZ)
+    getattr(self, 'hProngMatching_subleading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaZ/zg_truth)
+    getattr(self, 'hProngMatching_subleading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaZ/zg_truth)
+    getattr(self, 'hProngMatching_subleading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaZ/zg_truth)
+    getattr(self, 'hProngMatching_subleading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaZ/zg_truth)
     
     # Plot correlation of matched pt fraction for leading-subleading and subleading-leading
     getattr(self, 'hProngMatching_subleading-leading_correlation_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_truth.pt(), matched_pt_leading_subleading, matched_pt_subleading_leading)

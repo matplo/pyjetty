@@ -87,6 +87,9 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def dy_groom(self, dy_groomer, jet, a):
   
+    if len(jet.constituents()) < 2:
+      return None
+    
     if a == 'max_pt_softer':
       return dy_groomer.max_pt_softer(jet)
     elif a == 'max_z':
