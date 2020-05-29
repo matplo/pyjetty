@@ -42,9 +42,9 @@ class PlotRAA(common_base.CommonBase):
     
     self.colors = [600-6, 632-4]
     self.markers = [20, 21, 33]
-    self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1]
-    self.line_style = [1, 1, 1, 1, 9, 1]
-    self.line_width = [4, 4, 4, 4, 6, 4]
+    self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kBlack]
+    self.line_style = [1, 1, 1, 1, 9, 1, 1, 1]
+    self.line_width = [4, 4, 4, 4, 6, 4, 4, 4]
              
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #it{#beta}=0'
@@ -198,14 +198,17 @@ class PlotRAA(common_base.CommonBase):
             
             elif type == 'hybrid_model':
             
-              #x = np.array(theory_prediction['xbins'])
-              #ratio_lower = np.array(theory_prediction['ratio_lower'])
-              #ratio_upper = np.array(theory_prediction['ratio_upper'])
-              #if 'ratio' in theory_prediction:
-              #  ratio = np.array(theory_prediction['ratio'])
-              #else:
-              #  ratio = (ratio_lower + ratio_upper) / 2.
+              x = np.array(theory_prediction['xbins'])
+              ratio_lower = np.array(theory_prediction['ratio_lower'])
+              ratio_upper = np.array(theory_prediction['ratio_upper'])
+              ratio = (ratio_lower + ratio_upper) / 2.
               
+              n = len(x)
+              xerr = np.zeros(n)
+              g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+            
+            elif type == 'jetscape':
+
               # Get distributions
               xbins = np.array(theory_prediction['xbins'])
               y_pp = np.array(theory_prediction['y_pp'])
@@ -229,7 +232,6 @@ class PlotRAA(common_base.CommonBase):
               n = len(x)
               xerr = np.zeros(n)
               g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
-              #g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
 
             if prediction in plot_list:
               self.prediction_g_list.append(g)
