@@ -40,5 +40,9 @@ number of charged particles:
 - some code used here
 - https://github.com/matplo/pyjetty/blob/master/pyjetty/groom/argantyr/centrality.py
 - https://github.com/matplo/pyjetty/blob/master/pyjetty/groom/argantyr/centrality_percentiles.ipynb
-- to make histograms/files input for the notebook: tdraw_cfg.py tdraw_centrality.cfg -r input_file:centrality_output.root
-- the notebook should give the figure:
+- to make histograms/files input for the notebook: 
+```
+tdraw_cfg.py tdraw_centrality.cfg -r input_file:centrality_output.root
+```
+- the `tdraw_cfg.py` is from 
+- the notebook should give a figure: https://www.dropbox.com/s/o427cqaw0ub50ng/centrality_argantyr.png?dl=0
