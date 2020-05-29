@@ -2,7 +2,7 @@
 
 ## Note: notable changes to some code
 
-- read all branches of the event tree
+- read all branches of the event tree (replaced line L82 with L83)
 https://github.com/matplo/pyjetty/blob/8e983165123f7feade3ccc887907dc083a294465/pyjetty/mputils/data_io.py#L82
 - changed also (expose all branches to the user): https://github.com/matplo/pyjetty/blob/8e983165123f7feade3ccc887907dc083a294465/pyjetty/mputils/data_io.py#L18
 - using this (modified) - all attributes except anything with 'Particle': https://github.com/matplo/pyjetty/blob/8e983165123f7feade3ccc887907dc083a294465/pyjetty/mputils/data_io.py#L57
