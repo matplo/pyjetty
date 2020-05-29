@@ -184,9 +184,9 @@ class ProcessGroomers(process_base.ProcessBase):
             # THn for combined jets
             dim = 4;
             title = ['p_{T,ch jet}', '#it{z}_{g,ch}', '#theta_{g,ch}', 'flag']
-            nbins = [30, 50, 100, 8]
+            nbins = [30, 50, 100, 9]
             min = [0., 0., 0., 0.5]
-            max = [300., 0.5, 1., 8.5]
+            max = [300., 0.5, 1., 9.5]
             name = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
             self.create_thn(name, title, dim, nbins, min, max)
           
@@ -214,7 +214,7 @@ class ProcessGroomers(process_base.ProcessBase):
               # TH3 for combined jets
               for R_max in self.max_distance:
                 name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                h = ROOT.TH3F(name, name, 30, 0, 300, 50, 0, 0.5, 8, 0.5, 8.5)
+                h = ROOT.TH3F(name, name, 30, 0, 300, 50, 0, 0.5, 9, 0.5, 9.5)
                 h.GetXaxis().SetTitle('p_{T,ch jet}')
                 h.GetYaxis().SetTitle(label)
                 h.GetZaxis().SetTitle('flag')
@@ -840,29 +840,33 @@ class ProcessGroomers(process_base.ProcessBase):
      
     #  Return flag based on where >50% of subleading matched pt resides:
     #    1: subleading
-    #    2: leading
-    #    3: ungroomed
-    #    4: outside
-    #    5: other (i.e. 50% is not in any of the above)
-    #    6: pp-truth passed grooming, but combined jet failed grooming
-    #    7: combined jet passed grooming, but pp-truth failed grooming
-    #    8: both pp-truth and combined jet failed SoftDrop
+    #    2: leading, swap (>10% of leading in subleading)
+    #    3: leading, mis-tag (<10% of leading in subleading)
+    #    4: ungroomed
+    #    5: outside
+    #    6: other (i.e. 50% is not in any of the above)
+    #    7: pp-truth passed grooming, but combined jet failed grooming
+    #    8: combined jet passed grooming, but pp-truth failed grooming
+    #    9: both pp-truth and combined jet failed SoftDrop
     if matched_pt_subleading_subleading > self.prong_matching_threshold:
       return 1
     elif matched_pt_subleading_leading > self.prong_matching_threshold:
-      return 2
+      if matched_pt_leading_subleading > 0.1:
+        return 2
+      else:
+        return 3
     elif matched_pt_subleading_ungroomed_notgroomed > self.prong_matching_threshold:
-      return 3
-    elif matched_pt_subleading_outside > self.prong_matching_threshold:
       return 4
-    elif matched_pt_leading_leading >= 0.:
+    elif matched_pt_subleading_outside > self.prong_matching_threshold:
       return 5
-    elif matched_pt_leading_leading == -0.1:
+    elif matched_pt_leading_leading >= 0.:
       return 6
-    elif matched_pt_leading_leading == -0.2:
+    elif matched_pt_leading_leading == -0.1:
       return 7
-    elif matched_pt_leading_leading == -0.3:
+    elif matched_pt_leading_leading == -0.2:
       return 8
+    elif matched_pt_leading_leading == -0.3:
+      return 9
     else:
       print('Warning -- flag not specified!')
       return -1
