@@ -13,6 +13,7 @@ https://github.com/matplo/pyjetty/blob/8e983165123f7feade3ccc887907dc083a294465/
 ## centrality bins:
 
 number of participant cut:
+```
 90pc+ < 6
 80pc+ < 15
 70pc+ < 31
@@ -22,8 +23,9 @@ number of participant cut:
 30pc+ < 186
 20pc+ < 248
 10pc+ < 325
-
+```
 number of charged particles:
+```
 90pc+ < 277
 80pc+ < 555
 70pc+ < 1158
@@ -33,6 +35,7 @@ number of charged particles:
 30pc+ < 9293
 20pc+ < 13245
 10pc+ < 18467
+```
 
 - some code used here
 - https://github.com/matplo/pyjetty/blob/master/pyjetty/groom/argantyr/centrality.py
