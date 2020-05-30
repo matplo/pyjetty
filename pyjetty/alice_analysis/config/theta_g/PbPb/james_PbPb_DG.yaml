@@ -211,7 +211,7 @@ zg:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/80575'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/80575-test'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'theta_g'
@@ -220,7 +220,7 @@ force_rebin: False
 do_systematics: False
 do_plot_final_result: False
 do_plot_performance: True
-figure_approval_status: 'Work in Progress'
+figure_approval_status: 'ALICE Preliminary'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning, subtraction1, subtraction2, prong_matching]

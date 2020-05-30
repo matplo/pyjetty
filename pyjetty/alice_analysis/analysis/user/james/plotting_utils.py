@@ -969,7 +969,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       x = 0.23
       y = 0.8
       text_latex.SetTextSize(0.055)
-      text = 'ALICE Performance'
+      text = self.figure_approval_status
       text_latex.DrawLatex(x, y+0.05, text)
       
       text_latex.SetTextSize(0.04)
@@ -1020,8 +1020,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         myBlankHisto.GetXaxis().SetTitle('#Delta#it{z}_{prong}')
         myBlankHisto.GetYaxis().SetTitle('#frac{d#it{N}}{d#Delta #it{z}_{prong}}')
     else:
-        myBlankHisto.GetXaxis().SetTitle('#Delta#it{R}_{PYTHIA, PYTHIA#oplusPb#font[122]{-}Pb}^{subleading prong}')
-        myBlankHisto.GetYaxis().SetTitle('#frac{d#it{N}}{d#Delta #it{R}_{prong}}')
+        xtitle = '#Delta#it{R}_{PYTHIA, PYTHIA#oplusPb#font[122]{-}Pb}^{subleading prong}'
+        myBlankHisto.GetXaxis().SetTitle(xtitle)
+        myBlankHisto.GetYaxis().SetTitle('#frac{{d#it{{N}}}}{{d{}}}'.format(xtitle))
     myBlankHisto.Draw()
     
     leg = ROOT.TLegend(0.54,0.58,0.67,0.75)
@@ -1097,7 +1098,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       x = 0.23
       y = 0.8
       text_latex.SetTextSize(0.055)
-      text = 'ALICE Performance'
+      text = self.figure_approval_status
       text_latex.DrawLatex(x, y+0.05, text)
       
       text_latex.SetTextSize(0.04)
