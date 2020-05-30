@@ -82,7 +82,8 @@ class ProcessBase(common_base.CommonBase):
       
       self.max_distance = constituent_subtractor['max_distance']
       self.alpha = constituent_subtractor['alpha']
-      self.max_eta = constituent_subtractor['max_eta']
+      if 'max_eta' in constituent_subtractor:
+        self.max_eta = constituent_subtractor['max_eta']
       self.bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
       self.max_pt_correct = constituent_subtractor['max_pt_correct']
       self.ghost_area = constituent_subtractor['ghost_area']
