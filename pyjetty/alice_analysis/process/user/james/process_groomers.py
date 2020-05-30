@@ -75,7 +75,7 @@ class ProcessGroomers(process_base.ProcessBase):
     
     # Create constituent subtractor, if configured
     if self.do_constituent_subtraction:
-      self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) for R_max in self.max_distance]
+      self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.eta_max, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) for R_max in self.max_distance]
     
     print(self)
     
@@ -106,15 +106,15 @@ class ProcessGroomers(process_base.ProcessBase):
     self.prong_matching_threshold = config['prong_matching_threshold']
     self.use_ev_id_ext = config['use_ev_id_ext']
     self.main_R_max = config['constituent_subtractor']['main_R_max']
+    self.eta_max = config['eta_max']
     
     if 'thermal_model' in config:
       self.thermal_model = True
       beta = config['thermal_model']['beta']
       N_avg = config['thermal_model']['N_avg']
       sigma_N = config['thermal_model']['sigma_N']
-      eta_max = config['thermal_model']['eta_max']
       self.thermal_generator = thermal_generator.ThermalGenerator(N_avg = N_avg, sigma_N = sigma_N,
-                                                                  beta = beta, eta_max=eta_max)
+                                                                  beta = beta, eta_max=self.eta_max)
     else:
       self.thermal_model = False
      
@@ -367,8 +367,8 @@ class ProcessGroomers(process_base.ProcessBase):
 
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-      jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-      jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9)
+      jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+      jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max)
       if self.debug_level > 2:
         print('')
         print('jet definition is:', jet_def)

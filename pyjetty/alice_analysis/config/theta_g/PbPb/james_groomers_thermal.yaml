@@ -12,13 +12,14 @@
 
 process_observables: ['theta_g', 'zg', 'kappa', 'tf']
 jetR: [0.4]
+eta_max: 1.4
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
 prong_matching_threshold: 0.5
 debug_level: 0
 dry_run: False
 fast_simulation: False
-#event_number_max: 100
+#event_number_max: 1000
 use_ev_id_ext: False
 min_theta_list: [0., 0.25, 0.5]
 
@@ -26,13 +27,11 @@ thermal_model:
   beta: 0.5
   N_avg: 5000
   sigma_N: 500
-  eta_max: 1.5
 
 constituent_subtractor:
   max_distance: [0.05, 0.25, 0.7]
   main_R_max: 0.25
   alpha: 0
-  max_eta: 0.9
   bge_rho_grid_size: 1.0
   max_pt_correct: 100
   ghost_area: 0.01
@@ -45,10 +44,10 @@ theta_g:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#theta_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config11', 'config12', 'config6']
-      - ['config1', 'config2', 'config3', 'config4', 'config5']
-      - ['config6', 'config7', 'config8', 'config9', 'config10']
-      - ['config13', 'config14', 'config15', 'config16']
+      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      - ['config8', 'config9', 'config10', 'config11', 'config12']
+      - ['config15', 'config16', 'config17', 'config18']
       
   config1:
     SoftDrop:
@@ -143,10 +142,10 @@ zg:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{dz_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config11', 'config12', 'config6']
-      - ['config1', 'config2', 'config3', 'config4', 'config5']
-      - ['config6', 'config7', 'config8', 'config9', 'config10']
-      - ['config13', 'config14', 'config15', 'config16']
+      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      - ['config8', 'config9', 'config10', 'config11', 'config12']
+      - ['config15', 'config16', 'config17', 'config18']
       
   config1:
     SoftDrop:
@@ -241,10 +240,10 @@ kappa:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#kappa_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config11', 'config12', 'config6']
-      - ['config1', 'config2', 'config3', 'config4', 'config5']
-      - ['config6', 'config7', 'config8', 'config9', 'config10']
-      - ['config13', 'config14', 'config15', 'config16']
+      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      - ['config8', 'config9', 'config10', 'config11', 'config12']
+      - ['config15', 'config16', 'config17', 'config18']
      
   config1:
     SoftDrop:
@@ -339,10 +338,10 @@ tf:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#it{t}_{f}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config11', 'config12', 'config6']
-      - ['config1', 'config2', 'config3', 'config4', 'config5']
-      - ['config6', 'config7', 'config8', 'config9', 'config10']
-      - ['config13', 'config14', 'config15', 'config16']
+      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      - ['config8', 'config9', 'config10', 'config11', 'config12']
+      - ['config15', 'config16', 'config17', 'config18']
       
   config1:
     SoftDrop:
@@ -432,7 +431,7 @@ tf:
 ###############################################################################
 # Analysis parameters
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/93705'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/95763'
 
 main_data: ''
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/93705/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/95763/AnalysisResultsFinal.root'
