@@ -41,8 +41,9 @@ class PlotRAA(common_base.CommonBase):
     self.plot_theory = True
     
     self.colors = [600-6, 632-4]
+    self.ratio_color = ROOT.kGray+3
     self.markers = [20, 21, 33]
-    self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kBlack, 2, 4]
+    self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
     
     ROOT.gStyle.SetLineStyleString(11,'30 12');
     self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
@@ -383,7 +384,7 @@ class PlotRAA(common_base.CommonBase):
     pad2.Draw()
     pad2.cd()
     
-    ratio_legend = ROOT.TLegend(0.4,0.67,0.57,0.97)
+    ratio_legend = ROOT.TLegend(0.4,0.6,0.57,0.99)
     self.utils.setup_legend(ratio_legend,0.05)
           
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
@@ -412,14 +413,13 @@ class PlotRAA(common_base.CommonBase):
       
     h_ratio = self.h_main_AA.Clone()
     h_ratio.Divide(self.h_main_pp)
-    ratio_color = ROOT.kGray+3
-    h_ratio.SetMarkerColor(ratio_color)
-    h_ratio.SetLineColor(ratio_color)
+    h_ratio.SetMarkerColor(self.ratio_color)
+    h_ratio.SetLineColor(self.ratio_color)
 
     h_ratio_sys = self.h_sys_AA.Clone()
     h_ratio_sys.Divide(self.h_sys_pp)
-    h_ratio_sys.SetFillColor(ratio_color)
-    h_ratio_sys.SetFillColorAlpha(ratio_color, 0.3)
+    h_ratio_sys.SetFillColor(self.ratio_color)
+    h_ratio_sys.SetFillColorAlpha(self.ratio_color, 0.3)
 
     pad1.cd()
     if self.plot_data:
