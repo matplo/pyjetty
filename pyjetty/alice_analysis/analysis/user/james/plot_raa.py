@@ -215,9 +215,9 @@ class PlotRAA(common_base.CommonBase):
             
             elif type == 'jetscape':
 
-              plot_ratio_directly = False
+              plot_ratio_directly = True
               if plot_ratio_directly:
-                x = np.array(theory_prediction['xbins'])
+                x = np.array(theory_prediction['x_ratio'])
                 ratio = np.array(theory_prediction['ratio'])
                 ratio_err = np.array(theory_prediction['ratio_err'])
               else:
@@ -250,17 +250,27 @@ class PlotRAA(common_base.CommonBase):
               self.sublabel_list.append(theory_prediction['sublabel'])
               self.observable_name_list.append(theory['observable'])
 
+      # Set draw order (slightly hacky-- just move selected curves to start or end of draw list)
       self.draw_order = list(range(0, len(self.prediction_g_list)))
       for i, g in enumerate(self.prediction_g_list):
 
         label = self.label_list[i]
-        if 'Pablos' in self.label_list[i]:
+        sublabel = self.sublabel_list[i]
+        if 'Pablos' in label:
           index = self.draw_order.index(i)
           self.draw_order.insert(0, self.draw_order.pop(index))
           
-        if 'JETSCAPE' in self.label_list[i]:
+        if 'JETSCAPE' in label or 'quark' in sublabel or 'med' in sublabel:
           index = self.draw_order.index(i)
           self.draw_order.append(self.draw_order.pop(index))
+          
+      if observable == 'zg':
+        for i, g in enumerate(self.prediction_g_list):
+
+          label = self.label_list[i]
+          if 'JETSCAPE' in label:
+            index = self.draw_order.index(i)
+            self.draw_order.insert(0, self.draw_order.pop(index))
   
   #---------------------------------------------------------------
   # Rebin numpy arrays (xbins,y) representing a histogram,
