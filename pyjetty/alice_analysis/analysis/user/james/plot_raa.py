@@ -42,9 +42,11 @@ class PlotRAA(common_base.CommonBase):
     
     self.colors = [600-6, 632-4]
     self.markers = [20, 21, 33]
-    self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kBlack]
-    self.line_style = [1, 1, 1, 1, 9, 1, 1, 1]
-    self.line_width = [4, 4, 4, 4, 6, 4, 4, 4]
+    self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kBlack, 2, 4]
+    
+    ROOT.gStyle.SetLineStyleString(11,'30 12');
+    self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
+    self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
              
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #it{#beta}=0'
@@ -209,26 +211,32 @@ class PlotRAA(common_base.CommonBase):
             
             elif type == 'jetscape':
 
-              # Get distributions
-              xbins = np.array(theory_prediction['xbins'])
-              y_pp = np.array(theory_prediction['y_pp'])
-              y_pp_err = np.array(theory_prediction['y_pp_err'])
-              y_AA_lower = np.array(theory_prediction['y_AA_lower'])
-              y_AA_upper = np.array(theory_prediction['y_AA_upper'])
-              y_AA = (y_AA_lower + y_AA_upper) / 2.
-              
-              # Rebin distributions
-              x, y_pp, y_pp_err = self.rebin_arrays(xbins, y_pp, y_pp_err)
-              _, y_AA, y_AA_err = self.rebin_arrays(xbins, y_AA, y_AA-y_AA_lower)
+              plot_ratio_directly = False
+              if plot_ratio_directly:
+                x = np.array(theory_prediction['xbins'])
+                ratio = np.array(theory_prediction['ratio'])
+                ratio_err = np.array(theory_prediction['ratio_err'])
+              else:
+                # Get distributions
+                xbins = np.array(theory_prediction['xbins'])
+                y_pp = np.array(theory_prediction['y_pp'])
+                y_pp_err = np.array(theory_prediction['y_pp_err'])
+                y_AA = np.array(theory_prediction['y_AA'])
+                y_AA_err = np.array(theory_prediction['y_AA_err'])
+                
+                # Rebin distributions
+                x, y_pp, y_pp_err = self.rebin_arrays(xbins, y_pp, y_pp_err)
+                _, y_AA, y_AA_err = self.rebin_arrays(xbins, y_AA, y_AA_err)
 
-              # Form ratio and propagate uncertainty
-              y_pp_err_fraction = np.divide(y_pp_err, y_pp)
-              y_AA_err_fraction = np.divide(y_AA_err, y_AA)
-              
-              ratio = np.divide(y_AA, y_pp)
-              ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
-              ratio_err = np.multiply(ratio, ratio_err_fraction)
-    
+                # Form ratio and propagate uncertainty
+                y_pp_err_fraction = np.divide(y_pp_err, y_pp)
+                y_AA_err_fraction = np.divide(y_AA_err, y_AA)
+                
+                ratio = np.divide(y_AA, y_pp)
+                ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
+                ratio_err = np.multiply(ratio, ratio_err_fraction)
+                print(ratio_err_fraction)
+      
               n = len(x)
               xerr = np.zeros(n)
               g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
@@ -375,7 +383,7 @@ class PlotRAA(common_base.CommonBase):
     pad2.Draw()
     pad2.cd()
     
-    ratio_legend = ROOT.TLegend(0.4,0.67,0.55,0.97)
+    ratio_legend = ROOT.TLegend(0.4,0.67,0.57,0.97)
     self.utils.setup_legend(ratio_legend,0.05)
           
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
@@ -401,11 +409,6 @@ class PlotRAA(common_base.CommonBase):
       myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
 
     myBlankHisto2.Draw('')
-  
-    line = ROOT.TLine(xmin,1,xmax,1)
-    line.SetLineColor(920+2)
-    line.SetLineStyle(2)
-    line.Draw()
       
     h_ratio = self.h_main_AA.Clone()
     h_ratio.Divide(self.h_main_pp)
@@ -438,15 +441,22 @@ class PlotRAA(common_base.CommonBase):
         g.SetLineColor(color)
         g.SetFillColor(color)
         if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+          g.SetLineColor(0)
           g.Draw("3 same")
-          ratio_legend.AddEntry(g, '{}, {}'.format(label, sublabel), 'F')
+          ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
         elif type(g) == ROOT.TGraph:
           g.SetLineStyle(self.line_style[i])
-          g.SetLineWidth(6)
+          g.SetLineWidth(4)
           g.Draw("same")
-          ratio_legend.AddEntry(g, '{}, {}'.format(label, sublabel), 'L')
+          ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
 
     ratio_legend.Draw()
+    
+    line = ROOT.TLine(xmin,1,xmax,1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.SetLineWidth(2)
+    line.Draw()
      
     if self.plot_data:
       h_ratio_sys.DrawCopy('E2 same')
@@ -474,7 +484,7 @@ class PlotRAA(common_base.CommonBase):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(0.56, 0.67, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR)
     text_latex.DrawLatex(0.56, 0.6, text)
     
     text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
