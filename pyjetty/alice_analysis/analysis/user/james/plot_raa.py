@@ -421,7 +421,7 @@ class PlotRAA(common_base.CommonBase):
         
         ratio_legend = ROOT.TLegend(0.25,0.72,0.43,0.975)
         self.utils.setup_legend(ratio_legend,0.052)
-        ratio_legend2 = ROOT.TLegend(0.54,0.72,0.66,0.87)
+        ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.87)
         self.utils.setup_legend(ratio_legend2,0.05)
         
       else:
