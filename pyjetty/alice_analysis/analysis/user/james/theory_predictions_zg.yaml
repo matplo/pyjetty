@@ -1,7 +1,7 @@
 # Theory predictions for zg
 
 jetscape:
-  label: 'JETSCAPE MATTER+LBT (Prel.)'
+  label: 'JETSCAPE, MATTER+LBT (Prel.)'
   observable: 'zg'
   plot_list: ['config1', 'config2']
 

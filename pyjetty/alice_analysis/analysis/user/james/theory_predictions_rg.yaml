@@ -1,7 +1,7 @@
 # Theory predictions for theta_g or rg, 0-10%
 
 jetscape:
-  label: 'JETSCAPE MATTER+LBT (Prel.)'
+  label: 'JETSCAPE, MATTER+LBT (Prel.)'
   observable: 'theta_g'
   plot_list: ['config1', 'config2']
 

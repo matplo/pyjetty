@@ -115,7 +115,10 @@ class PlotRAA(common_base.CommonBase):
     self.ymax = self.h_main_pp.GetMaximum()
     
     if self.plot_theory:
-      name = 'hRAA_{}_R{}_Theory.pdf'.format(observable, self.utils.remove_periods(jetR))
+      if self.plot_data:
+        name = 'hRAA_{}_R{}_Theory.pdf'.format(observable, self.utils.remove_periods(jetR))
+      else:
+        name = 'hRAA_{}_R{}_TheoryOnly.pdf'.format(observable, self.utils.remove_periods(jetR))
     else:
       name = 'hRAA_{}_R{}.pdf'.format(observable, self.utils.remove_periods(jetR))
     self.output_filename = os.path.join(self.output_dir, name)
@@ -236,7 +239,6 @@ class PlotRAA(common_base.CommonBase):
                 ratio = np.divide(y_AA, y_pp)
                 ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
                 ratio_err = np.multiply(ratio, ratio_err_fraction)
-                print(ratio_err_fraction)
       
               n = len(x)
               xerr = np.zeros(n)
@@ -247,6 +249,18 @@ class PlotRAA(common_base.CommonBase):
               self.label_list.append(theory['label'])
               self.sublabel_list.append(theory_prediction['sublabel'])
               self.observable_name_list.append(theory['observable'])
+
+      self.draw_order = list(range(0, len(self.prediction_g_list)))
+      for i, g in enumerate(self.prediction_g_list):
+
+        label = self.label_list[i]
+        if 'Pablos' in self.label_list[i]:
+          index = self.draw_order.index(i)
+          self.draw_order.insert(0, self.draw_order.pop(index))
+          
+        if 'JETSCAPE' in self.label_list[i]:
+          index = self.draw_order.index(i)
+          self.draw_order.append(self.draw_order.pop(index))
   
   #---------------------------------------------------------------
   # Rebin numpy arrays (xbins,y) representing a histogram,
@@ -383,9 +397,6 @@ class PlotRAA(common_base.CommonBase):
     pad2.SetTicks(0,1)
     pad2.Draw()
     pad2.cd()
-    
-    ratio_legend = ROOT.TLegend(0.4,0.6,0.57,0.99)
-    self.utils.setup_legend(ratio_legend,0.05)
           
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
     myBlankHisto2.SetYTitle('#frac{Pb#font[122]{-}Pb}{pp}')
@@ -401,13 +412,38 @@ class PlotRAA(common_base.CommonBase):
     myBlankHisto2.GetYaxis().SetLabelFont(43)
     myBlankHisto2.GetYaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetNdivisions(505)
+    
     if observable == 'theta_g':
+    
       if jetR == 0.2:
-        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.3)
+      
+        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.7)
+        
+        ratio_legend = ROOT.TLegend(0.25,0.72,0.43,0.975)
+        self.utils.setup_legend(ratio_legend,0.052)
+        ratio_legend2 = ROOT.TLegend(0.54,0.72,0.66,0.87)
+        self.utils.setup_legend(ratio_legend2,0.05)
+        
       else:
-        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.1)
+      
+        myBlankHisto2.GetYaxis().SetRangeUser(0., 2.7)
+        
+        ratio_legend = ROOT.TLegend(0.22,0.8,0.35,0.97)
+        self.utils.setup_legend(ratio_legend,0.05)
+        ratio_legend2 = ROOT.TLegend(0.57,0.8,0.69,0.97)
+        self.utils.setup_legend(ratio_legend2,0.05)
+        
     else:
-      myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
+    
+      if jetR == 0.2:
+        myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
+      else:
+        myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.79)
+      
+      ratio_legend = ROOT.TLegend(0.24,0.75,0.4,0.97)
+      self.utils.setup_legend(ratio_legend,0.054)
+      ratio_legend2 = ROOT.TLegend(0.65,0.75,0.8,0.97)
+      self.utils.setup_legend(ratio_legend2,0.054)
 
     myBlankHisto2.Draw('')
       
@@ -442,16 +478,55 @@ class PlotRAA(common_base.CommonBase):
         g.SetFillColor(color)
         if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
           g.SetLineColor(0)
-          g.Draw("3 same")
-          ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+          #g.Draw("3 same")
+          if observable == 'theta_g':
+            if jetR == 0.4:
+              if 'Pablos' in label or 'JETSCAPE' in label:
+                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+              else:
+                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+            elif jetR == 0.2:
+              if 'Yuan' in label:
+                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+              else:
+                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+          elif observable == 'zg':
+            if 'Pablos' in label:
+              ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+            else:
+              ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
         elif type(g) == ROOT.TGraph:
           g.SetLineStyle(self.line_style[i])
           g.SetLineWidth(4)
-          g.Draw("same")
-          ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+          #g.Draw("same")
+          if observable == 'theta_g':
+            if jetR == 0.4:
+              if 'Pablos' in label or 'JETSCAPE' in label:
+                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+              else:
+                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+            if jetR == 0.2:
+              if 'Yuan' in label:
+                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+              else:
+                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+          elif observable == 'zg':
+            if 'Pablos' in label:
+              ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+            else:
+              ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
 
+    # Draw curves in specified order
+    for i in self.draw_order:
+      g = self.prediction_g_list[i]
+      if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+        g.Draw("3 same")
+      elif type(g) == ROOT.TGraph:
+        g.Draw("same")
+      
     ratio_legend.Draw()
-    
+    ratio_legend2.Draw()
+
     line = ROOT.TLine(xmin,1,xmax,1)
     line.SetLineColor(920+2)
     line.SetLineStyle(2)
