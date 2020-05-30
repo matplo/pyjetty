@@ -50,7 +50,7 @@ class PlotRAA(common_base.CommonBase):
     self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
              
     self.obs_label = 'SD_zcut02_B0'
-    self.formatted_grooming_label = 'SD #it{z}_{cut}=0.2, #it{#beta}=0'
+    self.formatted_grooming_label = 'Soft Drop #it{z}_{cut}=0.2, #it{#beta}=0'
     self.figure_approval_status = 'Preliminary'
     
     if not os.path.exists(self.output_dir):
@@ -202,9 +202,9 @@ class PlotRAA(common_base.CommonBase):
               n = len(x)
               g = ROOT.TGraph(n, x, ratio)
             
-            elif type == 'hybrid_model':
+            elif type in ['hybrid_model', 'yang_ting']:
             
-              x = np.array(theory_prediction['xbins'])
+              x = np.array(theory_prediction['x'])
               ratio_lower = np.array(theory_prediction['ratio_lower'])
               ratio_upper = np.array(theory_prediction['ratio_upper'])
               ratio = (ratio_lower + ratio_upper) / 2.
@@ -440,7 +440,7 @@ class PlotRAA(common_base.CommonBase):
       else:
         myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.79)
       
-      ratio_legend = ROOT.TLegend(0.24,0.75,0.4,0.97)
+      ratio_legend = ROOT.TLegend(0.23,0.75,0.4,0.97)
       self.utils.setup_legend(ratio_legend,0.054)
       ratio_legend2 = ROOT.TLegend(0.65,0.75,0.8,0.97)
       self.utils.setup_legend(ratio_legend2,0.054)
