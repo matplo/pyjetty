@@ -330,8 +330,11 @@ class PlotGroomers(common_base.CommonBase):
     pad2.Draw()
     pad2.cd()
     
+    leg_ratio = ROOT.TLegend(0.65,0.77,0.8,0.92)
+    self.utils.setup_legend(leg_ratio, 0.1)
+    
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
-    ytitle = '#frac{Embedded}{Truth}'
+    ytitle = 'Ratio'
     myBlankHisto2.SetYTitle(ytitle)
     myBlankHisto2.SetXTitle(self.xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
@@ -345,12 +348,13 @@ class PlotGroomers(common_base.CommonBase):
     myBlankHisto2.GetYaxis().SetLabelFont(43)
     myBlankHisto2.GetYaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetNdivisions(505)
-    myBlankHisto2.SetMinimum(0.61)
-    myBlankHisto2.SetMaximum(1.39)
+    myBlankHisto2.SetMinimum(0.01)
+    myBlankHisto2.SetMaximum(1.99)
     myBlankHisto2.Draw('')
     
     h_stack = ROOT.THStack('h_stack', 'stacked')
     h_sum = None
+    h_sum_tagged = None
     legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other',
                    'combined fail', 'truth fail', 'both fail']
     
@@ -374,11 +378,18 @@ class PlotGroomers(common_base.CommonBase):
       h_stack.Add(h1D)
       leg.AddEntry(h1D, legend_list[i], 'F')
       
-      if i == 0:
+      if h_sum:
+        h_sum.Add(h1D)
+      else:
         h_sum = h1D.Clone()
         h_sum.SetName('h_sum_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-      else:
-        h_sum.Add(h1D)
+
+      if legend_list[i] in ['subleading', 'leading (swap)']:
+        if h_sum_tagged:
+          h_sum_tagged.Add(h1D)
+        else:
+          h_sum_tagged = h1D.Clone()
+          h_sum_tagged.SetName('h_sum_tagged_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
     
     # Draw truth histogram
     if observable == 'theta_g':
@@ -426,16 +437,32 @@ class PlotGroomers(common_base.CommonBase):
       text = '#Delta#it{{R}} > {}'.format(min_theta*jetR)
       text_latex.DrawLatex(x, y-0.38, text)
     
+    # Build ratio Embedded/Truth
     pad2.cd()
     setattr(self, 'h_ratio_{}'.format(obs_label), None)
     h_ratio = h_sum.Clone()
-    h_ratio.SetMarkerStyle(21)
+    h_ratio.SetMarkerStyle(self.MarkerArray[0])
     h_ratio.SetMarkerColor(1)
     h_ratio.Divide(h1D_truth)
     if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
-      myBlankHisto2.SetMaximum(1.2*h_ratio.GetMaximum())
+      myBlankHisto2.SetMaximum(1.5*h_ratio.GetMaximum())
     h_ratio.Draw('PE same')
+    leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
     setattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio)
+    
+    # Build ratio of embedded tagging purity
+    setattr(self, 'h_ratio_tagged_{}'.format(obs_label), None)
+    h_ratio_tagged = h_sum_tagged.Clone()
+    h_ratio_tagged.SetMarkerStyle(self.MarkerArray[1])
+    h_ratio_tagged.SetMarkerColor(self.ColorArray[0])
+    h_ratio_tagged.Divide(h_sum)
+    if h_ratio_tagged.GetMinimum() < myBlankHisto2.GetMinimum():
+      myBlankHisto2.SetMinimum(0.8*h_ratio_tagged.GetMinimum())
+    h_ratio_tagged.Draw('PE same')
+    leg_ratio.AddEntry(h_ratio_tagged, 'Tagging purity', 'P')
+    setattr(self, 'h_ratio_tagged_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio_tagged)
+    
+    leg_ratio.Draw('same')
     
     line = ROOT.TLine(self.xmin,1,self.xmax,1)
     line.SetLineColor(920+2)
@@ -519,8 +546,11 @@ class PlotGroomers(common_base.CommonBase):
     pad2.Draw()
     pad2.cd()
     
+    leg_ratio = ROOT.TLegend(0.65,0.77,0.8,0.92)
+    self.utils.setup_legend(leg_ratio, 0.1)
+    
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
-    ytitle = '#frac{Embedded}{Truth}'
+    ytitle = 'Ratio'
     myBlankHisto2.SetYTitle(ytitle)
     myBlankHisto2.SetXTitle(self.xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
@@ -534,12 +564,13 @@ class PlotGroomers(common_base.CommonBase):
     myBlankHisto2.GetYaxis().SetLabelFont(43)
     myBlankHisto2.GetYaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetNdivisions(505)
-    myBlankHisto2.SetMinimum(0.61)
-    myBlankHisto2.SetMaximum(1.39)
+    myBlankHisto2.SetMinimum(0.01)
+    myBlankHisto2.SetMaximum(1.99)
     myBlankHisto2.Draw('')
     
     h_stack = ROOT.THStack('h_stack', 'stacked')
     h_sum = None
+    h_sum_tagged = None
     legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other',
                    'combined fail', 'truth fail', 'both fail']
     
@@ -561,11 +592,18 @@ class PlotGroomers(common_base.CommonBase):
       h_stack.Add(h1D)
       leg.AddEntry(h1D, legend_list[i], 'F')
       
-      if i == 0:
+      if h_sum:
+        h_sum.Add(h1D)
+      else:
         h_sum = h1D.Clone()
         h_sum.SetName('h_sum_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-      else:
-        h_sum.Add(h1D)
+
+      if legend_list[i] in ['subleading', 'leading (swap)']:
+        if h_sum_tagged:
+          h_sum_tagged.Add(h1D)
+        else:
+          h_sum_tagged = h1D.Clone()
+          h_sum_tagged.SetName('h_sum_tagged_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
     
     # Draw truth histogram
     h1D_truth = h2D_truth.ProjectionY()
@@ -605,6 +643,7 @@ class PlotGroomers(common_base.CommonBase):
     text = self.utils.formatted_grooming_label(grooming_setting)
     text_latex.DrawLatex(x, y-0.32, text)
     
+    # Build ratio Embedded/Truth
     pad2.cd()
     setattr(self, 'h_ratio_{}'.format(obs_label), None)
     h_ratio = h_sum.Clone()
@@ -614,7 +653,22 @@ class PlotGroomers(common_base.CommonBase):
     if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
       myBlankHisto2.SetMaximum(1.2*h_ratio.GetMaximum())
     h_ratio.Draw('PE same')
+    leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
     setattr(self, 'h_ratio_{}_{}-{}'.format(obs_label, min_pt, max_pt), h_ratio)
+    
+    # Build ratio of embedded tagging purity
+    setattr(self, 'h_ratio_tagged_{}'.format(obs_label), None)
+    h_ratio_tagged = h_sum_tagged.Clone()
+    h_ratio_tagged.SetMarkerStyle(self.MarkerArray[1])
+    h_ratio_tagged.SetMarkerColor(self.ColorArray[0])
+    h_ratio_tagged.Divide(h_sum)
+    if h_ratio_tagged.GetMinimum() < myBlankHisto2.GetMinimum():
+      myBlankHisto2.SetMinimum(0.8*h_ratio_tagged.GetMinimum())
+    h_ratio_tagged.Draw('PE same')
+    leg_ratio.AddEntry(h_ratio_tagged, 'Tagging purity', 'P')
+    setattr(self, 'h_ratio_tagged_{}_{}-{}'.format(obs_label, min_pt, max_pt), h_ratio_tagged)
+    
+    leg_ratio.Draw('same')
     
     line = ROOT.TLine(self.xmin,1,self.xmax,1)
     line.SetLineColor(920+2)
