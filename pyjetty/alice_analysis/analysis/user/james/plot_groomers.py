@@ -97,20 +97,20 @@ class PlotGroomers(common_base.CommonBase):
       self.xmin = 0.
       self.xmax = 1.
       self.axis = 2
-      self.rebin_value = 5
+      self.rebin_value = 2
     elif observable == 'zg':
       self.xmin = 0.
       self.xmax = 0.5
       self.axis = 1
-      self.rebin_value = 5
+      self.rebin_value = 2
     elif observable == 'kappa':
       self.xmin = 0.
       self.xmax = 0.5
-      self.rebin_value = 1
+      self.rebin_value = 2
     elif observable == 'tf':
       self.xmin = 0.
       self.xmax = 0.5
-      self.rebin_value = 1
+      self.rebin_value = 2
 
     # Create output dirs
     output_dir = os.path.join(self.output_dir, observable)
@@ -271,11 +271,12 @@ class PlotGroomers(common_base.CommonBase):
     
     # Set RAA (optionally) due to theta_g cut from jet quenching
     if observable == 'zg':
-      self.RAA = 1-min_theta
+      self.RAA = 1.
+      #self.RAA = 1-min_theta
     else:
       self.RAA = 1.
 
-    # Get normalization for embeddeed case
+    # Get normalization for embedded case
     h_normalization = h4D.Projection(self.axis)
     h_normalization.SetName('h_normalization_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
     N_inclusive_emb = h_normalization.Integral()/self.RAA
@@ -294,9 +295,34 @@ class PlotGroomers(common_base.CommonBase):
       print('Truth Integral is 0, check for problem')
       return
       
+    normalization_ratio = N_inclusive_emb / N_inclusive_truth
+      
     # Set theta cut
     h4D.GetAxis(2).SetRangeUser(min_theta, 1)
     h3D_truth.GetZaxis().SetRangeUser(min_theta, 1)
+    
+    # Get normalization for dR cut in embedded case
+    h_normalization_dR = h4D.Projection(self.axis)
+    h_normalization_dR.SetName('h_normalization_dR_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    N_inclusive_emb_dR = h_normalization_dR.Integral()/self.RAA
+    if N_inclusive_emb_dR < 1e-3:
+      print('Emb Integral is 0, check for problem')
+      return
+    
+    # Get normalization for dR cut in truth case
+    if observable == 'theta_g':
+      h_normalization_truth_dR = h3D_truth.Project3D('z')
+    elif observable == 'zg':
+      h_normalization_truth_dR = h3D_truth.Project3D('y')
+    h_normalization_truth_dR.SetName('h_normalization_truth_dR_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    N_inclusive_truth_dR = h_normalization_truth_dR.Integral()
+    if N_inclusive_truth_dR < 1e-3:
+      print('Truth Integral is 0, check for problem')
+      return
+    N_inclusive_truth_dR_factor = N_inclusive_truth_dR / N_inclusive_truth
+    #print('dR cut at truth-level leaves a fraction: {}'.format(N_inclusive_truth_dR_factor))
+    N_inclusive_emb_truth_dR_factor = N_inclusive_emb_dR/N_inclusive_truth_dR
+    #print('dR cut at emb-level compared to truth-level: {}'.format(N_inclusive_emb_truth_dR_factor))
 
     # Draw histogram
     c = ROOT.TCanvas('c','c: hist', 600, 650)
@@ -343,7 +369,7 @@ class PlotGroomers(common_base.CommonBase):
     pad2.Draw()
     pad2.cd()
     
-    leg_ratio = ROOT.TLegend(0.65,0.77,0.8,0.92)
+    leg_ratio = ROOT.TLegend(0.65,0.72,0.8,0.95)
     self.utils.setup_legend(leg_ratio, 0.1)
     
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
@@ -368,6 +394,7 @@ class PlotGroomers(common_base.CommonBase):
     h_stack = ROOT.THStack('h_stack', 'stacked')
     h_sum = None
     h_sum_tagged = None
+    h_sum_mistagged = None
 
     # Loop over each flag
     for i in range(len(self.legend_list)):
@@ -381,6 +408,7 @@ class PlotGroomers(common_base.CommonBase):
       h1D.SetName('h1D_{}'.format(i))
       h1D.Rebin(self.rebin_value)
       h1D.Scale(1./N_inclusive_emb, 'width')
+      h1D.Scale(1/N_inclusive_emb_truth_dR_factor) # Scale to truth dR cut normalization
         
       h1D.SetLineColor(self.ColorArray[i])
       h1D.SetFillColor(self.ColorArray[i])
@@ -401,7 +429,13 @@ class PlotGroomers(common_base.CommonBase):
         else:
           h_sum_tagged = h1D.Clone()
           h_sum_tagged.SetName('h_sum_tagged_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-    
+      else:
+        if h_sum_mistagged:
+          h_sum_mistagged.Add(h1D)
+        else:
+          h_sum_mistagged = h1D.Clone()
+          h_sum_mistagged.SetName('h_sum_mistagged_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+      
     # Draw truth histogram
     if observable == 'theta_g':
       h1D_truth = h3D_truth.Project3D('z')
@@ -414,6 +448,18 @@ class PlotGroomers(common_base.CommonBase):
     h1D_truth.SetLineWidth(2)
     myBlankHisto.SetMaximum(2.3*h1D_truth.GetMaximum())
     leg.AddEntry(h1D_truth, 'Truth', 'L')
+    
+    # Construct toy truth RAA
+    RAA =  0.5
+    hRAA_truth = h1D_truth.Clone('hRAA_truth_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    hRAA_truth.Scale(RAA)
+    hRAA_truth.Divide(h1D_truth)
+    
+    # Construct "embedded" RAA
+    hRAA_emb = h_sum_tagged.Clone('hRAA_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    hRAA_emb.Scale(RAA)
+    hRAA_emb.Add(h_sum_mistagged)
+    hRAA_emb.Divide(h_sum)
     
     pad1.cd()
     leg.Draw('same')
@@ -435,7 +481,7 @@ class PlotGroomers(common_base.CommonBase):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(x, y-0.12, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.2f}'.format(self.eta_max - jetR)
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(x, y-0.18, text)
    
     text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
@@ -457,8 +503,8 @@ class PlotGroomers(common_base.CommonBase):
     h_ratio.Divide(h1D_truth)
     if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
       myBlankHisto2.SetMaximum(1.5*h_ratio.GetMaximum())
-    h_ratio.Draw('PE same')
-    leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
+    #h_ratio.Draw('PE same')
+    #leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
     setattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio)
     
     # Build ratio of embedded tagging purity
@@ -472,6 +518,26 @@ class PlotGroomers(common_base.CommonBase):
     h_ratio_tagged.Draw('PE same')
     leg_ratio.AddEntry(h_ratio_tagged, 'Tagging purity', 'P')
     setattr(self, 'h_ratio_tagged_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio_tagged)
+    
+    # Plot RAA
+    ROOT.gStyle.SetErrorX(0.)
+    gRAA_truth = ROOT.TGraph(hRAA_truth)
+    gRAA_truth.SetMarkerStyle(0)
+    gRAA_truth.SetLineStyle(1)
+    gRAA_truth.SetLineColor(1)
+    gRAA_truth.SetLineWidth(4)
+    gRAA_truth.Draw('L same X0')
+    
+    gRAA_emb = ROOT.TGraph(hRAA_emb)
+    gRAA_emb.SetMarkerStyle(0)
+    gRAA_emb.SetLineStyle(1)
+    gRAA_emb.SetLineColor(2)
+    gRAA_emb.SetLineWidth(4)
+    gRAA_emb.Draw('L same')
+    
+    leg_ratio.AddEntry(hRAA_truth, 'True RAA', 'L')
+    leg_ratio.AddEntry(hRAA_emb, 'Embedded RAA', 'L')
+
     
     leg_ratio.Draw('same')
     
@@ -645,7 +711,7 @@ class PlotGroomers(common_base.CommonBase):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(x, y-0.12, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.2f}'.format(self.eta_max - jetR)
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(x, y-0.18, text)
    
     text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
