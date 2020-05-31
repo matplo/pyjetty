@@ -52,11 +52,13 @@ class GroomerOutput(object):
 			self.tembwp = RTreeWriter(tree=self.tembp)
 
 		self.jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 1.0)
-		self.dy_groomer = fjcontrib.DynamicalGroomer(self.jet_def_lund)
 
-		self.alphas = [0.1, 1.0, 2.0]
+		self.dy_groomer_alphas = [0.1, 1.0, 2.0]
+		self.sd_zcuts = [0.1, 0.2, 0.4]
 
-		print (self.dy_groomer.description())
+		self.gshop = fjcontrib.GroomerShop(self.jet_def_lund)
+		self.gshop_emb = fjcontrib.GroomerShop(self.jet_def_lund)
+		print (self.gshop.description())
 
 		self.sds = []
 		sd01 = fjcontrib.SoftDrop(0, 0.1, 1.0)
@@ -85,30 +87,35 @@ class GroomerOutput(object):
 			tw = self.tembw
 			sprefix = 'e'
 		tw.fill_branch(sprefix+'j', j)
-		for a in self.alphas:
-			dy_groomed = self.dy_groomer.result(j, a)
+		self.gshop.recluster(j)
+		for a in self.dy_groomer_alphas:
+			dy_groomed = self.gshop.dynamical(a)
 			tw.fill_branch(sprefix+'dg_{:.1f}'.format(a), dy_groomed)
-		max_pt_groomed = self.dy_groomer.max_pt_softer(j)
+		max_pt_groomed = self.gshop.max_pt_softer()
 		tw.fill_branch(sprefix+'max_ptsoft', max_pt_groomed)
-		max_z_groomed = self.dy_groomer.max_z(j)
+		max_z_groomed = self.gshop.max_z()
 		tw.fill_branch(sprefix+'max_z', max_z_groomed)
-		max_kt_groomed = self.dy_groomer.max_kt(j)
+		max_kt_groomed = self.gshop.max_kt()
 		tw.fill_branch(sprefix+'max_kt', max_kt_groomed)
-		max_kappa_groomed = self.dy_groomer.max_kappa(j)
+		max_kappa_groomed = self.gshop.max_kappa()
 		tw.fill_branch(sprefix+'max_kappa', max_kappa_groomed)
-		max_tf_groomed = self.dy_groomer.max_tf(j)
+		max_tf_groomed = self.gshop.max_tf()
 		tw.fill_branch(sprefix+'max_tf', max_tf_groomed)
-		min_tf_groomed = self.dy_groomer.min_tf(j)
+		min_tf_groomed = self.gshop.min_tf()
 		tw.fill_branch(sprefix+'min_tf', min_tf_groomed)
 
-		for i,sd in enumerate(self.sds):
-			j_sd = sd.result(j)
-			tw.fill_branch(sprefix+'sd{}'.format(i), j_sd)
-			sd_info = fjcontrib.get_SD_jet_info(j_sd)
-			tw.fill_branch(sprefix+'sd{}_z'.format(i), sd_info.z)
-			tw.fill_branch(sprefix+'sd{}_Delta'.format(i), sd_info.dR)
-			tw.fill_branch(sprefix+'sd{}_mu'.format(i), sd_info.mu)
-			tw.fill_branch(sprefix+'sd{}_kt'.format(i), sd_info.z * j_sd.pt() * sd_info.dR)
+		for zcut in self.sd_zcuts:
+			sd_groomed = self.gshop.soft_drop(0., zcut)
+			tw.fill_branch(sprefix+'sd_{}'.format(zcut), sd_groomed)
+
+		# for i,sd in enumerate(self.sds):
+		# 	j_sd = sd.result(j)
+		# 	tw.fill_branch(sprefix+'sd{}'.format(i), j_sd)
+		# 	sd_info = fjcontrib.get_SD_jet_info(j_sd)
+		# 	tw.fill_branch(sprefix+'sd{}_z'.format(i), sd_info.z)
+		# 	tw.fill_branch(sprefix+'sd{}_Delta'.format(i), sd_info.dR)
+		# 	tw.fill_branch(sprefix+'sd{}_mu'.format(i), sd_info.mu)
+		# 	tw.fill_branch(sprefix+'sd{}_kt'.format(i), sd_info.z * j_sd.pt() * sd_info.dR)
 
 		for s in kwargs:
 			tw.fill_branch(sprefix+s, kwargs[s])
@@ -135,64 +142,24 @@ class GroomerOutput(object):
 			return
 		tw = self.tembwp
 		tw.fill_branch('j_pp', j_pp)
+		self.gshop.recluster(j_pp)
+		self.gshop_emb.recluster(j_emb)
 		for a in self.alphas:
-			dy_groomed_pp = self.dy_groomer.result(j_pp, a)
-			dy_groomed_emb = self.dy_groomer.result(j_emb, a)
-			self.fill_groomers_matched(tw, self.dy_groomer.result(j_pp, a), self.dy_groomer.result(j_emb, a), 'dg_{:.1f}'.format(a))
+			self.fill_groomers_matched(tw, self.gshop.dynamical(a), self.gshop.dynamical(a), 'dg_{:.1f}'.format(a))
 
-		self.fill_groomers_matched(tw, self.dy_groomer.max_pt_softer(j_pp), self.dy_groomer.max_pt_softer(j_emb), 'max_ptsoft')
-		self.fill_groomers_matched(tw, self.dy_groomer.max_z(j_pp), self.dy_groomer.max_z(j_emb), 'max_z')
-		self.fill_groomers_matched(tw, self.dy_groomer.max_kt(j_pp), self.dy_groomer.max_kt(j_emb), 'max_kt')
-		self.fill_groomers_matched(tw, self.dy_groomer.max_kappa(j_pp), self.dy_groomer.max_kappa(j_emb), 'max_kappa')
-		self.fill_groomers_matched(tw, self.dy_groomer.max_tf(j_pp), self.dy_groomer.max_tf(j_emb), 'max_tf')
-		self.fill_groomers_matched(tw, self.dy_groomer.min_tf(j_pp), self.dy_groomer.min_tf(j_emb), 'min_tf')
+		self.fill_groomers_matched(tw, self.gshop.max_pt_softer(), 	self.gshop_emb.max_pt_softer(), 'max_ptsoft')
+		self.fill_groomers_matched(tw, self.gshop.max_z(), 			self.gshop_emb.max_z(), 'max_z')
+		self.fill_groomers_matched(tw, self.gshop.max_kt(), 		self.gshop_emb.max_kt(), 'max_kt')
+		self.fill_groomers_matched(tw, self.gshop.max_kappa(), 		self.gshop_emb.max_kappa(), 'max_kappa')
+		self.fill_groomers_matched(tw, self.gshop.max_tf(), 		self.gshop_emb.max_tf(), 'max_tf')
+		self.fill_groomers_matched(tw, self.gshop.min_tf(), 		self.gshop_emb.min_tf(), 'min_tf')
 
-		for i,sd in enumerate(self.sds):
-			j_sd_pp = sd.result(j_pp)
-			tw.fill_branch('sd{}_pp'.format(i), j_sd_pp)
-			sd_info = fjcontrib.get_SD_jet_info(j_sd_pp)
-			tw.fill_branch('sd{}_z_pp'.format(i), sd_info.z)
-			tw.fill_branch('sd{}_Delta_pp'.format(i), sd_info.dR)
-			tw.fill_branch('sd{}_mu_pp'.format(i), sd_info.mu)
-			tw.fill_branch('sd{}_kt_pp'.format(i), sd_info.z * j_sd_pp.pt() * sd_info.dR)
-
-			j_sd_emb = sd.result(j_emb)
-			tw.fill_branch('sd{}_emb'.format(i), j_sd_emb)
-			sd_info = fjcontrib.get_SD_jet_info(j_sd_emb)
-			tw.fill_branch('sd{}_z_emb'.format(i), sd_info.z)
-			tw.fill_branch('sd{}_Delta_emb'.format(i), sd_info.dR)
-			tw.fill_branch('sd{}_mu_emb'.format(i), sd_info.mu)
-			tw.fill_branch('sd{}_kt_emb'.format(i), sd_info.z * j_sd_pp.pt() * sd_info.dR)
-
-			# now fill the prong matching
-			p1 = fj.PseudoJet()
-			p2 = fj.PseudoJet()
-			has_parents_pp = j_sd_pp.has_parents(p1, p2)
-			tw.fill_branch('sd{}_p1_pp'.format(i), p1)
-			tw.fill_branch('sd{}_p2_pp'.format(i), p2)
-
-			pe1 = fj.PseudoJet()
-			pe2 = fj.PseudoJet()
-			has_parents_emb = j_sd_emb.has_parents(pe1, pe2)
-			tw.fill_branch('sd{}_p1_emb'.format(i), pe1)
-			tw.fill_branch('sd{}_p2_emb'.format(i), pe2)
-
-			# if has_parents_emb:
-			# 	tw.fill_branch('ej_p1_ptc', pe1.pt() - pe1.area() * rho)
-			# 	tw.fill_branch('ej_p2_ptc', pe2.pt() - pe2.area() * rho)
-			# else:
-			# 	tw.fill_branch('ej_p1_ptc', -1000)
-			# 	tw.fill_branch('ej_p2_ptc', -1000)
-
-			mpt1 = -1.0 # not passed SD
-			mpt2 = -1.0 # not passed SD
-
-			if has_parents_pp and has_parents_emb:
-				mpt1 = fjtools.matched_pt(pe1, p1)
-				mpt2 = fjtools.matched_pt(pe2, p2)
-			tw.fill_branch('sd{}_mpt1'.format(i), mpt1)
-			tw.fill_branch('sd{}_mpt2'.format(i), mpt2)
-
+		for zcut in enumerate(self.sd_zcuts):
+			self.fill_groomers_matched(tw, self.gshop.soft_drop(0.0, zcut), self.gshop_emb.soft_drop(0.0, zcut), 'sd{}'.format(zcut))
+			gsd = self.gshop.soft_drop(0., zcut)
+			tw.fill_branch('sd_{}_pp'.format(zcut), gsd.pair())
+			gsd = self.gshop_emb.soft_drop(0., zcut)
+			tw.fill_branch('sd_{}_emb'.format(zcut), gsd.pair())
 
 		for s in kwargs:
 			tw.fill_branch(s, kwargs[s])
@@ -223,7 +190,7 @@ def main():
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
 	parser.add_argument('--jetptcut', help='remove jets below the cut', default=50., type=float)
 	parser.add_argument('--nev', help='number of events to run', default=0, type=int)
-	parser.add_argument('--max-eta', help='max eta for particles', default=0.9)
+	parser.add_argument('--max-eta', help='max eta for particles', default=0.9, type=float)
 	parser.add_argument('--npart-cut', help='npart cut on centrality low,high hint:' + npart_cents, default='325,450', type=str)
 
 	args = parser.parse_args()

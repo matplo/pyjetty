@@ -83,19 +83,21 @@ class RTreeWriter(MPBase):
 											'a' 	: value.area()})
 			else:
 				self.fill_branch(bname, {'pt' : value.pt(), 'phi' : value.phi(), 'eta' : value.eta()})
+			if value.has_constituents():
+				self.fill_branch(bname, {'nconst': len(value.constituents())})
 			return
 		if self._fj_LundDeclustering_type == type(value):
 			self.fill_branch(bname, { 
-										'm' : value.m(),
-										'z' : value.z(),
+										'm'     : value.m(),
+										'z'     : value.z(),
 										'Delta' : value.Delta(),
-										'kt' : value.kt(),
+										'kt'    : value.kt(),
 										'kappa' : value.kappa(),
-										'psi' : value.psi(),
-										'p' : value.pair(),
-										's1' : value.harder(),
-										's2' : value.softer(),
-										'tf' : value.z() * value.Delta() * value.Delta()
+										'psi'   : value.psi(),
+										'p'     : value.pair(),
+										's1'    : value.harder(),
+										's2'    : value.softer(),
+										'tf'    : value.z() * value.Delta() * value.Delta()
 									})
 			return
 		if bool == type(value):
