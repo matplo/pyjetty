@@ -55,6 +55,7 @@ class PlotGroomers(common_base.CommonBase):
     thermal_data = config['main_response']
     self.fMC = ROOT.TFile(thermal_data, 'READ')
     
+    self.eta_max = config['eta_max']
     self.max_distance = config['constituent_subtractor']['max_distance']
     self.R_max = config['constituent_subtractor']['main_R_max']
     
@@ -98,6 +99,14 @@ class PlotGroomers(common_base.CommonBase):
       self.xmax = 0.5
       self.axis = 1
       self.rebin_value = 5
+    elif observable == 'kappa':
+      self.xmin = 0.
+      self.xmax = 0.5
+      self.rebin_value = 1
+    elif observable == 'tf':
+      self.xmin = 0.
+      self.xmax = 0.5
+      self.rebin_value = 1
 
     # Create output dirs
     output_dir = os.path.join(self.output_dir, observable)
@@ -194,7 +203,7 @@ class PlotGroomers(common_base.CommonBase):
         
       name = 'h_theta_g_zg_JetPt_Truth_R{}_{}'.format(jetR, obs_label)
       h3D_truth = self.fMC.Get(name)
-        
+      
       # Loop through pt slices, and plot 1D projection onto observable
       for i in range(0, len(self.pt_bins_reported) - 1):
         min_pt = self.pt_bins_reported[i]
@@ -206,8 +215,31 @@ class PlotGroomers(common_base.CommonBase):
         
         for min_theta in self.min_theta_list:
           self.plot_obs_projection(observable, h4D, h3D_truth, min_theta,
-                                 jetR, obs_label, obs_setting, grooming_setting,
-                                 min_pt, max_pt, output_dir)
+                                   jetR, obs_label, obs_setting, grooming_setting,
+                                   min_pt, max_pt, output_dir)
+      
+    elif observable in ['kappa', 'tf']:
+    
+      name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
+      h3D = self.fMC.Get(name)
+      h3D.Sumw2()
+        
+      name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, obs_label)
+      h2D_truth = self.fMC.Get(name)
+        
+      # Loop through pt slices, and plot 1D projection onto observable
+      for i in range(0, len(self.pt_bins_reported) - 1):
+        min_pt = self.pt_bins_reported[i]
+        max_pt = self.pt_bins_reported[i+1]
+        
+        # Set pt range
+        h3D.GetXaxis().SetRangeUser(min_pt, max_pt)
+        h2D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
+        
+        for min_theta in self.min_theta_list:
+          self.plot_obs_projection_kappa(observable, h3D, h2D_truth,
+                                         jetR, obs_label, obs_setting, grooming_setting,
+                                         min_pt, max_pt, output_dir)
 
   #---------------------------------------------------------------
   def plot_obs_projection(self, observable, h4D, h3D_truth, min_theta, jetR, obs_label, obs_setting,
@@ -381,7 +413,7 @@ class PlotGroomers(common_base.CommonBase):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(x, y-0.12, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.2f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(x, y-0.18, text)
    
     text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
@@ -416,11 +448,190 @@ class PlotGroomers(common_base.CommonBase):
     c.Close()
 
   #---------------------------------------------------------------
+  def plot_obs_projection_kappa(self, observable, h3D, h2D_truth, jetR, obs_label, obs_setting,
+                          grooming_setting, min_pt, max_pt, output_dir):
+    
+    # Reset projections for normalization
+    
+    # zg
+    h3D.GetYaxis().SetRangeUser(-10, self.xmax)
+    h2D_truth.GetYaxis().SetRangeUser(-10, self.xmax)
+    
+    # Flag
+    h3D.GetZaxis().SetRange(0, 11)
+
+    # Get normalization for embeddeed case
+    h_normalization = h3D.Project3D('y')
+    h_normalization.SetName('h_normalization_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    N_inclusive_emb = h_normalization.Integral()
+    if N_inclusive_emb < 1e-3:
+      print('Emb Integral is 0, check for problem')
+      return
+      
+    # Get normalization for truth case
+    h_normalization_truth = h2D_truth.ProjectionY()
+    h_normalization_truth.SetName('h_normalization_truth_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+    N_inclusive_truth = h_normalization_truth.Integral()
+    if N_inclusive_truth < 1e-3:
+      print('Truth Integral is 0, check for problem')
+      return
+      
+    # Draw histogram
+    c = ROOT.TCanvas('c','c: hist', 600, 650)
+    c.cd()
+    
+    pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
+    pad1.SetLeftMargin(0.2)
+    pad1.SetTopMargin(0.04)
+    pad1.SetRightMargin(0.04)
+    pad1.SetBottomMargin(0.)
+    pad1.Draw()
+    pad1.cd()
+    
+    leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
+    self.utils.setup_legend(leg, 0.04)
+
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.SetMinimum(0.01)
+    myBlankHisto.GetXaxis().SetTitle(self.xtitle)
+    myBlankHisto.GetXaxis().SetTitleSize(30)
+    myBlankHisto.GetXaxis().SetTitleFont(43)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.95)
+    myBlankHisto.GetXaxis().SetLabelFont(43)
+    myBlankHisto.GetXaxis().SetLabelSize(25)
+    myBlankHisto.GetYaxis().SetTitleSize(25)
+    myBlankHisto.GetYaxis().SetTitleFont(43)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.7)
+    myBlankHisto.GetYaxis().SetLabelFont(43)
+    myBlankHisto.GetYaxis().SetLabelSize(25)
+    myBlankHisto.GetYaxis().SetNdivisions(505)
+    myBlankHisto.GetYaxis().SetTitle(self.ytitle)
+    myBlankHisto.Draw('E')
+    
+    c.cd()
+    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.3)
+    pad2.SetTopMargin(0)
+    pad2.SetBottomMargin(0.35)
+    pad2.SetLeftMargin(0.2)
+    pad2.SetRightMargin(0.04)
+    pad2.SetTicks(0,1)
+    pad2.Draw()
+    pad2.cd()
+    
+    myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
+    ytitle = '#frac{Embedded}{Truth}'
+    myBlankHisto2.SetYTitle(ytitle)
+    myBlankHisto2.SetXTitle(self.xtitle)
+    myBlankHisto2.GetXaxis().SetTitleSize(30)
+    myBlankHisto2.GetXaxis().SetTitleFont(43)
+    myBlankHisto2.GetXaxis().SetTitleOffset(3.5)
+    myBlankHisto2.GetXaxis().SetLabelFont(43)
+    myBlankHisto2.GetXaxis().SetLabelSize(25)
+    myBlankHisto2.GetYaxis().SetTitleSize(25)
+    myBlankHisto2.GetYaxis().SetTitleFont(43)
+    myBlankHisto2.GetYaxis().SetTitleOffset(2.)
+    myBlankHisto2.GetYaxis().SetLabelFont(43)
+    myBlankHisto2.GetYaxis().SetLabelSize(25)
+    myBlankHisto2.GetYaxis().SetNdivisions(505)
+    myBlankHisto2.SetMinimum(0.61)
+    myBlankHisto2.SetMaximum(1.39)
+    myBlankHisto2.Draw('')
+    
+    h_stack = ROOT.THStack('h_stack', 'stacked')
+    h_sum = None
+    legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other',
+                   'combined fail', 'truth fail', 'both fail']
+    
+    # Loop over each flag
+    for i in range(len(legend_list)):
+      flag = i+1
+      h3D.GetZaxis().SetRange(flag, flag)
+
+      # Project onto 1D
+      h1D = h3D.Project3D('y')
+      h1D.SetName('h1D_{}'.format(i))
+      h1D.Rebin(self.rebin_value)
+      h1D.Scale(1./N_inclusive_emb, 'width')
+        
+      h1D.SetLineColor(self.ColorArray[i])
+      h1D.SetFillColor(self.ColorArray[i])
+      h1D.SetLineWidth(2)
+
+      h_stack.Add(h1D)
+      leg.AddEntry(h1D, legend_list[i], 'F')
+      
+      if i == 0:
+        h_sum = h1D.Clone()
+        h_sum.SetName('h_sum_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+      else:
+        h_sum.Add(h1D)
+    
+    # Draw truth histogram
+    h1D_truth = h2D_truth.ProjectionY()
+    h1D_truth.Rebin(self.rebin_value)
+    h1D_truth.Scale(1./N_inclusive_truth, 'width')
+    h1D_truth.SetLineColor(1)
+    h1D_truth.SetLineWidth(2)
+    myBlankHisto.SetMaximum(2.3*h1D_truth.GetMaximum())
+    leg.AddEntry(h1D_truth, 'Truth', 'L')
+    
+    pad1.cd()
+    leg.Draw('same')
+    h_stack.Draw('same hist')
+    h1D_truth.Draw('same hist')
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    
+    x = 0.23
+    y = 0.9
+    text_latex.SetTextSize(0.05)
+    text = 'PYTHIA8 embedded in thermal background'
+    text_latex.DrawLatex(x, y, text)
+        
+    text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
+    text_latex.DrawLatex(x, y-0.06, text)
+
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.DrawLatex(x, y-0.12, text)
+    
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.2f}'.format(self.eta_max - jetR)
+    text_latex.DrawLatex(x, y-0.18, text)
+   
+    text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
+    text_latex.DrawLatex(x, y-0.25, text)
+   
+    text = self.utils.formatted_grooming_label(grooming_setting)
+    text_latex.DrawLatex(x, y-0.32, text)
+    
+    pad2.cd()
+    setattr(self, 'h_ratio_{}'.format(obs_label), None)
+    h_ratio = h_sum.Clone()
+    h_ratio.SetMarkerStyle(21)
+    h_ratio.SetMarkerColor(1)
+    h_ratio.Divide(h1D_truth)
+    if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
+      myBlankHisto2.SetMaximum(1.2*h_ratio.GetMaximum())
+    h_ratio.Draw('PE same')
+    setattr(self, 'h_ratio_{}_{}-{}'.format(obs_label, min_pt, max_pt), h_ratio)
+    
+    line = ROOT.TLine(self.xmin,1,self.xmax,1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.Draw('same')
+
+    output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}.pdf'.format(self.utils.grooming_label(grooming_setting),
+                                          obs_label, min_pt, max_pt))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
   # Plot ratio of money plot for each groomer
   #---------------------------------------------------------------
   def plot_money_ratios(self, observable, output_dir, jetR):
   
-    for min_theta in self.min_theta_list:
+    for i_theta, min_theta in enumerate(self.min_theta_list):
   
       for i_overlay, overlay_list in enumerate(self.plot_overlay_list):
 
@@ -429,7 +640,11 @@ class PlotGroomers(common_base.CommonBase):
           min_pt_truth = self.pt_bins_reported[i]
           max_pt_truth = self.pt_bins_reported[i+1]
           
-          self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth)
+          if observable in ['zg', 'theta_g']:
+            self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth)
+          elif observable in ['kappa', 'tf']:
+            if i_theta == 0:
+              self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth)
  
   #---------------------------------------------------------------
   # Plot ratio of money plot for each groomer
@@ -480,7 +695,10 @@ class PlotGroomers(common_base.CommonBase):
       obs_label = self.utils.obs_label(obs_setting, grooming_setting)
       self.set_zmin(observable, grooming_setting)
       
-      h_ratio = getattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR))
+      if observable in ['zg', 'theta_g']:
+        h_ratio = getattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR))
+      elif observable in ['kappa', 'tf']:
+        h_ratio = getattr(self, 'h_ratio_{}_{}-{}'.format(obs_label, min_pt, max_pt))
       h_ratio.SetMarkerStyle(0)
       h_ratio.SetLineStyle(0)
       h_ratio.SetLineColor(0)
@@ -489,7 +707,6 @@ class PlotGroomers(common_base.CommonBase):
       
       if h_ratio.GetMaximum() > 0.5*myBlankHisto.GetMaximum():
         myBlankHisto.SetMaximum(2*h_ratio.GetMaximum())
-
 
       i_reset += 1
       h_ratio.SetLineWidth(2)
@@ -520,19 +737,25 @@ class PlotGroomers(common_base.CommonBase):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(x, y-2*dy, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR)
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max-jetR)
     text_latex.DrawLatex(x, y-3*dy, text)
   
     text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{PYTHIA} < ' + str(int(max_pt)) + ' GeV/#it{c}'
     text_latex.DrawLatex(x, y-4*dy-0.02, text)
     
-    if min_theta > 1e-3:
-      text = '#Delta#it{{R}} > {}'.format(min_theta*jetR)
-      text_latex.DrawLatex(x, y-5*dy-0.04, text)
+    if observable in ['zg', 'theta_g']:
+      if min_theta > 1e-3:
+        text = '#Delta#it{{R}} > {}'.format(min_theta*jetR)
+        text_latex.DrawLatex(x, y-5*dy-0.04, text)
   
-    output_filename = os.path.join(output_dir, 'ratios/money_plot_ratio_{}-{}_dR{}_{}.pdf'.format(
-                                   min_pt, max_pt, self.utils.remove_periods(min_theta*jetR),
-                                   i_overlay))
+      output_filename = os.path.join(output_dir, 'ratios/money_plot_ratio_{}-{}_dR{}_{}.pdf'.format(
+                                     min_pt, max_pt, self.utils.remove_periods(min_theta*jetR),
+                                     i_overlay))
+                                     
+    elif observable in ['kappa', 'tf']:
+      output_filename = os.path.join(output_dir, 'ratios/money_plot_ratio_{}-{}_{}.pdf'.format(
+                                     min_pt, max_pt, i_overlay))
+                                       
     c.SaveAs(output_filename)
     c.Close()
 
