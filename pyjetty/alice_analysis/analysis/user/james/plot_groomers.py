@@ -141,10 +141,15 @@ class PlotGroomers(common_base.CommonBase):
             obs_setting = self.obs_settings[i]
             grooming_setting = self.grooming_settings[i]
             obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-            self.create_output_subdir(output_dir, self.utils.grooming_label(grooming_setting))
             self.set_zmin(observable, grooming_setting)
-                
-            self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir)
+            
+            output_dir_money = os.path.join(output_dir, 'money')
+            self.create_output_subdir(output_dir_money, self.utils.grooming_label(grooming_setting))
+            self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir_money)
+
+            output_dir_toy = os.path.join(output_dir, 'toy')
+            self.create_output_subdir(output_dir_toy, self.utils.grooming_label(grooming_setting))
+            self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir_toy, option='toy')
            
           self.create_output_subdir(output_dir, 'ratios_Embedded_Truth')
           self.plot_money_ratios(observable, output_dir, jetR, 'Embedded/Truth')
@@ -191,7 +196,8 @@ class PlotGroomers(common_base.CommonBase):
               self.plotting_utils.plot_prong_matching_correlation(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
   #---------------------------------------------------------------
-  def plot_money_plot(self, observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir):
+  def plot_money_plot(self, observable, jetR, R_max, obs_label, obs_setting,
+                      grooming_setting, output_dir, option=''):
       
     if observable in ['zg', 'theta_g']:
       # (pt, zg, theta_g, flag)
@@ -224,16 +230,24 @@ class PlotGroomers(common_base.CommonBase):
         h4D.GetAxis(0).SetRangeUser(min_pt, max_pt)
         h3D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
         
-        for min_theta in self.min_theta_list:
-          self.plot_obs_projection(observable, h4D, h3D_truth, min_theta,
-                                   jetR, obs_label, obs_setting, grooming_setting,
-                                   min_pt, max_pt, output_dir)
+        for i_theta, min_theta in enumerate(self.min_theta_list):
+        
+          # Set RAA (optionally) due to theta_g cut from jet quenching
+          if observable == 'zg':
+            self.RAA = 1-min_theta
+          else:
+            self.RAA = 1.
+        
+          if observable == 'zg' or i_theta == 0:
+            self.plot_obs_projection(observable, h4D, h3D_truth, min_theta,
+                                     jetR, obs_label, obs_setting, grooming_setting,
+                                     min_pt, max_pt, output_dir, option=option)
       
     elif observable in ['kappa', 'tf']:
     
       name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
       h3D = self.fMC.Get(name)
-      h3D.Sumw2()
+      #h3D.Sumw2()
         
       name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, obs_label)
       h2D_truth = self.fMC.Get(name)
@@ -247,14 +261,16 @@ class PlotGroomers(common_base.CommonBase):
         h3D.GetXaxis().SetRangeUser(min_pt, max_pt)
         h2D_truth.GetXaxis().SetRangeUser(min_pt, max_pt)
         
-        for min_theta in self.min_theta_list:
-          self.plot_obs_projection_kappa(observable, h3D, h2D_truth,
-                                         jetR, obs_label, obs_setting, grooming_setting,
-                                         min_pt, max_pt, output_dir)
+        for i_theta, min_theta in enumerate(self.min_theta_list):
+        
+          if  i_theta == 0:
+            self.plot_obs_projection_kappa(observable, h3D, h2D_truth,
+                                           jetR, obs_label, obs_setting, grooming_setting,
+                                           min_pt, max_pt, output_dir)
 
   #---------------------------------------------------------------
   def plot_obs_projection(self, observable, h4D, h3D_truth, min_theta, jetR, obs_label, obs_setting,
-                          grooming_setting, min_pt, max_pt, output_dir):
+                          grooming_setting, min_pt, max_pt, output_dir, option=''):
     
     # Reset projections for normalization
     
@@ -268,18 +284,14 @@ class PlotGroomers(common_base.CommonBase):
 
     # Flag
     h4D.GetAxis(3).SetRange(0, 11)
-    
-    # Set RAA (optionally) due to theta_g cut from jet quenching
-    if observable == 'zg':
-      self.RAA = 1.
-      #self.RAA = 1-min_theta
-    else:
-      self.RAA = 1.
 
     # Get normalization for embedded case
     h_normalization = h4D.Projection(self.axis)
     h_normalization.SetName('h_normalization_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-    N_inclusive_emb = h_normalization.Integral()/self.RAA
+    if option ==  'toy':
+      N_inclusive_emb = h_normalization.Integral()
+    else:
+      N_inclusive_emb = h_normalization.Integral()/self.RAA
     if N_inclusive_emb < 1e-3:
       print('Emb Integral is 0, check for problem')
       return
@@ -304,7 +316,7 @@ class PlotGroomers(common_base.CommonBase):
     # Get normalization for dR cut in embedded case
     h_normalization_dR = h4D.Projection(self.axis)
     h_normalization_dR.SetName('h_normalization_dR_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-    N_inclusive_emb_dR = h_normalization_dR.Integral()/self.RAA
+    N_inclusive_emb_dR = h_normalization_dR.Integral()
     if N_inclusive_emb_dR < 1e-3:
       print('Emb Integral is 0, check for problem')
       return
@@ -450,17 +462,18 @@ class PlotGroomers(common_base.CommonBase):
     leg.AddEntry(h1D_truth, 'Truth', 'L')
     
     # Construct toy truth RAA
-    RAA =  0.5
-    hRAA_truth = h1D_truth.Clone('hRAA_truth_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-    hRAA_truth.Scale(RAA)
-    hRAA_truth.Divide(h1D_truth)
-    
-    # Construct "embedded" RAA
-    hRAA_emb = h_sum_tagged.Clone('hRAA_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-    hRAA_emb.Scale(RAA)
-    hRAA_emb.Add(h_sum_mistagged)
-    hRAA_emb.Divide(h_sum)
-    
+    if option ==  'toy':
+
+      hRAA_truth = h1D_truth.Clone('hRAA_truth_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+      hRAA_truth.Scale(self.RAA)
+      hRAA_truth.Divide(h1D_truth)
+      
+      # Construct "embedded" RAA
+      hRAA_emb = h_sum_tagged.Clone('hRAA_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+      hRAA_emb.Scale(self.RAA)
+      hRAA_emb.Add(h_sum_mistagged)
+      hRAA_emb.Divide(h_sum)
+      
     pad1.cd()
     leg.Draw('same')
     h_stack.Draw('same hist')
@@ -503,8 +516,9 @@ class PlotGroomers(common_base.CommonBase):
     h_ratio.Divide(h1D_truth)
     if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
       myBlankHisto2.SetMaximum(1.5*h_ratio.GetMaximum())
-    #h_ratio.Draw('PE same')
-    #leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
+    if not option ==  'toy':
+      h_ratio.Draw('PE same')
+      leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
     setattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio)
     
     # Build ratio of embedded tagging purity
@@ -520,24 +534,25 @@ class PlotGroomers(common_base.CommonBase):
     setattr(self, 'h_ratio_tagged_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio_tagged)
     
     # Plot RAA
-    ROOT.gStyle.SetErrorX(0.)
-    gRAA_truth = ROOT.TGraph(hRAA_truth)
-    gRAA_truth.SetMarkerStyle(0)
-    gRAA_truth.SetLineStyle(1)
-    gRAA_truth.SetLineColor(1)
-    gRAA_truth.SetLineWidth(4)
-    gRAA_truth.Draw('L same X0')
-    
-    gRAA_emb = ROOT.TGraph(hRAA_emb)
-    gRAA_emb.SetMarkerStyle(0)
-    gRAA_emb.SetLineStyle(1)
-    gRAA_emb.SetLineColor(2)
-    gRAA_emb.SetLineWidth(4)
-    gRAA_emb.Draw('L same')
-    
-    leg_ratio.AddEntry(hRAA_truth, 'True RAA', 'L')
-    leg_ratio.AddEntry(hRAA_emb, 'Embedded RAA', 'L')
+    if option ==  'toy':
 
+      ROOT.gStyle.SetErrorX(0.)
+      gRAA_truth = ROOT.TGraph(hRAA_truth)
+      gRAA_truth.SetMarkerStyle(0)
+      gRAA_truth.SetLineStyle(1)
+      gRAA_truth.SetLineColor(1)
+      gRAA_truth.SetLineWidth(4)
+      gRAA_truth.Draw('L same X0')
+      
+      gRAA_emb = ROOT.TGraph(hRAA_emb)
+      gRAA_emb.SetMarkerStyle(0)
+      gRAA_emb.SetLineStyle(1)
+      gRAA_emb.SetLineColor(2)
+      gRAA_emb.SetLineWidth(4)
+      gRAA_emb.Draw('L same')
+      
+      leg_ratio.AddEntry(hRAA_truth, 'True RAA', 'L')
+      leg_ratio.AddEntry(hRAA_emb, 'Embedded RAA', 'L')
     
     leg_ratio.Draw('same')
     
@@ -546,8 +561,14 @@ class PlotGroomers(common_base.CommonBase):
     line.SetLineStyle(2)
     line.Draw('same')
 
-    output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}_dR{}.pdf'.format(self.utils.grooming_label(grooming_setting),
-                                          obs_label, min_pt, max_pt, self.utils.remove_periods(min_theta*jetR)))
+    if option ==  'toy':
+      output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}_dR{}.pdf'.format(self.utils.grooming_label(grooming_setting),
+                                               obs_label, min_pt, max_pt,
+                                               self.utils.remove_periods(min_theta*jetR)))
+    else:
+      output_filename = os.path.join(output_dir, '{}/money_plot_{}_{}-{}_dR{}.pdf'.format(self.utils.grooming_label(grooming_setting),
+                                                 obs_label, min_pt, max_pt,
+                                                 self.utils.remove_periods(min_theta*jetR)))
     c.SaveAs(output_filename)
     c.Close()
 
@@ -763,7 +784,7 @@ class PlotGroomers(common_base.CommonBase):
   def plot_money_ratios(self, observable, output_dir, jetR, option):
   
     for i_theta, min_theta in enumerate(self.min_theta_list):
-  
+
       for i_overlay, overlay_list in enumerate(self.plot_overlay_list):
 
         # Loop through pt slices, and plot 1D projection onto observable
@@ -772,10 +793,13 @@ class PlotGroomers(common_base.CommonBase):
           max_pt_truth = self.pt_bins_reported[i+1]
           
           if observable in ['zg', 'theta_g']:
-            self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth, option)
+            if observable == 'zg' or i_theta == 0:
+              self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR,
+                                    min_pt_truth, max_pt_truth, option)
           elif observable in ['kappa', 'tf']:
             if i_theta == 0:
-              self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth, option)
+              self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR,
+                                    min_pt_truth, max_pt_truth, option)
  
   #---------------------------------------------------------------
   # Plot ratio of money plot for each groomer
