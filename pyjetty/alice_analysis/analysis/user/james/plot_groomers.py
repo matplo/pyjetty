@@ -63,6 +63,10 @@ class PlotGroomers(common_base.CommonBase):
     self.output_dir = config['output_dir']
     
     self.min_theta_list = config['min_theta_list']
+    
+    #self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other', 'combined fail', 'truth fail', 'both fail']
+    self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other']
+    
 
     self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
@@ -200,6 +204,10 @@ class PlotGroomers(common_base.CommonBase):
       #    6: pp-truth passed grooming, but combined jet failed grooming
       #    7: combined jet passed grooming, but pp-truth failed grooming
       #    8: both pp-truth and combined jet failed SoftDrop
+      # Note that 8 doesn't affect the relative normalization of combined / truth.
+      # We will further assume 6,7 are of equal magnitude, and ignore 6-8 when
+      # comparing combined to truth distributions.
+      # (Note that 6,8 don't enter the combined distribution, since it has no splitting).
       name = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, obs_label, R_max)
       h4D = self.fMC.Get(name)
       h4D.Sumw2()
@@ -358,11 +366,9 @@ class PlotGroomers(common_base.CommonBase):
     h_stack = ROOT.THStack('h_stack', 'stacked')
     h_sum = None
     h_sum_tagged = None
-    legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other',
-                   'combined fail', 'truth fail', 'both fail']
-    
+
     # Loop over each flag
-    for i in range(len(legend_list)):
+    for i in range(len(self.legend_list)):
       flag = i+1
       h4D.GetAxis(3).SetRange(flag, flag)
       if observable == 'zg':
@@ -379,7 +385,7 @@ class PlotGroomers(common_base.CommonBase):
       h1D.SetLineWidth(2)
 
       h_stack.Add(h1D)
-      leg.AddEntry(h1D, legend_list[i], 'F')
+      leg.AddEntry(h1D, self.legend_list[i], 'F')
       
       if h_sum:
         h_sum.Add(h1D)
@@ -387,7 +393,7 @@ class PlotGroomers(common_base.CommonBase):
         h_sum = h1D.Clone()
         h_sum.SetName('h_sum_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
 
-      if legend_list[i] in ['subleading', 'leading (swap)']:
+      if self.legend_list[i] in ['subleading', 'leading (swap)']:
         if h_sum_tagged:
           h_sum_tagged.Add(h1D)
         else:
@@ -574,11 +580,9 @@ class PlotGroomers(common_base.CommonBase):
     h_stack = ROOT.THStack('h_stack', 'stacked')
     h_sum = None
     h_sum_tagged = None
-    legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other',
-                   'combined fail', 'truth fail', 'both fail']
     
     # Loop over each flag
-    for i in range(len(legend_list)):
+    for i in range(len(self.legend_list)):
       flag = i+1
       h3D.GetZaxis().SetRange(flag, flag)
 
@@ -593,7 +597,7 @@ class PlotGroomers(common_base.CommonBase):
       h1D.SetLineWidth(2)
 
       h_stack.Add(h1D)
-      leg.AddEntry(h1D, legend_list[i], 'F')
+      leg.AddEntry(h1D, self.legend_list[i], 'F')
       
       if h_sum:
         h_sum.Add(h1D)
@@ -601,7 +605,7 @@ class PlotGroomers(common_base.CommonBase):
         h_sum = h1D.Clone()
         h_sum.SetName('h_sum_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
 
-      if legend_list[i] in ['subleading', 'leading (swap)']:
+      if self.legend_list[i] in ['subleading', 'leading (swap)']:
         if h_sum_tagged:
           h_sum_tagged.Add(h1D)
         else:
