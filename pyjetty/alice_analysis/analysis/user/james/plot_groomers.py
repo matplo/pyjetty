@@ -142,8 +142,11 @@ class PlotGroomers(common_base.CommonBase):
                 
             self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir)
            
-          self.create_output_subdir(output_dir, 'ratios')
-          self.plot_money_ratios(observable, output_dir, jetR)
+          self.create_output_subdir(output_dir, 'ratios_Embedded_Truth')
+          self.plot_money_ratios(observable, output_dir, jetR, 'Embedded/Truth')
+          
+          self.create_output_subdir(output_dir, 'ratios_Purity')
+          self.plot_money_ratios(observable, output_dir, jetR, 'Tagging purity')
 
           # Plot performance plots only once
           if observable == 'theta_g':
@@ -683,7 +686,7 @@ class PlotGroomers(common_base.CommonBase):
   #---------------------------------------------------------------
   # Plot ratio of money plot for each groomer
   #---------------------------------------------------------------
-  def plot_money_ratios(self, observable, output_dir, jetR):
+  def plot_money_ratios(self, observable, output_dir, jetR, option):
   
     for i_theta, min_theta in enumerate(self.min_theta_list):
   
@@ -695,15 +698,22 @@ class PlotGroomers(common_base.CommonBase):
           max_pt_truth = self.pt_bins_reported[i+1]
           
           if observable in ['zg', 'theta_g']:
-            self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth)
+            self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth, option)
           elif observable in ['kappa', 'tf']:
             if i_theta == 0:
-              self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth)
+              self.plot_money_ratio(observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt_truth, max_pt_truth, option)
  
   #---------------------------------------------------------------
   # Plot ratio of money plot for each groomer
   #---------------------------------------------------------------
-  def plot_money_ratio(self, observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt, max_pt):
+  def plot_money_ratio(self, observable, output_dir, overlay_list, i_overlay, min_theta, jetR, min_pt, max_pt, option):
+  
+    if option == 'Tagging purity':
+      ratio_suffix = '_tagged'
+      output_dir = os.path.join(output_dir, 'ratios_Purity')
+    else:
+      ratio_suffix = ''
+      output_dir = os.path.join(output_dir, 'ratios_Embedded_Truth')
  
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -727,7 +737,7 @@ class PlotGroomers(common_base.CommonBase):
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, self.xmin, self.xmax)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(self.xtitle)
-    myBlankHisto.SetYTitle('#frac{Embedded}{Truth}')
+    myBlankHisto.SetYTitle(option)
     myBlankHisto.SetMaximum(2.49)
     myBlankHisto.SetMinimum(0.01) # Don't draw 0 on top panel
     myBlankHisto.GetXaxis().SetTitleSize(0.06)
@@ -750,9 +760,9 @@ class PlotGroomers(common_base.CommonBase):
       self.set_zmin(observable, grooming_setting)
       
       if observable in ['zg', 'theta_g']:
-        h_ratio = getattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR))
+        h_ratio = getattr(self, 'h_ratio{}_{}_{}-{}_dR{}'.format(ratio_suffix, obs_label, min_pt, max_pt, min_theta*jetR))
       elif observable in ['kappa', 'tf']:
-        h_ratio = getattr(self, 'h_ratio_{}_{}-{}'.format(obs_label, min_pt, max_pt))
+        h_ratio = getattr(self, 'h_ratio{}_{}_{}-{}'.format(ratio_suffix, obs_label, min_pt, max_pt))
       h_ratio.SetMarkerStyle(0)
       h_ratio.SetLineStyle(0)
       h_ratio.SetLineColor(0)
@@ -802,12 +812,12 @@ class PlotGroomers(common_base.CommonBase):
         text = '#Delta#it{{R}} > {}'.format(min_theta*jetR)
         text_latex.DrawLatex(x, y-5*dy-0.04, text)
   
-      output_filename = os.path.join(output_dir, 'ratios/money_plot_ratio_{}-{}_dR{}_{}.pdf'.format(
+      output_filename = os.path.join(output_dir, 'money_plot_ratio_{}-{}_dR{}_{}.pdf'.format(
                                      min_pt, max_pt, self.utils.remove_periods(min_theta*jetR),
                                      i_overlay))
                                      
     elif observable in ['kappa', 'tf']:
-      output_filename = os.path.join(output_dir, 'ratios/money_plot_ratio_{}-{}_{}.pdf'.format(
+      output_filename = os.path.join(output_dir, 'money_plot_ratio_{}-{}_{}.pdf'.format(
                                      min_pt, max_pt, i_overlay))
                                        
     c.SaveAs(output_filename)
