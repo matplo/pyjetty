@@ -65,7 +65,7 @@ class PlotGroomers(common_base.CommonBase):
     self.min_theta_list = config['min_theta_list']
     
     #self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other', 'combined fail', 'truth fail', 'both fail']
-    self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other']
+    self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'groomed away', 'outside jet', 'other']
     
 
     self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray]
@@ -310,8 +310,10 @@ class PlotGroomers(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
     
-    leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
+    leg = ROOT.TLegend(0.62,0.5,0.77,0.8)
     self.utils.setup_legend(leg, 0.04)
+    leg.SetHeader('#splitline{PYTHIA subleading prong}{tagged in:}')
+    leg.AddEntry(None, '', '')
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
     myBlankHisto.SetNdivisions(505)
@@ -524,8 +526,10 @@ class PlotGroomers(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
     
-    leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
+    leg = ROOT.TLegend(0.62,0.5,0.77,0.8)
     self.utils.setup_legend(leg, 0.04)
+    leg.SetHeader('#splitline{PYTHIA subleading prong}{tagged in:}')
+    leg.AddEntry(None, '', '')
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
     myBlankHisto.SetNdivisions(505)
