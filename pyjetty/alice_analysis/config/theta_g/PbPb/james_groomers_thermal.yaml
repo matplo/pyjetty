@@ -23,13 +23,16 @@ fast_simulation: False
 use_ev_id_ext: False
 min_theta_list: [0., 0.25, 0.5]
 
+#angantyr:
+#  min_background_multiplicity: 18467
+
 thermal_model:
   beta: 0.5
   N_avg: 5000
   sigma_N: 500
 
 constituent_subtractor:
-  max_distance: [0.05, 0.25, 0.7]
+  max_distance: [0.25]
   main_R_max: 0.25
   alpha: 0
   bge_rho_grid_size: 1.0
@@ -44,10 +47,9 @@ theta_g:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#theta_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17', 'config18']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
-      - ['config8', 'config9', 'config10', 'config11', 'config12']
-      - ['config15', 'config16', 'config17', 'config18']
       
   config1:
     SoftDrop:
@@ -142,10 +144,9 @@ zg:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{dz_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17', 'config18']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
-      - ['config8', 'config9', 'config10', 'config11', 'config12']
-      - ['config15', 'config16', 'config17', 'config18']
       
   config1:
     SoftDrop:
@@ -240,11 +241,10 @@ kappa:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#kappa_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17', 'config18']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
-      - ['config8', 'config9', 'config10', 'config11', 'config12']
-      - ['config15', 'config16', 'config17', 'config18']
-     
+      
   config1:
     SoftDrop:
       zcut: 0.1
@@ -338,10 +338,9 @@ tf:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#it{t}_{f}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config4', 'config13', 'config14', 'config8']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17', 'config18']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
-      - ['config8', 'config9', 'config10', 'config11', 'config12']
-      - ['config15', 'config16', 'config17', 'config18']
       
   config1:
     SoftDrop:
@@ -431,7 +430,7 @@ tf:
 ###############################################################################
 # Analysis parameters
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/95763'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/100566_100727_100728'
 
 main_data: ''
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/95763/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/100566_100727_100728/AnalysisResultsFinal.root'

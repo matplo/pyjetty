@@ -49,6 +49,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       self.observable = config['analysis_observable']
     if 'figure_approval_status' in config:
       self.figure_approval_status = config['figure_approval_status']
+      
+    self.eta_max = config['eta_max']
 
     main_data = config['main_data']
     main_response = config['main_response']
@@ -63,11 +65,13 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     else:
       self.suffix = ''
     
-    self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
-                       ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
-                       ROOT.kOrange-3]
-    self.MarkerArray = [20, 21, 22, 23, 34, 33, 24, 25, 26, 32]
-    self.OpenMarkerArray = [24, 25, 26, 32, 27, 28]
+    #self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
+    #                   ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
+    #                   ROOT.kOrange-3]
+    self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray, ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kBlue-6, 1]
+                       
+    self.MarkerArray = [20, 21, 22, 23, 34, 33, 24, 25, 26, 32, 27, 28, 42]
+    self.OpenMarkerArray = [24, 25, 26, 32, 27, 28, 42]
     
     print(self)
 
@@ -584,7 +588,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text = str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.3, 0.73, text)
 
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(0.3, 0.67, text)
     
     subobs_label = self.formatted_subobs_label(self.observable)
@@ -738,7 +742,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       text = str(min_pt) + ' < #it{p}_{T, ch jet}^{det} < ' + str(max_pt) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.3, 0.73, text)
 
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(0.3, 0.67, text)
     
     subobs_label = self.formatted_subobs_label(self.observable)
@@ -890,8 +894,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     myBlankHisto.Draw()
     
     if self.groomer_studies:
-      myLegend = ROOT.TLegend(0.55,0.65,0.75,0.82)
+      myLegend = ROOT.TLegend(0.42,0.64,0.55,0.83)
       self.setup_legend(myLegend,0.035)
+      myLegend2 = ROOT.TLegend(0.76,0.64,0.88,0.83)
+      self.setup_legend(myLegend2,0.035)
     else:
       myLegend = ROOT.TLegend(0.42,0.2,0.75,0.4)
       self.setup_legend(myLegend,0.043)
@@ -944,11 +950,21 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         hMatchedFraction_vs_pt.SetMarkerColor(self.ColorArray[len(self.ColorArray)-i-2])
         hMatchedFraction_vs_pt.SetLineColor(self.ColorArray[len(self.ColorArray)-i-2])
       hMatchedFraction_vs_pt.DrawCopy('P same')
-      myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies), 'P')
-        
+
+      if self.groomer_studies:
+        if i_reset < 7:
+          myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting, verbose = True), 'P')
+        else:
+          myLegend2.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting, verbose = True), 'P')
+      else:
+        myLegend.AddEntry(hMatchedFraction_vs_pt, self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies), 'P')
+              
       h_list.append(hMatchedFraction_vs_pt)
 
     myLegend.Draw('same')
+    if self.groomer_studies:
+      #myLegend2.AddEntry(None, '', '')
+      myLegend2.Draw('same')
 
     line = ROOT.TLine(0, 1, 200, 1)
     line.SetLineColor(920+2)
@@ -960,7 +976,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text_latex.SetNDC()
 
     if self.groomer_studies:
-      x = 0.2
+      x = 0.17
       y = 0.85
       text_latex.SetTextSize(0.04)
       text = 'PYTHIA8 Monash 2013 embedded in thermal background'
@@ -979,10 +995,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
     text_latex.DrawLatex(x, y-0.05, text)
 
-    text = 'Charged jets   anti-#it{k}_{T}'
+    text = 'Charged jets anti-#it{k}_{T}'
     text_latex.DrawLatex(x, y-0.1, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(x, y-0.15, text)
     
     outdir = 'prong_matching_fraction_pt'
@@ -1111,7 +1127,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.DrawLatex(x, y-0.1, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #it{#eta}_{jet}| < 0.5'
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(x, y-0.15, text)
     
     text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{pp-det} < ' + str(int(max_pt)) + ' GeV/#it{c}'

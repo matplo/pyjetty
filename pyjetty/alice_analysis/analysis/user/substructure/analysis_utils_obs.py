@@ -129,8 +129,18 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
         else:
           text += 'SD: #it{{z}}_{{cut}} = {}, #it{{#beta}} = {}'.format(value[0], value[1])
       if key == 'dg':
-        if value[0] in  ['max_pt_softer', 'max_z', 'max_kt', 'max_kappa', 'max_tf', 'min_tf']:
-          text += value[0]
+        if value[0] == 'max_pt_softer':
+          text += 'max-#it{p}_{t}^{soft}'
+        elif value[0] == 'max_z':
+          text += 'max-#it{z}'
+        elif value[0] == 'max_kt':
+          text += 'max-#it{k}_{t}'
+        elif value[0] == 'max_kappa':
+          text += 'max-#it{#kappa}'
+        elif value[0] == 'max_tf':
+          text += 'max-#it{t}_{f}'
+        elif value[0] == 'min_tf':
+          text += 'min-#it{t}_{f}'
         else:
           if verbose:
             text += 'Dynamical Grooming: #it{{a}} = {}'.format(value[0])

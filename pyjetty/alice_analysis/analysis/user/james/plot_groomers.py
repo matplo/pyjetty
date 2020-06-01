@@ -66,9 +66,8 @@ class PlotGroomers(common_base.CommonBase):
     
     #self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other', 'combined fail', 'truth fail', 'both fail']
     self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'groomed away', 'outside jet', 'other']
-    
 
-    self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray]
+    self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray, 1, 1, 1, 1]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
     self.OpenMarkerArray = [24, 25, 26, 32, 27, 28]
     
@@ -97,7 +96,7 @@ class PlotGroomers(common_base.CommonBase):
       self.xmin = 0.
       self.xmax = 1.
       self.axis = 2
-      self.rebin_value = 2
+      self.rebin_value = 4
     elif observable == 'zg':
       self.xmin = 0.
       self.xmax = 0.5
@@ -348,9 +347,9 @@ class PlotGroomers(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
     
-    leg = ROOT.TLegend(0.62,0.5,0.77,0.8)
+    leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
     self.utils.setup_legend(leg, 0.04)
-    leg.SetHeader('#splitline{PYTHIA subleading prong}{tagged in:}')
+    leg.SetHeader('#splitline{PYTHIA subleading}{prong tagged in:}')
     leg.AddEntry(None, '', '')
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
@@ -514,8 +513,8 @@ class PlotGroomers(common_base.CommonBase):
     h_ratio.SetMarkerStyle(self.MarkerArray[0])
     h_ratio.SetMarkerColor(1)
     h_ratio.Divide(h1D_truth)
-    if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
-      myBlankHisto2.SetMaximum(1.5*h_ratio.GetMaximum())
+    if 2.*h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
+      myBlankHisto2.SetMaximum(2.*h_ratio.GetMaximum())
     if not option ==  'toy':
       h_ratio.Draw('PE same')
       leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
@@ -613,9 +612,9 @@ class PlotGroomers(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
     
-    leg = ROOT.TLegend(0.62,0.5,0.77,0.8)
+    leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
     self.utils.setup_legend(leg, 0.04)
-    leg.SetHeader('#splitline{PYTHIA subleading prong}{tagged in:}')
+    leg.SetHeader('#splitline{PYTHIA subleading}{prong tagged in:}')
     leg.AddEntry(None, '', '')
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
@@ -748,8 +747,8 @@ class PlotGroomers(common_base.CommonBase):
     h_ratio.SetMarkerStyle(21)
     h_ratio.SetMarkerColor(1)
     h_ratio.Divide(h1D_truth)
-    if h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
-      myBlankHisto2.SetMaximum(1.2*h_ratio.GetMaximum())
+    if 2.*h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
+      myBlankHisto2.SetMaximum(2.*h_ratio.GetMaximum())
     h_ratio.Draw('PE same')
     leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
     setattr(self, 'h_ratio_{}_{}-{}'.format(obs_label, min_pt, max_pt), h_ratio)
@@ -829,14 +828,17 @@ class PlotGroomers(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
   
-    leg = ROOT.TLegend(0.6,0.62,0.8,0.8)
+    leg = ROOT.TLegend(0.55,0.6,0.7,0.85)
     self.utils.setup_legend(leg, 0.04)
     
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, self.xmin, self.xmax)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(self.xtitle)
     myBlankHisto.SetYTitle(option)
-    myBlankHisto.SetMaximum(2.49)
+    if option == 'Tagging purity':
+      myBlankHisto.SetMaximum(1.99)
+    else:
+      myBlankHisto.SetMaximum(2.49)
     myBlankHisto.SetMinimum(0.01) # Don't draw 0 on top panel
     myBlankHisto.GetXaxis().SetTitleSize(0.06)
     myBlankHisto.GetXaxis().SetTitleOffset(1.2)
@@ -874,7 +876,7 @@ class PlotGroomers(common_base.CommonBase):
       h_ratio.SetLineWidth(2)
       h_ratio.Draw('E3 same')
       
-      leg.AddEntry(h_ratio, self.utils.formatted_grooming_label(grooming_setting), 'F')
+      leg.AddEntry(h_ratio, self.utils.formatted_grooming_label(grooming_setting, True), 'F')
 
     leg.Draw('same')
     
