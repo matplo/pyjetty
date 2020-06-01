@@ -70,6 +70,7 @@ class PlotGroomers(common_base.CommonBase):
     self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray, 1, 1, 1, 1]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
     self.OpenMarkerArray = [24, 25, 26, 32, 27, 28]
+    ROOT.gStyle.SetLineStyleString(11,'30 12')
     
     print(self)
 
@@ -97,11 +98,13 @@ class PlotGroomers(common_base.CommonBase):
       self.xmax = 1.
       self.axis = 2
       self.rebin_value = 4
+      #self.rebin_value = 10     # For ratio plots
     elif observable == 'zg':
       self.xmin = 0.
       self.xmax = 0.5
       self.axis = 1
-      self.rebin_value = 2
+      #self.rebin_value = 2
+      self.rebin_value = 5     # For ratio plots
     elif observable == 'kappa':
       self.xmin = 0.
       self.xmax = 0.5
@@ -347,7 +350,7 @@ class PlotGroomers(common_base.CommonBase):
     pad1.Draw()
     pad1.cd()
     
-    leg = ROOT.TLegend(0.65,0.5,0.8,0.8)
+    leg = ROOT.TLegend(0.65,0.35,0.8,0.8)
     self.utils.setup_legend(leg, 0.04)
     leg.SetHeader('#splitline{PYTHIA subleading}{prong tagged in:}')
     leg.AddEntry(None, '', '')
@@ -380,8 +383,15 @@ class PlotGroomers(common_base.CommonBase):
     pad2.Draw()
     pad2.cd()
     
-    leg_ratio = ROOT.TLegend(0.65,0.72,0.8,0.95)
-    self.utils.setup_legend(leg_ratio, 0.1)
+
+    if option == 'toy':
+      leg_ratio = ROOT.TLegend(0.21,0.72,0.35,0.95)
+      self.utils.setup_legend(leg_ratio, 0.08)
+      leg_ratio2 = ROOT.TLegend(0.43,0.72,0.55,0.95)
+      self.utils.setup_legend(leg_ratio2, 0.08)
+    else:
+      leg_ratio = ROOT.TLegend(0.65,0.72,0.8,0.95)
+      self.utils.setup_legend(leg_ratio, 0.1)
     
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
     ytitle = 'Ratio'
@@ -456,27 +466,52 @@ class PlotGroomers(common_base.CommonBase):
     h1D_truth.Rebin(self.rebin_value)
     h1D_truth.Scale(1./N_inclusive_truth, 'width')
     h1D_truth.SetLineColor(1)
-    h1D_truth.SetLineWidth(2)
+    h1D_truth.SetLineWidth(4)
+
     myBlankHisto.SetMaximum(2.3*h1D_truth.GetMaximum())
-    leg.AddEntry(h1D_truth, 'Truth', 'L')
+    leg.AddEntry(None, '', '')
+    if option ==  'toy':
+      leg.AddEntry(h1D_truth, 'PYTHIA Truth', 'L')
+    else:
+      leg.AddEntry(h1D_truth, 'Truth', 'L')
+      
+    pad1.cd()
+    if 2*h_sum.GetMaximum() > myBlankHisto.GetMaximum():
+      myBlankHisto.SetMaximum(2*h_sum.GetMaximum())
+    h_stack.Draw('same hist')
     
     # Construct toy truth RAA
     if option ==  'toy':
-
-      hRAA_truth = h1D_truth.Clone('hRAA_truth_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
-      hRAA_truth.Scale(self.RAA)
-      hRAA_truth.Divide(h1D_truth)
+    
+      emb_color = ROOT.kRed-3
+      #ROOT.kAzure+7
+      h_sum.SetFillColor(0)
+      h_sum.SetLineColor(emb_color)
+      h_sum.SetLineWidth(4)
+      h_sum.DrawCopy('same hist')
       
       # Construct "embedded" RAA
       hRAA_emb = h_sum_tagged.Clone('hRAA_emb_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
       hRAA_emb.Scale(self.RAA)
       hRAA_emb.Add(h_sum_mistagged)
-      hRAA_emb.Divide(h_sum)
+      hRAA_emb.SetFillColor(0)
+      hRAA_emb.SetLineColor(emb_color)
+      hRAA_emb.SetLineStyle(11)
+      hRAA_emb.SetLineWidth(4)
+      hRAA_emb.DrawCopy('same hist')
       
-    pad1.cd()
-    leg.Draw('same')
-    h_stack.Draw('same hist')
+      hRAA_truth = h1D_truth.Clone('hRAA_truth_{}_{}_{}-{}'.format(observable, obs_label, min_pt, max_pt))
+      hRAA_truth.Scale(self.RAA)
+      hRAA_truth.SetLineStyle(11)
+      hRAA_truth.SetLineWidth(4)
+      hRAA_truth.DrawCopy('same hist')
+      
+      leg.AddEntry(hRAA_truth, '"Pb-Pb Truth"', 'L')
+      leg.AddEntry(h_sum, 'PYTHIA Embedded', 'L')
+      leg.AddEntry(hRAA_emb, '"Pb-Pb Data"', 'L')
+      
     h1D_truth.Draw('same hist')
+    leg.Draw('same')
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -515,9 +550,9 @@ class PlotGroomers(common_base.CommonBase):
     h_ratio.Divide(h1D_truth)
     if 2.*h_ratio.GetMaximum() > myBlankHisto2.GetMaximum():
       myBlankHisto2.SetMaximum(2.*h_ratio.GetMaximum())
-    if not option ==  'toy':
-      h_ratio.Draw('PE same')
-      leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
+    #if not option ==  'toy':
+    h_ratio.Draw('PE same')
+    leg_ratio.AddEntry(h_ratio, 'Embedded / Truth', 'P')
     setattr(self, 'h_ratio_{}_{}-{}_dR{}'.format(obs_label, min_pt, max_pt, min_theta*jetR), h_ratio)
     
     # Build ratio of embedded tagging purity
@@ -536,24 +571,25 @@ class PlotGroomers(common_base.CommonBase):
     if option ==  'toy':
 
       ROOT.gStyle.SetErrorX(0.)
+      
+      hRAA_truth.Divide(h1D_truth)
       gRAA_truth = ROOT.TGraph(hRAA_truth)
       gRAA_truth.SetMarkerStyle(0)
-      gRAA_truth.SetLineStyle(1)
-      gRAA_truth.SetLineColor(1)
-      gRAA_truth.SetLineWidth(4)
+      gRAA_truth.SetLineStyle(11)
       gRAA_truth.Draw('L same X0')
       
+      hRAA_emb.Divide(h_sum)
       gRAA_emb = ROOT.TGraph(hRAA_emb)
       gRAA_emb.SetMarkerStyle(0)
-      gRAA_emb.SetLineStyle(1)
-      gRAA_emb.SetLineColor(2)
-      gRAA_emb.SetLineWidth(4)
+      gRAA_emb.SetLineStyle(11)
       gRAA_emb.Draw('L same')
       
-      leg_ratio.AddEntry(hRAA_truth, 'True RAA', 'L')
-      leg_ratio.AddEntry(hRAA_emb, 'Embedded RAA', 'L')
+      leg_ratio2.AddEntry(gRAA_truth, 'True #it{R}_{AA}: "Pb-Pb Truth" / PYTHIA Truth', 'L')
+      leg_ratio2.AddEntry(gRAA_emb, 'Reported #it{R}_{AA}: "Pb-Pb Data" / PYTHIA Embedded', 'L')
+      leg_ratio2.Draw('same')
     
     leg_ratio.Draw('same')
+    
     
     line = ROOT.TLine(self.xmin,1,self.xmax,1)
     line.SetLineColor(920+2)
