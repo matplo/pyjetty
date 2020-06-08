@@ -26,8 +26,8 @@ sd_beta: 0      # exponent on (deltaR / R)
 ang:
 
   common_settings:
-    xtitle: '#lambda_{#beta}'
-    ytitle: '#frac{1}{#sigma_{jet}} #frac{d#sigma}{d#lambda_{#beta}}'
+    xtitle: '#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}}'
     pt_bins_reported: [40, 60]
     plot_overlay_list:
       - ['config_R0.2_B1', 'config_R0.2_B1.5', 'config_R0.2_B2', 'config_R0.2_B3']
