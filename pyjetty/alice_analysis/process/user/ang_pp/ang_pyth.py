@@ -66,8 +66,8 @@ class process_ang_data(process_base.ProcessBase):
     for jetR in self.jetR_list:
       inf_MPIon = self.input_dir + "PythiaResults_R%s.root" % str(jetR)
       inf_MPIoff = self.input_dir + "PythiaResults_R%s_MPIoff.root" % str(jetR)
-      io = process_io_pyth.ProcessIO(input_file_MPIon=inf_MPIon, input_file_MPIoff=inf_MPIoff,
-                                     betas=self.beta_list)
+      io = process_io_pyth.ProcessIO(input_file_MPIoff=inf_MPIoff, input_file_MPIon=inf_MPIon,
+                                     mergebetween=False, betas=self.beta_list)
       self.df_ang_jets = io.load_data()
       print('--- {} seconds ---'.format(time.time() - start_time))
 
