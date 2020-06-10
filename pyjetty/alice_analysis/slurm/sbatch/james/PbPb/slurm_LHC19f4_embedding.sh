@@ -1,7 +1,7 @@
 #! /bin/bash
 
 #SBATCH --job-name=james19f4emb
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=2
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-1000

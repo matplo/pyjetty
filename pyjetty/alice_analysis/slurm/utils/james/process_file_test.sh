@@ -1,7 +1,7 @@
 #! /bin/bash
 
-#OUTPUTDIR=/rstorage/alice/data/LHC18qr/147-148
-OUTPUTDIR=/rstorage/alice/data/LHC19f4/403
+OUTPUTDIR=/rstorage/alice/data/LHC18qr/413-414
+#OUTPUTDIR=/rstorage/alice/data/LHC19f4/403
 #OUTPUTDIR=/rstorage/alice/data/LHC17pq/145
 #OUTPUTDIR=/rstorage/alice/data/LHC18b8/146
 

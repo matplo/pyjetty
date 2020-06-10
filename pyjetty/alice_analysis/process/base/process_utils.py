@@ -59,8 +59,11 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def delta_R(self, jet, eta, phi):
   
-    delta_phi = jet.phi() - phi
+    delta_phi = np.abs(jet.phi() - phi)
     delta_eta = jet.eta() - eta
+
+    if delta_phi > np.pi:
+      delta_phi = 2*np.pi - delta_phi
     
     deltaR = np.sqrt(delta_phi*delta_phi + delta_eta*delta_eta)
     return deltaR
@@ -77,3 +80,27 @@ class ProcessUtils(common_utils.CommonUtils):
         leading_particle = particle
       
     return leading_particle
+
+  #---------------------------------------------------------------
+  # Perform dynamical grooming (or other custom grooming method
+  # in src/fjcontrib/custom/DynamicalGroomer.hh)
+  #---------------------------------------------------------------
+  def dy_groom(self, dy_groomer, jet, a):
+  
+    if len(jet.constituents()) < 2:
+      return None
+    
+    if a == 'max_pt_softer':
+      return dy_groomer.max_pt_softer(jet)
+    elif a == 'max_z':
+      return dy_groomer.max_z(jet)
+    elif a == 'max_kt':
+      return dy_groomer.max_kt(jet)
+    elif a == 'max_kappa':
+      return dy_groomer.max_kappa(jet)
+    elif a == 'max_tf':
+      return dy_groomer.max_tf(jet)
+    elif a == 'min_tf':
+      return dy_groomer.min_tf(jet)
+    else:
+      return dy_groomer.result(jet, a)

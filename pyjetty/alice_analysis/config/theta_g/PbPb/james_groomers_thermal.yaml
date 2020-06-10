@@ -1,0 +1,436 @@
+# Configuration for:
+#   (a) Processing of ROOT trees into histograms
+#   (b) Analysis of histograms into final result
+#
+# The observables are structured into observable blocks (e.g. theta_g, subjet_z, etc.)
+# each containing multiple individual subconfigurations (e.g. zcut, beta, subjetR, etc.),
+# where each subconfiguration corresponds to a single unfolded result.
+# One can also specify a list of jetR, which will be looped over.
+#
+# The process step is intended  to loop over all observables simultaneously
+# The analysis step is intended to run for a single observable block
+
+process_observables: ['theta_g', 'zg', 'kappa', 'tf']
+jetR: [0.4]
+eta_max: 1.4
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+prong_matching_threshold: 0.5
+debug_level: 0
+dry_run: False
+fast_simulation: False
+#event_number_max: 1000
+use_ev_id_ext: False
+min_theta_list: [0., 0.25, 0.5]
+
+#angantyr:
+#  min_background_multiplicity: 18467
+
+thermal_model:
+  beta: 0.5
+  N_avg: 5000
+  sigma_N: 500
+
+constituent_subtractor:
+  max_distance: [0.25]
+  main_R_max: 0.25
+  alpha: 0
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+# Observable block
+theta_g:
+
+  common_settings:
+    xtitle: '#theta_{g}'
+    ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#theta_{g}}'
+    pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
+    plot_overlay_list:
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+      
+  config5:
+    SoftDrop:
+      zcut: 0.2
+      beta: 1
+      
+  config6:
+    SoftDrop:
+      zcut: 0.2
+      beta: 2
+
+  config7:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+  
+  config8:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config9:
+    DynamicalGrooming:
+      a: 1.0
+
+  config10:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config11:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config12:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+  
+  config13:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config14:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config16:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config18:
+    DynamicalGrooming:
+      a: 'min_tf'
+
+# Observable block
+zg:
+
+  common_settings:
+    xtitle: '#it{z}_{g}'
+    ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{dz_{g}}'
+    pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
+    plot_overlay_list:
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+      
+  config5:
+    SoftDrop:
+      zcut: 0.2
+      beta: 1
+      
+  config6:
+    SoftDrop:
+      zcut: 0.2
+      beta: 2
+
+  config7:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+  
+  config8:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config9:
+    DynamicalGrooming:
+      a: 1.0
+
+  config10:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config11:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config12:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+  
+  config13:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config14:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config16:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config18:
+    DynamicalGrooming:
+      a: 'min_tf'
+
+# Observable block
+kappa:
+
+  common_settings:
+    xtitle: '#kappa'
+    ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#kappa_{g}}'
+    pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
+    plot_overlay_list:
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+      
+  config5:
+    SoftDrop:
+      zcut: 0.2
+      beta: 1
+      
+  config6:
+    SoftDrop:
+      zcut: 0.2
+      beta: 2
+
+  config7:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+
+  config8:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config9:
+    DynamicalGrooming:
+      a: 1.0
+
+  config10:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config11:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config12:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+  config13:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config14:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config16:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config18:
+    DynamicalGrooming:
+      a: 'min_tf'
+
+# Observable block
+tf:
+
+  common_settings:
+    xtitle: '#it{t}_{f}'
+    ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#it{t}_{f}}'
+    pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
+    plot_overlay_list:
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
+      - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
+      
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+      
+  config3:
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config4:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+      
+  config5:
+    SoftDrop:
+      zcut: 0.2
+      beta: 1
+      
+  config6:
+    SoftDrop:
+      zcut: 0.2
+      beta: 2
+
+  config7:
+    SoftDrop:
+      zcut: 0.3
+      beta: 0
+  
+  config8:
+    DynamicalGrooming:
+      a: 0.1
+      
+  config9:
+    DynamicalGrooming:
+      a: 1.0
+
+  config10:
+    DynamicalGrooming:
+      a: 2.0
+      
+  config11:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config12:
+    DynamicalGrooming:
+      a: 0.1
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+  
+  config13:
+    DynamicalGrooming:
+      a: 'max_pt_softer'
+   
+  config14:
+    DynamicalGrooming:
+      a: 'max_z'
+      
+  config15:
+    DynamicalGrooming:
+      a: 'max_kt'
+
+  config16:
+    DynamicalGrooming:
+      a: 'max_kappa'
+      
+  config17:
+    DynamicalGrooming:
+      a: 'max_tf'
+      
+  config18:
+    DynamicalGrooming:
+      a: 'min_tf'
+
+###############################################################################
+# Analysis parameters
+file_format: '.pdf'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/100566_100727_100728'
+
+main_data: ''
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/100566_100727_100728/AnalysisResultsFinal.root'

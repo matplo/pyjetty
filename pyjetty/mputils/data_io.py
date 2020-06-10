@@ -6,12 +6,32 @@ import fastjet as fj
 import fjext
 
 
-class DataEvent(object):
-	def __init__(self, particles, run_number, ev_id):
-		self.particles = particles
-		self.run_number = run_number
-		self.ev_id = ev_id
+#class DataEvent(MPBase):
+#	def __init__(self, **kwargs):
+#		kwargs['name'] = 'noUniqueName'
+#		super(DataEvent, self).__init__(**kwargs)
+#		# self.particles = particles
+#		# self.run_number = run_number
+#		# self.ev_id = ev_id
 
+# with less overhead
+class DataEvent(object):
+	def __init__(self, **kwargs):
+		for key, value in kwargs.items():
+			self.__setattr__(key, value)
+	def configure_from_args(self, **kwargs):
+		for key, value in kwargs.items():
+			self.__setattr__(key, value)
+
+	def __str__(self):
+		s = []
+		s.append('[i] DataEvent')
+		for a in self.__dict__:
+			sval = str(getattr(self, a))
+			if len(sval) > 200:
+				sval = sval[:200]
+			s.append('   {} = {}'.format(str(a), sval))
+		return '\n'.join(s)
 
 class DataFileIO(MPBase):
 	def __init__(self, **kwargs):
@@ -35,13 +55,17 @@ class DataFileIO(MPBase):
 		self.track_tree_name = None
 
 	def get_event(self, df_tracks):
+		# event_df = self.event_df.loc[(self.event_df['run_number'] == self.run_number) & (self.event_df['ev_id'] == self.ev_id)]
+		# event = DataEvent([], -1, -1, self.event_df)
+		# event = DataEvent(particles=[], run_number=-1, ev_id=-1)
 		# Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
-		event = DataEvent([], -1, -1)
-		event.particles = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)  
-		if len(event.particles) > 0:
-			event.run_number = float(df_tracks['run_number'].values[0])
-			event.ev_id = float(df_tracks['ev_id'].values[0])
-		else:
+		_parts = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values)  
+		event = DataEvent(particles=_parts)
+		for c in df_tracks.columns:
+			if 'Particle' not in c:
+				event.__setattr__(c, df_tracks[c].values[0])
+		if len(event.particles) <= 0:
+			# backward compat
 			event.run_number = -1
 			event.ev_id = -1
 		return event
@@ -55,7 +79,8 @@ class DataFileIO(MPBase):
 		if not self.event_tree:
 			print('[e] Tree {} not found in file {}'.format(self.event_tree_name, file_input))
 			return False
-		self.event_df_orig = self.event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
+		# self.event_df_orig = self.event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
+		self.event_df_orig = self.event_tree.pandas.df()
 		self.event_df_orig.reset_index(drop=True)
 		self.event_df = self.event_df_orig.query('is_ev_rej == 0')
 		self.event_df.reset_index(drop=True)

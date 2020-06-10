@@ -79,7 +79,10 @@ class CommonUtils(common_base.CommonBase):
       if key == 'dg':
         if text:
            text += '_'
-        text += 'DG_a{}'.format(self.remove_periods(value[0]))
+        if value[0] in  ['max_pt_soft', 'max_z', 'max_kt', 'max_kappa', 'max_tf', 'min_tf']:
+          text += value[0]
+        else:
+          text += 'DG_a{}'.format(self.remove_periods(value[0]))
       
     if not text:
       sys.exit('CommonUtils::grooming_label: Unknown grooming type!')

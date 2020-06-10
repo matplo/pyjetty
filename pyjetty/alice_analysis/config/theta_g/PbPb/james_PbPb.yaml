@@ -39,7 +39,7 @@ theta_g:
   common_settings:
     xtitle: '#theta_{g}'
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#theta_{g}}'
-    pt_bins_reported: [60, 80]
+    pt_bins_reported: [40, 60, 80, 100]
     #max_reg_param: 10
     plot_overlay_list:
       - ['config1', 'config2', 'config3', 'config4']
@@ -73,7 +73,7 @@ zg:
   common_settings:
     xtitle: '#it{z}_{g}'
     ytitle: '#frac{1}{#sigma_{jets, inc}} #frac{d#sigma}{d#it{z}_{g}}'
-    pt_bins_reported: [60, 80]
+    pt_bins_reported: [40, 60, 80, 100]
     max_reg_param: 10
     plot_overlay_list:
       - ['config1', 'config2', 'config3', 'config4']
@@ -103,12 +103,12 @@ output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-0
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'theta_g'
-do_unfolding: True
-force_rebin: True
-do_systematics: True
-do_plot_final_result: True
-do_plot_performance: False
-figure_approval_status: 'Work in Progress'
+do_unfolding: False
+force_rebin: False
+do_systematics: False
+do_plot_final_result: False
+do_plot_performance: True
+figure_approval_status: 'Preliminary'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning, subtraction1, subtraction2, prong_matching]
@@ -121,7 +121,8 @@ systematics_list:
   - binning
   - subtraction1
   - subtraction2
-  - prong_matching
+#  - prong_matching
+  - thermal_closure
   
 # Prior variation parameters
 prior1_variation_parameter: 0.5

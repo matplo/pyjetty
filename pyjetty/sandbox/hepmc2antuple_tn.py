@@ -22,11 +22,12 @@ def fill_event(run_number, ev_id, event_hepmc, tw_e, tw_p, pdg):
 	tw_e.Fill(run_number, ev_id, 0, 0)
 
 	for part in event_hepmc.particles:
-		if part.status == 1 and not part.end_vertex and pdg.GetParticle(part.pid).Charge() != 0:
-			# print(pdg.GetParticle(p.pid).GetName())
-			# tlv = ROOT.TLorentzVector()
-			# tlv.SetPxPyPzE(p.momentum.px, p.momentum.py, p.momentum.pz, p.momentum.e)
-			tw_p.Fill(run_number, ev_id, part.momentum.pt(), part.momentum.eta(), part.momentum.phi(), part.pid)
+		if pdg.GetParticle(part.pid):
+			if part.status == 1 and not part.end_vertex and pdg.GetParticle(part.pid).Charge() != 0:
+				# print(pdg.GetParticle(p.pid).GetName())
+				# tlv = ROOT.TLorentzVector()
+				# tlv.SetPxPyPzE(p.momentum.px, p.momentum.py, p.momentum.pz, p.momentum.e)
+				tw_p.Fill(run_number, ev_id, part.momentum.pt(), part.momentum.eta(), part.momentum.phi(), part.pid)
 
 
 def main():

@@ -61,7 +61,10 @@ def accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted =
   
   # Check PID for charged particles
   #print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
-  if pdg.GetParticle(pid).Charge() == 0:
+  if pdg.GetParticle(part.pid):
+    if pdg.GetParticle(part.pid).Charge() == 0:
+      return False
+  else:
     return False
     
   return True
@@ -77,7 +80,10 @@ def accept_particle_jetscape(part, pdg):
   
   # Check PID for charged particles, and reject neutrinos
   #print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
-  if pdg.GetParticle(part.pid).Charge() == 0:
+  if pdg.GetParticle(part.pid):
+    if pdg.GetParticle(part.pid).Charge() == 0:
+      return False
+  else:
     return False
 
   return True

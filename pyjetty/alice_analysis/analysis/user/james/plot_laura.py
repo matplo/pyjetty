@@ -62,6 +62,9 @@ class PlotLaura(common_base.CommonBase):
     
     if not os.path.exists(self.output_dir):
       os.makedirs(self.output_dir)
+      
+    self.utils.set_plotting_options()
+    ROOT.gROOT.ForceStyle()
 
   #---------------------------------------------------------------
   # Initialize config file into class members
