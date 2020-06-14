@@ -109,6 +109,7 @@ class ProcessGroomers(process_base.ProcessBase):
     self.eta_max = config['eta_max']
     
     if 'thermal_model' in config:
+      self.min_background_multiplicity = None
       self.thermal_model = True
       beta = config['thermal_model']['beta']
       N_avg = config['thermal_model']['N_avg']
@@ -117,6 +118,7 @@ class ProcessGroomers(process_base.ProcessBase):
                                                                   beta = beta, eta_max=self.eta_max)
     else:
       self.thermal_model = False
+      self.min_background_multiplicity = config['angantyr']['min_background_multiplicity']
      
     self.observable_list = config['process_observables']
     
@@ -328,25 +330,26 @@ class ProcessGroomers(process_base.ProcessBase):
   
     # If Pb-Pb, construct embedded event (do this once, for all jetR)
         
-    # If thermal model, generate a thermal event and add it to the det-level particle list
+    # If thermal model, generate a thermal event
     if self.thermal_model:
       fj_particles_combined_beforeCS = self.thermal_generator.load_event()
-      
-      # Form the combined event
-      # The pp-truth tracks are each stored with a unique user_index >= 0
-      #   (same index in fj_particles_combined and fj_particles_truth -- which will be used in prong-matching)
-      # The thermal tracks are each stored with a unique user_index < 0
-      [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_truth]
 
-    # Main case: Get Pb-Pb event and embed it into the det-level particle list
+    # Angantyr: Get Pb-Pb event
     else:
-      fj_particles_combined_beforeCS = self.process_io_emb.load_event()
+      accept_background_event = False
+      while not accept_background_event:
+        fj_particles_combined_beforeCS = self.process_io_emb.load_event()
+        multiplicity = len([p.pt() for p in fj_particles_combined_beforeCS])
+        if multiplicity > self.min_background_multiplicity:
+          accept_background_event = True
+        print(multiplicity)
+        print('accepted: {}'.format(accept_background_event))
           
-      # Form the combined event
-      # The pp-truth tracks are each stored with a unique user_index >= 0
-      #   (same index in fj_particles_combined and fj_particles_truth -- which will be used in prong-matching)
-      # The Pb-Pb tracks are each stored with a unique user_index < 0
-      [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_truth]
+    # Form the combined event
+    # The pp-truth tracks are each stored with a unique user_index >= 0
+    #   (same index in fj_particles_combined and fj_particles_truth -- which will be used in prong-matching)
+    # The Pb-Pb tracks are each stored with a unique user_index < 0
+    [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_truth]
      
     # Perform constituent subtraction for each R_max
     fj_particles_combined = [self.constituent_subtractor[i].process_event(fj_particles_combined_beforeCS) for i, R_max in enumerate(self.max_distance)]
