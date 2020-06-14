@@ -72,7 +72,7 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
   # Fill jet axis difference
   #---------------------------------------------------------------
   def fill_groomed_jet_histograms(self, grooming_setting, grooming_label,
-                                  jet, jet_groomed, jet_pt_ungroomed, jetR, R_max):
+                                  jet, jet_groomed_lund, jet_pt_ungroomed, jetR, R_max):
     
     # Recluster with WTA (with larger jet R)
     jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
@@ -82,6 +82,7 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
     reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
     jet_wta = reclusterer_wta.result(jet)
 
+    jet_groomed = jet_groomed_lund.pair()
     self.fill_jet_axis_histograms(jet, jet_groomed, jet_wta, jetR, grooming_setting, grooming_label)
 
   #---------------------------------------------------------------

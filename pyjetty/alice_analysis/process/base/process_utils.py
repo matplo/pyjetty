@@ -19,9 +19,8 @@ import pandas
 import numpy as np
 import ROOT
 
-# Fastjet via python (from external library fjpydev)
-import fastjet as fj
-import fjext
+# Fastjet via python (from external library heppy)
+import fjcontrib
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_utils
@@ -82,25 +81,43 @@ class ProcessUtils(common_utils.CommonUtils):
     return leading_particle
 
   #---------------------------------------------------------------
-  # Perform dynamical grooming (or other custom grooming method
-  # in src/fjcontrib/custom/DynamicalGroomer.hh)
+  # Perform grooming and return Lund declustering object
+  # (cpptools/src/fjcontrib/custom/GroomerShop.hh)
   #---------------------------------------------------------------
-  def dy_groom(self, dy_groomer, jet, a):
+  def groom(self, jet, grooming_setting, jetR = None):
   
-    if len(jet.constituents()) < 2:
-      return None
+    gshop = fjcontrib.GroomerShop(jet)
+  
+    if 'sd' in grooming_setting:
     
-    if a == 'max_pt_softer':
-      return dy_groomer.max_pt_softer(jet)
-    elif a == 'max_z':
-      return dy_groomer.max_z(jet)
-    elif a == 'max_kt':
-      return dy_groomer.max_kt(jet)
-    elif a == 'max_kappa':
-      return dy_groomer.max_kappa(jet)
-    elif a == 'max_tf':
-      return dy_groomer.max_tf(jet)
-    elif a == 'min_tf':
-      return dy_groomer.min_tf(jet)
+      zcut = grooming_setting['sd'][0]
+      beta = grooming_setting['sd'][1]
+      return gshop.soft_drop(beta, zcut, jetR)
+
+    elif 'dg' in grooming_setting:
+    
+      if len(jet.constituents()) < 2:
+        return None
+        
+      a = grooming_setting['dg'][0]
+      
+      if a == 'max_pt_softer':
+        return gshop.max_pt_softer()
+      elif a == 'max_z':
+        return gshop.max_z()
+      elif a == 'max_kt':
+        return gshop.max_kt()
+      elif a == 'max_kappa':
+        return gshop.max_kappa()
+      elif a == 'max_tf':
+        return gshop.max_tf()
+      elif a == 'min_tf':
+        return gshop.min_tf()
+      else:
+        return gshop.dynamical(a)
+    
     else:
-      return dy_groomer.result(jet, a)
+      sys.exit('grooming_setting {} not recognized.'.format(grooming_setting))
+    
+
+

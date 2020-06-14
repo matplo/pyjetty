@@ -299,52 +299,17 @@ class ProcessDataBase(process_base.ProcessBase):
     # Check additional acceptance criteria
     if not self.utils.is_det_jet_accepted(jet):
       return
-      
-    jet_pt_ungroomed = jet.pt()
   
-    grooming_label = self.utils.grooming_label(grooming_setting)
-  
-    # Construct SD groomer
-    if 'sd' in grooming_setting:
-          
-      zcut = grooming_setting['sd'][0]
-      beta = grooming_setting['sd'][1]
-      sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-      jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-      reclusterer = fjcontrib.Recluster(jet_def_recluster)
-      sd.set_reclustering(True, reclusterer)
-      if self.debug_level > 2:
-        print('SoftDrop groomer is: {}'.format(sd.description()))
-      
-    # Construct Dynamical groomer, and groom jet
-    if 'dg' in grooming_setting:
-      
-      a = grooming_setting['dg'][0]
-      jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
-      dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
-      if self.debug_level > 2:
-        print('Dynamical groomer is: {}'.format(dy_groomer.description()))
-        
-      jet_dg_lund = self.utils.dy_groom(dy_groomer, jet, a)
-      if not jet_dg_lund:
-        return
-      jet_dg = jet_dg_lund.pair()
-
     # Groom jet
-    if 'sd' in grooming_setting:
-
-      # If both SD and DG are specified, first apply DG, then SD
-      if 'dg' in grooming_setting:
-        jet_groomed = sd.result(jet_dg)
-      else:
-        jet_groomed = sd.result(jet)
-
-    elif 'dg' in grooming_setting:
-    
-      jet_groomed = jet_dg_lund
+    jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
+    if not jet_groomed_lund:
+      return
       
+    # Call user function to fill histograms
+    jet_pt_ungroomed = jet.pt()
+    grooming_label = self.utils.grooming_label(grooming_setting)
     self.fill_groomed_jet_histograms(grooming_setting, grooming_label, jet,
-                                     jet_groomed, jet_pt_ungroomed, jetR, R_max)
+                                     jet_groomed_lund, jet_pt_ungroomed, jetR, R_max)
 
   #---------------------------------------------------------------
   # This function is called once
