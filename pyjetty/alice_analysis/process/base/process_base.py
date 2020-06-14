@@ -124,12 +124,13 @@ class ProcessBase(common_base.CommonBase):
       return [sys.maxsize, -sys.maxsize]
 
   #---------------------------------------------------------------
-  # Return Lund coordinates [log(1/deltaR), log(1/kt)] of a DG jet
+  # Return Lund coordinates [log(1/deltaR), log(1/kt)] of a jet
+  # groomed by the GroomerShop
   #---------------------------------------------------------------
-  def lund_coordinates_DG(self, jet_dg):
+  def lund_coordinates(self, jet_groomed_lund):
 
-    dR = jet_dg.Delta()
-    kt = jet_dg.kt()
+    dR = jet_groomed_lund.Delta()
+    kt = jet_groomed_lund.kt()
     
     if dR > 1e-5:
       return [np.log(1/dR), np.log(kt)]

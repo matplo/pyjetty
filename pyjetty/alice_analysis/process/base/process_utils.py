@@ -84,8 +84,13 @@ class ProcessUtils(common_utils.CommonUtils):
   # Perform grooming and return Lund declustering object
   # (cpptools/src/fjcontrib/custom/GroomerShop.hh)
   #---------------------------------------------------------------
-  def groom(self, jet, grooming_setting, jetR = None):
+  def groom(self, jet, grooming_setting, jetR):
   
+    #print('constituent index: {}'.format([p.user_index() for p in jet.constituents()]))
+    #print('constituent pt: {}'.format([p.pt() for p in jet.constituents()]))
+    #print('constituent eta: {}'.format([p.eta() for p in jet.constituents()]))
+    #print('constituent phi: {}'.format([p.phi() for p in jet.constituents()]))
+
     gshop = fjcontrib.GroomerShop(jet)
   
     if 'sd' in grooming_setting:
