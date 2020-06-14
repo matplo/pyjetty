@@ -35,22 +35,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     self.observable = observable
 
   #---------------------------------------------------------------
-  # Get observable settings (i.e. list that stores the observable setting, e.g. subjetR)
-  # from observable config block
-  #---------------------------------------------------------------
-  def obs_settings(self, observable, obs_config_dict, obs_subconfig_list):
-
-    if observable == 'subjet_z':
-      return [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
-    elif observable == 'jet_axis':
-      return [obs_config_dict[name]['axis'] for name in obs_subconfig_list]
-    elif observable == 'ang':
-      return [obs_config_dict[name]['beta'] for name in obs_subconfig_list]
-
-    # Else observable not implemented
-    return [None for _ in obs_subconfig_list]
-
-  #---------------------------------------------------------------
   # Get subobservable label (e.g. formatted label for subjetR)
   #---------------------------------------------------------------
   def formatted_subobs_label(self, observable):

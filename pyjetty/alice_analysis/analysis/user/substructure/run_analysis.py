@@ -22,6 +22,7 @@ To use this class, the following should be done:
     See the example for details.
 
   - You also should modify a few observable-specific functions at the top of substructure/analysis_utils_obs.py
+    and common_utils.py
 
 Then, you should run your analysis with:
 

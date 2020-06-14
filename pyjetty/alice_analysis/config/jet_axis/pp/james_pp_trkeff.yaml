@@ -15,6 +15,7 @@ jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.04
 debug_level: 0
+use_ev_id_ext: False
 
 # Observable block
 jet_axis:
