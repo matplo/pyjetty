@@ -12,7 +12,9 @@ To use this class, the following should be done:
       - fill_observable_histograms()
       - fill_matched_jet_histograms()
     
-  - The histogram of the response matrix should be named hResponse_JetPt_[obs]_R[R]_[subobs]_[grooming setting]
+  - You should include the following histograms:
+      - Response matrix: hResponse_JetPt_[obs]_R[R]_[subobs]_[grooming setting]
+      - Residual distribution: hResidual_JetPt_[obs]_R[R]_[subobs]_[grooming setting]
 
   - You also should modify observable-specific functions at the top of common_utils.py
   
