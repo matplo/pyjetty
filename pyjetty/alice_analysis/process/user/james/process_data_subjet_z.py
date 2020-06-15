@@ -66,24 +66,18 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
         setattr(self, name, h)
       
   #---------------------------------------------------------------
-  # Fill histograms
+  # This function is called once for each jet subconfiguration
   #---------------------------------------------------------------
-  def fill_jet_histograms(self, jet, jetR):
+  def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
+                          grooming_label, jet_pt_ungroomed, suffix):
     
-    # Find subjets
-    result = [self.analyze_subjets(jet, jetR, subjetR) for subjetR in self.obs_settings[self.observable]]
-
-  #---------------------------------------------------------------
-  # For a given jet, find subjets of a given radius, and fill histograms
-  #---------------------------------------------------------------
-  def analyze_subjets(self, jet, jetR, subjetR):
-
-    cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[subjetR])
+    # For a given jet, find subjets of a given radius, and fill histograms
+    cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
     for subjet in subjets:
       z = subjet.pt() / jet.pt()
-      getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, subjetR)).Fill(jet.pt(), z)
-  
+      getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_setting)).Fill(jet.pt(), z)
+
 ##################################################################
 if __name__ == '__main__':
   # Define arguments

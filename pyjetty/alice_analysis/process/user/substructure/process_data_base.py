@@ -9,8 +9,7 @@ To use this class, the following should be done:
   - Implement a user analysis class inheriting from this one, such as in user/james/process_data_XX.py
     You should implement the following functions:
       - initialize_user_output_objects()
-      - fill_jet_histograms()                (optional)
-      - fill_groomed_jet_histograms()        (optional)
+      - fill_jet_histograms()
     
   - The histogram of the data should be named h_[obs]_JetPt_R[R]_[subobs]_[grooming setting]
     The grooming part is optional, and should be labeled e.g. zcut01_B0 — from CommonUtils::grooming_label({'sd':[zcut, beta]})
@@ -259,57 +258,54 @@ class ProcessDataBase(process_base.ProcessBase):
   # Analyze jets of a given event.
   #---------------------------------------------------------------
   def analyze_jets(self, jets_selected, jetR, R_max = None):
+  
+    # Set suffix for filling histograms
+    if R_max:
+      suffix = '_Rmax{}'.format(R_max)
+    else:
+      suffix = ''
     
     # Loop through jets and call user function to fill histos
-    result = [self.analyze_accepted_jet(jet, jetR) for jet in jets_selected]
-          
-    # Loop through grooming settings and call user function to fill grooming histograms
-    if len(self.grooming_settings) > 0:
-      result = [[self.analyze_groomed_jet(grooming_setting, jet, jetR, R_max) for grooming_setting in self.grooming_settings] for jet in jets_selected]
+    result = [self.analyze_accepted_jet(jet, jetR, suffix) for jet in jets_selected]
   
   #---------------------------------------------------------------
   # Fill histograms
   #---------------------------------------------------------------
-  def analyze_accepted_jet(self, jet, jetR):
-    
-    if self.debug_level > 1:
-      print('jet: {} with pt={}'.format(jet, jet.pt()))
+  def analyze_accepted_jet(self, jet, jetR, suffix):
     
     # Check additional acceptance criteria
     if not self.utils.is_det_jet_accepted(jet):
       return
-      
+          
+    # Fill base histograms
+    jet_pt_ungroomed = jet.pt()
     if self.is_pp or self.fill_Rmax_indep_hists:
     
-      jet_pt = jet.pt()
       hZ = getattr(self, 'hZ_R{}'.format(jetR))
       for constituent in jet.constituents():
-        z = constituent.pt() / jet_pt
-        hZ.Fill(jet_pt, z)
+        z = constituent.pt() / jet_pt_ungroomed
+        hZ.Fill(jet_pt_ungroomed, z)
     
-    # Call fill_jet_histograms() only if it is defined by the user
-    if 'fill_jet_histograms' in dir(self):
-      self.fill_jet_histograms(jet, jetR)
+    # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
+    observable = self.observable_list[0]
+    for i in range(len(self.obs_settings[observable])):
+    
+      obs_setting = self.obs_settings[observable][i]
+      grooming_setting = self.obs_grooming_settings[observable][i]
+    
+      # Groom jet, if applicable
+      if grooming_setting:
+        grooming_label = self.utils.grooming_label(grooming_setting)
+        jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
+        if not jet_groomed_lund:
+          continue
+      else:
+        jet_groomed_lund = None
+        grooming_label = None
 
-  #---------------------------------------------------------------
-  # Analyze groomed jets
-  #---------------------------------------------------------------
-  def analyze_groomed_jet(self, grooming_setting, jet, jetR, R_max):
-  
-    # Check additional acceptance criteria
-    if not self.utils.is_det_jet_accepted(jet):
-      return
-  
-    # Groom jet
-    jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
-    if not jet_groomed_lund:
-      return
-      
-    # Call user function to fill histograms
-    jet_pt_ungroomed = jet.pt()
-    grooming_label = self.utils.grooming_label(grooming_setting)
-    self.fill_groomed_jet_histograms(grooming_setting, grooming_label, jet,
-                                     jet_groomed_lund, jet_pt_ungroomed, jetR, R_max)
+      # Call user function to fill histograms
+      self.fill_jet_histograms(jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
+                               grooming_label, jet_pt_ungroomed, suffix)
 
   #---------------------------------------------------------------
   # This function is called once
@@ -323,13 +319,6 @@ class ProcessDataBase(process_base.ProcessBase):
   # This function is called once for each jet,
   # if it is defined by the user
   #---------------------------------------------------------------
-  #def fill_jet_histograms(self, jet, jetR):
- 
-  #---------------------------------------------------------------
-  # This function is called once for each groomed jet
-  # You must implement this
-  #---------------------------------------------------------------
-  def fill_groomed_jet_histograms(self, grooming_setting, grooming_label,
-                                  jet, jet_groomed, jet_pt_ungroomed, jetR, R_max):
-
-    raise NotImplementedError('You must implement fill_groomed_jet_histograms()!')
+  def fill_jet_histograms(self, jet, jetR):
+  
+    raise NotImplementedError('You must implement fill_jet_histograms()!')

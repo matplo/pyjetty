@@ -84,21 +84,16 @@ class ProcessData_theta_g(process_data_base.ProcessDataBase):
                   setattr(self, name, h)
 
   #---------------------------------------------------------------
-  # This function is called once for each groomed jet
+  # This function is called once for each jet subconfiguration
   #---------------------------------------------------------------
-  def fill_groomed_jet_histograms(self, grooming_setting, grooming_label,
-                                  jet, jet_groomed_lund, jet_pt_ungroomed, jetR, R_max):
+  def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
+                          grooming_label, jet_pt_ungroomed, suffix):
     
     # Get groomed observables from Lund object
-    # (https://phab.hepforge.org/source/fastjetsvn/browse/contrib/contribs/LundPlane/tags/1.0.3/LundGenerator.hh)
     theta_g = jet_groomed_lund.Delta() / jetR
     zg = jet_groomed_lund.z()
       
     # Fill histograms
-    if R_max:
-      suffix = '_Rmax{}'.format(R_max)
-    else:
-      suffix = ''
     if grooming_setting in self.obs_grooming_settings['theta_g']:
       getattr(self, 'h_theta_g_JetPt_R{}_{}{}'.format(jetR, grooming_label, suffix)).Fill(jet_pt_ungroomed, theta_g)
     if grooming_setting in self.obs_grooming_settings['zg']:
