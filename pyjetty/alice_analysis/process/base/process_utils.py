@@ -83,6 +83,10 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   # Perform grooming and return Lund declustering object
   # (cpptools/src/fjcontrib/custom/GroomerShop.hh)
+  #
+  # Note that the GroomerShop returns a pointer to the
+  # LundDeclustering object, so we use .copy() to construct
+  # an allocated object so that it remains in scope.
   #---------------------------------------------------------------
   def groom(self, jet, grooming_setting, jetR):
   
@@ -90,14 +94,13 @@ class ProcessUtils(common_utils.CommonUtils):
     #print('constituent pt: {}'.format([p.pt() for p in jet.constituents()]))
     #print('constituent eta: {}'.format([p.eta() for p in jet.constituents()]))
     #print('constituent phi: {}'.format([p.phi() for p in jet.constituents()]))
-
     gshop = fjcontrib.GroomerShop(jet)
   
     if 'sd' in grooming_setting:
     
       zcut = grooming_setting['sd'][0]
       beta = grooming_setting['sd'][1]
-      return gshop.soft_drop(beta, zcut, jetR)
+      return gshop.soft_drop(beta, zcut, jetR).copy()
 
     elif 'dg' in grooming_setting:
     
@@ -107,19 +110,19 @@ class ProcessUtils(common_utils.CommonUtils):
       a = grooming_setting['dg'][0]
       
       if a == 'max_pt_softer':
-        return gshop.max_pt_softer()
+        return gshop.max_pt_softer().copy()
       elif a == 'max_z':
-        return gshop.max_z()
+        return gshop.max_z().copy()
       elif a == 'max_kt':
-        return gshop.max_kt()
+        return gshop.max_kt().copy()
       elif a == 'max_kappa':
-        return gshop.max_kappa()
+        return gshop.max_kappa().copy()
       elif a == 'max_tf':
-        return gshop.max_tf()
+        return gshop.max_tf().copy()
       elif a == 'min_tf':
-        return gshop.min_tf()
+        return gshop.min_tf().copy()
       else:
-        return gshop.dynamical(a)
+        return gshop.dynamical(a).copy()
     
     else:
       sys.exit('grooming_setting {} not recognized.'.format(grooming_setting))
