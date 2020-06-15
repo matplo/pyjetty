@@ -466,104 +466,33 @@ class ProcessGroomers(process_base.ProcessBase):
         
         if self.debug_level > 2:
           print('**** jet_pt_combined_ungroomed: {}, jet_pt_truth_ungroomed: {}'.format(jet_pt_combined_ungroomed, jet_pt_truth_ungroomed))
-       
-        # Construct SD groomer, and groom jet
-        if 'sd' in grooming_setting:
-         
-          zcut = grooming_setting['sd'][0]
-          beta = grooming_setting['sd'][1]
-            
-          # Note: Set custom recluster definition, since by default it uses jetR=max_allowable_R
-          sd = fjcontrib.SoftDrop(beta, zcut, jetR)
-          jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-          reclusterer = fjcontrib.Recluster(jet_def_recluster)
-          sd.set_reclustering(True, reclusterer)
-          if self.debug_level > 2:
-            print('SoftDrop groomer is: {}'.format(sd.description()))
- 
-          jet_combined_sd = sd.result(jet_combined)
-          jet_truth_sd = sd.result(jet_truth)
-
-        # Construct Dynamical groomer, and groom jet
-        if 'dg' in grooming_setting:
-
-          a = grooming_setting['dg'][0]
           
-          jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
-          dy_groomer = fjcontrib.DynamicalGroomer(jet_def_lund)
-          if self.debug_level > 2:
-            print('Dynamical groomer is: {}'.format(dy_groomer.description()))
-          
-          jet_combined_dg_lund = self.utils.dy_groom(dy_groomer, jet_combined, a)
-          if not jet_combined_dg_lund:
-            return
-          jet_truth_dg_lund = self.utils.dy_groom(dy_groomer, jet_truth, a)
-          if not jet_truth_dg_lund:
-            return
-          
-          jet_combined_dg = jet_combined_dg_lund.pair()
-          jet_truth_dg = jet_truth_dg_lund.pair()
-          
-        # Compute groomed observables
-        if 'sd' in grooming_setting:
-
-          # If both SD and DG are specified, first apply DG, then SD
-          if 'dg' in grooming_setting:
-            if self.debug_level > 2:
-              print('both SD and DG applied')
-            if jet_combined_dg.has_constituents() and jet_truth_dg.has_constituents():
-              jet_combined_groomed = sd.result(jet_combined_dg)
-              jet_truth_groomed = sd.result(jet_truth_dg)
-            else:
-              return
-          else:
-            if self.debug_level > 2:
-              print('SD applied')
-            jet_combined_groomed = jet_combined_sd
-            jet_truth_groomed = jet_truth_sd
-            
-          theta_g_combined = self.theta_g(jet_combined_groomed, jetR)
-          theta_g_truth = self.theta_g(jet_truth_groomed, jetR)
-          zg_combined = self.zg(jet_combined_groomed)
-          zg_truth = self.zg(jet_truth_groomed)
-
-        elif 'dg' in grooming_setting:
+        # Groom combined jet
+        jet_combined_groomed_lund = self.utils.groom(jet_combined, grooming_setting, jetR)
+        if not jet_combined_groomed_lund:
+          return
         
-          if self.debug_level > 2:
-            print('DG applied')
-          
-          jet_combined_groomed = jet_combined_dg
-          jet_truth_groomed = jet_truth_dg
-          
-          theta_g_combined = jet_combined_dg_lund.Delta()/jetR
-          theta_g_truth = jet_truth_dg_lund.Delta()/jetR
-          zg_combined = jet_combined_dg_lund.z()
-          zg_truth = jet_truth_dg_lund.z()
-       
+        # Groom truth jet
+        jet_truth_groomed_lund = self.utils.groom(jet_truth, grooming_setting, jetR)
+        if not jet_truth_groomed_lund:
+          return
+           
         # Fill some variables
+        theta_g_combined = jet_combined_groomed_lund.Delta()/jetR
+        theta_g_truth = jet_truth_groomed_lund.Delta()/jetR
+        zg_combined = jet_combined_groomed_lund.z()
+        zg_truth = jet_truth_groomed_lund.z()
+
         if 'kappa' in self.observable_list:
           kappa_combined = self.kappa(zg_combined, theta_g_combined)
           kappa_truth = self.kappa(zg_truth, theta_g_truth)
         if 'tf' in self.observable_list:
           tf_combined = self.tf(zg_combined, theta_g_combined)
           tf_truth = self.tf(zg_truth, theta_g_truth)
-       
-        #  Fill prong-matching histograms
-        if 'sd' in grooming_setting:
-
-          if 'dg' in grooming_setting:
-            groomer_list = [sd, dy_groomer]
-            if grooming_setting in self.obs_grooming_settings['theta_g']:
-              prong_match = self.fill_prong_matching_histograms(jet_truth, jet_combined, jet_combined_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD+DG')
-          else:
-            groomer_list = [sd]
-            if grooming_setting in self.obs_grooming_settings['theta_g']:
-              prong_match = self.fill_prong_matching_histograms(jet_truth, jet_combined, jet_combined_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD')
-    
-        elif 'dg' in grooming_setting:
-
-          if grooming_setting in self.obs_grooming_settings['theta_g']:
-            prong_match = self.fill_prong_matching_histograms(jet_truth, jet_combined, jet_combined_dg_lund, [dy_groomer], jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'DG')
+                  
+        # Fill prong matching histograms
+        if grooming_setting in self.obs_grooming_settings['theta_g']:
+          prong_match = self.fill_prong_matching_histograms(jet_truth, jet_truth_groomed_lund, jet_combined, jet_combined_groomed_lund, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max)
 
         # Fill combined histograms
         hname = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
@@ -603,6 +532,7 @@ class ProcessGroomers(process_base.ProcessBase):
               self.tw.fill_branch('R{}_jet_pt_combined_ungroomed'.format(jetR), jet_pt_combined_ungroomed)
               
             label = 'R{}_Rmax{}_{}'.format(jetR, R_max, grooming_label)
+            jet_combined_groomed = jet_combined_groomed_lund.pair()
             jet_pt_combined_groomed = jet_combined_groomed.pt()
             self.tw.fill_branch('{}_jet_pt_combined_groomed'.format(label), jet_pt_combined_groomed)
             self.tw.fill_branch('{}_zg_combined'.format(label), zg_combined)
@@ -612,78 +542,40 @@ class ProcessGroomers(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Do prong-matching
   #---------------------------------------------------------------
-  def fill_prong_matching_histograms(self, jet_truth, jet_combined, jet_combined_groomed, groomer_list, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max, type = 'SD'):
+  def fill_prong_matching_histograms(self, jet_truth, jet_truth_groomed_lund, jet_combined, jet_combined_groomed_lund, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max):
     
-    # Do grooming on pp-truth jet, and get prongs
-    if 'SD' in type:
-    
-      if 'DG' in type:
-      
-        # Assumes groomer_list = [sd, dy_groomer]
-        a = grooming_setting['dg'][0]
-        jet_truth_dg_lund = self.utils.dy_groom(groomer_list[1], jet_truth, a)
-        if not jet_truth_dg_lund:
-          return
-          
-        jet_truth_dg = jet_truth_dg_lund.pair()
-        jet_truth_groomed = groomer_list[0].result(jet_truth_dg)
-      
-      else:
-      
-        jet_truth_groomed = groomer_list[0].result(jet_truth)
-    
-      # SD grooming returns the groomed fastjet::PseudoJet
-      # Use the fastjet::PseudoJet::has_parents function which returns the last clustering step
-      #   If the jet passed SoftDrop, then its parents are the SoftDrop splitting
-      #   If the jet didn't pass SoftDrop, then it will have no parents
-      jet_truth_prong1 = fj.PseudoJet()
-      jet_truth_prong2 = fj.PseudoJet()
-      has_parents_truth = jet_truth_groomed.has_parents(jet_truth_prong1, jet_truth_prong2)
-      
-      # Get prongs of combined jet
-      jet_combined_prong1 = fj.PseudoJet()
-      jet_combined_prong2 = fj.PseudoJet()
-      has_parents_combined = jet_combined_groomed.has_parents(jet_combined_prong1, jet_combined_prong2)
+    # Dynamical grooming returns a fjcontrib::LundGenerator
+    #   The prongs can be retrieved directly from this object.
+    #   If the object exists, then it has passed grooming
+    jet_truth_prong1 = jet_truth_groomed_lund.harder()
+    jet_truth_prong2 = jet_truth_groomed_lund.softer()
 
-    elif type == 'DG':
+    # Get prongs of combined jet
+    jet_combined_prong1 = jet_combined_groomed_lund.harder()
+    jet_combined_prong2 = jet_combined_groomed_lund.softer()
     
-      z_combined = jet_combined_groomed.z()
-      
-      a = grooming_setting['dg'][0]
-      jet_truth_groomed_lund = self.utils.dy_groom(groomer_list[0], jet_truth, a)
-      if not jet_truth_groomed_lund:
-        return
+    # Get the fastjet::PseudoJets from the fjcontrib::LundGenerators
+    jet_truth_groomed = jet_truth_groomed_lund.pair()
+    jet_combined_groomed = jet_combined_groomed_lund.pair()
     
-      # Dynamical grooming returns a fjcontrib::LundGenerator
-      #   The prongs can be retrieved directly from this object.
-      #   If the object exists, then it has passed grooming
-      jet_truth_prong1 = jet_truth_groomed_lund.harder()
-      jet_truth_prong2 = jet_truth_groomed_lund.softer()
-      has_parents_truth = jet_truth_groomed_lund
-
-      # Get prongs of combined jet
-      jet_combined_prong1 = jet_combined_groomed.harder()
-      jet_combined_prong2 = jet_combined_groomed.softer()
-      has_parents_combined = jet_combined_groomed
-      
-      # Get the fastjet::PseudoJets from the fjcontrib::LundGenerators
-      jet_truth_groomed = jet_truth_groomed_lund.pair()
-      jet_combined_groomed = jet_combined_groomed.pair()
-      
-      # Check that groomed truth jet doesn't contain any background tracks
-      problem = False
+    has_parents_truth = jet_truth_groomed.has_constituents()
+    has_parents_combined = jet_combined_groomed.has_constituents()
+    
+    # Check that groomed truth jet doesn't contain any background tracks
+    problem = False
+    if has_parents_truth:
       for constituent in jet_truth_groomed.constituents():
         if constituent.user_index() < 0:
           problem = True
-      if problem:
-        print(grooming_setting)
-        print(dir(jet_truth_groomed_lund))
-        print('pair: {}'.format(jet_truth_groomed_lund.pair()))
-        print('kappa: {}'.format(jet_truth_groomed_lund.kappa()))
-        print('groomed constituents: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
-        print('jet constituents: {}'.format([track.user_index() for track in jet_truth.constituents()]))
-        print('prong1 constituents: {}'.format([track.user_index() for track in jet_truth_prong1.constituents()]))
-        print('prong2 constituents: {}'.format([track.user_index() for track in jet_truth_prong2.constituents()]))
+    if problem:
+      print(grooming_setting)
+      print(dir(jet_truth_groomed_lund))
+      print('pair: {}'.format(jet_truth_groomed_lund.pair()))
+      print('kappa: {}'.format(jet_truth_groomed_lund.kappa()))
+      print('groomed constituents: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
+      print('jet constituents: {}'.format([track.user_index() for track in jet_truth.constituents()]))
+      print('prong1 constituents: {}'.format([track.user_index() for track in jet_truth_prong1.constituents()]))
+      print('prong2 constituents: {}'.format([track.user_index() for track in jet_truth_prong2.constituents()]))
           
     if self.debug_level > 1:
 
@@ -749,22 +641,15 @@ class ProcessGroomers(process_base.ProcessBase):
         # --------------------------
         deltaR_prong1 = jet_combined_prong1.delta_R(jet_truth_prong1)
         deltaR_prong2 = jet_combined_prong2.delta_R(jet_truth_prong2)
-        if 'SD' in type:
-          deltaZ = self.zg(jet_combined_groomed) - self.zg(jet_truth_groomed)
-          rg_truth = jetR*self.theta_g(jet_truth_groomed, jetR)
-          zg_truth = self.zg(jet_truth_groomed)
-          
-        elif 'DG' in type:
-          deltaZ = z_combined - jet_truth_groomed_lund.z()
-          rg_truth = jet_truth_groomed_lund.Delta()
-          zg_truth = jet_truth_groomed_lund.z()
+        deltaZ = jet_combined_groomed_lund.z() - jet_truth_groomed_lund.z()
+        rg_truth = jet_truth_groomed_lund.Delta()
+        zg_truth = jet_truth_groomed_lund.z()
         
         if rg_truth  < 1e-5:
           print('rg_truth: {}'.format(rg_truth))
           print(grooming_setting)
-          if 'SD' not in type:
-            print('pair: {}'.format(jet_truth_groomed_lund.pair()))
-            print('kappa: {}'.format(jet_truth_groomed_lund.kappa()))
+          print('pair: {}'.format(jet_truth_groomed_lund.pair()))
+          print('kappa: {}'.format(jet_truth_groomed_lund.kappa()))
           print('groomed constituents: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
           print('groomed constituent eta: {}'.format([track.eta() for track in jet_truth_groomed.constituents()]))
           print('groomed constituent phi: {}'.format([track.phi() for track in jet_truth_groomed.constituents()]))

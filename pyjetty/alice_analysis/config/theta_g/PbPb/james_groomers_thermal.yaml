@@ -97,20 +97,6 @@ theta_g:
   config10:
     DynamicalGrooming:
       a: 2.0
-      
-  config11:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.1
-      beta: 0
-
-  config12:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.2
-      beta: 0
   
   config13:
     DynamicalGrooming:
@@ -194,20 +180,6 @@ zg:
   config10:
     DynamicalGrooming:
       a: 2.0
-      
-  config11:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.1
-      beta: 0
-
-  config12:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.2
-      beta: 0
   
   config13:
     DynamicalGrooming:
@@ -291,20 +263,6 @@ kappa:
   config10:
     DynamicalGrooming:
       a: 2.0
-      
-  config11:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.1
-      beta: 0
-
-  config12:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.2
-      beta: 0
 
   config13:
     DynamicalGrooming:
@@ -388,20 +346,6 @@ tf:
   config10:
     DynamicalGrooming:
       a: 2.0
-      
-  config11:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.1
-      beta: 0
-
-  config12:
-    DynamicalGrooming:
-      a: 0.1
-    SoftDrop:
-      zcut: 0.2
-      beta: 0
   
   config13:
     DynamicalGrooming:
