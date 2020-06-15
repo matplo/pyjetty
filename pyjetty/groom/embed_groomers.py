@@ -54,7 +54,7 @@ class GroomerOutput(object):
 		self.jet_def_lund = fj.JetDefinition(fj.cambridge_algorithm, 1.0)
 
 		self.dy_groomer_alphas = [0.1, 1.0, 2.0]
-		self.sd_zcuts = [0.1, 0.2, 0.4]
+		self.sd_zcuts = [0.1, 0.2, 0.3, 0.4]
 
 		self.gshop = fjcontrib.GroomerShop(self.jet_def_lund)
 		self.gshop_emb = fjcontrib.GroomerShop(self.jet_def_lund)
