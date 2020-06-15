@@ -87,7 +87,7 @@ class ProcessData_theta_g(process_data_base.ProcessDataBase):
   # This function is called once for each jet subconfiguration
   #---------------------------------------------------------------
   def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                          grooming_label, jet_pt_ungroomed, suffix):
+                          obs_label, jet_pt_ungroomed, suffix):
     
     # Get groomed observables from Lund object
     theta_g = jet_groomed_lund.Delta() / jetR
@@ -95,9 +95,9 @@ class ProcessData_theta_g(process_data_base.ProcessDataBase):
       
     # Fill histograms
     if grooming_setting in self.obs_grooming_settings['theta_g']:
-      getattr(self, 'h_theta_g_JetPt_R{}_{}{}'.format(jetR, grooming_label, suffix)).Fill(jet_pt_ungroomed, theta_g)
+      getattr(self, 'h_theta_g_JetPt_R{}_{}{}'.format(jetR, obs_label, suffix)).Fill(jet_pt_ungroomed, theta_g)
     if grooming_setting in self.obs_grooming_settings['zg']:
-      getattr(self, 'h_zg_JetPt_R{}_{}{}'.format(jetR, grooming_label, suffix)).Fill(jet_pt_ungroomed, zg)
+      getattr(self, 'h_zg_JetPt_R{}_{}{}'.format(jetR, obs_label, suffix)).Fill(jet_pt_ungroomed, zg)
 
 ##################################################################
 if __name__ == '__main__':

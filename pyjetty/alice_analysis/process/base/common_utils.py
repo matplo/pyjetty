@@ -50,6 +50,26 @@ class CommonUtils(common_base.CommonBase):
 
     # Else observable not implemented
     return [None for _ in obs_subconfig_list]
+    
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
+  # All observable-specific edits should be above here!
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
+  #---------------------------------------------------------------
+
+  #---------------------------------------------------------------
+  # Get label from obs_setting and grooming_setting
+  #---------------------------------------------------------------
+  def obs_label(self, obs_setting, grooming_setting):
+
+    obs_label = ''
+    if obs_setting:
+      obs_label += '{}'.format(obs_setting)
+    if grooming_setting:
+      obs_label += '{}'.format(self.grooming_label(grooming_setting))
+    return obs_label
   
   #---------------------------------------------------------------
   # Get grooming settings (i.e. list that stores a dict of grooming

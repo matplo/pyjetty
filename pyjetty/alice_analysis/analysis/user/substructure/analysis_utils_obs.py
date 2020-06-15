@@ -86,18 +86,6 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
 
   #---------------------------------------------------------------
-  # Get label from obs_setting and grooming_setting
-  #---------------------------------------------------------------
-  def obs_label(self, obs_setting, grooming_setting):
-
-    obs_label = ''
-    if obs_setting:
-      obs_label += '{}'.format(obs_setting)
-    if grooming_setting:
-      obs_label += '{}'.format(self.grooming_label(grooming_setting))
-    return obs_label
-
-  #---------------------------------------------------------------
   # Get formatted grooming label from grooming_setting = {'sd': [zcut, beta]} or {'dg': [a]}
   #---------------------------------------------------------------
   def formatted_grooming_label(self, grooming_setting, verbose=False):

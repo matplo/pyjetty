@@ -34,7 +34,7 @@ from pyjetty.alice_analysis.process.base import thermal_generator
 from pyjetty.mputils import CEventSubtractor
 
 ################################################################
-class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
+class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
 
   #---------------------------------------------------------------
   # Constructor
@@ -42,108 +42,59 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
   
     # Initialize base class
-    super(ProcessMC_theta_g, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    super(ProcessMC_subjet_z, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
+    
+    self.observable = self.observable_list[0]
 
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
   def initialize_user_output_objects_R(self, jetR):
       
-      for observable in self.observable_list:
+    if not self.is_pp:
+    
+      for R_max in self.max_distance:
 
-        if observable == 'theta_g':
+        for subjetR in self.obs_settings[self.observable]:
+      
+          name = 'hDeltaR_combined_ppdet_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+          setattr(self, name, h)
+          
+          name = 'hDeltaR_ppdet_pptrue_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+          setattr(self, name, h)
+          
+      #for subjetR in self.obs_settings[self.observable]:
+      
+        # Create prong matching histograms
+        #self.create_prong_matching_histograms(jetR, subjetR)
 
-          for grooming_setting in self.obs_grooming_settings[observable]:
-            if grooming_setting:
-              grooming_label = self.utils.grooming_label(grooming_setting)
-              
-              if self.is_pp:
-                self.create_theta_g_histograms(observable, jetR, grooming_label)
-              else:
-                for R_max in self.max_distance:
-                  self.create_theta_g_histograms(observable, jetR, grooming_label, R_max)
-                  if R_max == self.main_R_max:
-                    self.create_theta_g_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
-              
-              if self.thermal_model:
-                for R_max in self.max_distance:
-                  name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                  h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.0)
-                  h.GetXaxis().SetTitle('p_{T,ch jet}')
-                  h.GetYaxis().SetTitle('#theta_{g,ch}')
-                  setattr(self, name, h)
-                  
-              name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, grooming_label)
-              h = ROOT.TH2F(name, name, 20, 0, 200, 100, 0, 1.0)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('#theta_{g,ch}')
-              setattr(self, name, h)
-
-        if observable == 'zg':
-        
-          for grooming_setting in self.obs_grooming_settings[observable]:
-            if grooming_setting:
-              grooming_label = self.utils.grooming_label(grooming_setting)
-              
-              if self.is_pp:
-                self.create_zg_histograms(observable, jetR, grooming_label)
-              else:
-                for R_max in self.max_distance:
-                  self.create_zg_histograms(observable, jetR, grooming_label, R_max)
-                  if R_max == self.main_R_max:
-                    self.create_zg_histograms(observable, jetR, grooming_label, '{}_matched'.format(R_max))
-
-              if self.thermal_model:
-                for R_max in self.max_distance:
-                  name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, R_max)
-                  h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 0.5)
-                  h.GetXaxis().SetTitle('p_{T,ch jet}')
-                  h.GetYaxis().SetTitle('z_{g,ch}')
-                  setattr(self, name, h)
-                  
-              name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, grooming_label)
-              h = ROOT.TH2F(name, name, 20, 0, 200, 50, 0, 0.5)
-              h.GetXaxis().SetTitle('p_{T,ch jet}')
-              h.GetYaxis().SetTitle('z_{g,ch}')
-              setattr(self, name, h)
-
-      # Plot some Lund planes
-      for grooming_setting in self.grooming_settings:
-        if grooming_setting:
-          grooming_label = self.utils.grooming_label(grooming_setting)
-          if self.is_pp:
-            self.create_lund_histograms(jetR, grooming_label)
-          else:
-            for R_max in self.max_distance:
-              self.create_lund_histograms(jetR, grooming_label, R_max)
-
-      # Create prong matching histograms
-      for grooming_setting in self.obs_grooming_settings['theta_g']:
-        if grooming_setting:
-          grooming_label = self.utils.grooming_label(grooming_setting)
-          if not self.is_pp:
-            self.create_prong_matching_histograms(jetR, grooming_label)
-            
-  #---------------------------------------------------------------
-  # Create Lund plane histograms
-  #---------------------------------------------------------------
-  def create_lund_histograms(self, jetR, grooming_label, R_max = None):
-  
-    if R_max:
-      suffix = '_Rmax{}'.format(R_max)
-    else:
-      suffix = ''
-  
-    name = 'hLundPlane_R{}_{}{}'.format(jetR, grooming_label, suffix)
-    h = ROOT.TH2F(name, name, 140, 0, 7, 100, -4., 6.)
-    h.GetXaxis().SetTitle('log(1/ #DeltaR)')
-    h.GetYaxis().SetTitle('log(k_{t})')
-    setattr(self, name, h)
+    for subjetR in self.obs_settings[observable]:
+      
+      name = 'hDeltaR_All_{}_R{}_{}'.format(observable, jetR, subjetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+      setattr(self, name, h)
+    
+      name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
+      h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1.0, 1.0)
+      h.GetXaxis().SetTitle('p_{T,truth}')
+      h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
+      setattr(self, name, h)
+      
+      # Create THn of response for subjet z
+      dim = 4;
+      title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
+      nbins = [30, 30, 100, 50]
+      min = [0., 0., 0., 0.]
+      max = [150., 300., 1., 1.]
+      name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
+      self.create_thn(name, title, dim, nbins, min, max)
 
   #---------------------------------------------------------------
   # Create theta_g response histograms
   #---------------------------------------------------------------
-  def create_prong_matching_histograms(self, jetR, grooming_label):
+  def create_prong_matching_histograms(self, jetR, subjetR):
   
     prong_list = ['leading', 'subleading']
     match_list = ['leading', 'subleading', 'ungroomed', 'outside']
@@ -181,73 +132,19 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
       setattr(self, name, h)
 
   #---------------------------------------------------------------
-  # Create theta_g response histograms
-  #---------------------------------------------------------------
-  def create_theta_g_histograms(self, observable, jetR, grooming_label, R_max = None):
-
-    if R_max:
-      suffix = '_Rmax{}'.format(R_max)
-    else:
-      suffix = ''
-            
-    # Create THn of response for theta_g
-    if self.fill_RM_histograms:
-      dim = 4;
-      title = ['p_{T,det}', 'p_{T,truth}', '#theta_{g,det}', '#theta_{g,truth}']
-      nbins = [30, 20, 100, 100]
-      min = [0., 0., 0., 0.]
-      max = [150., 200., 1., 1.]
-      name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-      self.create_thn(name, title, dim, nbins, min, max)
-    
-    name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0., 1., 200, -2., 2.)
-    h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('#theta_{g,truth}')
-    h.GetZaxis().SetTitle('#frac{#theta_{g,det}-#theta_{g,truth}}{#theta_{g,truth}}')
-    setattr(self, name, h)
-
-  #---------------------------------------------------------------
-  # Create theta_g response histograms
-  #---------------------------------------------------------------
-  def create_zg_histograms(self, observable, jetR, grooming_label, R_max = None):
-
-    if R_max:
-      suffix = '_Rmax{}'.format(R_max)
-    else:
-      suffix = ''
-    
-    # Create THn of response for z_g
-    if self.fill_RM_histograms:
-      dim = 4;
-      title = ['p_{T,det}', 'p_{T,truth}', 'z_{g,det}', 'z_{g,truth}']
-      nbins = [30, 20, 50, 50]
-      min = [0., 0., 0., 0.]
-      max = [150., 200., 0.5, 0.5]
-      name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-      self.create_thn(name, title, dim, nbins, min, max)
-
-    name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, grooming_label, suffix)
-    h = ROOT.TH3F(name, name, 20, 0, 200, 50, 0., 0.5, 200, -2., 2.)
-    h.GetXaxis().SetTitle('p_{T,truth}')
-    h.GetYaxis().SetTitle('z_{g,truth}')
-    h.GetZaxis().SetTitle('#frac{z_{g,det}-z_{g,truth}}{z_{g,truth}}')
-    setattr(self, name, h)
-
-
-  #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
   # Fill 2D histogram of (pt, obs)
   #---------------------------------------------------------------
   def fill_observable_histograms(self, hname, jet, jet_groomed_lund, jetR, obs_setting,
                                  grooming_setting, obs_label, jet_pt_ungroomed):
-
-      theta_g = jet_groomed_lund.Delta()/jetR
-      zg = jet_groomed_lund.z()
-        
-      getattr(self, hname.format('theta_g', obs_label)).Fill(jet_pt_ungroomed, theta_g)
-      getattr(self,  hname.format('zg', obs_label)).Fill(jet_pt_ungroomed, zg)
-
+  
+    # For a given jet, find subjets of a given radius, and fill histograms
+    cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
+    subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
+    for subjet in subjets:
+      z = subjet.pt() / jet.pt()
+      getattr(self,  hname.format(self.observable, jetR, obs_label)).Fill(jet_pt_ungroomed, z)
+      
   #---------------------------------------------------------------
   # Fill matched jet histograms
   #---------------------------------------------------------------
@@ -255,36 +152,47 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
                                   jet_truth_groomed_lund, jet_pp_det, jetR,
                                   obs_setting, grooming_setting, obs_label,
                                   jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
+       
+    # Find subjets
+    cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
+    subjets_det = fj.sorted_by_pt(cs_subjet_det.inclusive_jets())
 
-    # Compute groomed observables
-    theta_g_det = jet_det_groomed_lund.Delta()/jetR
-    theta_g_truth = jet_truth_groomed_lund.Delta()/jetR
-    zg_det = jet_det_groomed_lund.z()
-    zg_truth = jet_truth_groomed_lund.z()
+    cs_subjet_truth = fj.ClusterSequence(jet_truth.constituents(), self.subjet_def[subjetR])
+    subjets_truth = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
     
-    # Fill Lund diagrams
-    lund_coords = self.lund_coordinates(jet_truth_groomed_lund)
-    name = 'hLundPlane_R{}_{}{}'.format(jetR, obs_label, suffix)
-    if jet_pt_truth_ungroomed > 100.:
-      getattr(self, name).Fill(lund_coords[0], lund_coords[1])
+    if not self.is_pp:
+      cs_subjet_det_pp = fj.ClusterSequence(jet_pp_det.constituents(), self.subjet_def[subjetR])
+      subjets_det_pp = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
 
-    # Fill prong-matching histograms
-    if not self.is_pp and grooming_setting in self.obs_grooming_settings['theta_g']:
-      prong_match = self.fill_prong_matching_histograms(jet_truth, jet_det, jet_det_groomed_lund,
-                                                        jet_pt_truth_ungroomed, jetR, grooming_setting,
-                                                        obs_label, R_max)
-
-    # If PbPb, fill extra RM only for successful prong matches
+    # Loop through subjets and set subjet matching candidates for each subjet in user_info
     if self.is_pp:
-      prong_match = False
-    
-    # Fill histograms
-    observable = 'theta_g'
-    self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, obs_label, R_max, prong_match = prong_match)
+        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hDeltaR_All_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
+    else:
+        # First fill the combined-to-pp matches, then the pp-to-pp matches
+        [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hDeltaR_combined_ppdet_subjet_z_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
+        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets_det_pp]
       
-    observable = 'zg'
-    self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, zg_det, zg_truth, obs_label, R_max, prong_match = prong_match)
+    # Loop through subjets and set accepted matches
+    if self.is_pp:
+        [self.set_matches_pp(subjet_det, 'hSubjetMatchingQA_R{}_{}'.format(jetR, subjetR)) for subjet_det in subjets_det]
+    else:
+        [self.set_matches_AA(subjet_det_combined, subjetR, 'hSubjetMatchingQA_R{}_{}'.format(jetR, subjetR)) for subjet_det_combined in subjets_det]
+
+    # Loop through matches and fill histograms
+    for subjet_det in subjets_det:
+
+      if subjet_det.has_user_info():
+        subjet_truth = subjet_det.python_info().match
+      
+        if subjet_truth:
           
+          z_det = subjet_det.pt() / jet_det.pt()
+          z_truth = subjet_truth.pt() / jet_truth.pt()
+          
+          # Fill histograms
+          self.fill_response(self.observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                             z_det, z_truth, obs_label, R_max, prong_match = False)
+    
   #---------------------------------------------------------------
   # Do prong-matching
   #---------------------------------------------------------------
@@ -486,5 +394,5 @@ if __name__ == '__main__':
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
     sys.exit(0)
 
-  analysis = ProcessMC_theta_g(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
+  analysis = ProcessMC_subjet_z(input_file=args.inputFile, config_file=args.configFile, output_dir=args.outputDir)
   analysis.process_mc()

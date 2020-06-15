@@ -71,7 +71,7 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
   # This function is called once for each jet subconfiguration
   #---------------------------------------------------------------
   def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                          grooming_label, jet_pt_ungroomed, suffix):
+                          obs_label, jet_pt_ungroomed, suffix):
     
     # Recluster with WTA (with larger jet R)
     jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
@@ -83,28 +83,28 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
 
     jet_groomed = jet_groomed_lund.pair()
     self.fill_jet_axis_histogram(jet, jet_groomed, jet_wta, jetR, obs_setting,
-                                 grooming_setting, grooming_label)
+                                 grooming_setting, obs_label)
 
   #---------------------------------------------------------------
   # Fill jet axis histograms
   #---------------------------------------------------------------
   def fill_jet_axis_histograms(self, jet, jet_groomed, jet_wta, jetR, obs_setting,
-                               grooming_setting, grooming_label):
+                               grooming_setting, obs_label):
 
     if obs_setting == 'Standard_SD':
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         deltaR = jet.delta_R(jet_groomed)
-        getattr(self, 'h_{}_JetPt_R{}_Standard_SD{}'.format(self.observable, jetR, grooming_label)).Fill(jet.pt(), deltaR)
+        getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
         
     if obs_setting == 'Standard_WTA':
       if grooming_setting == self.grooming_settings[0]:
         deltaR = jet.delta_R(jet_wta)
-        getattr(self, 'h_{}_JetPt_R{}_Standard_WTA'.format(self.observable, jetR)).Fill(jet.pt(), deltaR)
+        getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
       
     if obs_setting == 'WTA_SD':
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         deltaR = jet_groomed.delta_R(jet_wta)
-        getattr(self, 'h_{}_JetPt_R{}_WTA_SD{}'.format(self.observable, jetR, grooming_label)).Fill(jet.pt(), deltaR)
+        getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
 
 ##################################################################
 if __name__ == '__main__':

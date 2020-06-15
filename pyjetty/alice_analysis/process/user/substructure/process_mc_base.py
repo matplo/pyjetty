@@ -8,10 +8,9 @@ To use this class, the following should be done:
 
   - Implement a user analysis class inheriting from this one, such as in user/james/process_mc_XX.py
     You should implement the following functions:
-      - initialize_user_output_objects()
-      - fill_observable()
-      - fill_matched_jet_histograms()                (optional)
-      - fill_matched_groomed_jet_histograms()        (optional)
+      - initialize_user_output_objects_R()
+      - fill_observable_histograms()
+      - fill_matched_jet_histograms()
     
   - The histogram of the response matrix should be named hResponse_JetPt_[obs]_R[R]_[subobs]_[grooming setting]
 
@@ -27,6 +26,7 @@ import time
 
 # Data analysis and plotting
 import pandas
+from array import *
 import ROOT
 import yaml
 import random
@@ -475,15 +475,9 @@ class ProcessMCBase(process_base.ProcessBase):
     else:
         hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
         [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
-    
-    # Loop through jets and fill matching histograms
+          
+    # Loop through jets and fill response histograms if both det and truth jets are unique match
     result = [self.fill_jet_matches(jet_det, jetR, R_max) for jet_det in jets_det_selected]
-
-    # Loop through jets and fill groomed histograms if both det and truth jets are unique match
-    for grooming_setting in self.grooming_settings:
-      if self.debug_level > 1:
-        print('grooming setting: {}'.format(grooming_setting))
-      result = [self.fill_groomed_jet_matches(grooming_setting, jet_det, jetR, R_max) for jet_det in jets_det_selected]
 
   #---------------------------------------------------------------
   # Fill some background histograms
@@ -545,7 +539,7 @@ class ProcessMCBase(process_base.ProcessBase):
           
     # Fill 2D histogram of truth (pt, obs)
     hname = 'h_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
-    self.fill_observable_histograms(jet, jetR, hname)
+    self.fill_unmatched_jet_histograms(jet, jetR, hname)
 
   #---------------------------------------------------------------
   # Fill det jet histograms
@@ -561,34 +555,46 @@ class ProcessMCBase(process_base.ProcessBase):
     # Fill groomed histograms
     if self.thermal_model:
       hname = 'h_{{}}_JetPt_R{}_{{}}_Rmax{}'.format(jetR, R_max)
-      self.fill_observable_histograms(jet, jetR, hname)
-
-  #---------------------------------------------------------------
-  # Fill 2D histogram of (pt, obs)
-  #---------------------------------------------------------------
-  def fill_observable_histograms(self, jet, jetR, hname):
+      self.fill_unmatched_jet_histograms(jet, jetR, hname)
   
-    for grooming_setting in self.grooming_settings:
-    
-      # Groom jet
-      jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
-      if not jet_groomed_lund:
-        return
-
-      # Call user function to fill observable
-      grooming_label = self.utils.grooming_label(grooming_setting)
-      self.fill_observable(hname, jet_groomed_lund, jet, grooming_setting, grooming_label, jetR)
-      
   #---------------------------------------------------------------
-  # Loop through jets and fill matching histos
+  # This function is called once for each jet
+  #---------------------------------------------------------------
+  def fill_unmatched_jet_histograms(self, jet, jetR, hname):
+
+    # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
+    observable = self.observable_list[0]
+    for i in range(len(self.obs_settings[observable])):
+
+      obs_setting = self.obs_settings[observable][i]
+      grooming_setting = self.obs_grooming_settings[observable][i]
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+
+      # Groom jet, if applicable
+      if grooming_setting:
+        jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
+        if not jet_groomed_lund:
+          continue
+      else:
+        jet_groomed_lund = None
+        
+      # Call user function to fill histograms
+      self.fill_observable_histograms(hname, jet, jet_groomed_lund, jetR, obs_setting,
+                                      grooming_setting, obs_label, jet.pt())
+  
+  #---------------------------------------------------------------
+  # Loop through jets and call user function to fill matched
+  # histos if both det and truth jets are unique match.
   #---------------------------------------------------------------
   def fill_jet_matches(self, jet_det, jetR, R_max):
-      
+  
+    # Set suffix for filling histograms
     if R_max:
       suffix = '_Rmax{}'.format(R_max)
     else:
       suffix = ''
-      
+    
+    # Get matched truth jet
     if jet_det.has_user_info():
       jet_truth = jet_det.python_info().match
       
@@ -599,55 +605,109 @@ class ProcessMCBase(process_base.ProcessBase):
         JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
         getattr(self, 'hJES_R{}{}'.format(jetR, suffix)).Fill(jet_pt_truth_ungroomed, JES)
         
+        # If Pb-Pb case, we need to keep jet_det, jet_truth, jet_pp_det
+        jet_pp_det = None
         if not self.is_pp:
         
-          # Get pp-det match, and fill delta-pt histogram
+          # Get pp-det jet
           jet_pp_det = jet_truth.python_info().match
             
+          # Fill delta-pt histogram
           if jet_pp_det:
             jet_pp_det_pt = jet_pp_det.pt()
             delta_pt = (jet_pt_det_ungroomed - jet_pp_det_pt)
             getattr(self, 'hDeltaPt_emb_R{}_Rmax{}'.format(jetR, R_max)).Fill(jet_pt_truth_ungroomed, delta_pt)
-                
-          self.fill_matched_jet_histograms(jet_det, jet_truth, jetR, jet_pp_det)
+            
+        # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
+        observable = self.observable_list[0]
+        for i in range(len(self.obs_settings[observable])):
         
-        else:
-          self.fill_matched_jet_histograms(jet_det, jet_truth, jetR, None)
-
-  #---------------------------------------------------------------
-  # Loop through jets and fill response if both det and truth jets are unique match
-  #---------------------------------------------------------------
-  def fill_groomed_jet_matches(self, grooming_setting, jet_det, jetR, R_max):
-       
-    if jet_det.has_user_info():
-      jet_truth = jet_det.python_info().match
-     
-      if jet_truth:
-     
-        jet_pt_det_ungroomed = jet_det.pt()
-        jet_pt_truth_ungroomed = jet_truth.pt()
-        
-        if self.debug_level > 2:
-          print('**** jet_pt_det_ungroomed: {}, jet_pt_truth_ungroomed: {}'.format(jet_pt_det_ungroomed, jet_pt_truth_ungroomed))
-       
-        # Groom det jet
-        jet_det_groomed_lund = self.utils.groom(jet_det, grooming_setting, jetR)
-        if not jet_det_groomed_lund:
-          return
-       
-        # Groom truth jet
-        jet_truth_groomed_lund = self.utils.groom(jet_truth, grooming_setting, jetR)
-        if not jet_truth_groomed_lund:
-          return
+          obs_setting = self.obs_settings[observable][i]
+          grooming_setting = self.obs_grooming_settings[observable][i]
+          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
           
-        # Call user function to fill histograms
-        grooming_label = self.utils.grooming_label(grooming_setting)
-        
-        if R_max:
-          suffix = '_Rmax{}'.format(R_max)
-        else:
-          suffix = ''
+          # Groom jets, if applicable
+          if grooming_setting:
+                    
+            # Groom det jet
+            jet_det_groomed_lund = self.utils.groom(jet_det, grooming_setting, jetR)
+            if not jet_det_groomed_lund:
+              return
 
-        self.fill_matched_groomed_jet_histograms(grooming_setting, grooming_label, jet_det_groomed_lund,
-                                                 jet_truth_groomed_lund, jet_det, jet_truth, jet_pt_det_ungroomed,
-                                                 jet_pt_truth_ungroomed, jetR, R_max, suffix)
+            # Groom truth jet
+            jet_truth_groomed_lund = self.utils.groom(jet_truth, grooming_setting, jetR)
+            if not jet_truth_groomed_lund:
+              return
+              
+          else:
+          
+            jet_det_groomed_lund = None
+            jet_truth_groomed_lund = None
+              
+          # Call user function to fill histos
+          self.fill_matched_jet_histograms(jet_det, jet_det_groomed_lund, jet_truth,
+                                           jet_truth_groomed_lund, jet_pp_det, jetR,
+                                           obs_setting, grooming_setting, obs_label,
+                                           jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                                           R_max, suffix)
+
+  #---------------------------------------------------------------
+  # Fill response histograms -- common utility function
+  #---------------------------------------------------------------
+  def fill_response(self, observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                    obs_det, obs_truth, obs_label, R_max, prong_match = False):
+
+    if self.fill_RM_histograms:
+      x = ([jet_pt_det_ungroomed, jet_pt_truth_ungroomed, obs_det, obs_truth])
+      x_array = array('d', x)
+      name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, obs_label)
+      if not self.is_pp:
+        name += '_Rmax{}'.format(R_max)
+      getattr(self, name).Fill(x_array)
+      
+    if obs_truth > 1e-5:
+      obs_resolution = (obs_det - obs_truth) / obs_truth
+      name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, obs_label)
+      if not self.is_pp:
+        name += '_Rmax{}'.format(R_max)
+      getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_truth, obs_resolution)
+    
+    # Fill prong-matched response
+    if not self.is_pp and R_max == self.main_R_max:
+      if prong_match:
+      
+        name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, obs_label, R_max)
+        getattr(self, name).Fill(x_array)
+        
+        if obs_truth > 1e-5:
+          name = 'hResidual_JetPt_{}_R{}_{}_Rmax{}_matched'.format(observable, jetR, obs_label, R_max)
+          getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_truth, obs_resolution)
+
+  #---------------------------------------------------------------
+  # This function is called once for each jetR
+  # You must implement this
+  #---------------------------------------------------------------
+  def initialize_user_output_objects_R(self, jetR):
+      
+    raise NotImplementedError('You must implement initialize_user_output_objects_R()!')
+
+  #---------------------------------------------------------------
+  # This function is called once for each jet subconfiguration
+  # You must implement this
+  #---------------------------------------------------------------
+  def fill_observable_histograms(self, hname, jet, jet_groomed_lund, jetR, obs_setting,
+                                 grooming_setting, obs_label, jet_pt_ungroomed):
+
+    raise NotImplementedError('You must implement fill_observable_histograms()!')
+
+  #---------------------------------------------------------------
+  # This function is called once for each matched jet subconfiguration
+  # You must implement this
+  #---------------------------------------------------------------
+  def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth,
+                                  jet_truth_groomed_lund, jet_pp_det, jetR,
+                                  obs_setting, grooming_setting, obs_label,
+                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                                  R_max, suffix):
+
+    raise NotImplementedError('You must implement fill_matched_jet_histograms()!')

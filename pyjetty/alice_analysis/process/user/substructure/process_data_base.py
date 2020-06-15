@@ -292,20 +292,19 @@ class ProcessDataBase(process_base.ProcessBase):
     
       obs_setting = self.obs_settings[observable][i]
       grooming_setting = self.obs_grooming_settings[observable][i]
+      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
     
       # Groom jet, if applicable
       if grooming_setting:
-        grooming_label = self.utils.grooming_label(grooming_setting)
         jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
         if not jet_groomed_lund:
           continue
       else:
         jet_groomed_lund = None
-        grooming_label = None
 
       # Call user function to fill histograms
       self.fill_jet_histograms(jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                               grooming_label, jet_pt_ungroomed, suffix)
+                               obs_label, jet_pt_ungroomed, suffix)
 
   #---------------------------------------------------------------
   # This function is called once
@@ -316,10 +315,10 @@ class ProcessDataBase(process_base.ProcessBase):
     raise NotImplementedError('You must implement initialize_user_output_objects()!')
 
   #---------------------------------------------------------------
-  # This function is called once for each jet subconfiguration,
-  # if it is defined by the user
+  # This function is called once for each jet subconfiguration
+  # You must implement this
   #---------------------------------------------------------------
   def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                          grooming_label, jet_pt_ungroomed, suffix):
+                          obs_label, jet_pt_ungroomed, suffix):
   
     raise NotImplementedError('You must implement fill_jet_histograms()!')
