@@ -316,9 +316,10 @@ class ProcessDataBase(process_base.ProcessBase):
     raise NotImplementedError('You must implement initialize_user_output_objects()!')
 
   #---------------------------------------------------------------
-  # This function is called once for each jet,
+  # This function is called once for each jet subconfiguration,
   # if it is defined by the user
   #---------------------------------------------------------------
-  def fill_jet_histograms(self, jet, jetR):
+  def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
+                          grooming_label, jet_pt_ungroomed, suffix):
   
     raise NotImplementedError('You must implement fill_jet_histograms()!')
