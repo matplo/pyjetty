@@ -75,6 +75,8 @@ def main():
 		gshops = [fjcontrib.GroomerShop(j) for j in jets]
 		for ij, jj in enumerate(jets):
 			print('orig jet:', jj, 'from gshop:', gshops[ij].jet(), 'SD:', gshops[ij].soft_drop(0.0, 0.1, 0.4).as_string())
+			print(gshops[ij].lund_generator().description(), '\n   number of splits:', len(gshops[ij].lund_splits()))
+
 		# print (' xxx ')
 		# fjcontrib.setGroomer(jets[0], 0.4)
 		# fjcontrib.setGroomer(jets[0], 0.4)
