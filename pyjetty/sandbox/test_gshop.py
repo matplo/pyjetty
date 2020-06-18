@@ -68,17 +68,23 @@ def main():
 		g1_copy = groom_copy(jets[0], 0.4, 0.1, 0)
 		g2_copy = groom_copy(jets[1], 0.4, 0.1, 0)
 		print('  |-> GroomerShop::soft_drop 1 w/ copy', g1_copy.as_string())
-		print('  |-> GroomerShop::soft_drop 1 no copy', g1.as_string(), ' * this is a hard to debug runtime error *')
+		print('  |-> GroomerShop::soft_drop 1 no copy', g1.as_string(), ' * this can be a hard to debug runtime error *')
 		print('  |-> GroomerShop::soft_drop 2 w/ copy', g2_copy.as_string())
 		print('  |-> GroomerShop::soft_drop 2 no copy', g2.as_string())
 
+		gshops = [fjcontrib.GroomerShop(j) for j in jets]
+		for ij, jj in enumerate(jets):
+			print('orig jet:', jj, 'from gshop:', gshops[ij].jet(), 'SD:', gshops[ij].soft_drop(0.0, 0.1, 0.4).as_string())
 		# print (' xxx ')
 		# fjcontrib.setGroomer(jets[0], 0.4)
 		# fjcontrib.setGroomer(jets[0], 0.4)
 		# fjcontrib.setGroomer(jets[0], 0.4)
 		# print (' xxx ', fj.cambridge_algorithm)
 
-		[print(' |-> Groomed SD', fjcontrib.groom(j, 0.4).soft_drop(0.0, 0.1, 0.4).as_string()) for j in jets]
+		# algo = fj.cambridge_algorithm
+		# this is removed from the library - GroomerShopUI 
+		# [print(' |-> Groomed SD', fjcontrib.groom(j).soft_drop(0.0, 0.1, 0.4).as_string()) for j in jets]
+		# [print(' |-> Groomed max-tf', fjcontrib.groom(j).max_tf().as_string()) for j in jets]
 
 		print('---')
 
