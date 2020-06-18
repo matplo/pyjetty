@@ -135,6 +135,16 @@ class ProcessIO(common_base.CommonBase):
 
     # Merge event info into track tree
     self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)
+    
+    # Check if there are duplicated tracks in an event.
+    duplicate_selection = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi']
+    duplicate_rows_df = self.track_df.duplicated(duplicate_selection)
+    n_duplicates = sum(duplicate_rows_df)
+    if n_duplicates > 0:
+      print('WARNING: There appear to be {} duplicate particles in the dataframe'.format(n_duplicates))
+      print('         Removing them.')
+      track_df_orig.drop_duplicates(duplicate_selection, inplace=True)
+    
     return self.track_df
 
   #---------------------------------------------------------------
