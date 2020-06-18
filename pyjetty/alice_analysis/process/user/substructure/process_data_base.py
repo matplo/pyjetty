@@ -27,6 +27,7 @@ from __future__ import print_function
 import time
 
 # Data analysis and plotting
+import numpy as np
 import ROOT
 import yaml
 

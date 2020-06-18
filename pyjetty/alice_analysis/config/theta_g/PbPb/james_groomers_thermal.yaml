@@ -20,7 +20,7 @@ debug_level: 0
 dry_run: False
 fast_simulation: False
 #event_number_max: 1000
-use_ev_id_ext: False
+use_ev_id_ext: True
 min_theta_list: [0., 0.25, 0.5]
 
 #angantyr:

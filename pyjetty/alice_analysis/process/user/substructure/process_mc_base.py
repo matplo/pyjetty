@@ -28,6 +28,7 @@ import time
 
 # Data analysis and plotting
 import pandas
+import numpy as np
 from array import *
 import ROOT
 import yaml
