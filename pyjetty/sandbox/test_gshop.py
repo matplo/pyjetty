@@ -72,7 +72,7 @@ def main():
 		print('  |-> GroomerShop::soft_drop 2 w/ copy', g2_copy.as_string())
 		print('  |-> GroomerShop::soft_drop 2 no copy', g2.as_string())
 
-		gshops = [fjcontrib.GroomerShop(j) for j in jets]
+		gshops = [fjcontrib.GroomerShop(j, 0.4, fj.antikt_algorithm) for j in jets]
 		for ij, jj in enumerate(jets):
 			print('orig jet:', jj, 'from gshop:', gshops[ij].jet(), 'SD:', gshops[ij].soft_drop(0.0, 0.1, 0.4).as_string())
 			print(gshops[ij].lund_generator().description(), '\n   number of splits:', len(gshops[ij].lund_splits()))
