@@ -333,6 +333,12 @@ class ProcessMCBase(process_base.ProcessBase):
     if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
       print('fj_particles type mismatch -- skipping event')
       return
+      
+    if len(fj_particles_truth) > 1:
+      if np.abs(fj_particles_truth[0].pt() - fj_particles_truth[1].pt()) <  1e-5:
+        print('WARNING: Duplicate particles may be present')
+        print([p.user_index() for p in fj_particles_truth])
+        print([p.pt() for p in fj_particles_truth])
         
     # If Pb-Pb, construct embedded event (do this once, for all jetR)
     if not self.is_pp:
@@ -574,7 +580,8 @@ class ProcessMCBase(process_base.ProcessBase):
 
       # Groom jet, if applicable
       if grooming_setting:
-        jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
+        gshop = fjcontrib.GroomerShop(jet, jetR, fj.cambridge_algorithm)
+        jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
         if not jet_groomed_lund:
           continue
       else:
@@ -632,12 +639,14 @@ class ProcessMCBase(process_base.ProcessBase):
           if grooming_setting:
                     
             # Groom det jet
-            jet_det_groomed_lund = self.utils.groom(jet_det, grooming_setting, jetR)
+            gshop_det = fjcontrib.GroomerShop(jet_det, jetR, fj.cambridge_algorithm)
+            jet_det_groomed_lund = self.utils.groom(gshop_det, grooming_setting, jetR)
             if not jet_det_groomed_lund:
               return
 
             # Groom truth jet
-            jet_truth_groomed_lund = self.utils.groom(jet_truth, grooming_setting, jetR)
+            gshop_truth = fjcontrib.GroomerShop(jet_truth, jetR, fj.cambridge_algorithm)
+            jet_truth_groomed_lund = self.utils.groom(gshop_truth, grooming_setting, jetR)
             if not jet_truth_groomed_lund:
               return
               

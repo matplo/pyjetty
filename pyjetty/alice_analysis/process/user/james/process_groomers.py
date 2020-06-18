@@ -324,6 +324,12 @@ class ProcessGroomers(process_base.ProcessBase):
       print('fj_particles type mismatch -- skipping event')
       return
       
+    if len(fj_particles_truth) > 1:
+      if np.abs(fj_particles_truth[0].pt() - fj_particles_truth[1].pt()) <  1e-5:
+        print('WARNING: Duplicate particles may be present')
+        print([p.user_index() for p in fj_particles_truth])
+        print([p.pt() for p in fj_particles_truth])
+                  
     # Clear event in tree
     if self.fill_tree:
       self.tw.clear()
@@ -357,11 +363,11 @@ class ProcessGroomers(process_base.ProcessBase):
     if self.debug_level > 3:
       print([p.user_index() for p in fj_particles_truth])
       print([p.pt() for p in fj_particles_truth])
-      print([p.user_index() for p in fj_particles_combined])
-      print([p.pt() for p in fj_particles_combined])
+      print([p.user_index() for p in fj_particles_combined[0]])
+      print([p.pt() for p in fj_particles_combined[0]])
       print([p.user_index() for p in fj_particles_combined_beforeCS])
       print([p.pt() for p in fj_particles_combined_beforeCS])
-
+      
     # Loop through jetR, and process event for each R
     for jetR in self.jetR_list:
     
@@ -448,7 +454,7 @@ class ProcessGroomers(process_base.ProcessBase):
       if jet_truth:
         delta_pt = (jet_combined.pt() - jet_truth.pt())
         getattr(self, 'hDeltaPt_emb_R{}_Rmax{}'.format(jetR, R_max)).Fill(jet_truth.pt(), delta_pt)
-
+        
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
@@ -468,12 +474,14 @@ class ProcessGroomers(process_base.ProcessBase):
           print('**** jet_pt_combined_ungroomed: {}, jet_pt_truth_ungroomed: {}'.format(jet_pt_combined_ungroomed, jet_pt_truth_ungroomed))
           
         # Groom combined jet
-        jet_combined_groomed_lund = self.utils.groom(jet_combined, grooming_setting, jetR)
+        gshop_combined = fjcontrib.GroomerShop(jet_combined, jetR, fj.cambridge_algorithm)
+        jet_combined_groomed_lund = self.utils.groom(gshop_combined, grooming_setting, jetR)
         if not jet_combined_groomed_lund:
           return
         
         # Groom truth jet
-        jet_truth_groomed_lund = self.utils.groom(jet_truth, grooming_setting, jetR)
+        gshop_truth = fjcontrib.GroomerShop(jet_truth, jetR, fj.cambridge_algorithm)
+        jet_truth_groomed_lund = self.utils.groom(gshop_truth, grooming_setting, jetR)
         if not jet_truth_groomed_lund:
           return
            
@@ -589,12 +597,15 @@ class ProcessGroomers(process_base.ProcessBase):
             print('')
             print('jet_truth tracks: {}'.format([track.user_index() for track in jet_truth.constituents()]))
             print('         track pt: {}'.format([np.around(track.pt(),2) for track in jet_truth.constituents()]))
-            print('jet_truth_groomed tracks: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
-            print('                 track pt: {}'.format([np.around(track.pt(),2) for track in jet_truth_groomed.constituents()]))
-            print('jet_combined groomed tracks: {}'.format([track.user_index() for track in jet_combined_groomed.constituents()]))
-            print('                   track pt: {}'.format([np.around(track.pt(),2) for track in jet_combined_groomed.constituents()]))
-            print('jet_combined ungroomed tracks: {}'.format([track.user_index() for track in jet_combined.constituents()]))
-            print('                     track pt: {}'.format([np.around(track.pt(),2) for track in jet_combined.constituents()]))
+            if jet_truth_groomed.has_constituents():
+              print('jet_truth_groomed tracks: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
+              print('                 track pt: {}'.format([np.around(track.pt(),2) for track in jet_truth_groomed.constituents()]))
+            if jet_combined_groomed.has_constituents():
+              print('jet_combined groomed tracks: {}'.format([track.user_index() for track in jet_combined_groomed.constituents()]))
+              print('                   track pt: {}'.format([np.around(track.pt(),2) for track in jet_combined_groomed.constituents()]))
+            if jet_combined.has_constituents():
+              print('jet_combined ungroomed tracks: {}'.format([track.user_index() for track in jet_combined.constituents()]))
+              print('                     track pt: {}'.format([np.around(track.pt(),2) for track in jet_combined.constituents()]))
 
     # Compute fraction of pt of the pp-truth prong tracks that is contained in the combined-jet prong,
     # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-truth prong
@@ -644,18 +655,9 @@ class ProcessGroomers(process_base.ProcessBase):
         deltaZ = jet_combined_groomed_lund.z() - jet_truth_groomed_lund.z()
         rg_truth = jet_truth_groomed_lund.Delta()
         zg_truth = jet_truth_groomed_lund.z()
-        
-        if rg_truth  < 1e-5:
-          print('rg_truth: {}'.format(rg_truth))
-          print(grooming_setting)
-          print('pair: {}'.format(jet_truth_groomed_lund.pair()))
-          print('kappa: {}'.format(jet_truth_groomed_lund.kappa()))
-          print('groomed constituents: {}'.format([track.user_index() for track in jet_truth_groomed.constituents()]))
-          print('groomed constituent eta: {}'.format([track.eta() for track in jet_truth_groomed.constituents()]))
-          print('groomed constituent phi: {}'.format([track.phi() for track in jet_truth_groomed.constituents()]))
-          print('jet constituents: {}'.format([track.user_index() for track in jet_truth.constituents()]))
-          print('prong1 constituents: {}'.format([track.user_index() for track in jet_truth_prong1.constituents()]))
-          print('prong2 constituents: {}'.format([track.user_index() for track in jet_truth_prong2.constituents()]))
+        if self.debug_level > 3:
+          if rg_truth < 0.:
+            print(rg_truth)
         
         if self.debug_level > 1:
         

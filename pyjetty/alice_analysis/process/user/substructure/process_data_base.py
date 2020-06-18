@@ -204,6 +204,12 @@ class ProcessDataBase(process_base.ProcessBase):
     if self.debug_level > 1:
       print('-------------------------------------------------')
       print('event {}'.format(self.event_number))
+    
+    if len(fj_particles) > 1:
+      if np.abs(fj_particles[0].pt() - fj_particles[1].pt()) <  1e-5:
+        print('WARNING: Duplicate particles may be present')
+        print([p.user_index() for p in fj_particles])
+        print([p.pt() for p in fj_particles])
   
     # Perform constituent subtraction for each R_max (do this once, for all jetR)
     if not self.is_pp:
@@ -296,7 +302,8 @@ class ProcessDataBase(process_base.ProcessBase):
     
       # Groom jet, if applicable
       if grooming_setting:
-        jet_groomed_lund = self.utils.groom(jet, grooming_setting, jetR)
+        gshop = fjcontrib.GroomerShop(jet, jetR, fj.cambridge_algorithm)
+        jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
         if not jet_groomed_lund:
           continue
       else:

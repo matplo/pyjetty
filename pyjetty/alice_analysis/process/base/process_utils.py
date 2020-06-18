@@ -85,44 +85,44 @@ class ProcessUtils(common_utils.CommonUtils):
   # (cpptools/src/fjcontrib/custom/GroomerShop.hh)
   #
   # Note that the GroomerShop returns a pointer to the
-  # LundDeclustering object, so we use .copy() to construct
-  # an allocated object so that it remains in scope.
+  # LundDeclustering object -- this object is a class member,
+  # of the GroomerShop, so it  will only stay in scope as long as
+  # the GroomerShop  remains in scope.
   #---------------------------------------------------------------
-  def groom(self, jet, grooming_setting, jetR):
+  def groom(self, gshop, grooming_setting, jetR):
   
     #print('constituent index: {}'.format([p.user_index() for p in jet.constituents()]))
     #print('constituent pt: {}'.format([p.pt() for p in jet.constituents()]))
     #print('constituent eta: {}'.format([p.eta() for p in jet.constituents()]))
     #print('constituent phi: {}'.format([p.phi() for p in jet.constituents()]))
-    gshop = fjcontrib.GroomerShop(jet)
   
     if 'sd' in grooming_setting:
     
       zcut = grooming_setting['sd'][0]
       beta = grooming_setting['sd'][1]
-      return gshop.soft_drop(beta, zcut, jetR).copy()
+      return gshop.soft_drop(beta, zcut, jetR)
 
     elif 'dg' in grooming_setting:
     
-      if len(jet.constituents()) < 2:
+      if len(gshop.jet().constituents()) < 2:
         return None
         
       a = grooming_setting['dg'][0]
       
       if a == 'max_pt_softer':
-        return gshop.max_pt_softer().copy()
+        return gshop.max_pt_softer()
       elif a == 'max_z':
-        return gshop.max_z().copy()
+        return gshop.max_z()
       elif a == 'max_kt':
-        return gshop.max_kt().copy()
+        return gshop.max_kt()
       elif a == 'max_kappa':
-        return gshop.max_kappa().copy()
+        return gshop.max_kappa()
       elif a == 'max_tf':
-        return gshop.max_tf().copy()
+        return gshop.max_tf()
       elif a == 'min_tf':
-        return gshop.min_tf().copy()
+        return gshop.min_tf()
       else:
-        return gshop.dynamical(a).copy()
+        return gshop.dynamical(a)
     
     else:
       sys.exit('grooming_setting {} not recognized.'.format(grooming_setting))
