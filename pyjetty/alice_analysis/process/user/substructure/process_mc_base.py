@@ -336,7 +336,7 @@ class ProcessMCBase(process_base.ProcessBase):
       return
       
     if len(fj_particles_truth) > 1:
-      if np.abs(fj_particles_truth[0].pt() - fj_particles_truth[1].pt()) <  1e-5:
+      if np.abs(fj_particles_truth[0].pt() - fj_particles_truth[1].pt()) <  1e-10:
         print('WARNING: Duplicate particles may be present')
         print([p.user_index() for p in fj_particles_truth])
         print([p.pt() for p in fj_particles_truth])

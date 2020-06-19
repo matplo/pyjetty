@@ -207,7 +207,7 @@ class ProcessDataBase(process_base.ProcessBase):
       print('event {}'.format(self.event_number))
     
     if len(fj_particles) > 1:
-      if np.abs(fj_particles[0].pt() - fj_particles[1].pt()) <  1e-5:
+      if np.abs(fj_particles[0].pt() - fj_particles[1].pt()) <  1e-10:
         print('WARNING: Duplicate particles may be present')
         print([p.user_index() for p in fj_particles])
         print([p.pt() for p in fj_particles])

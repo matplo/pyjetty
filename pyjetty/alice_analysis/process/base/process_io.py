@@ -108,7 +108,7 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   def load_dataframe(self):
 
-    # Load event tree into dataframe, and apply event selection
+    # Load event tree into dataframe
     event_tree = None
     event_df = None
     event_tree_name = self.tree_dir + self.event_tree_name
@@ -116,6 +116,13 @@ class ProcessIO(common_base.CommonBase):
     if not event_tree:
       sys.exit('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
     self.event_df_orig = event_tree.pandas.df(self.event_columns)
+    
+    # Check if there are duplicated event ids
+    n_duplicates = sum(self.event_df_orig.duplicated(self.unique_identifier))
+    if n_duplicates > 0:
+      sys.exit('ERROR: There appear to be {} duplicate events in the event dataframe'.format(n_duplicates))
+    
+    # Apply event selection
     self.event_df_orig.reset_index(drop=True)
     if self.is_pp:
       event_criteria = 'is_ev_rej == 0'
@@ -136,15 +143,11 @@ class ProcessIO(common_base.CommonBase):
     # Merge event info into track tree
     self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)
     
-    # Check if there are duplicated tracks in an event.
-    duplicate_selection = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi']
-    duplicate_rows_df = self.track_df.duplicated(duplicate_selection)
-    n_duplicates = sum(duplicate_rows_df)
+    # Check if there are duplicated tracks in an event
+    n_duplicates = sum(self.track_df.duplicated(['ParticlePt', 'ParticleEta', 'ParticlePhi']))
     if n_duplicates > 0:
-      print('WARNING: There appear to be {} duplicate particles in the dataframe'.format(n_duplicates))
-      print('         Removing them.')
-      track_df_orig.drop_duplicates(duplicate_selection, inplace=True)
-    
+      sys.exit('ERROR: There appear to be {} duplicate particles in the merged dataframe'.format(n_duplicates))
+      
     return self.track_df
 
   #---------------------------------------------------------------
