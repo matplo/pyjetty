@@ -636,6 +636,9 @@ class ProcessMCBase(process_base.ProcessBase):
           grooming_setting = self.obs_grooming_settings[observable][i]
           obs_label = self.utils.obs_label(obs_setting, grooming_setting)
           
+          if self.debug_level > 3:
+            print('obs_label: {}'.format(obs_label))
+          
           # Groom jets, if applicable
           if grooming_setting:
                     

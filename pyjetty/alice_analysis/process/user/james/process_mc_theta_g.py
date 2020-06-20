@@ -255,7 +255,7 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
                                   jet_truth_groomed_lund, jet_pp_det, jetR,
                                   obs_setting, grooming_setting, obs_label,
                                   jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
-
+    
     # Compute groomed observables
     theta_g_det = jet_det_groomed_lund.Delta()/jetR
     theta_g_truth = jet_truth_groomed_lund.Delta()/jetR
@@ -290,11 +290,12 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
   #---------------------------------------------------------------
   def fill_prong_matching_histograms(self, jet_truth, jet_det, jet_det_groomed_lund, jet_pt_truth_ungroomed,
                                      jetR, grooming_setting, grooming_label, R_max):
-    
+        
     # Do grooming on pp-det jet, and get prongs
     jet_pp_det = jet_truth.python_info().match
       
-    jet_pp_det_groomed_lund = self.utils.groom(jet_pp_det, grooming_setting, jetR)
+    gshop = fjcontrib.GroomerShop(jet_pp_det, jetR, fj.cambridge_algorithm)
+    jet_pp_det_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
     if not jet_pp_det_groomed_lund:
       return
     
@@ -303,17 +304,15 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
     #   If the object exists, then it has passed grooming
     jet_pp_det_prong1 = jet_pp_det_groomed_lund.harder()
     jet_pp_det_prong2 = jet_pp_det_groomed_lund.softer()
-    has_parents_pp_det = jet_pp_det_groomed_lund
 
     # Get prongs of combined jet
     jet_combined_prong1 = jet_det_groomed_lund.harder()
     jet_combined_prong2 = jet_det_groomed_lund.softer()
-    has_parents_combined = jet_det_groomed_lund
     
     # Get the fastjet::PseudoJets from the fjcontrib::LundGenerators
     jet_pp_det_groomed = jet_pp_det_groomed_lund.pair()
     jet_det_groomed = jet_det_groomed_lund.pair()
-          
+              
     if self.debug_level > 1:
 
         if jet_pt_truth_ungroomed > 80.:
@@ -326,10 +325,12 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
             print('')
             print('jet_pp_det tracks: {}'.format([track.user_index() for track in jet_pp_det.constituents()]))
             print('         track pt: {}'.format([np.around(track.pt(),2) for track in jet_pp_det.constituents()]))
-            print('jet_pp_det_groomed tracks: {}'.format([track.user_index() for track in jet_pp_det_groomed.constituents()]))
-            print('                 track pt: {}'.format([np.around(track.pt(),2) for track in jet_pp_det_groomed.constituents()]))
-            print('jet_combined groomed tracks: {}'.format([track.user_index() for track in jet_det_groomed.constituents()]))
-            print('                   track pt: {}'.format([np.around(track.pt(),2) for track in jet_det_groomed.constituents()]))
+            if jet_pp_det_groomed.has_constituents():
+              print('jet_pp_det_groomed tracks: {}'.format([track.user_index() for track in jet_pp_det_groomed.constituents()]))
+              print('                 track pt: {}'.format([np.around(track.pt(),2) for track in jet_pp_det_groomed.constituents()]))
+            if jet_det_groomed.has_constituents():
+              print('jet_combined groomed tracks: {}'.format([track.user_index() for track in jet_det_groomed.constituents()]))
+              print('                   track pt: {}'.format([np.around(track.pt(),2) for track in jet_det_groomed.constituents()]))
             print('jet_combined ungroomed tracks: {}'.format([track.user_index() for track in jet_det.constituents()]))
             print('                     track pt: {}'.format([np.around(track.pt(),2) for track in jet_det.constituents()]))
 
@@ -338,13 +339,13 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
     deltaR_prong1 = -1.
     deltaR_prong2 = -1.
     deltaZ = -1.
-    if has_parents_pp_det and has_parents_combined:
-    
+    if jet_pp_det_groomed.has_constituents() and jet_det_groomed.has_constituents():
+
         # Subleading jet pt-matching
         # --------------------------
         # (1) Fraction of pt matched: subleading pp-det in subleading combined
         matched_pt_subleading_subleading = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
-        
+
         # (2) Fraction of pt matched: subleading pp-det in leading combined
         matched_pt_subleading_leading = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong2)
         
@@ -376,8 +377,8 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
         # --------------------------
         deltaR_prong1 = jet_combined_prong1.delta_R(jet_pp_det_prong1)
         deltaR_prong2 = jet_combined_prong2.delta_R(jet_pp_det_prong2)
-        deltaZ = self.zg(jet_det_groomed) - self.zg(jet_pp_det_groomed)
-        
+        deltaZ = jet_det_groomed_lund.z() - jet_pp_det_groomed_lund.z()
+
         if self.debug_level > 1:
         
             if jet_pt_truth_ungroomed > 80.:
@@ -402,10 +403,10 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
                 print('deltaR_prong1: {}'.format(deltaR_prong1))
                 print('deltaR_prong2: {}'.format(deltaR_prong2))
 
-    elif has_parents_pp_det: # pp-det passed grooming, but combined jet failed grooming
+    elif jet_pp_det_groomed.has_constituents(): # pp-det passed grooming, but combined jet failed grooming
         matched_pt_leading_leading = matched_pt_leading_subleading = matched_pt_leading_ungroomed_notgroomed = matched_pt_leading_outside = matched_pt_subleading_leading = matched_pt_subleading_subleading = matched_pt_subleading_ungroomed_notgroomed = matched_pt_subleading_outside = -0.1
         
-    elif has_parents_combined: # combined jet passed grooming, but pp-det failed grooming
+    elif jet_det_groomed.has_constituents(): # combined jet passed grooming, but pp-det failed grooming
         matched_pt_leading_leading = matched_pt_leading_subleading = matched_pt_leading_ungroomed_notgroomed = matched_pt_leading_outside = matched_pt_subleading_leading = matched_pt_subleading_subleading = matched_pt_subleading_ungroomed_notgroomed = matched_pt_subleading_outside = -0.2
         
     else: # both pp-det and combined jet failed SoftDrop
@@ -445,7 +446,7 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
     
     # Plot correlation of matched pt fraction for leading-subleading and subleading-leading
     getattr(self, 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_subleading, matched_pt_subleading_leading)
-    
+
     subleading_match = (matched_pt_subleading_subleading > 0.5)
     leading_match = (matched_pt_leading_leading > 0.5)
     prong_match = subleading_match and leading_match

@@ -760,24 +760,6 @@ class ProcessGroomers(process_base.ProcessBase):
     else:
       print('Warning -- flag not specified!')
       return -1
-        
-  #---------------------------------------------------------------
-  # Compute theta_g
-  #---------------------------------------------------------------
-  def theta_g(self, jet_sd, jetR):
-    
-    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
-    theta_g = sd_info.dR / jetR
-    return theta_g
-
-  #---------------------------------------------------------------
-  # Compute z_g
-  #---------------------------------------------------------------
-  def zg(self, jet_sd):
-    
-    sd_info = fjcontrib.get_SD_jet_info(jet_sd)
-    zg = sd_info.z
-    return zg
     
   #---------------------------------------------------------------
   # Compute kappa

@@ -91,11 +91,6 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def groom(self, gshop, grooming_setting, jetR):
   
-    #print('constituent index: {}'.format([p.user_index() for p in jet.constituents()]))
-    #print('constituent pt: {}'.format([p.pt() for p in jet.constituents()]))
-    #print('constituent eta: {}'.format([p.eta() for p in jet.constituents()]))
-    #print('constituent phi: {}'.format([p.phi() for p in jet.constituents()]))
-  
     if 'sd' in grooming_setting:
     
       zcut = grooming_setting['sd'][0]
