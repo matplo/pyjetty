@@ -35,7 +35,7 @@ class ProcessIO(common_base.CommonBase):
   def __init__(self, input_file='', tree_dir='PWGHF_TreeCreator',
                track_tree_name='tree_Particle', event_tree_name='tree_event_char',
                output_dir='', is_pp=True, min_cent=0., max_cent=10.,
-               use_ev_id_ext=False, **kwargs):
+               use_ev_id_ext=True, **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
