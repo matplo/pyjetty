@@ -21,9 +21,9 @@ fi
 
 # Load modules
 module use /software/users/james/heppy/modules
-module load heppy/main_python
+module load heppy/1.0
 module use /software/users/james/pyjetty/modules
-module load pyjetty/main_python
+module load pyjetty/1.0
 module list
 
 # Merge all output files from each pt-hat bin

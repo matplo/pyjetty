@@ -1,9 +1,9 @@
 #! /bin/bash
 
-OUTPUTDIR=/rstorage/alice/data/LHC18qr/413-414
+#OUTPUTDIR=/rstorage/alice/data/LHC18qr/413-414
 #OUTPUTDIR=/rstorage/alice/data/LHC19f4/403
-#OUTPUTDIR=/rstorage/alice/data/LHC17pq/145
-#OUTPUTDIR=/rstorage/alice/data/LHC18b8/146
+OUTPUTDIR=/rstorage/alice/data/LHC17pq/448
+#OUTPUTDIR=/rstorage/alice/data/LHC18b8/449
 
 FILELIST=$OUTPUTDIR/files.txt
 
@@ -30,9 +30,9 @@ fi
 
 # Load modules
 module use /software/users/james/heppy/modules
-module load heppy/main_python
+module load heppy/1.0
 module use /software/users/james/pyjetty/modules
-module load pyjetty/main_python
+module load pyjetty/1.0
 module list
 
 # Run python script via pipenv

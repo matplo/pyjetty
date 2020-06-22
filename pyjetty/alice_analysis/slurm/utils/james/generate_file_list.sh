@@ -9,3 +9,4 @@
 find "$PWD" -name "*.root" >files.txt
 
 # To see number of files: wc -l files.txt
+# To remove empty directories: find . -type d -empty -delete
