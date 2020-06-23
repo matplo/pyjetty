@@ -22,6 +22,7 @@ fast_simulation: False
 #event_number_max: 1000
 use_ev_id_ext: False
 min_theta_list: [0., 0.25, 0.5]
+reclustering_algorithm: 'CA'
 
 #angantyr:
 #  min_background_multiplicity: 18467

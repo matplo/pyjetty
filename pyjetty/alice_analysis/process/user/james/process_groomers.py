@@ -147,6 +147,15 @@ class ProcessGroomers(process_base.ProcessBase):
       for setting in observable:
         if setting not in self.grooming_settings and setting != None:
           self.grooming_settings.append(setting)
+          
+    # Set reclustering algorithm
+    recluster_alg = config['reclustering_algorithm']
+    if recluster_alg == 'CA':
+      self.reclustering_algorithm = fj.cambridge_algorithm
+    elif recluster_alg == 'KT':
+      self.reclustering_algorithm = fj.kt_algorithm
+    elif recluster_alg == 'AKT':
+      self.reclustering_algorithm = fj.antikt_algorithm
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -474,13 +483,13 @@ class ProcessGroomers(process_base.ProcessBase):
           print('**** jet_pt_combined_ungroomed: {}, jet_pt_truth_ungroomed: {}'.format(jet_pt_combined_ungroomed, jet_pt_truth_ungroomed))
           
         # Groom combined jet
-        gshop_combined = fjcontrib.GroomerShop(jet_combined, jetR, fj.cambridge_algorithm)
+        gshop_combined = fjcontrib.GroomerShop(jet_combined, jetR, self.reclustering_algorithm)
         jet_combined_groomed_lund = self.utils.groom(gshop_combined, grooming_setting, jetR)
         if not jet_combined_groomed_lund:
           return
         
         # Groom truth jet
-        gshop_truth = fjcontrib.GroomerShop(jet_truth, jetR, fj.cambridge_algorithm)
+        gshop_truth = fjcontrib.GroomerShop(jet_truth, jetR, self.reclustering_algorithm)
         jet_truth_groomed_lund = self.utils.groom(gshop_truth, grooming_setting, jetR)
         if not jet_truth_groomed_lund:
           return
