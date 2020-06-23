@@ -67,7 +67,15 @@ class ProcessGroomers(process_base.ProcessBase):
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io_truth.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
-
+    
+    # ------------------------------------------------------------------------
+    
+    # Set up the Pb-Pb embedding object
+    if not self.thermal_model:
+      self.process_io_emb = process_io_emb.ProcessIO_Emb(self.emb_file_list,
+                              track_tree_name='tree_Particle_gen', is_pp = True,
+                              use_ev_id_ext = self.use_ev_id_ext, remove_used_file=False)
+        
     # ------------------------------------------------------------------------
 
     # Initialize histograms
@@ -119,7 +127,8 @@ class ProcessGroomers(process_base.ProcessBase):
     else:
       self.thermal_model = False
       self.min_background_multiplicity = config['angantyr']['min_background_multiplicity']
-     
+      self.emb_file_list = config['angantyr']['emb_file_list']
+
     self.observable_list = config['process_observables']
     
     # Create dictionaries to store grooming settings and observable settings for each observable
@@ -169,6 +178,7 @@ class ProcessGroomers(process_base.ProcessBase):
       self.hNevents.Fill(1, self.nEvents)
 
     self.hRho =  ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
+    self.hMult =  ROOT.TH1F('hMult', 'hMult', 100, 0., 20000.)
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -357,8 +367,10 @@ class ProcessGroomers(process_base.ProcessBase):
         multiplicity = len([p.pt() for p in fj_particles_combined_beforeCS])
         if multiplicity > self.min_background_multiplicity:
           accept_background_event = True
-        print(multiplicity)
-        print('accepted: {}'.format(accept_background_event))
+        self.hMult.Fill(multiplicity)
+        if self.debug_level > 3:
+          print('multiplicity: {}'.format(multiplicity))
+          print('accepted: {}'.format(accept_background_event))
           
     # Form the combined event
     # The pp-truth tracks are each stored with a unique user_index >= 0
