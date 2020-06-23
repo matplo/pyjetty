@@ -364,7 +364,8 @@ class ProcessGroomers(process_base.ProcessBase):
       accept_background_event = False
       while not accept_background_event:
         fj_particles_combined_beforeCS = self.process_io_emb.load_event()
-        multiplicity = len([p.pt() for p in fj_particles_combined_beforeCS])
+        particles = [p.eta() for p in fj_particles_combined_beforeCS]
+        multiplicity = sum(np.abs(i) < 0.9 for i in particles)
         if multiplicity > self.min_background_multiplicity:
           accept_background_event = True
         self.hMult.Fill(multiplicity)
