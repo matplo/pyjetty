@@ -64,9 +64,14 @@ def main():
 	# from James
 	# Check if there are duplicated tracks in an event.
 	duplicate_selection = ['run_number', 'ev_id', 'ParticlePt', 'ParticleEta', 'ParticlePhi']
-	#if use_ev_id_ext:
-	#  duplicate_selection.append('ev_id_ext')
+	# if use_ev_id_ext:
+	# duplicate_selection.append('ev_id_ext')
 	duplicate_rows_df = track_df.duplicated(duplicate_selection)
+	for i, row in duplicate_rows_df.iteritems():
+		if row:
+			print(i, row)
+	# for r in duplicate_rows_df:
+	# 	print(type(r))
 	n_duplicates = sum(duplicate_rows_df)
 	pindent('2nd pass: using duplicate selection ', duplicate_selection)
 	if n_duplicates > 0:
