@@ -47,7 +47,7 @@ theta_g:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#theta_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config18']
       - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
       
@@ -130,7 +130,7 @@ zg:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{dz_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config18']
       - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
       
@@ -213,7 +213,7 @@ kappa:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#kappa_{g}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config18']
       - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
       
@@ -296,7 +296,7 @@ tf:
     ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#it{t}_{f}}'
     pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
     plot_overlay_list:
-      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config17']
+      - ['config1', 'config4', 'config7', 'config8', 'config9', 'config10', 'config13', 'config14', 'config15', 'config16', 'config18']
       - ['config1', 'config4', 'config7', 'config8', 'config13', 'config14', 'config16']
       - ['config1', 'config2', 'config3', 'config4', 'config5', 'config6']
       
@@ -374,7 +374,7 @@ tf:
 ###############################################################################
 # Analysis parameters
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/100566_100727_100728'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/109224_109385_109546'
 
 main_data: ''
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/100566_100727_100728/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/109224_109385_109546/AnalysisResultsFinal.root'

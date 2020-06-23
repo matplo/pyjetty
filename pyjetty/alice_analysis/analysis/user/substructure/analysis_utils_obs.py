@@ -110,9 +110,9 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
         elif value[0] == 'max_kappa':
           text += 'max-#it{#kappa}'
         elif value[0] == 'max_tf':
-          text += 'min-#it{t}_{f}'
-        elif value[0] == 'min_tf':
           text += 'max-#it{t}_{f}'
+        elif value[0] == 'min_tf':
+          text += 'min-#it{t}_{f}'
         else:
           if verbose:
             text += 'Dynamical Grooming: #it{{a}} = {}'.format(value[0])
