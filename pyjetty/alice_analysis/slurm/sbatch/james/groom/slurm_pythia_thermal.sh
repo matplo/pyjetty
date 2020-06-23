@@ -9,7 +9,9 @@
 
 # Note: Set a separate job for each file -- otherwise they will rewrite each other
 
-FILE_PATHS='/rstorage/ploskon/groom/pythia8/pppthatbias-root/files.txt'
+FILE_PATHS='/rstorage/ploskon/groom/pythia8/pppthatbias-root/files_30XXX.txt'
+#FILE_PATHS='/rstorage/ploskon/groom/pythia8/pppthatbias-root/files_31XXX.txt'
+#FILE_PATHS='/rstorage/ploskon/groom/pythia8/pppthatbias-root/files_32XXX.txt'
 #FILE_PATHS='/rstorage/ploskon/groom/pythia8/pthatminX-root/files_50.txt'
 #FILE_PATHS='/rstorage/ploskon/groom/pythia8/pthatminX-root/files_100.txt'
 #FILE_PATHS='/rstorage/ploskon/groom/pythia8/pthatminX-root/files_200.txt'

@@ -4,8 +4,8 @@ import os
 
 def merge_filelists():
     
-    path = '/rstorage/alice/data/LHC18qr/413-414'
-    n = 100
+    path = '/rstorage/alice/data/LHC18bdeghijkklnop/436'
+    n = 160
 
     filenames_passed = ['{}/files_passed_{}.txt'.format(path, i) for i in range(1, n+1)]
     filenames_failed = ['{}/files_failed_{}.txt'.format(path, i) for i in range(1, n+1)]
