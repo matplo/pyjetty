@@ -25,7 +25,7 @@ min_theta_list: [0., 0.25, 0.5]
 reclustering_algorithm: 'CA'
 
 angantyr:
-  min_background_multiplicity: 1494 # for |eta|<0.9
+  min_background_multiplicity: 2689 # for |eta|<0.9, 0-10% is dN/deta > 1494
   emb_file_list: '/rstorage/ploskon/groom/pythia8/argantyr-root/files.txt'
   #emb_file_list: '/Users/jamesmulligan/Analysis_theta_g/test_groomer_angantyr/PbPb_file_list.txt'
 
