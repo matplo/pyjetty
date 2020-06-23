@@ -51,6 +51,16 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       self.figure_approval_status = config['figure_approval_status']
       
     self.eta_max = config['eta_max']
+    
+    # Set reclustering algorithm
+    if 'reclustering_algorithm' in config:
+      recluster_alg = config['reclustering_algorithm']
+      if recluster_alg == 'CA':
+        self.reclustering_algorithm = 'C-A'
+      elif recluster_alg == 'KT':
+        self.reclustering_algorithm = '#it{k}_{T}'
+      elif recluster_alg == 'AKT':
+        self.reclustering_algorithm = 'anti-#it{k}_{T}'
 
     main_data = config['main_data']
     main_response = config['main_response']
@@ -1000,6 +1010,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     
     text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(x, y-0.15, text)
+    
+    text = '{} reclustering'.format(self.reclustering_algorithm)
+    text_latex.DrawLatex(x, y-0.21, text)
     
     outdir = 'prong_matching_fraction_pt'
     if 'JetPtDet' in name_prefix:
