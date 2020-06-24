@@ -143,7 +143,6 @@ class ProcessGroomers(process_base.ProcessBase):
       # Fill observable settings
       self.obs_settings[observable] = []
       obs_config_dict = config[observable]
-      obs_config_dict = config[observable]
       obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
       obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
       
@@ -544,6 +543,19 @@ class ProcessGroomers(process_base.ProcessBase):
     cs_subjet_truth = fj.ClusterSequence(jet_truth.constituents(), self.subjet_def[subjetR])
     subjets_truth = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
     
+    # Find leading subjets and fill matched pt
+    leading_subjet_combined = self.leading_subjet(subjets_combined)
+    leading_subjet_truth = self.leading_subjet(subjets_truth)
+    
+    z_leading_combined = leading_subjet_combined.pt() / jet_combined.pt()
+    matched_pt = fjtools.matched_pt(leading_subjet_combined, leading_subjet_truth)
+    
+    name = 'h_subjet_z_fraction_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
+    getattr(self, name).Fill(jet_truth.pt(), z_leading_combined, matched_pt)
+    
+    # Set subjet matches
+    # Beware that defining geometrical subjet matches highly constrains them to match by pt
+
     # Loop through subjets and set jet matching candidates (based on deltaR) for each jet in user_info
     [[self.set_matching_candidates(subjet_combined, subjet_truth, subjetR,
      'hDeltaR_subjet_z_R{}_{{}}_Rmax{}'.format(jetR, R_max)) for subjet_truth in subjets_truth]
@@ -552,7 +564,7 @@ class ProcessGroomers(process_base.ProcessBase):
     # Loop through subjets and set accepted matches
     hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
     [self.set_matches_AA_truth(subjet_combined, subjetR, hname) for subjet_combined in subjets_combined]
-    
+        
     # Loop through matches and fill histograms
     for subjet_combined in subjets_combined:
 
@@ -561,7 +573,6 @@ class ProcessGroomers(process_base.ProcessBase):
       
         if subjet_truth:
           
-          z_combined = subjet_combined.pt() / jet_combined.pt()
           z_truth = subjet_truth.pt() / jet_truth.pt()
           
           # Compute fraction of pt of truth subjet contained in matched combined subjet
@@ -569,15 +580,22 @@ class ProcessGroomers(process_base.ProcessBase):
 
           name = 'h_subjet_z_fraction_JetPt_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
           getattr(self, name).Fill(jet_truth.pt(), z_truth, matched_pt)
-          
-          # If subjet_truth is leading, fill leading histograms
-          is_leading = True
-          for sj_truth in subjets_truth:
-            if subjet_truth.pt() < sj_truth.pt():
-              is_leading = False
-          if is_leading:
-            name = 'h_subjet_z_fraction_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
-            getattr(self, name).Fill(jet_truth.pt(), z_truth, matched_pt)
+
+  #---------------------------------------------------------------
+  # Loop through jets and fill response if both det and truth jets are unique match
+  #---------------------------------------------------------------
+  def leading_subjet(self, subjets):
+  
+    leading_subjet = None
+    for subjet in subjets:
+    
+      if not leading_subjet:
+        leading_subjet = subjet
+        
+      if subjet.pt() > leading_subjet.pt():
+        leading_subjet = subjet
+
+    return leading_subjet
 
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
