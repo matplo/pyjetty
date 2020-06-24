@@ -10,7 +10,7 @@
 # The process step is intended  to loop over all observables simultaneously
 # The analysis step is intended to run for a single observable block
 
-process_observables: ['theta_g', 'zg', 'kappa', 'tf']
+process_observables: ['theta_g', 'zg', 'kappa', 'tf', 'subjet_z']
 jetR: [0.4]
 eta_max: 1.4
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
@@ -24,15 +24,15 @@ use_ev_id_ext: False
 min_theta_list: [0., 0.25, 0.5]
 reclustering_algorithm: 'CA'
 
-angantyr:
-  min_background_multiplicity: 2689 # for |eta|<0.9, 0-10% is dN/deta > 1494
-  emb_file_list: '/rstorage/ploskon/groom/pythia8/argantyr-root/files.txt'
+#angantyr:
+#  min_background_multiplicity: 2689 # for |eta|<0.9, 0-10% is dN/deta > 1494
+#  emb_file_list: '/rstorage/ploskon/groom/pythia8/argantyr-root/files.txt'
   #emb_file_list: '/Users/jamesmulligan/Analysis_theta_g/test_groomer_angantyr/PbPb_file_list.txt'
 
-#thermal_model:
-#  beta: 0.5
-#  N_avg: 5000
-#  sigma_N: 500
+thermal_model:
+  beta: 0.5
+  N_avg: 5000
+  sigma_N: 500
 
 constituent_subtractor:
   max_distance: [0.25]
@@ -41,6 +41,22 @@ constituent_subtractor:
   bge_rho_grid_size: 1.0
   max_pt_correct: 100
   ghost_area: 0.01
+
+# Observable block
+subjet_z:
+
+  common_settings:
+    xtitle: '#it{z}'
+    ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z}}'
+    pt_bins_reported: [40, 60, 80, 100, 150, 200, 250, 300]
+    plot_overlay_list:
+      - ['config1', 'config2']
+
+  config1:
+    subjet_R: 0.1
+    
+  config2:
+    subjet_R: 0.2
 
 # Observable block
 theta_g:
@@ -377,7 +393,7 @@ tf:
 ###############################################################################
 # Analysis parameters
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/117286'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/120537'
 
 main_data: ''
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/117286/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/120537/AnalysisResultsFinal.root'

@@ -145,10 +145,17 @@ class ProcessGroomers(process_base.ProcessBase):
       obs_config_dict = config[observable]
       obs_config_dict = config[observable]
       obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+      obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+      
+      self.obs_settings[observable] = self.utils.obs_settings(observable, obs_config_dict, obs_subconfig_list)
+      if observable == 'subjet_z':
+        self.subjet_def = {}
+        for subjetR in self.obs_settings[observable]:
+          self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
      
       # Fill grooming settings
       self.obs_grooming_settings[observable] = self.utils.grooming_settings(obs_config_dict)
-      
+
     # Construct set of unique grooming settings
     self.grooming_settings = []
     lists_grooming = [self.obs_grooming_settings[obs] for obs in self.observable_list]
@@ -194,6 +201,12 @@ class ProcessGroomers(process_base.ProcessBase):
         name = 'hDeltaR_R{}_Rmax{}'.format(jetR, R_max)
         h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
         setattr(self, name, h)
+        
+        for subjetR in self.obs_settings['subjet_z']:
+      
+          name = 'hDeltaR_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+          setattr(self, name, h)
         
       #  Construct THn for each groomer: (pt, zg, theta_g, tag flag)
       for grooming_setting in self.obs_grooming_settings['theta_g']:
@@ -246,6 +259,42 @@ class ProcessGroomers(process_base.ProcessBase):
               h = ROOT.TH2F(name, name, 30, 0, 300, 50, 0, 0.5)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
               h.GetYaxis().SetTitle(label)
+              setattr(self, name, h)
+          
+        if observable == 'subjet_z':
+          
+          for obs_setting in self.obs_settings[observable]:
+        
+            for R_max in self.max_distance:
+            
+              label = '#it{z}'
+              name = 'h_{}_fraction_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+              h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 15, -0.4, 1.1)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle(label)
+              h.GetZaxis().SetTitle('Prong matching fraction')
+              setattr(self, name, h)
+              
+              name = 'h_{}_flag_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+              h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 9, 0.5, 9.5)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle(label)
+              h.GetZaxis().SetTitle('flag')
+              setattr(self, name, h)
+              
+              label = '#it{z}_{leading}'
+              name = 'h_{}_fraction_leading_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+              h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 15, -0.4, 1.1)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle(label)
+              h.GetZaxis().SetTitle('Prong matching fraction')
+              setattr(self, name, h)
+              
+              name = 'h_{}_flag_leading_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+              h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 9, 0.5, 9.5)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle(label)
+              h.GetZaxis().SetTitle('flag')
               setattr(self, name, h)
               
       # Create prong matching histograms
@@ -474,9 +523,62 @@ class ProcessGroomers(process_base.ProcessBase):
     if jet_combined.has_user_info():
       jet_truth = jet_combined.python_info().match
       if jet_truth:
+      
+        # Fill delta pt
         delta_pt = (jet_combined.pt() - jet_truth.pt())
         getattr(self, 'hDeltaPt_emb_R{}_Rmax{}'.format(jetR, R_max)).Fill(jet_truth.pt(), delta_pt)
         
+        # Fill subjet histograms
+        for subjetR in self.obs_settings['subjet_z']:
+          self.fill_subjet_histograms(jet_combined, jet_truth, jetR, subjetR, R_max)
+
+  #---------------------------------------------------------------
+  # Fill subjet histograms
+  #---------------------------------------------------------------
+  def fill_subjet_histograms(self, jet_combined, jet_truth, jetR, subjetR, R_max):
+  
+    # Find subjets
+    cs_subjet_combined = fj.ClusterSequence(jet_combined.constituents(), self.subjet_def[subjetR])
+    subjets_combined = fj.sorted_by_pt(cs_subjet_combined.inclusive_jets())
+
+    cs_subjet_truth = fj.ClusterSequence(jet_truth.constituents(), self.subjet_def[subjetR])
+    subjets_truth = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
+    
+    # Loop through subjets and set jet matching candidates (based on deltaR) for each jet in user_info
+    [[self.set_matching_candidates(subjet_combined, subjet_truth, subjetR,
+     'hDeltaR_subjet_z_R{}_{{}}_Rmax{}'.format(jetR, R_max)) for subjet_truth in subjets_truth]
+                                           for subjet_combined in subjets_combined]
+        
+    # Loop through subjets and set accepted matches
+    hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
+    [self.set_matches_AA_truth(subjet_combined, subjetR, hname) for subjet_combined in subjets_combined]
+    
+    # Loop through matches and fill histograms
+    for subjet_combined in subjets_combined:
+
+      if subjet_combined.has_user_info():
+        subjet_truth = subjet_combined.python_info().match
+      
+        if subjet_truth:
+          
+          z_combined = subjet_combined.pt() / jet_combined.pt()
+          z_truth = subjet_truth.pt() / jet_truth.pt()
+          
+          # Compute fraction of pt of truth subjet contained in matched combined subjet
+          matched_pt = fjtools.matched_pt(subjet_combined, subjet_truth)
+
+          name = 'h_subjet_z_fraction_JetPt_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
+          getattr(self, name).Fill(jet_truth.pt(), z_truth, matched_pt)
+          
+          # If subjet_truth is leading, fill leading histograms
+          is_leading = True
+          for sj_truth in subjets_truth:
+            if subjet_truth.pt() < sj_truth.pt():
+              is_leading = False
+          if is_leading:
+            name = 'h_subjet_z_fraction_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
+            getattr(self, name).Fill(jet_truth.pt(), z_truth, matched_pt)
+
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
