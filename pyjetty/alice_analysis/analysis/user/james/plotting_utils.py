@@ -1264,7 +1264,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       grooming_setting = grooming_settings[i]
       obs_label = self.obs_label(obs_setting, grooming_setting)
       
-      name = '{}_{}{}{}'.format(name_prefix, obs_label, self.suffix, self.scaled_suffix)
+      name = '{}_{}{}{}'.format(name_prefix, obs_setting, self.suffix, self.scaled_suffix)
       hFraction_vs_pt = self.fMC.Get(name)
       xtitle = hFraction_vs_pt.GetXaxis().GetTitle()
       #myBlankHisto.GetXaxis().SetTitle(xtitle)
@@ -1274,16 +1274,16 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         myBlankHisto.GetXaxis().SetTitle('#it{p}_{T,ch jet}^{pp-det} (GeV/#it{c})')
       
       epsilon = 1e-5
-      min_bin = hFraction_vs_pt.GetYaxis().FindBin(0. + epsilon)
-      cut_bin = hFraction_vs_pt.GetYaxis().FindBin(prong_match_threshold + epsilon)
-      max_bin = hFraction_vs_pt.GetYaxis().FindBin(1. + epsilon)
+      min_bin = hFraction_vs_pt.GetZaxis().FindBin(0. + epsilon)
+      cut_bin = hFraction_vs_pt.GetZaxis().FindBin(prong_match_threshold + epsilon)
+      max_bin = hFraction_vs_pt.GetZaxis().FindBin(1. + epsilon)
       
       name_total = 'hTotal_vs_pt{}_{}_{}'.format(i, jetR, obs_label)
-      hTotal_vs_pt = hFraction_vs_pt.ProjectionX(name_total, min_bin, max_bin)
+      hTotal_vs_pt = hFraction_vs_pt.ProjectionX(name_total, 0, -1, min_bin, max_bin)
       hTotal_vs_pt.SetName(name_total)
       
       name_matched = 'hMatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label)
-      hMatched_vs_pt = hFraction_vs_pt.ProjectionX(name_matched, cut_bin, max_bin)
+      hMatched_vs_pt = hFraction_vs_pt.ProjectionX(name_matched, 0, -1, cut_bin, max_bin)
       hMatched_vs_pt.SetName(name_matched)
       
       name_fraction = 'hMatchedFraction_vs_pt{}_{}_{}'.format(i, jetR, obs_label)
