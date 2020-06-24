@@ -113,6 +113,10 @@ class PlotGroomers(common_base.CommonBase):
       self.xmin = 0.
       self.xmax = 0.5
       self.rebin_value = 2
+    elif observable == 'subjet_z':
+      self.xmin = 0.
+      self.xmax = 1.
+      self.rebin_value = 1
 
     # Create output dirs
     output_dir = os.path.join(self.output_dir, observable)
@@ -137,65 +141,81 @@ class PlotGroomers(common_base.CommonBase):
           output_dir = os.path.join(output_dir, 'jetR{}'.format(jetR))
           output_dir = os.path.join(output_dir, 'Rmax{}'.format(R_max))
         
-          # Plot money plot for all observables
-          for i, _ in enumerate(self.obs_subconfig_list):
-
-            obs_setting = self.obs_settings[i]
-            grooming_setting = self.grooming_settings[i]
-            obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-            self.set_zmin(observable, grooming_setting)
-            
-            output_dir_money = os.path.join(output_dir, 'money')
-            self.create_output_subdir(output_dir_money, self.utils.grooming_label(grooming_setting))
-            self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir_money)
-
-            output_dir_toy = os.path.join(output_dir, 'toy')
-            self.create_output_subdir(output_dir_toy, self.utils.grooming_label(grooming_setting))
-            self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir_toy, option='toy')
-           
-          self.create_output_subdir(output_dir, 'ratios_Embedded_Truth')
-          self.plot_money_ratios(observable, output_dir, jetR, 'Embedded/Truth')
+          # Plot subjet histograms
+          if observable == 'subjet_z':
           
-          self.create_output_subdir(output_dir, 'ratios_Purity')
-          self.plot_money_ratios(observable, output_dir, jetR, 'Tagging purity')
-
-          # Plot performance plots only once
-          if observable == 'theta_g':
-
-            # Create output subdirectories
-            output_dir = os.path.join(self.output_dir, 'performance')
-            self.create_output_subdir(output_dir, 'delta_pt')
-            self.create_output_subdir(output_dir, 'prong_matching_fraction_pt')
-            self.create_output_subdir(output_dir, 'prong_matching_deltaR')
-            self.create_output_subdir(output_dir, 'prong_matching_deltaZ')
-            self.create_output_subdir(output_dir, 'prong_matching_correlation')
-            
             self.plotting_utils = plotting_utils.PlottingUtils(output_dir, self.config_file, R_max=R_max,
                                                                thermal = False, groomer_studies = True)
-        
-            # Plot some subobservable-independent performance plots
-            self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
+            
+            self.create_output_subdir(output_dir, 'prong_matching_fraction_pt')
+            hname = 'h_subjet_z_fraction_JetPt_R{}'.format(jetR)
+            self.plotting_utils.plot_subjet_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+            
+            self.create_output_subdir(output_dir, 'prong_matching_fraction_pt_leading')
+            hname = 'h_subjet_z_fraction_leading_JetPt_R{}'.format(jetR)
+            self.plotting_utils.plot_subjet_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+          
+          # Plot groomed histograms
+          if observable in ['theta_g', 'zg', 'kappa', 'tf']:
+            # Plot money plot for all observables
+            for i, _ in enumerate(self.obs_subconfig_list):
 
-            # Plot prong matching histograms
-            self.prong_match_threshold = 0.5
-            min_pt = 80.
-            max_pt = 100.
-            prong_list = ['leading', 'subleading']
-            match_list = ['leading', 'subleading', 'ungroomed', 'outside']
-            for i, overlay_list in enumerate(self.plot_overlay_list):
-              for prong in prong_list:
-                for match in match_list:
+              obs_setting = self.obs_settings[i]
+              grooming_setting = self.grooming_settings[i]
+              obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+              self.set_zmin(observable, grooming_setting)
+              
+              output_dir_money = os.path.join(output_dir, 'money')
+              self.create_output_subdir(output_dir_money, self.utils.grooming_label(grooming_setting))
+              self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir_money)
 
-                  hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
-                  self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
-                  self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=False)
+              output_dir_toy = os.path.join(output_dir, 'toy')
+              self.create_output_subdir(output_dir_toy, self.utils.grooming_label(grooming_setting))
+              self.plot_money_plot(observable, jetR, R_max, obs_label, obs_setting, grooming_setting, output_dir_toy, option='toy')
+             
+            self.create_output_subdir(output_dir, 'ratios_Embedded_Truth')
+            self.plot_money_ratios(observable, output_dir, jetR, 'Embedded/Truth')
+            
+            self.create_output_subdir(output_dir, 'ratios_Purity')
+            self.plot_money_ratios(observable, output_dir, jetR, 'Tagging purity')
 
-                  if 'subleading' in prong or 'leading' in prong:
-                    hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
-                    self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
+            # Plot performance plots only once
+            if observable == 'theta_g':
 
-              hname = 'hProngMatching_subleading-leading_correlation_JetPt_R{}'.format(jetR)
-              self.plotting_utils.plot_prong_matching_correlation(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+              # Create output subdirectories
+              output_dir = os.path.join(self.output_dir, 'performance')
+              self.create_output_subdir(output_dir, 'delta_pt')
+              self.create_output_subdir(output_dir, 'prong_matching_fraction_pt')
+              self.create_output_subdir(output_dir, 'prong_matching_deltaR')
+              self.create_output_subdir(output_dir, 'prong_matching_deltaZ')
+              self.create_output_subdir(output_dir, 'prong_matching_correlation')
+              
+              self.plotting_utils = plotting_utils.PlottingUtils(output_dir, self.config_file, R_max=R_max,
+                                                                 thermal = False, groomer_studies = True)
+          
+              # Plot some subobservable-independent performance plots
+              self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
+
+              # Plot prong matching histograms
+              self.prong_match_threshold = 0.5
+              min_pt = 80.
+              max_pt = 100.
+              prong_list = ['leading', 'subleading']
+              match_list = ['leading', 'subleading', 'ungroomed', 'outside']
+              for i, overlay_list in enumerate(self.plot_overlay_list):
+                for prong in prong_list:
+                  for match in match_list:
+
+                    hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
+                    self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+                    self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=False)
+
+                    if 'subleading' in prong or 'leading' in prong:
+                      hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
+                      self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold, min_pt, max_pt, plot_deltaz=True)
+
+                hname = 'hProngMatching_subleading-leading_correlation_JetPt_R{}'.format(jetR)
+                self.plotting_utils.plot_prong_matching_correlation(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
 
   #---------------------------------------------------------------
   def plot_money_plot(self, observable, jetR, R_max, obs_label, obs_setting,
