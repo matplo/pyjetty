@@ -17,6 +17,9 @@ import time
 
 # Data analysis and plotting
 import numpy as np
+import matplotlib as mpl
+from matplotlib import pyplot as plt
+import seaborn as sns
 from array import *
 import ROOT
 import yaml
@@ -115,6 +118,7 @@ class ProcessGroomers(process_base.ProcessBase):
     self.use_ev_id_ext = config['use_ev_id_ext']
     self.main_R_max = config['constituent_subtractor']['main_R_max']
     self.eta_max = config['eta_max']
+    self.plot_diagram =  config['plot_diagram']
     
     if 'thermal_model' in config:
       self.min_background_multiplicity = None
@@ -201,12 +205,13 @@ class ProcessGroomers(process_base.ProcessBase):
         h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
         setattr(self, name, h)
         
-        for subjetR in self.obs_settings['subjet_z']:
-      
-          name = 'hDeltaR_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-          setattr(self, name, h)
+        if 'subjet_z' in self.observable_list:
+          for subjetR in self.obs_settings['subjet_z']:
         
+            name = 'hDeltaR_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+            setattr(self, name, h)
+          
       #  Construct THn for each groomer: (pt, zg, theta_g, tag flag)
       for grooming_setting in self.obs_grooming_settings['theta_g']:
         if grooming_setting:
@@ -512,7 +517,7 @@ class ProcessGroomers(process_base.ProcessBase):
     for grooming_setting in self.grooming_settings:
       if self.debug_level > 1:
         print('grooming setting: {}'.format(grooming_setting))
-      result = [self.fill_groomed_jet_matches(grooming_setting, jet_combined, jetR, R_max) for jet_combined in jets_combined_selected]
+      result = [self.fill_groomed_jet_matches(grooming_setting, jet_combined, i_jet, jetR, R_max) for i_jet, jet_combined in enumerate(jets_combined_selected)]
       
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
@@ -528,8 +533,9 @@ class ProcessGroomers(process_base.ProcessBase):
         getattr(self, 'hDeltaPt_emb_R{}_Rmax{}'.format(jetR, R_max)).Fill(jet_truth.pt(), delta_pt)
         
         # Fill subjet histograms
-        for subjetR in self.obs_settings['subjet_z']:
-          self.fill_subjet_histograms(jet_combined, jet_truth, jetR, subjetR, R_max)
+        if 'subjet_z' in self.observable_list:
+          for subjetR in self.obs_settings['subjet_z']:
+            self.fill_subjet_histograms(jet_combined, jet_truth, jetR, subjetR, R_max)
 
   #---------------------------------------------------------------
   # Fill subjet histograms
@@ -600,7 +606,7 @@ class ProcessGroomers(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
-  def fill_groomed_jet_matches(self, grooming_setting, jet_combined, jetR, R_max):
+  def fill_groomed_jet_matches(self, grooming_setting, jet_combined, i_jet, jetR, R_max):
 
     grooming_label = self.utils.grooming_label(grooming_setting)
        
@@ -643,6 +649,10 @@ class ProcessGroomers(process_base.ProcessBase):
         # Fill prong matching histograms
         if grooming_setting in self.obs_grooming_settings['theta_g']:
           prong_match = self.fill_prong_matching_histograms(jet_truth, jet_truth_groomed_lund, jet_combined, jet_combined_groomed_lund, jet_pt_truth_ungroomed, jetR, grooming_setting, grooming_label, R_max)
+          
+        # Plot diagram
+        if self.plot_diagram:
+          self.diagram(jet_truth, jet_combined, prong_match, i_jet, grooming_setting, jetR)
 
         # Fill combined histograms
         hname = 'h_theta_g_zg_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
@@ -688,7 +698,99 @@ class ProcessGroomers(process_base.ProcessBase):
             self.tw.fill_branch('{}_zg_combined'.format(label), zg_combined)
             self.tw.fill_branch('{}_theta_g_combined'.format(label), theta_g_combined)
             self.tw.fill_branch('{}_prong_matching_flag'.format(label), prong_match)
+
+  #---------------------------------------------------------------
+  # Plot diagram
+  #---------------------------------------------------------------
+  def diagram(self, jet_truth, jet_combined, prong_match, i_jet, grooming_setting, jetR):
+  
+    # Groom truth jet, and get list of all Lund splits
+    gshop_truth = fjcontrib.GroomerShop(jet_truth, jetR, self.reclustering_algorithm)
+    jet_truth_groomed_lund = self.utils.groom(gshop_truth, grooming_setting, jetR)
+    jet_truth_lunds = gshop_truth.lund_splits()
+    if not jet_truth_lunds:
+      return
+
+    # Loop through Lund splits, and draw diagram
+    self.single_diagram(jet_truth, jet_truth_lunds, jet_pt=jet_truth.pt(),
+                        i_jet=i_jet, label='truth')
+  
+    # Groom combined jet, and get list of all Lund splits
+    gshop_combined = fjcontrib.GroomerShop(jet_combined, jetR, self.reclustering_algorithm)
+    jet_combined_groomed_lund = self.utils.groom(gshop_combined, grooming_setting, jetR)
+    jet_combined_lunds = gshop_combined.lund_splits()
+    if not jet_combined_lunds:
+      return
+    
+    # Loop through Lund splits, and draw diagram
+    self.single_diagram(jet_combined, jet_combined_lunds, jet_pt=jet_truth.pt(),
+                        i_jet=i_jet, prong_match=prong_match, label='combined')
+    
+    #    1: subleading
+    #    2: leading, swap (>10% of leading in subleading)
+    #    3: leading, mis-tag (<10% of leading in subleading)
+    #    4: ungroomed
+    #    5: outside
+    #    6: other (i.e. 50% is not in any of the above)
+    #    7: pp-truth passed grooming, but combined jet failed grooming
+    #    8: combined jet passed grooming, but pp-truth failed grooming
+    #    9: both pp-truth and combined jet failed SoftDrop
+  
+  #---------------------------------------------------------------
+  # Plot diagram
+  #---------------------------------------------------------------
+  def single_diagram(self, jet, jet_lunds, jet_pt=0., i_jet=-1, prong_match='', label=''):
+    
+    # Draw leading branch
+    linewidth=3.
+    x = [0, 1]
+    y = [1, 1]
+    plt.plot(x, y, sns.xkcd_rgb['denim blue'], linewidth=linewidth+2)
+    
+    # Loop through primary Lund plane
+    delta = 0.7/len(jet_lunds)
+    found_split = False
+    for i, split in enumerate(jet_lunds):
+      pt = split.pair().pt()
+      z = split.z()
+      dr = split.Delta()
+            
+      # Draw softer splitting
+      length = pt*z / jet_pt
+      x = [delta*(i+1), delta*(i+1) + length*np.cos(dr)]
+      y = [1, 1 + length*np.sin(dr)]
+      plt.plot(x, y, sns.xkcd_rgb['denim blue'], linewidth=linewidth)
+      
+      # Draw fraction of splitting from background
+      prong = split.softer()
+      prong_pt = prong.pt()
+      matched_pt = 0.
+      for p in prong.constituents():
+        if p.user_index() >= 0:
+          matched_pt += p.pt()
+      
+      length *= 1 - matched_pt/prong_pt
+      x = [delta*(i+1), delta*(i+1) + length*np.cos(dr)]
+      y = [1, 1 + length*np.sin(dr)]
+      if length > 1e-2:
+        plt.plot(x, y, sns.xkcd_rgb['pale red'], linewidth=linewidth)
           
+      # Identify first splitting passing SD condition
+      if not found_split:
+        if z > 0.1:
+          found_split = True
+          x_split = [x[0], x[0]]
+          y_split = [y[0], y[0]]
+      
+    if found_split:
+      plt.plot(x_split, y_split, sns.xkcd_rgb['medium green'], marker='o', markersize=12)
+      
+    axes = plt.gca()
+    axes.set_ylim([0.92, 1.08])
+    plt.savefig(os.path.join(self.output_dir, 'diagram_ev{}_jet{}_{}{}.pdf'.format(self.event_number, i_jet, label, prong_match)))
+
+    plt.close('all')
+    
   #---------------------------------------------------------------
   # Do prong-matching
   #---------------------------------------------------------------
