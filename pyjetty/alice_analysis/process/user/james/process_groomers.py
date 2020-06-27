@@ -168,12 +168,12 @@ class ProcessGroomers(process_base.ProcessBase):
           self.grooming_settings.append(setting)
           
     # Set reclustering algorithm
-    recluster_alg = config['reclustering_algorithm']
-    if recluster_alg == 'CA':
+    self.recluster_alg = config['reclustering_algorithm']
+    if self.recluster_alg == 'CA':
       self.reclustering_algorithm = fj.cambridge_algorithm
-    elif recluster_alg == 'KT':
+    elif self.recluster_alg == 'KT':
       self.reclustering_algorithm = fj.kt_algorithm
-    elif recluster_alg == 'AKT':
+    elif self.recluster_alg == 'AKT':
       self.reclustering_algorithm = fj.antikt_algorithm
 
   #---------------------------------------------------------------
@@ -704,6 +704,9 @@ class ProcessGroomers(process_base.ProcessBase):
   #---------------------------------------------------------------
   def diagram(self, jet_truth, jet_combined, prong_match, i_jet, grooming_setting, jetR):
   
+    if jet_truth.pt() < 50:
+      return
+  
     # Groom truth jet, and get list of all Lund splits
     gshop_truth = fjcontrib.GroomerShop(jet_truth, jetR, self.reclustering_algorithm)
     jet_truth_groomed_lund = self.utils.groom(gshop_truth, grooming_setting, jetR)
@@ -741,11 +744,13 @@ class ProcessGroomers(process_base.ProcessBase):
   #---------------------------------------------------------------
   def single_diagram(self, jet, jet_lunds, jet_pt=0., i_jet=-1, prong_match='', label=''):
     
-    # Draw leading branch
+    # Plot settings
     linewidth=3.
-    x = [0, 1]
-    y = [1, 1]
-    plt.plot(x, y, sns.xkcd_rgb['denim blue'], linewidth=linewidth+2)
+    color_pythia = sns.xkcd_rgb['denim blue']
+    color_thermal = sns.xkcd_rgb['pale red']
+    color_primary = sns.xkcd_rgb['grey']
+    ymin = 0.98
+    ymax = 1.08
     
     # Loop through primary Lund plane
     delta = 0.7/len(jet_lunds)
@@ -759,7 +764,7 @@ class ProcessGroomers(process_base.ProcessBase):
       length = pt*z / jet_pt
       x = [delta*(i+1), delta*(i+1) + length*np.cos(dr)]
       y = [1, 1 + length*np.sin(dr)]
-      plt.plot(x, y, sns.xkcd_rgb['denim blue'], linewidth=linewidth)
+      plt.plot(x, y, color_pythia, linewidth=linewidth, label=('PYTHIA' if (i==0 and label != 'truth') else '_'))
       
       # Draw fraction of splitting from background
       prong = split.softer()
@@ -772,8 +777,8 @@ class ProcessGroomers(process_base.ProcessBase):
       length *= 1 - matched_pt/prong_pt
       x = [delta*(i+1), delta*(i+1) + length*np.cos(dr)]
       y = [1, 1 + length*np.sin(dr)]
-      if length > 1e-2:
-        plt.plot(x, y, sns.xkcd_rgb['pale red'], linewidth=linewidth)
+      if length > 1e-3:
+        plt.plot(x, y, color_thermal, linewidth=linewidth, label=('Background' if i==0 else '_'))
           
       # Identify first splitting passing SD condition
       if not found_split:
@@ -781,12 +786,34 @@ class ProcessGroomers(process_base.ProcessBase):
           found_split = True
           x_split = [x[0], x[0]]
           y_split = [y[0], y[0]]
+    
+    # Draw leading branch
+    x = [0, 1]
+    y = [1, 1]
+    plt.plot(x, y, color_primary, linewidth=linewidth+1.2)
       
     if found_split:
-      plt.plot(x_split, y_split, sns.xkcd_rgb['medium green'], marker='o', markersize=12)
+      if prong_match in [1, 2, '']:
+        plt.plot(x_split, y_split, color_pythia, marker='o', markersize=12)
+      elif prong_match in [3,4,5,6]:
+        plt.plot(x_split, y_split, color_thermal, marker='o', markersize=12)
       
+    # Draw main legend
+    pt_label = r'$p_{{\mathrm{{T,jet}}}} = {:.0f} \;\mathrm{{GeV}}/c$'.format(jet_pt)
+    reclustering_label = '{} reclustering'.format(self.recluster_alg)
+    grooming_label = r'Soft Drop $z_{\mathrm{cut}}=0.1$'
+    if label == 'truth':
+      title = '{} \n{} \n{} \n{}'.format(r'$\bf{{pp}}$', grooming_label,
+                                         reclustering_label, pt_label)
+    else:
+      title = '{} \n{} \n{} \n{}'.format(r'$\bf{{pp + thermal}}$', grooming_label,
+                                       reclustering_label, pt_label)
+    first_legend = plt.legend(title = title, title_fontsize=15,
+                                 loc='upper right', fontsize=12)
+    ax = plt.gca().add_artist(first_legend)
+
     axes = plt.gca()
-    axes.set_ylim([0.92, 1.08])
+    axes.set_ylim([ymin, ymax])
     plt.savefig(os.path.join(self.output_dir, 'diagram_ev{}_jet{}_{}{}.pdf'.format(self.event_number, i_jet, label, prong_match)))
 
     plt.close('all')
