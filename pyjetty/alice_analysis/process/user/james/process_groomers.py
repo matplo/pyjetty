@@ -704,7 +704,7 @@ class ProcessGroomers(process_base.ProcessBase):
   #---------------------------------------------------------------
   def diagram(self, jet_truth, jet_combined, prong_match, i_jet, grooming_setting, jetR):
   
-    if jet_truth.pt() < 50:
+    if jet_truth.pt() < 40 or jet_truth.pt() > 100:
       return
   
     # Groom truth jet, and get list of all Lund splits

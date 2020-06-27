@@ -10,7 +10,8 @@
 # The process step is intended  to loop over all observables simultaneously
 # The analysis step is intended to run for a single observable block
 
-process_observables: ['theta_g', 'zg', 'kappa', 'tf', 'subjet_z']
+#process_observables: ['theta_g', 'zg', 'kappa', 'tf', 'subjet_z']
+process_observables: ['theta_g', 'zg', 'kappa', 'tf']
 jetR: [0.4]
 eta_max: 1.4
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
@@ -23,6 +24,7 @@ fast_simulation: False
 use_ev_id_ext: False
 min_theta_list: [0., 0.25, 0.5]
 reclustering_algorithm: 'CA'
+plot_diagram: False
 
 #angantyr:
 #  min_background_multiplicity: 2689 # for |eta|<0.9, 0-10% is dN/deta > 1494
@@ -393,7 +395,7 @@ tf:
 ###############################################################################
 # Analysis parameters
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/120537'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/groomers/109224_109385_109546'
 
 main_data: ''
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/120537/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/groomers_thermal/109224_109385_109546/AnalysisResultsFinal.root'

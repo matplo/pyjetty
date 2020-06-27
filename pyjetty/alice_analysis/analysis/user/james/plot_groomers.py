@@ -64,6 +64,16 @@ class PlotGroomers(common_base.CommonBase):
     
     self.min_theta_list = config['min_theta_list']
     
+    # Set reclustering algorithm
+    if 'reclustering_algorithm' in config:
+      recluster_alg = config['reclustering_algorithm']
+      if recluster_alg == 'CA':
+        self.reclustering_algorithm = 'C-A'
+      elif recluster_alg == 'KT':
+        self.reclustering_algorithm = '#it{k}_{T}'
+      elif recluster_alg == 'AKT':
+        self.reclustering_algorithm = 'anti-#it{k}_{T}'
+    
     #self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'ungroomed', 'outside', 'other', 'combined fail', 'truth fail', 'both fail']
     self.legend_list = ['subleading', 'leading (swap)', 'leading (mis-tag)', 'groomed away', 'outside jet', 'other']
 
@@ -103,8 +113,8 @@ class PlotGroomers(common_base.CommonBase):
       self.xmin = 0.
       self.xmax = 0.5
       self.axis = 1
-      #self.rebin_value = 2
-      self.rebin_value = 5     # For ratio plots
+      self.rebin_value = 2
+      #self.rebin_value = 5     # For ratio plots
     elif observable == 'kappa':
       self.xmin = 0.
       self.xmax = 0.5
@@ -768,6 +778,9 @@ class PlotGroomers(common_base.CommonBase):
     
     if min_theta > 1e-3:
       text = '#Delta#it{{R}} > {}'.format(min_theta*jetR)
+      text_latex.DrawLatex(x, y-0.38, text)
+    else:
+      text = '{} reclustering'.format(self.reclustering_algorithm)
       text_latex.DrawLatex(x, y-0.38, text)
     
     # Build ratio Embedded/Truth
