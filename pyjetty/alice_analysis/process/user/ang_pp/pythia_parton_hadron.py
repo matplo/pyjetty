@@ -6,10 +6,14 @@ import fastjet as fj
 import fjcontrib
 import fjext
 
+import ROOT
+
 import tqdm
+import yaml
 import copy
 import argparse
 import os
+import array
 import numpy as np
 
 from pyjetty.mputils import *
@@ -19,227 +23,501 @@ import pythia8
 import pythiafjext
 import pythiaext
 
+from pyjetty.alice_analysis.process.base import process_base
 from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa
 
-def main():
+# Prevent ROOT from stealing focus when plotting
+ROOT.gROOT.SetBatch(True)
+
+################################################################
+class pythia_parton_hadron(process_base.ProcessBase):
+
+    #---------------------------------------------------------------
+    # Constructor
+    #---------------------------------------------------------------
+    def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, args=None, **kwargs):
+
+        super(pythia_parton_hadron, self).__init__(
+            input_file, config_file, output_dir, debug_level, **kwargs)
+
+        self.initialize_config(args)
+
+    #---------------------------------------------------------------
+    # Main processing function
+    #---------------------------------------------------------------
+    def pythia_parton_hadron(self, args):
+
+        # Create ROOT TTree file for storing raw PYTHIA particle information
+        outf_path = os.path.join(self.output_dir, args.tree_output_fname)
+        outf = ROOT.TFile(outf_path, 'recreate')
+        outf.cd()
+
+        # Initialize response histograms
+        self.initialize_hist()
+
+        for jetR in self.jetR_list:
+
+            pinfo('user seed for pythia', self.user_seed)
+            # mycfg = ['PhaseSpace:pThatMin = 100']
+            mycfg = ['Random:setSeed=on', 'Random:seed={}'.format(self.user_seed)]
+            mycfg.append('HadronLevel:all=off')
+
+            pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
+
+            # print the banner first
+            fj.ClusterSequence.print_banner()
+            print()
+
+            # Initialize tree writer
+            name = 'particle_unscaled_R%s' % str(jetR).replace('.', '')
+            t = ROOT.TTree(name, name)
+            tw = RTreeWriter(tree=t)
+            
+            # set up our jet definition and a jet selector
+            jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+            print(jet_def)
+
+            pwarning('max eta for particles after hadronization set to', self.max_eta_hadron)
+            parts_selector_h = fj.SelectorAbsEtaMax(self.max_eta_hadron)
+            jet_selector = fj.SelectorPtMin(5.0) & \
+                           fj.SelectorAbsEtaMax(self.max_eta_hadron - jetR)
+
+            #max_eta_parton = self.max_eta_hadron + 2. * jetR
+            #pwarning('max eta for partons set to', max_eta_parton)
+            #parts_selector_p = fj.SelectorAbsEtaMax(max_eta_parton)
+
+            # SoftDrop settings
+            if self.use_SD:
+                args.output = args.output.replace('.root', '_sdbeta{}.root'.format(args.sd_beta))
+            sd = fjcontrib.SoftDrop(args.sd_beta, 0.1, jetR) if self.use_SD else None
+
+            count1 = 0  # Number of jets rejected from ch-h matching
+            count2 = 0  # Number of jets rejected from h-p matching
+
+            # event loop
+            for iev in range(args.nev):  #tqdm.tqdm(range(args.nev)):
+                if not pythia.next():
+                    continue
+
+                parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
+                #parts_pythia_p_selected = parts_selector_p(parts_pythia_p)
+
+                hstatus = pythia.forceHadronLevel()
+                if not hstatus:
+                    #pwarning('forceHadronLevel false event', iev)
+                    continue
+                # parts_pythia_h = pythiafjext.vectorize_select(
+                #     pythia, [pythiafjext.kHadron, pythiafjext.kCharged])
+                parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
+                #parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
+
+                parts_pythia_hch = pythiafjext.vectorize_select(
+                    pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, True)
+                #parts_pythia_hch_selected = parts_selector_h(parts_pythia_hch)
+
+                # pinfo('debug partons...')
+                # for p in parts_pythia_p_selected:
+                #   pyp = pythiafjext.getPythia8Particle(p)
+                #   print(pyp.name())
+                # pinfo('debug hadrons...')
+                # for p in parts_pythia_h_selected:
+                #   pyp = pythiafjext.getPythia8Particle(p)
+                #   print(pyp.name())
+                # pinfo('debug ch. hadrons...')
+                # for p in parts_pythia_hch_selected:
+                #   pyp = pythiafjext.getPythia8Particle(p)
+                #   print(pyp.name())
+
+                # parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
+                jets_p = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_p)))
+                jets_h = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_h)))
+                jets_ch = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_hch)))
+
+                if self.level:  # Only save info at one level w/o matching
+                    jets = locals()["jets_%s" % self.level]
+                    for jet in jets:
+                        self.fill_unmatched_jet_tree(tw, jetR, iev, jet)
+                    continue
+
+                for i,jchh in enumerate(jets_ch):
+
+                    # match hadron (full) jet
+                    drhh_list = []
+                    for j, jh in enumerate(jets_h):
+                        drhh = jchh.delta_R(jh)
+                        if drhh < jetR / 2.:
+                            drhh_list.append((j,jh))
+                    if len(drhh_list) != 1:
+                        count1 += 1
+                    else:  # Require unique match
+                        j, jh = drhh_list[0]
+
+                        # match parton level jet
+                        dr_list = []
+                        for k, jp in enumerate(jets_p):
+                            dr = jh.delta_R(jp)
+                            if dr < jetR / 2.:
+                                dr_list.append((k, jp))
+                        if len(dr_list) != 1:
+                            count2 += 1
+                        else:
+                            k, jp = dr_list[0]
+
+                            pwarning('event', iev)
+                            pinfo('matched jets: ch.h:', jchh.pt(), 'h:', jh.pt(), 'p:', jp.pt(), 'dr:', dr)
+
+                            self.fill_matched_jet_tree(tw, jetR, iev, jp, jh, jchh, sd)
+                            self.fill_jet_histograms(jetR, jp, jh, jchh, sd)
+
+                    #print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(
+                    #    sd_info.z, sd_info.dR, sd_info.mu))
+
+            tw.fill_tree()
+            pythia.stat()
+
+            # Scale all jet histograms by the appropriate factor from generated cross section
+            # and the number of accepted events
+            if not self.no_scale:
+                print("Weight tree by correct cross section...")
+                scale_f = pythia.info.sigmaGen() / pythia.info.nAccepted()
+                self.scale_jet_histograms(jetR, scale_f)
+
+            print("%i jets cut at first match criteria; %i jets cut at second match criteria.\n\n" % 
+                  (count1, count2))
+
+        outf.Write()
+        outf.Close()
+
+
+    #---------------------------------------------------------------
+    # Initialize config file into class members
+    #---------------------------------------------------------------
+    def initialize_config(self, args):
+    
+        # Call base class initialization
+        process_base.ProcessBase.initialize_config(self)
+
+        # Read config file
+        with open(self.config_file, 'r') as stream:
+            config = yaml.safe_load(stream)
+
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
+        # Defaults to None if not in use
+        self.level = args.no_match_level
+
+        self.jetR_list = config["jetR"]
+        self.beta_list = config["betas"]
+
+        # SoftDrop parameters
+        self.use_SD = False   # Change this to use SD
+        self.sd_beta = config["sd_beta"]
+        self.sd_zcut = config["sd_zcut"]
+
+        self.user_seed = args.user_seed
+        self.nev = args.nev
+
+        self.n_pt_bins = config["n_pt_bins"]
+        self.pt_limits = config["pt_limits"]
+        self.pTbins = np.arange(self.pt_limits[0], self.pt_limits[1] + 1, 
+                                (self.pt_limits[1] - self.pt_limits[0]) / self.n_pt_bins)
+        self.n_lambda_bins = config['n_lambda_bins']
+        self.lambda_limits = config['lambda_limits']
+
+        # hadron level - ALICE tracking restriction
+        self.max_eta_hadron = 0.9
+
+        # Whether or not to rescale final jet histograms based on sigma/N
+        self.no_scale = args.no_scale
+
+
+    #---------------------------------------------------------------
+    # Fill jet tree with (unscaled/raw) matched parton/hadron tracks
+    #---------------------------------------------------------------
+    def fill_matched_jet_tree(self, tw, jetR, iev, jp, jh, jchh, sd=None):
+
+        tw.fill_branch('iev', iev)
+        tw.fill_branch('ch', jchh)
+        tw.fill_branch('h', jh)
+        tw.fill_branch('p', jp)
+
+        kappa = 1
+        for beta in self.beta_list:
+            label = str(beta).replace('.', '')
+            tw.fill_branch("l_ch_%s" % label,
+                           lambda_beta_kappa(jchh, jetR, beta, kappa))
+            tw.fill_branch("l_h_%s" % label,
+                           lambda_beta_kappa(jh, jetR, beta, kappa))
+            tw.fill_branch("l_p_%s" % label,
+                           lambda_beta_kappa(jp, jetR, beta, kappa))
+
+        # Save SoftDrop variables as well if desired
+        if self.use_SD:
+
+            if sd == None:
+                print("ERROR: NoneType passed as SoftDrop groomer.")
+                exit(1)
+
+            jchh_sd = sd.result(jchh)
+            jchh_sd_info = fjcontrib.get_SD_jet_info(jchh_sd)
+            jh_sd = sd.result(jh)
+            jh_sd_info = fjcontrib.get_SD_jet_info(jh_sd)
+            jp_sd = sd.result(jp)
+            jp_sd_info = fjcontrib.get_SD_jet_info(jp_sd)
+
+            tw.fill_branch('p_zg', jp_sd_info.z)
+            tw.fill_branch('p_Rg', jp_sd_info.dR)
+            tw.fill_branch('p_thg', jp_sd_info.dR/jet_R0)
+            tw.fill_branch('p_mug', jp_sd_info.mu)
+
+            tw.fill_branch('h_zg', jh_sd_info.z)
+            tw.fill_branch('h_Rg', jh_sd_info.dR)
+            tw.fill_branch('h_thg', jh_sd_info.dR/jet_R0)
+            tw.fill_branch('h_mug', jh_sd_info.mu)
+
+            tw.fill_branch('ch_zg', jchh_sd_info.z)
+            tw.fill_branch('ch_Rg', jchh_sd_info.dR)
+            tw.fill_branch('ch_thg', jchh_sd_info.dR/jet_R0)
+            tw.fill_branch('ch_mug', jchh_sd_info.mu)
+
+
+    #---------------------------------------------------------------
+    # Fill jet tree with (unscaled/raw) unmatched parton/hadron tracks
+    #---------------------------------------------------------------
+    def fill_unmatched_jet_tree(self, tw, jetR, iev, jet):
+
+        tw.fill_branch('iev', iev)
+        tw.fill_branch(self.level, jet)
+
+        kappa = 1
+        for beta in betas:
+            label = str(beta).replace('.', '')
+            tw.fill_branch('l_%s_%s' % (self.level, label),
+                           lambda_beta_kappa(jet, jet_R0, beta, kappa))
+
+ 
+    #---------------------------------------------------------------
+    # Initialize histograms
+    #---------------------------------------------------------------
+    def initialize_hist(self):
+
+        self.hNevents = ROOT.TH1F('hNevents', 'hNevents', 2, -0.5, 1.5)
+
+        for jetR in self.jetR_list:
+
+            # Store a list of all the histograms just so that we can rescale them later
+            hist_list_name = "hist_list_R%s" % str(jetR).replace('.', '')
+            setattr(self, hist_list_name, [])
+
+            R_label = str(jetR).replace('.', '') + 'Scaled'
+
+            if self.level in [None, 'ch']:
+                name = 'hJetPt_ch_R%s' % R_label
+                h = ROOT.TH1F(name, name+';p_{T}^{jet, ch};#frac{dN}{dp_{T}^{jet, ch};', 300, 0, 300)
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+            if self.level in [None, 'h']:
+                name = 'hJetPt_h_R%s' % R_label
+                h = ROOT.TH1F(name, name+';p_{T}^{jet, h};#frac{dN}{dp_{T}^{jet, h};', 300, 0, 300)
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+            if self.level in [None, 'p']:
+                name = 'hJetPt_p_R%s' % R_label
+                h = ROOT.TH1F(name, name+';p_{T}^{jet, parton};#frac{dN}{dp_{T}^{jet, parton};',
+                              300, 0, 300)
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+            if self.level == None:
+                name = 'hJetPtRes_R%s' % R_label
+                h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+                h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
+                h.GetYaxis().SetTitle(
+                    '#frac{p_{T}^{jet, parton}-p_{T}^{jet, ch}}{p_{T}^{jet, parton}}')
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+                name = 'hResponse_JetPt_R%s' % R_label
+                h = ROOT.TH2F(name, name, 200, 0, 200, 200, 0, 200)
+                h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
+                h.GetYaxis().SetTitle('p_{T}^{jet, ch}')
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+            for beta in self.beta_list:
+
+                label = ("R%s_%sScaled" % (str(jetR), str(beta))).replace('.', '')
+
+                if self.level in [None, 'ch']:
+                    name = 'hAng_JetPt_ch_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('p_{T}^{jet, ch}')
+                    h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{#beta=%s}^{ch}}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                if self.level in [None, 'h']:
+                    name = 'hAng_JetPt_h_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('p_{T}^{jet, h}')
+                    h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{#beta=%s}^{h}}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                if self.level in [None, 'p']:
+                    name = 'hAng_JetPt_p_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
+                    h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{#beta=%s}^{parton}}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                if self.level == None:
+                    name = 'hResponse_ang_p_%s' % label
+                    h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
+                    h.GetXaxis().SetTitle('#lambda_{#beta=%s}^{parton}' % beta)
+                    h.GetYaxis().SetTitle('#lambda_{#beta=%s}^{ch}' % beta)
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = "hAngResidual_JetPt_%s" % label
+                    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+                    h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
+                    h.GetYaxis().SetTitle('#frac{#lambda_{#beta}^{jet, parton}-#lambda_{#beta}' + \
+                                          '^{jet, ch}}{#lambda_{#beta}^{jet, parton}}')
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    # Create THn of response
+                    dim = 4
+                    title = ['p_{T}^{jet, parton}', 'p_{T}^{jet, ch}',
+                             '#lambda_{#beta}^{parton}', '#lambda_{#beta}^{ch}']
+                    nbins = [10, 20, 100, 100]
+                    min_li = [0.,   0.,   0.,  0.]
+                    max_li = [100., 200., 1.0, 1.0]
+
+                    name = 'hResponse_JetPt_ang_%s' % label
+                    nbins = (nbins)
+                    xmin = (min_li)
+                    xmax = (max_li)
+                    nbins_array = array.array('i', nbins)
+                    xmin_array = array.array('d', xmin)
+                    xmax_array = array.array('d', xmax)
+                    h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+                    for i in range(0, dim):
+                        h.GetAxis(i).SetTitle(title[i])
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+
+    #---------------------------------------------------------------
+    # Fill jet histograms
+    #---------------------------------------------------------------
+    def fill_jet_histograms(self, jetR, jp, jh, jch, sd):
+
+        R_label = str(jetR).replace('.', '') + 'Scaled'
+
+        # Fill jet histograms which are not dependant on angualrity
+        if self.level in [None, 'ch']:
+            getattr(self, 'hJetPt_ch_R%s' % R_label).Fill(jch.pt())
+        if self.level in [None, 'h']:
+            getattr(self, 'hJetPt_h_R%s' % R_label).Fill(jh.pt())
+        if self.level in [None, 'ch']:
+            getattr(self, 'hJetPt_p_R%s' % R_label).Fill(jp.pt())
+
+        if self.level == None:
+            if jp.pt():  # prevent divide by 0
+                getattr(self, 'hJetPtRes_R%s' % R_label).Fill(jp.pt(), (jp.pt() - jch.pt()) / jp.pt())
+            getattr(self, 'hResponse_JetPt_R%s' % R_label).Fill(jp.pt(), jch.pt())
+
+        # Fill angularity histograms and response matrices
+        for beta in self.beta_list:
+            self.fill_RMs(jetR, beta, jp, jh, jch, sd)
+
+
+    #---------------------------------------------------------------
+    # Fill jet histograms
+    #---------------------------------------------------------------
+    def fill_RMs(self, jetR, beta, jp, jh, jch, sd):
+
+        # Calculate angularities
+        kappa = 1
+        lp = lambda_beta_kappa(jp, jetR, beta, kappa)
+        lh = lambda_beta_kappa(jh, jetR, beta, kappa)
+        lch = lambda_beta_kappa(jch, jetR, beta, kappa)
+
+        label = ("R%s_%sScaled" % (str(jetR), str(beta))).replace('.', '')
+
+        if self.level in [None, 'ch']:
+            getattr(self, 'hAng_JetPt_ch_%s' % label).Fill(jch.pt(), lch)
+
+        if self.level in [None, 'h']:
+            getattr(self, 'hAng_JetPt_h_%s' % label).Fill(jh.pt(), lh)
+
+        if self.level in [None, 'p']:
+            getattr(self, 'hAng_JetPt_p_%s' % label).Fill(jp.pt(), lp)
+
+        if self.level == None:
+            getattr(self, 'hResponse_ang_p_%s' % label).Fill(lp, lch)
+            if lp:  # prevent divide by 0
+                getattr(self, "hAngResidual_JetPt_%s" % label).Fill(jp.pt(), (lp - lch) / lp)
+
+            x = ([jp.pt(), jch.pt(), lp, lch])
+            x_array = array.array('d', x)
+            getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(x_array)
+
+
+    #---------------------------------------------------------------
+    # Scale all jet histograms by sigma/N
+    #---------------------------------------------------------------
+    def scale_jet_histograms(self, jetR, scale_f):
+        
+        hist_list_name = "hist_list_R%s" % str(jetR).replace('.', '')
+        for h in getattr(self, hist_list_name):
+            h.Sumw2()  #TODO check if
+            h.Scale(scale_f)
+
+################################################################
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly',
                                      prog=os.path.basename(__file__))
     pyconf.add_standard_pythia_args(parser)
     # Could use --py-seed
     parser.add_argument('--user-seed', help='PYTHIA starting seed', default=1111, type=int)
-    parser.add_argument('--output', default="output.root", type=str)
-    parser.add_argument('--sd_beta', help='SoftDrop beta', default=None, type=float)
-    parser.add_argument('--jetR', help='Jet radius/resolution parameter', default=0.4, type=float)
+    parser.add_argument('-o', '--output-dir', action='store', type=str, default='./', 
+                        help='Output directory for generated ROOT file(s)')
+    parser.add_argument('--tree-output-fname', default="tree_output.root", type=str,
+                        help="Filename for the (unscaled) generated particle ROOT TTree")
     parser.add_argument('--no-match-level', help="Save simulation for only one level with " + \
                         "no matching. Options: 'p', 'h', 'ch'", default=None, type=str)
-    parser.add_argument('--p-ch-MPI', help="Match between parton level (no MPI) and charged " + \
-                        "hadron level (with MPI) for ALICE response characterization",
+    parser.add_argument('--no-scale', help="Turn off rescaling all histograms by cross section / N",
                         action='store_true', default=False)
+    parser.add_argument('-c', '--config_file', action='store', type=str, default='config/angularity.yaml',
+                        help="Path of config file for observable configurations")
     args = parser.parse_args()
 
-    level = args.no_match_level
-    if args.p_ch_MPI:
-        if level:
-            print("ERROR: --no-match-level and --p-ch-MPI cannot be set simultaneously.")
-            exit(1)
-    if level not in [None, 'p', 'h', 'ch']:
+    if args.no_match_level not in [None, 'p', 'h', 'ch']:
         print("ERROR: Unrecognized type %s. Please use 'p', 'h', or 'ch'" % args.type_only)
         exit(1)
 
-    # Angularity beta values
-    betas = [1, 1.5, 2, 3]
+    # If invalid configFile is given, exit
+    if not os.path.exists(args.config_file):
+        print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
+        sys.exit(0)
 
+    # Use PYTHIA seed for event generation
     if args.user_seed < 0:
         args.user_seed = 1111
-    pinfo('user seed for pythia', args.user_seed)
-    # mycfg = ['PhaseSpace:pThatMin = 100']
-    mycfg = ['Random:setSeed=on', 'Random:seed={}'.format(args.user_seed)]
-    mycfg.append('HadronLevel:all=off')
 
     # Have at least 1 event
     if args.nev < 1:
         args.nev = 1
 
-    if args.p_ch_MPI:
-        d = vars(args)
-        d['py_noMPI'] = True
-        pythia_noMPI = pyconf.create_and_init_pythia_from_args(args, mycfg)
-        args_MPI = copy.deepcopy(args)
-        d = vars(args_MPI)
-        d['py_noMPI'] = False
-        pythia = pyconf.create_and_init_pythia_from_args(args_MPI, mycfg)
-    else:
-        pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
-
-    # print the banner first
-    fj.ClusterSequence.print_banner()
-    print()
-    # set up our jet definition and a jet selector
-    jet_R0 = args.jetR
-    jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-    print(jet_def)
-
-    # hadron level - ALICE
-    max_eta_hadron = 0.9
-    pwarning('max eta for particles after hadronization set to', max_eta_hadron)
-    parts_selector_h = fj.SelectorAbsEtaMax(max_eta_hadron)
-    jet_selector = fj.SelectorPtMin(5.0) #& fj.SelectorAbsEtaMax(max_eta_hadron - jet_R0)
-
-    max_eta_parton = max_eta_hadron + 2. * jet_R0
-    pwarning('max eta for partons set to', max_eta_parton)
-    parts_selector_p = fj.SelectorAbsEtaMax(max_eta_parton)
-
-    if not args.sd_beta is None:
-        args.output = args.output.replace('.root', '_sdbeta{}.root'.format(args.sd_beta))
-    outf = ROOT.TFile(args.output, 'recreate')
-    outf.cd()
-    t = ROOT.TTree('t', 't')
-    tw = RTreeWriter(tree=t)
-
-    count1 = 0
-    count2 = 0
-
-    # event loop
-    for iev in range(args.nev):  #tqdm.tqdm(range(args.nev)):
-        if not pythia.next():
-            if args.p_ch_MPI:
-                pythia_noMPI.next()
-            continue
-        if args.p_ch_MPI and not pythia_noMPI.next():
-            continue
-
-        parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
-        parts_pythia_p_selected = parts_selector_p(parts_pythia_p)
-
-        if args.p_ch_MPI:
-            parts_pythia_p = pythiafjext.vectorize_select(pythia_noMPI, [pythiafjext.kFinal], 0, True)
-            parts_pythia_p_selected = parts_selector_p(parts_pythia_p)
-
-        hstatus = pythia.forceHadronLevel()
-        if not hstatus:
-            #pwarning('forceHadronLevel false event', iev)
-            continue
-        # parts_pythia_h = pythiafjext.vectorize_select(
-        #     pythia, [pythiafjext.kHadron, pythiafjext.kCharged])
-        parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
-        parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
-
-        parts_pythia_hch = pythiafjext.vectorize_select(
-            pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, True)
-        parts_pythia_hch_selected = parts_selector_h(parts_pythia_hch)
-
-        # pinfo('debug partons...')
-        # for p in parts_pythia_p_selected:
-        #   pyp = pythiafjext.getPythia8Particle(p)
-        #   print(pyp.name())
-        # pinfo('debug hadrons...')
-        # for p in parts_pythia_h_selected:
-        #   pyp = pythiafjext.getPythia8Particle(p)
-        #   print(pyp.name())
-        # pinfo('debug ch. hadrons...')
-        # for p in parts_pythia_hch_selected:
-        #   pyp = pythiafjext.getPythia8Particle(p)
-        #   print(pyp.name())
-
-        # parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
-        jets_p = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_p)))
-        jets_h = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_h)))
-        jets_ch = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_hch)))
-
-        if level:  # Only save info at one level w/o matching
-            jets = locals()["jets_%s" % level]
-            for jet in jets:
-                tw.fill_branch('iev', iev)
-                tw.fill_branch(level, jet)
-                kappa = 1
-                for beta in betas:
-                    label = str(beta).replace('.', '')
-                    tw.fill_branch('l_%s_%s' % (level, label),
-                                   lambda_beta_kappa(jet, jet_R0, beta, kappa))
-            continue
-
-        if not args.sd_beta is None:
-            sd = fjcontrib.SoftDrop(args.sd_beta, 0.1, jet_R0)
-
-        for i,jchh in enumerate(jets_ch):
-
-            # match hadron (full) jet
-            drhh_list = []
-            for j, jh in enumerate(jets_h):
-                drhh = jchh.delta_R(jh)
-                if drhh < jet_R0 / 2.:
-                    drhh_list.append((j,jh))
-            if len(drhh_list) != 1:
-                count1 += 1
-            else:  # Require unique match
-                j, jh = drhh_list[0]
-
-                # match parton level jet
-                dr_list = []
-                for k, jp in enumerate(jets_p):
-                    dr = jh.delta_R(jp)
-                    if dr < jet_R0 / 2.:
-                        dr_list.append((k, jp))
-                if len(dr_list) != 1:
-                    count2 += 1
-                else:
-                    k, jp = dr_list[0]
-
-                    # pwarning('event', iev)
-                    # pinfo('matched jets: ch.h:', jchh.pt(), 'h:', jh.pt(),
-                    #       'p:', jp.pt(), 'dr:', dr)
-
-                    tw.fill_branch('iev', iev)
-                    tw.fill_branch('ch', jchh)
-                    tw.fill_branch('h', jh)
-                    tw.fill_branch('p', jp)
-
-                    kappa = 1
-                    for beta in betas:
-                        label = str(beta).replace('.', '')
-                        tw.fill_branch("l_ch_%s" % label,
-                                       lambda_beta_kappa(jchh, jet_R0, beta, kappa))
-                        tw.fill_branch("l_h_%s" % label,
-                                       lambda_beta_kappa(jh, jet_R0, beta, kappa))
-                        tw.fill_branch("l_p_%s" % label,
-                                       lambda_beta_kappa(jp, jet_R0, beta, kappa))
-
-                    if not args.sd_beta is None:
-                        jchh_sd = sd.result(jchh)
-                        jchh_sd_info = fjcontrib.get_SD_jet_info(jchh_sd)
-                        jh_sd = sd.result(jh)
-                        jh_sd_info = fjcontrib.get_SD_jet_info(jh_sd)
-                        jp_sd = sd.result(jp)
-                        jp_sd_info = fjcontrib.get_SD_jet_info(jp_sd)
-
-                        tw.fill_branch('p_zg', jp_sd_info.z)
-                        tw.fill_branch('p_Rg', jp_sd_info.dR)
-                        tw.fill_branch('p_thg', jp_sd_info.dR/jet_R0)
-                        tw.fill_branch('p_mug', jp_sd_info.mu)
-
-                        tw.fill_branch('h_zg', jh_sd_info.z)
-                        tw.fill_branch('h_Rg', jh_sd_info.dR)
-                        tw.fill_branch('h_thg', jh_sd_info.dR/jet_R0)
-                        tw.fill_branch('h_mug', jh_sd_info.mu)
-
-                        tw.fill_branch('ch_zg', jchh_sd_info.z)
-                        tw.fill_branch('ch_Rg', jchh_sd_info.dR)
-                        tw.fill_branch('ch_thg', jchh_sd_info.dR/jet_R0)
-                        tw.fill_branch('ch_mug', jchh_sd_info.mu)
-
-            #print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(
-            #    sd_info.z, sd_info.dR, sd_info.mu))
-
-    tw.fill_tree()
-    if args.p_ch_MPI:
-        pythia_noMPI.stat()
-    pythia.stat()
-
-    print("%i jets cut at first match criteria; %i jets cut at second match criteria." % 
-          (count1, count2))
-
-    outf.Write()
-    outf.Close()
-
-if __name__ == '__main__':
-    main()
+    process = pythia_parton_hadron(config_file=args.config_file, output_dir=args.output_dir, args=args)
+    process.pythia_parton_hadron(args)
