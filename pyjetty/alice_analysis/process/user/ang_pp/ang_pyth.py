@@ -105,9 +105,6 @@ class process_ang_data(process_base.ProcessBase):
     self.lambda_limits = config["lambda_limits"]
     self.n_rap_bins = config["n_rap_bins"]
     self.rap_limits = config["rap_limits"]
-
-    # Configs for each jetR / beta
-    self.config_dict = config["ang"]
   
   #---------------------------------------------------------------
   # Initialize histograms
@@ -192,7 +189,9 @@ class process_ang_data(process_base.ProcessBase):
   #---------------------------------------------------------------
   def analyzeJets(self, jetR):
 
-    for index, ang_jets in tqdm(self.df_ang_jets.iterrows()):
+    # Use tqdm for following number of iterations when not running on slurm
+    #for index, ang_jets in tqdm(self.df_ang_jets.iterrows()):
+    for index, ang_jets in self.df_ang_jets.iterrows():
 
       if abs(ang_jets["ch_eta"]) > 0.9:
         continue
