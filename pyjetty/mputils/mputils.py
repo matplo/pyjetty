@@ -18,6 +18,11 @@ def logbins(xmin, xmax, nbins):
 	return arr
 
 
+def linbins(xmin, xmax, nbins):
+	lspace = np.linspace(xmin, xmax, nbins+1)
+	arr = array.array('f', lspace)
+	return arr
+
 class ColorS(object):
 	def str(*args):
 		_s = ' '.join([str(s) for s in args])
