@@ -79,6 +79,22 @@ class ProcessUtils(common_utils.CommonUtils):
         leading_particle = particle
       
     return leading_particle
+    
+  #---------------------------------------------------------------
+  # Return leading jet (or subjet)
+  #---------------------------------------------------------------
+  def leading_jet(self, jets):
+  
+    leading_jet = None
+    for jet in jets:
+    
+      if not leading_jet:
+        leading_jet = jet
+        
+      if jet.pt() > leading_jet.pt():
+        leading_jet = jet
+
+    return leading_jet
 
   #---------------------------------------------------------------
   # Perform grooming and return Lund declustering object

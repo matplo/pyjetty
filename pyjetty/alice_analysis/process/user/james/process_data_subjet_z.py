@@ -59,10 +59,18 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
     for jetR in self.jetR_list:
       for subjetR in self.obs_settings[self.observable]:
       
-        name = 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, subjetR)
+        # Inclusive subjets
+        name = 'h_{}_inclusive_JetPt_R{}_{}'.format(self.observable, jetR, subjetR)
         h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
         h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('z_{subjet}')
+        h.GetYaxis().SetTitle('z_{inclusive subjet}')
+        setattr(self, name, h)
+        
+        # Leading subjets
+        name = 'h_{}_leading_JetPt_R{}_{}'.format(self.observable, jetR, subjetR)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+        h.GetXaxis().SetTitle('p_{T,ch jet}')
+        h.GetYaxis().SetTitle('z_{leading subjet}')
         setattr(self, name, h)
       
   #---------------------------------------------------------------
@@ -71,12 +79,19 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
   def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
                           obs_label, jet_pt_ungroomed, suffix):
     
-    # For a given jet, find subjets of a given radius, and fill histograms
+    # For a given jet, find inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
+    
+    # Fill inclusive subjets
     for subjet in subjets:
       z = subjet.pt() / jet.pt()
-      getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, subjetR)).Fill(jet.pt(), z)
+      getattr(self, 'h_{}_inclusive_JetPt_R{}_{}'.format(self.observable, jetR, obs_setting)).Fill(jet.pt(), z)
+      
+    # Fill leading subjets
+    leading_subjet = self.utils.leading_jet(subjets)
+    z_leading = leading_subjet.pt() / jet.pt()
+    getattr(self, 'h_{}_leading_JetPt_R{}_{}'.format(self.observable, jetR, obs_setting)).Fill(jet.pt(), z_leading)
 
 ##################################################################
 if __name__ == '__main__':
