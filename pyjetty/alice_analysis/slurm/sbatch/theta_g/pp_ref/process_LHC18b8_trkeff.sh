@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /software/users/james/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/james/process_mc.py -c config/theta_g/pp_ref/james_pp_ref_trkeff.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+pipenv run python process/user/james/process_mc_theta_g.py -c config/theta_g/pp_ref/james_pp_ref_trkeff.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/james/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}/
