@@ -1,0 +1,165 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title PYTHIA8 inclusive #int^{r}_{0} p_{T} dp_{T} / p_{T}^{jet},, tx_size=0.03
+#title PYTHIA8 inclusive - fraction of jet p_{T} in [0, r], r #leq R tx_size=0.04
+#legend pos=ur
+#logx 1
+#y r (rad)
+sm21_inc.root 		:hERptR10_pint :colz: title=hERptR10
+#sm21_inc.root 		:hERptR10 :colz  : title=hERptR10
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title PYTHIA8 glue jets #int^{r}_{0} p_{T} dp_{T} / p_{T}^{jet},, tx_size=0.03
+#title PYTHIA8 glue jets - fraction of jet p_{T} in [0, r], r #leq R tx_size=0.04
+#legend pos=ur
+#logx 1
+#y r (rad)
+sm21_glue.root 		:hERptR10_pint :colz: title=hERptR10
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title PYTHIA8 quark jets #int^{r}_{0} p_{T} dp_{T} / p_{T}^{jet},, tx_size=0.03
+#title PYTHIA8 quark jets - fraction of jet p_{T} in [0, r], r #leq R tx_size=0.04
+#legend pos=ur
+#logx 1
+#y r (rad)
+sm21_quark.root 		:hERptR10_pint :colz: title=hERptR10
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 number of C/A splittings
+#legend pos=ul title=anti-k_{T} R=0.4
+#logx 1
+#force_legend 1
+#y #LT n #GT
+#x p_{T}^{jet} (GeV/c)
+sm21_inc.root 		:hR04nlundpt :colz over noleg: title=hR04nlundpt
+sm21_inc.root 		:hR04nlundpt_pfx : l hist +l1 +w5 +k2 : title=n_{splittings}
+sm21_inc.root 		:hR04nsd01pt_pfx : l hist +l1 +w5 +k6 : title=n_{SD} z_{cut}>0.1
+sm21_inc.root 		:hR04nsd02pt_pfx : l hist +l1 +w5 +k7 : title=n_{SD} z_{cut}>0.2
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 number of SD splittings
+#legend pos=ul title=anti-k_{T} R=0.4 SD z_{cut}>0.1
+#logx 1
+#force_legend 1
+#y #LT n_{SD} #GT
+#x p_{T}^{jet} (GeV/c)
+#sm21_inc.root 		:hR04nlundpt :colz over noleg: title=hR04nlundpt
+sm21_inc.root 		:hR04nsd01pt_pfx : l hist +l1 +w5 +k6 : title=inclusive jets
+sm21_glue.root 		:hR04nsd01pt_pfx : l hist +l1 +w5 +k1 : title=gluon jets
+sm21_quark.root 		:hR04nsd01pt_pfx : l hist +l1 +w5 +k2 : title=quark jets
+#sm21_inc.root 		:hR04nsd02pt_pfx : l hist +l1 +w5 +k7 : title=n_{SD} z_{cut}>0.2
+#sm21_charm.root 		:hR04nsd01pt_pfx : l hist +l1 +w5 +k7 : title=n_{SD} z_{cut}>0.1
+#sm21_beauty.root 		:hR04nsd01pt_pfx : l hist +l1 +w5 +k9 : title=n_{SD} z_{cut}>0.1
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 R=0.4 #LT R_{g} #GT for SD z_{cut} > 0.2
+#force_legend 1
+#legend 0.2,0.67,0.8,0.87
+#logx 1
+#y #LT R_{g} #GT
+#x p_{T}^{jet} (GeV/c)
+sm21_inc.root 		:hR04sd02Rg_n :colz noleg: title=hR04sd02Rg_n
+sm21_inc.root 		:hR04sd02Rg_n_pfx :l hist +l1 +k2 +w5: title=#LT R_{g} #GT iterative SD z_{cut}>0.2
+sm21_inc.root 		:hR04sd02Rg_pfx :l hist +l1 +k6 +w5: title=#LT R_{g} #GT SD z_{cut}>0.2
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 R=1.0 #LT R_{g} #GT for SD z_{cut} > 0.2
+#force_legend 1
+#legend 0.2,0.67,0.8,0.87
+#logx 1
+#y #LT R_{g} #GT
+#x p_{T}^{jet} (GeV/c)
+sm21_inc.root 		:hR10sd02Rg_n :colz noleg: title=hR10sd02Rg_n,,scale=1./1e5
+sm21_inc.root 		:hR10sd02Rg_n_pfx :l hist +l1 +k2 +w5: title=#LT R_{g} #GT iterative SD z_{cut}>0.2
+#sm21_glue.root 		:hR10sd02Rg_n_pfx :l hist -k +w5: title= - glue jets
+#sm21_quark.root 		:hR10sd02Rg_n_pfx :l hist -k +w5: title= - quark jets
+sm21_inc.root 		:hR10sd02Rg_pfx :l hist +l1 +k6 +w5: title=#LT R_{g} #GT SD z_{cut}>0.2
+
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 #LT R_{g} #GT for iterative SD z_{cut} > 0.2
+#force_legend 1
+#legend pos=ur
+#logx 1
+#y #LT R_{g} #GT
+#x p_{T}^{jet} (GeV/c)
+#maxy 0.5
+#miny 0
+#sm21_inc.root 		:hR10sd02Rg_n_pfx :l hist +k2 +w5: title=#LT R_{g} #GT iterative SD z_{cut}>0.2
+sm21_quark.root 	:hR10sd02Rg_n_pfx :l hist +w5 +k2: title= R=1.0 quark jets
+sm21_quark.root 	:hR04sd02Rg_n_pfx :l hist +w5 +k2: title= R=0.4 quark jets
+
+sm21_glue.root 		:hR10sd02Rg_n_pfx :l hist +w5 +k1: title= R=1.0 glue jets
+sm21_glue.root 		:hR04sd02Rg_n_pfx :l hist +w5 +k1: title= R=0.4 glue jets
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 #LT R_{g} #GT for SD z_{cut} > 0.2
+#force_legend 1
+#legend pos=ur
+#logx 1
+#y #LT R_{g} #GT
+#x p_{T}^{jet} (GeV/c)
+#maxy 1
+#miny 0
+#sm21_inc.root 		:hR10sd02Rg_pfx :l hist +k2 +w5: title=#LT R_{g} #GT iterative SD z_{cut}>0.2
+
+sm21_glue.root 		:hR10sd02Rg_pfx :l hist +w5: title= R=1.0 glue jets
+sm21_quark.root 	:hR10sd02Rg_pfx :l hist +w5: title= R=1.0 quark jets
+#sm21_quark.root 	:hR10sd02Rg_pfx :hist -k rect serror: title= R=1.0 quark jets
+
+sm21_glue.root 		:hR04sd02Rg_pfx :l hist +w5: title= R=0.4 glue jets
+sm21_quark.root 	:hR04sd02Rg_pfx :l hist +w5: title= R=0.4 quark jets
+#sm21_quark.root 	:hR04sd02Rg_pfx :hist -k rect serror: title= R=0.4 quark jets
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 #LT R_{g} #GT for SD z_{cut} > 0.2
+#force_legend 1
+#legend pos=ur
+#logx 1
+#y #LT R_{g} #GT
+#x p_{T}^{jet} (GeV/c)
+#maxy 1
+#miny 0
+#sm21_inc.root 		:hR10sd02Rg_pfx :l hist +k2 +w5: title=#LT R_{g} #GT iterative SD z_{cut}>0.2
+
+sm21_glue.root 		:hR10sd02Rg_pfx :l hist +w5: title= R=1.0 glue jets
+#sm21_quark.root 	:hR10sd02Rg_pfx :l hist +w5: title= R=1.0 quark jets
+sm21_charm.root 	:hR10sd02Rg_pfx :l hist +w5: title= R=1.0 charm jets
+sm21_beauty.root 	:hR10sd02Rg_pfx :l hist +w5: title= R=1.0 beauty jets
+#sm21_quark.root 	:hR10sd02Rg_pfx :hist -k rect serror: title= R=1.0 quark jets
+
+sm21_glue.root 		:hR04sd02Rg_pfx :l hist +w5: title= R=0.4 glue jets
+#sm21_quark.root 	:hR04sd02Rg_pfx :l hist +w5: title= R=0.4 quark jets
+sm21_charm.root 	:hR04sd02Rg_pfx :l hist +w5: title= R=1.0 charm jets
+sm21_beauty.root 	:hR04sd02Rg_pfx :l hist +w5: title= R=1.0 beauty jets
+#sm21_quark.root 	:hR04sd02Rg_pfx :hist -k rect serror: title= R=0.4 quark jets
+
