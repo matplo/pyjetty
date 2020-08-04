@@ -75,7 +75,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
         self.calculate_events(pythia)
         pythia.stat()
         print()
-
+        
         # PYTHIA instance with MPI on
         setattr(args, "py_noMPI", False)
         pythia_MPI = pyconf.create_and_init_pythia_from_args(args, mycfg)
@@ -242,7 +242,8 @@ class pythia_parton_hadron(process_base.ProcessBase):
     #---------------------------------------------------------------
     # Find jets, do matching between levels, and fill histograms & trees
     #---------------------------------------------------------------
-    def find_jets_fill_trees(self, parts_pythia_p, parts_pythia_h, parts_pythia_hch, iev, MPIon=False):
+    def find_jets_fill_trees(self, parts_pythia_p, parts_pythia_h, parts_pythia_hch,
+                             iev, MPIon=False):
 
         for jetR in self.jetR_list:
             jetR_str = str(jetR).replace('.', '')
@@ -344,17 +345,17 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
             tw.fill_branch('p_zg', jp_sd_info.z)
             tw.fill_branch('p_Rg', jp_sd_info.dR)
-            tw.fill_branch('p_thg', jp_sd_info.dR/jet_R0)
+            tw.fill_branch('p_thg', jp_sd_info.dR/jetR)
             tw.fill_branch('p_mug', jp_sd_info.mu)
 
             tw.fill_branch('h_zg', jh_sd_info.z)
             tw.fill_branch('h_Rg', jh_sd_info.dR)
-            tw.fill_branch('h_thg', jh_sd_info.dR/jet_R0)
+            tw.fill_branch('h_thg', jh_sd_info.dR/jetR)
             tw.fill_branch('h_mug', jh_sd_info.mu)
 
             tw.fill_branch('ch_zg', jchh_sd_info.z)
             tw.fill_branch('ch_Rg', jchh_sd_info.dR)
-            tw.fill_branch('ch_thg', jchh_sd_info.dR/jet_R0)
+            tw.fill_branch('ch_thg', jchh_sd_info.dR/jetR)
             tw.fill_branch('ch_mug', jchh_sd_info.mu)
 
 
