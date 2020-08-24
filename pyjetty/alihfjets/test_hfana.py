@@ -10,6 +10,8 @@ import fastjet as fj
 import fjcontrib
 import fjext
 
+import fjtools
+
 import ROOT
 ROOT.gROOT.SetBatch(True)
 
@@ -36,6 +38,14 @@ class HFAnalysisInvMass(hfdio.HFAnalysis):
 	def analysis(self, df):
 		if len(df) <= 0:
 			return
+
+		for i, dv in enumerate(self.fj_Dcands):
+			print(i, self.fj_Dcands[i].phi(), '=?', self.fj_DcandsGhosts[i].phi(), self.fj_Dcands[i].perp(), '=?', self.fj_DcandsGhosts[i].perp())
+		print(len(self.fj_parts))
+		#for d in df:
+		#	print (df[d])
+		# _ipDmatches = fjtools.matched_Reta(d0c, self.fj_parts)
+
 
 		_parts = self.parts_selector(self.fj_parts)
 
@@ -69,6 +79,7 @@ if __name__ == '__main__':
 
 	hfaio = hfdio.HFAnalysisIO()
 
+	# (pt_cand > 2, |z_vtx_reco| < 10, pt_prong(0,1) > 0.5, |eta| < 0.8, |TPC_sigma| < 3, |TOF_sigma| < 3 OR TOF_sigma < -900) 
 	hfa = HFAnalysisInvMass(name = args.output)
 	hfa.add_selection_range('pt_cand', 2, 1e3)
 	hfa.add_selection_range_abs('z_vtx_reco', 10)

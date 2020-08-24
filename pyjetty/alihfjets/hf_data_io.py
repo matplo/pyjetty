@@ -19,7 +19,8 @@ class HFAnalysis(MPBase):
 		self.callback = None
 		self.fj_parts = None
 		self.fj_Dcands = None
-
+		self.fj_DcandsGhosts = None
+		
 	def add_selection_equal(self, what, val):
 		self.selection.append([what, val, None, 0])
 		self.query_strings.append('({} == {})'.format(what, val))
@@ -49,8 +50,10 @@ class HFAnalysis(MPBase):
 		self.compile_selection(df)
 		_df = df[self.df_selection]
 		self.fj_parts = fjext.vectorize_pt_eta_phi(_df['ParticlePt'].values, _df['ParticleEta'].values, _df['ParticlePhi'].values)
-		self.fj_Dcands = fjext.vectorize_pt_eta_phi(_df['pt_cand'].values, _df['eta_cand'].values, _df['phi_cand'].values)
 		_df = _df.drop(columns=['ParticlePt', 'ParticleEta', 'ParticlePhi'])
+		self.fj_Dcands = fjext.vectorize_pt_eta_phi_m(_df['pt_cand'].values, _df['eta_cand'].values, _df['phi_cand'].values, _df['inv_mass'].values)
+		_Dgh_pt = [1e-5 for v in _df['pt_cand'].values]
+		self.fj_DcandsGhosts = fjext.vectorize_pt_eta_phi_m(_Dgh_pt, _df['eta_cand'].values, _df['phi_cand'].values, _df['inv_mass'].values)
 		_df.reset_index(drop=True)
 		_df.drop_duplicates(inplace=True)
 		self.analysis(_df)
