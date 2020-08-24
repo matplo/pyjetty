@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from pyjetty.mputils import MPBase, pwarning, pinfo, perror, treewriter
+from pyjetty.mputils import MPBase, pwarning, pinfo, perror, treewriter, jet_analysis
 import random
 import uproot
 import pandas as pd
@@ -86,6 +86,15 @@ class HFAIO(MPBase):
 		_parts = fjext.vectorize_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
 		_d0s = fjext.vectorize_pt_eta_phi(_df_d0['pt_cand'].values, _df_d0['eta_cand'].values, _df_d0['phi_cand'].values)
 		_d0s_gh = [p * 1.e-6 for p in _d0s]
+
+		_parts_and_ds = _parts
+		_tmp = [_parts_and_ds.push_back(p) for p in _d0s_gh]
+		# pinfo('n parts = ', len(_parts_and_ds))
+
+		ja = jet_analysis.JetAnalysis(jet_R = 0.6, particle_eta_max=0.9)
+		ja.analyze_event(_parts_and_ds)
+		# pinfo('n jets = ', len(ja.jets))
+
 		# now the jet finding with ghost D0s
 		# write jets with constituents ... and/or fill histograms
 
@@ -99,6 +108,7 @@ class HFAIO(MPBase):
 		self.tw.fill_branches(dpsj = _d0s)
 		self.tw.fill_branches(dpsjgh = _d0s_gh)
 		self.tw.fill_branches(minv = _df_d0['inv_mass'].values.tolist())
+		self.tw.fill_branches(jets = ja.jets_as_psj_vector())
 		self.tw.fill_tree()
 
 
