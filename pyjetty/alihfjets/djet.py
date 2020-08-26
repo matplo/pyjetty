@@ -27,9 +27,11 @@ class HFAIO(MPBase):
 
 		# temp output
 		self.tw = treewriter.RTreeWriter(name = 'd0j', file_name = 'djet_tout.root')
+		self.twjc = treewriter.RTreeWriter(name = 'd0jc', file_name ='djet_correl_tout.root')
 
 	def __del__(self):
 		self.tw.write_and_close()
+		self.twjc.write_and_close()
 
 	def pd_tree(self, path, tname, squery=None):
 		try:
@@ -42,36 +44,57 @@ class HFAIO(MPBase):
 			return None
 		df = tree.pandas.df()
 		if squery:
+			#df.query(squery, inplace=True)
 			df = df.query(squery)
 			df.reset_index(drop=True)
 		return df
-
 
 	def process_file(self, fname):
 		_ev_cuts = "is_ev_rej == 0 & abs(z_vtx_reco) < 10"
 		self.event_df = self.pd_tree(path=fname, tname=self.event_tree_name, squery=_ev_cuts)
 		if self.event_df is None:
 			return False
-		pinfo('events from', fname, len(self.event_df))
+		pinfo('events from', fname, len(self.event_df.index))
 
-		_d0cuts_base = "(pt_cand > 2.0 & pt_prong0 > 0.5 & pt_prong1 > 0.5 & abs(eta_cand) < 0.8) & "
+		_d0cuts_base = "(pt_cand > 4.0 & pt_prong0 > 0.5 & pt_prong1 > 0.5 & abs(eta_cand) < 0.8) & "
 		_d0cuts_kpi = _d0cuts_base
-		_d0cuts_kpi += "(abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_0 < -900)) | "
-		_d0cuts_kpi += "(abs(nsigTPC_Pi_1) < 3. & (abs(nsigTOF_Pi_1) < 3. | nsigTOF_Pi_1 < -900) & abs(nsigTPC_K_0) < 3. & (abs(nsigTOF_K_0) < 3. | nsigTOF_K_0 < -900))"
+		_d0cuts_kpi += "((abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_0 < -900)) | "
+		_d0cuts_kpi += "(abs(nsigTPC_Pi_1) < 3. & (abs(nsigTOF_Pi_1) < 3. | nsigTOF_Pi_1 < -900) & abs(nsigTPC_K_0) < 3. & (abs(nsigTOF_K_0) < 3. | nsigTOF_K_0 < -900)))"
 		self.d0_df = self.pd_tree(path=fname, tname=self.d0_tree_name, squery=_d0cuts_kpi)
 		if self.d0_df is None:
 			return False
-		pinfo('d0s from', fname, len(self.d0_df))
-
+		pinfo('d0s from', fname, len(self.d0_df.index))
 		self.track_df = self.pd_tree(path=fname, tname=self.track_tree_name)
 		# self.track_df = _track_df.groupby(['run_number','ev_id'])
 		if self.track_df is None:
 			return False
-		pinfo('tracks from', fname, len(self.track_df))
+		pinfo('tracks from', fname, len(self.track_df.index))
+		with tqdm.tqdm(total=len(self.event_df.index)) as self.pbar:
+			self.event_df.apply(self.process_event, axis=1)
+		self.pbar.close()
 
-		self.event_df.apply(self.process_event, axis=1)
+	def process_files(self, fname):
+		pinfo('reading file list from', fname)
+		with open(fname) as f:
+			flist = f.readlines()
+		pinfo('number of files', len(flist))
+		for ifn, fn in enumerate(flist):
+			pinfo('file', ifn, 'of', len(flist))
+			self.process_file(fn.strip('\n'))
+
+	def d0_jet_correl(self, jets, _d0s, _d0_imass_list):
+		for j in jets:
+			jc = j.constituents()
+			for ic in range(len(jc)):
+				c = jc[ic]
+				if c.user_index() >= self._user_index_offset:
+					_d0_index = c.user_index() - self._user_index_offset 
+					_d0 = _d0s[_d0_index]
+					self.twjc.fill_branches(jet = j, d0 = _d0, dR = j.delta_R(_d0), minv = _d0_imass_list[_d0_index], m = _d0.m())
+		self.twjc.fill_tree()
 
 	def process_event(self, df):
+		self.pbar.update(1)
 		if 'ev_id_ext' in df.keys():
 			_ev_query = "run_number == {} & ev_id == {} & ev_id_ext == {}".format(df['run_number'], df['ev_id'], df['ev_id_ext'])
 		else:
@@ -84,33 +107,25 @@ class HFAIO(MPBase):
 		_df_tracks = self.track_df.query(_ev_query)
 		_df_tracks.reset_index(drop=True)
 		_parts = fjext.vectorize_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
-		_d0s = fjext.vectorize_pt_eta_phi(_df_d0['pt_cand'].values, _df_d0['eta_cand'].values, _df_d0['phi_cand'].values)
+		self._user_index_offset = 10000
+		_d0s = fjext.vectorize_pt_eta_phi(_df_d0['pt_cand'].values, _df_d0['eta_cand'].values, _df_d0['phi_cand'].values, self._user_index_offset)
 		_d0s_gh = [p * 1.e-6 for p in _d0s]
 
 		_parts_and_ds = _parts
 		_tmp = [_parts_and_ds.push_back(p) for p in _d0s_gh]
 		# pinfo('n parts = ', len(_parts_and_ds))
 
-		ja = jet_analysis.JetAnalysis(jet_R = 0.6, particle_eta_max=0.9)
+		ja = jet_analysis.JetAnalysis(jet_R = 0.6, particle_eta_max=0.9, jet_pt_min=5.0)
 		ja.analyze_event(_parts_and_ds)
-		# pinfo('n jets = ', len(ja.jets))
 
-		# now the jet finding with ghost D0s
-		# write jets with constituents ... and/or fill histograms
-
-		# some debug info
-		# pinfo(_df_d0.keys())
-		# if 'ev_id_ext' in df.keys():
-		# 	pinfo('run#:', df['run_number'], 'ev_id:', df['ev_id'], 'ev_id_ext:', df['ev_id_ext'], 'ntrk:', len(_parts), 'nd0s:', _n_d0s)
-		# else:
-		# 	pinfo('run#:', df['run_number'], 'ev_id:', df['ev_id'], 'ntrk:', len(_parts), 'nd0s:', _n_d0s)
-
+		_d0_imass_list = _df_d0['inv_mass'].values.tolist()
 		self.tw.fill_branches(dpsj = _d0s)
 		self.tw.fill_branches(dpsjgh = _d0s_gh)
-		self.tw.fill_branches(minv = _df_d0['inv_mass'].values.tolist())
+		self.tw.fill_branches(minv = _d0_imass_list)
 		self.tw.fill_branches(jets = ja.jets_as_psj_vector())
 		self.tw.fill_tree()
 
+		self.d0_jet_correl(ja.jets, _d0s, _d0_imass_list)
 
 def main():
 	parser = argparse.ArgumentParser(description='D0 analysis on alice data', prog=os.path.basename(__file__))
@@ -119,10 +134,11 @@ def main():
 	parser.add_argument('-o', '--output', help="output name / file name in the end", type=str, default='test_hfana')
 	args = parser.parse_args()
 
+	hfa = HFAIO()
 	if '.root' in args.flist:
-		hfa = HFAIO()
 		hfa.process_file(args.flist)
-
+	else:
+		hfa.process_files(args.flist)		
 
 if __name__ == '__main__':
 	main()
