@@ -152,7 +152,7 @@ class HFAIO(MPBase):
 		_tmp = [_parts_and_ds.push_back(p) for p in _d0s_gh]
 		# pinfo('n parts = ', len(_parts_and_ds))
 
-		ja = jet_analysis.JetAnalysis(jet_R = 0.4, particle_eta_max=0.9, jet_pt_min=4.0)
+		ja = jet_analysis.JetAnalysis(jet_R = 0.4, particle_eta_max=0.9, jet_pt_min=10.0)
 		ja.analyze_event(_parts_and_ds)
 
 		_d0_imass_list = df['inv_mass'].values.tolist()
@@ -216,11 +216,11 @@ def main():
 	parser = argparse.ArgumentParser(description='D0 analysis on alice data', prog=os.path.basename(__file__))
 	parser.add_argument('-f', '--flist', help='single root file or a file with a list of files to process', type=str, default=None, required=True)
 	parser.add_argument('-n', '--nfiles', help='max n files to process', type=int, default=0, required=False)
-	parser.add_argument('-o', '--output', help="output name / file name in the end", type=str, default='test_hfana')
+	parser.add_argument('-o', '--output', help="prefix output file names", type=str, default='./hfaio_rfile')
 	args = parser.parse_args()
 
 	if '.root' in args.flist:
-		HFAIO(output_prefix='./hfaio_rfile', input_file=args.flist)
+		HFAIO(output_prefix=args.output, input_file=args.flist)
 	else:
 		process_files(args.flist)		
 
