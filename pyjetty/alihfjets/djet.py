@@ -87,7 +87,9 @@ class HFAIO(MPBase):
 		else:
 			self.d0ev_df = pd.merge(self.d0_df, self.event_df, on=['run_number', 'ev_id'])
 		self.d0ev_df.query(_ev_cuts, inplace=True)
+		self.d0ev_df_grouped = self.d0ev_df.groupby(['run_number','ev_id'])
 		pinfo('d0s after event cuts from ', fname, len(self.d0ev_df.index))
+		pinfo('N d0 groups after event cuts from ', fname, len(self.d0ev_df_grouped))
 
 		self.track_df = self.pd_tree(path=fname, tname=self.track_tree_name)
 		# self.track_df = _track_df.groupby(['run_number','ev_id'])
@@ -101,13 +103,16 @@ class HFAIO(MPBase):
 		# with tqdm.tqdm(total=len(self.event_df.index)) as self.pbar:
 
 		# d0 based processing
-		with tqdm.tqdm(total=len(self.d0ev_df.index)) as self.pbar:
-			self.d0ev_df.apply(self.process_d0s, axis=1)
+		# with tqdm.tqdm(total=len(self.d0ev_df.index)) as self.pbar:
+		#	self.d0ev_df.apply(self.process_d0s, axis=1)
+		with tqdm.tqdm(total=len(self.d0ev_df_grouped)) as self.pbar:
+			_tmp = self.d0ev_df_grouped.apply(self.process_d0s)
 		self.pbar.close()
 
 		self.event_df = None
 		self.d0_df = None
 		self.d0ev_df = None
+		self.d0ev_df_grouped = None
 		self.track_df = None
 
 	def d0_jet_correl(self, jets, _d0s, _d0_imass_list):
@@ -131,14 +136,16 @@ class HFAIO(MPBase):
 			return
 		# pinfo(df)
 		if 'ev_id_ext' in list(self.event_df):
-			_ev_query = "run_number == {} & ev_id == {} & ev_id_ext == {}".format(df['run_number'], df['ev_id'], df['ev_id_ext'])
+			# _ev_query = "run_number == {} & ev_id == {} & ev_id_ext == {}".format(df['run_number'], df['ev_id'], df['ev_id_ext'])
+			_ev_query = "run_number == {} & ev_id == {} & ev_id_ext == {}".format(df['run_number'].values[0], df['ev_id'].values[0], df['ev_id_ext'].values[0])
 		else:
-			_ev_query = "run_number == {} & ev_id == {}".format(df['run_number'], df['ev_id'])
+			_ev_query = "run_number == {} & ev_id == {}".format(df['run_number'].values[0], df['ev_id'].values[0])
 		_df_tracks = self.track_df.query(_ev_query)
 		_df_tracks.reset_index(drop=True)
 		_parts = fjext.vectorize_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
 		self._user_index_offset = 10000
-		_d0s = fjext.vectorize_pt_eta_phi([df['pt_cand']], [df['eta_cand']], [df['phi_cand']], self._user_index_offset)
+		# _d0s = fjext.vectorize_pt_eta_phi([df['pt_cand']], [df['eta_cand']], [df['phi_cand']], self._user_index_offset)
+		_d0s = fjext.vectorize_pt_eta_phi(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, self._user_index_offset)
 		_d0s_gh = [p * 1.e-6 for p in _d0s]
 
 		_parts_and_ds = _parts
@@ -148,8 +155,8 @@ class HFAIO(MPBase):
 		ja = jet_analysis.JetAnalysis(jet_R = 0.4, particle_eta_max=0.9, jet_pt_min=4.0)
 		ja.analyze_event(_parts_and_ds)
 
-		# _d0_imass_list = df['inv_mass'].values.tolist()
-		_d0_imass_list = [df['inv_mass']]
+		_d0_imass_list = df['inv_mass'].values.tolist()
+		# _d0_imass_list = [df['inv_mass']]
 		self.tw.fill_branches(dpsj = _d0s)
 		self.tw.fill_branches(dpsjgh = _d0s_gh)
 		self.tw.fill_branches(minv = _d0_imass_list)
@@ -157,6 +164,8 @@ class HFAIO(MPBase):
 		self.tw.fill_tree()
 
 		self.d0_jet_correl(ja.jets, _d0s, _d0_imass_list)
+
+		return True
 
 	def process_event(self, df):
 		self.pbar.update(1)
