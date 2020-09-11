@@ -43,20 +43,35 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
   
     # Initialize base class
     super(ProcessMC_subjet_z, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
-    
-    self.observable = self.observable_list[0]
+        
+    # User-specific initialization
+    self.initialize_user_config()
 
+  #---------------------------------------------------------------
+  # Initialize config file into class members
+  #---------------------------------------------------------------
+  def initialize_user_config(self):
+  
+    self.observable = self.observable_list[0]
+    
+    # Define subjet finders
+    self.subjet_def = {}
+    for subjetR in self.obs_settings[self.observable]:
+      self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+      
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
   def initialize_user_output_objects_R(self, jetR):
-      
-    if not self.is_pp:
     
-      for R_max in self.max_distance:
+    # Subjet matching histograms
+    for subjetR in self.obs_settings[self.observable]:
+    
+      if not self.is_pp:
+    
+        for R_max in self.max_distance:
 
-        for subjetR in self.obs_settings[self.observable]:
-      
+          # Matching histograms
           name = 'hDeltaR_combined_ppdet_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
@@ -64,72 +79,82 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           name = 'hDeltaR_ppdet_pptrue_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
           setattr(self, name, h)
+        
+          # Create prong matching histograms
+          label = '#it{z}'
+          name = 'h_{}_fraction_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 15, -0.4, 1.1)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle(label)
+          h.GetZaxis().SetTitle('Prong matching fraction')
+          setattr(self, name, h)
           
-      #for subjetR in self.obs_settings[self.observable]:
+          name = 'h_{}_flag_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 9, 0.5, 9.5)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle(label)
+          h.GetZaxis().SetTitle('flag')
+          setattr(self, name, h)
+          
+          label = '#it{z}_{leading}'
+          name = 'h_{}_fraction_leading_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 15, -0.4, 1.1)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle(label)
+          h.GetZaxis().SetTitle('Prong matching fraction')
+          setattr(self, name, h)
+          
+          name = 'h_{}_flag_leading_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+          h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 9, 0.5, 9.5)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle(label)
+          h.GetZaxis().SetTitle('flag')
+          setattr(self, name, h)
+        
+      else:
       
-        # Create prong matching histograms
-        #self.create_prong_matching_histograms(jetR, subjetR)
+        name = 'hDeltaR_ppdet_pptrue_{}_R{}_{}'.format('subjet_z', jetR, subjetR)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+        setattr(self, name, h)
 
-    for subjetR in self.obs_settings[observable]:
-      
-      name = 'hDeltaR_All_{}_R{}_{}'.format(observable, jetR, subjetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-      setattr(self, name, h)
+    # Residuals and responses
+    for subjetR in self.obs_settings[self.observable]:
     
-      name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1.0, 1.0)
-      h.GetXaxis().SetTitle('p_{T,truth}')
-      h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
-      setattr(self, name, h)
+      if not self.is_pp:
+    
+        for R_max in self.max_distance:
+          print('not yet implemented...')
+        
+      else:
       
-      # Create THn of response for subjet z
-      dim = 4;
-      title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
-      nbins = [30, 30, 100, 50]
-      min = [0., 0., 0., 0.]
-      max = [150., 300., 1., 1.]
-      name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
-      self.create_thn(name, title, dim, nbins, min, max)
-
-  #---------------------------------------------------------------
-  # Create theta_g response histograms
-  #---------------------------------------------------------------
-  def create_prong_matching_histograms(self, jetR, subjetR):
-  
-    prong_list = ['leading', 'subleading']
-    match_list = ['leading', 'subleading', 'ungroomed', 'outside']
-
-    for R_max in self.max_distance:
-      for prong in prong_list:
-        for match in match_list:
-
-          name = 'hProngMatching_{}_{}_JetPt_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 20, 0., 2*jetR)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta R_{prong}')
-          setattr(self, name, h)
-          
-          name = 'hProngMatching_{}_{}_JetPtDet_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 20, 0., 2*jetR)
-          h.GetXaxis().SetTitle('p_{T,pp-det}')
-          h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta R_{prong}')
-          setattr(self, name, h)
-          
-          name = 'hProngMatching_{}_{}_JetPtZ_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 50, -0.5, 0.5)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta z_{prong}')
-          setattr(self, name, h)
-
-      name = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
-      h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 15, -0.4, 1.1)
-      h.GetXaxis().SetTitle('p_{T,pp-det}')
-      h.GetYaxis().SetTitle('Prong matching fraction, leading_subleading')
-      h.GetZaxis().SetTitle('Prong matching fraction, subleading_leading')
-      setattr(self, name, h)
+        name = 'hResidual_inclusive_JetPt_{}_R{}_{}'.format(self.observable, jetR, subjetR)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1.0, 1.0)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
+        setattr(self, name, h)
+        
+        name = 'hResidual_leading_JetPt_{}_R{}_{}'.format(self.observable, jetR, subjetR)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1.0, 1.0)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
+        setattr(self, name, h)
+        
+        # Create THn of response for subjet z
+        dim = 4;
+        title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
+        nbins = [30, 30, 100, 50]
+        min = [0., 0., 0., 0.]
+        max = [150., 300., 1., 1.]
+        name = 'hResponse_inclusive_JetPt_{}_R{}_{}'.format(self.observable, jetR, subjetR)
+        self.create_thn(name, title, dim, nbins, min, max)
+        
+        dim = 4;
+        title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
+        nbins = [30, 30, 100, 50]
+        min = [0., 0., 0., 0.]
+        max = [150., 300., 1., 1.]
+        name = 'hResponse_leading_JetPt_{}_R{}_{}'.format(self.observable, jetR, subjetR)
+        self.create_thn(name, title, dim, nbins, min, max)
 
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
@@ -138,12 +163,21 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
   def fill_observable_histograms(self, hname, jet, jet_groomed_lund, jetR, obs_setting,
                                  grooming_setting, obs_label, jet_pt_ungroomed):
   
-    # For a given jet, find subjets of a given radius, and fill histograms
+    # For a given jet, find inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
+    
+    # Fill inclusive subjets
     for subjet in subjets:
       z = subjet.pt() / jet.pt()
-      getattr(self,  hname.format(self.observable, jetR, obs_label)).Fill(jet_pt_ungroomed, z)
+      prefix = '{}_inclusive'.format(self.observable)
+      getattr(self, hname.format(prefix, obs_label)).Fill(jet.pt(), z)
+      
+    # Fill leading subjets
+    leading_subjet = self.utils.leading_jet(subjets)
+    z_leading = leading_subjet.pt() / jet.pt()
+    prefix = '{}_leading'.format(self.observable)
+    getattr(self, hname.format(prefix, obs_label)).Fill(jet.pt(), z_leading)
       
   #---------------------------------------------------------------
   # Fill matched jet histograms
@@ -166,7 +200,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
 
     # Loop through subjets and set subjet matching candidates for each subjet in user_info
     if self.is_pp:
-        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hDeltaR_All_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
+        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
         [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hDeltaR_combined_ppdet_subjet_z_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
@@ -178,7 +212,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     else:
         [self.set_matches_AA(subjet_det_combined, subjetR, 'hSubjetMatchingQA_R{}_{}'.format(jetR, subjetR)) for subjet_det_combined in subjets_det]
 
-    # Loop through matches and fill histograms
+    # Loop through matches and fill inclusive histograms
     for subjet_det in subjets_det:
 
       if subjet_det.has_user_info():
@@ -192,6 +226,19 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           # Fill histograms
           self.fill_response(self.observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
                              z_det, z_truth, obs_label, R_max, prong_match = False)
+                             
+    # Get leading subjet and fill leading histograms
+    leading_subjet_det = self.leading_subjet(subjets_det)
+    leading_subjet_truth = self.leading_subjet(subjets_truth)
+    
+    if leading_subjet_det and leading_subjet_truth:
+      
+      z_leading_det = leading_subjet_det.pt() / jet_det.pt()
+      z_leading_truth = leading_subjet_truth.pt() / jet_truth.pt()
+      
+      # Fill histograms
+      self.fill_response(self.observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                         z_leading_det, z_leading_truth, obs_label, R_max, prong_match = False)
     
   #---------------------------------------------------------------
   # Do prong-matching
