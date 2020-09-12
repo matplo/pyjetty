@@ -43,12 +43,10 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
   # Initialize config file into class members
   #---------------------------------------------------------------
   def initialize_user_config(self):
-  
-    self.observable = self.observable_list[0]
-    
-    # Define subjet finders
+        
+    # Define subjet finders (from first observable defined)
     self.subjet_def = {}
-    for subjetR in self.obs_settings[self.observable]:
+    for subjetR in self.obs_settings[self.observable_list[0]]:
       self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
     
   #---------------------------------------------------------------
@@ -57,21 +55,16 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
   def initialize_user_output_objects(self):
 
     for jetR in self.jetR_list:
-      for subjetR in self.obs_settings[self.observable]:
+    
+      for observable in self.observable_list:
       
-        # Inclusive subjets
-        name = 'h_{}_inclusive_JetPt_R{}_{}'.format(self.observable, jetR, subjetR)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('z_{inclusive subjet}')
-        setattr(self, name, h)
+        for subjetR in self.obs_settings[observable]:
         
-        # Leading subjets
-        name = 'h_{}_leading_JetPt_R{}_{}'.format(self.observable, jetR, subjetR)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('z_{leading subjet}')
-        setattr(self, name, h)
+          name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, subjetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+          h.GetXaxis().SetTitle('p_{T,ch jet}')
+          h.GetYaxis().SetTitle('z_{r}')
+          setattr(self, name, h)
       
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
@@ -83,15 +76,19 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
     
-    # Fill inclusive subjets
-    for subjet in subjets:
-      z = subjet.pt() / jet.pt()
-      getattr(self, 'h_{}_inclusive_JetPt_R{}_{}'.format(self.observable, jetR, obs_setting)).Fill(jet.pt(), z)
-      
-    # Fill leading subjets
-    leading_subjet = self.utils.leading_jet(subjets)
-    z_leading = leading_subjet.pt() / jet.pt()
-    getattr(self, 'h_{}_leading_JetPt_R{}_{}'.format(self.observable, jetR, obs_setting)).Fill(jet.pt(), z_leading)
+    for observable in self.observable_list:
+
+      # Fill inclusive subjets
+      if 'inclusive' in observable:
+        for subjet in subjets:
+          z = subjet.pt() / jet.pt()
+          getattr(self, 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_setting)).Fill(jet.pt(), z)
+          
+      # Fill leading subjets
+      if 'leading' in observable:
+        leading_subjet = self.utils.leading_jet(subjets)
+        z_leading = leading_subjet.pt() / jet.pt()
+        getattr(self, 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_setting)).Fill(jet.pt(), z_leading)
 
 ##################################################################
 if __name__ == '__main__':
