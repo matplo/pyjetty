@@ -98,7 +98,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
               name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
               h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
               setattr(self, name, h)
-          
+                        
             # Create prong matching histograms
             name = 'h_{}_fraction_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
             h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 15, -0.4, 1.1)
@@ -221,8 +221,8 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
         [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
-        [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hDeltaR_combined_ppdet_subjet_z_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
-        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets_det_pp]
+        [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hDeltaR_combined_ppdet_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
+        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets_det_pp]
       
     # Loop through subjets and set accepted matches
     if self.is_pp:
