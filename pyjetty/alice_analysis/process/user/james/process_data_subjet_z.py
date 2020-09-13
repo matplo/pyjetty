@@ -60,6 +60,9 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
       
         for subjetR in self.obs_settings[observable]:
         
+          if (jetR - subjetR) < 1e-3:
+            continue
+        
           name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, subjetR)
           h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
           h.GetXaxis().SetTitle('p_{T,ch jet}')
@@ -71,6 +74,9 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
   #---------------------------------------------------------------
   def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
                           obs_label, jet_pt_ungroomed, suffix):
+    
+    if (jetR - obs_setting) < 1e-3:
+      return
     
     # For a given jet, find inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])

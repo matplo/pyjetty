@@ -66,6 +66,9 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
 
       for subjetR in self.obs_settings[observable]:
       
+        if (jetR - subjetR) < 1e-3:
+          continue
+      
         # Truth histograms
         name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, subjetR)
         h = ROOT.TH2F(name, name, 20, 0, 200, 100, 0, 1.0)
@@ -97,17 +100,17 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
               setattr(self, name, h)
           
             # Create prong matching histograms
-            name = 'h_{}_fraction_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+            name = 'h_{}_fraction_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
             h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 15, -0.4, 1.1)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#it{z_{r}}')
             h.GetZaxis().SetTitle('Prong matching fraction')
             setattr(self, name, h)
             
-            name = 'h_{}_flag_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
+            name = 'h_{}_flag_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
             h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 9, 0.5, 9.5)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
-            h.GetYaxis().SetTitle(label)
+            h.GetYaxis().SetTitle('#it{z_{r}}')
             h.GetZaxis().SetTitle('flag')
             setattr(self, name, h)
           
@@ -122,10 +125,15 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
       # Residuals and responses
       for subjetR in self.obs_settings[observable]:
       
+        if (jetR - subjetR) < 1e-3:
+          continue
+      
         if not self.is_pp:
       
           for R_max in self.max_distance:
-            print('not yet implemented...')
+            self.create_response_histograms(observable, jetR, subjetR, R_max)
+            if R_max == self.main_R_max:
+              self.create_response_histograms(observable, jetR, subjetR, '{}_matched'.format(R_max))
           
         else:
           self.create_response_histograms(observable, jetR, subjetR)
@@ -163,6 +171,9 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
   #---------------------------------------------------------------
   def fill_observable_histograms(self, hname, jet, jet_groomed_lund, jetR, obs_setting,
                                  grooming_setting, obs_label, jet_pt_ungroomed):
+    
+    if (jetR - obs_setting) < 1e-3:
+      return
   
     # For a given jet, find inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
@@ -190,6 +201,9 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
                                   obs_setting, grooming_setting, obs_label,
                                   jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
        
+    if (jetR - obs_setting) < 1e-3:
+      return
+       
     # Find subjets
     subjetR = obs_setting
     cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
@@ -200,7 +214,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     
     if not self.is_pp:
       cs_subjet_det_pp = fj.ClusterSequence(jet_pp_det.constituents(), self.subjet_def[subjetR])
-      subjets_det_pp = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
+      subjets_det_pp = fj.sorted_by_pt(cs_subjet_det_pp.inclusive_jets())
 
     # Loop through subjets and set subjet matching candidates for each subjet in user_info
     if self.is_pp:
