@@ -83,7 +83,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#z_{r}')
             setattr(self, name, h)
-        
+            
         # Subjet matching histograms
         if not self.is_pp:
       
@@ -97,6 +97,16 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
               
               name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
               h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              setattr(self, name, h)
+              
+            # Plot deltaR distribution between the truth-detector leading subjets
+            # (since they are not matched geometrically, and can contain "swaps")
+            if 'leading' in observable:
+              name = 'hDeltaR_det_truth_{}_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+              h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#it{z_{r}}')
+              h.GetZaxis().SetTitle('#DeltaR')
               setattr(self, name, h)
                         
             # Create prong matching histograms
@@ -120,6 +130,16 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           if observable == self.observable_list[0]:
             name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)
             h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+            setattr(self, name, h)
+            
+          # Plot deltaR distribution between the truth-detector leading subjets
+          # (since they are not matched geometrically, and can contain "swaps")
+          if 'leading' in observable:
+            name = 'hDeltaR_det_truth_{}_R{}_{}'.format(observable, jetR, subjetR)
+            h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('#it{z_{r}}')
+            h.GetZaxis().SetTitle('#DeltaR')
             setattr(self, name, h)
 
       # Residuals and responses
@@ -230,6 +250,11 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     else:
         [self.set_matches_AA(subjet_det_combined, subjetR, 'hSubjetMatchingQA_R{}_{}'.format(jetR, subjetR)) for subjet_det_combined in subjets_det]
 
+
+    #matched_pt = fjtools.matched_pt(leading_subjet_combined, leading_subjet_truth)
+    #name = 'h_subjet_z_fraction_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
+    #getattr(self, name).Fill(jet_truth.pt(), z_leading_combined, matched_pt)
+
     # Loop through matches and fill histograms
     for observable in self.observable_list:
     
@@ -266,6 +291,14 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           # Fill histograms
           self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
                              z_leading_det, z_leading_truth, obs_label, R_max, prong_match = False)
+          
+          # Plot deltaR distribution between the truth-detector leading subjets
+          # (since they are not matched geometrically, and can contain "swaps")
+          deltaR = leading_subjet_det.delta_R(leading_subjet_truth)
+          name = 'hDeltaR_det_truth_{}_R{}_{}'.format(observable, jetR, subjetR)
+          if not self.is_pp:
+            name += '_Rmax{}'.format(R_max)
+          getattr(self, name).Fill(jet_truth.pt(), z_leading_truth, deltaR)
         
   #---------------------------------------------------------------
   # Do prong-matching
