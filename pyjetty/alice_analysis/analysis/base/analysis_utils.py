@@ -46,7 +46,7 @@ class AnalysisUtils(common_utils.CommonUtils):
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
     
     #  Check whether sumw2 has been previously set, just for our info
-    if h.GetSumw2() is 0:
+    if h.GetSumw2() == 0:
       print('analysis_utils::rebin_data() -- sumw2 has not been set')
     else:
       print('analysis_utils::rebin_data() -- sumw2 has been set')
@@ -78,7 +78,7 @@ class AnalysisUtils(common_utils.CommonUtils):
       h.SetBinError(i, new_uncertainty)
     
     # We want to make sure sumw2 is set after rebinning, since we will scale etc. this histogram
-    if h.GetSumw2() is 0:
+    if h.GetSumw2() == 0:
       h.Sumw2()
     return h
 
@@ -349,7 +349,7 @@ class AnalysisUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def scale_by_integral(self, h):
     
-    if h.GetSumw2() is 0:
+    if h.GetSumw2() == 0:
       h.Sumw2()
     
     integral = h.Integral()
