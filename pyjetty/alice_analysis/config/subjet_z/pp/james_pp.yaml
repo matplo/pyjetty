@@ -14,6 +14,7 @@ process_observables: ['inclusive_subjet_z', 'leading_subjet_z']
 jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.0
+eta_max: 0.9
 debug_level: 0
 dry_run: False
 fast_simulation: False
@@ -24,7 +25,7 @@ inclusive_subjet_z:
 
   common_settings:
     xtitle: '#it{z_{r}}'
-    ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
+    ytitle: '#frac{1}{#it{N}_{subjets}} #frac{d#it{N}}{d#it{z_{r}}}'
     pt_bins_reported: [20, 40, 60, 80]
     plot_overlay_list:
       - ['config1', 'config2']
@@ -105,9 +106,9 @@ roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 analysis_observable: 'inclusive_subjet_z'
 do_unfolding: False
 force_rebin: False
-do_systematics: True
-do_plot_final_result: True
-do_plot_performance: False
+do_systematics: False
+do_plot_final_result: False
+do_plot_performance: True
 figure_approval_status: 'ongoing analysis'
 
 # List of which systematics to perform
