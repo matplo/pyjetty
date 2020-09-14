@@ -112,7 +112,6 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
     self.create_output_subdir(output_dir_performance, 'data')
     if not self.is_pp:
       self.create_output_subdir(output_dir_performance, 'delta_pt')
-      self.create_output_subdir(output_dir_performance, 'matched_pt')
     
     # Generate performance plots
     for jetR in self.jetR_list:
@@ -147,7 +146,7 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
       self.prong_match_threshold = 0.5
       for i, overlay_list in enumerate(self.plot_overlay_list):
 
-        self.create_output_subdir(output_dir_performance, 'prong_matching_fraction_pt_leading')
+        self.create_output_subdir(output_dir_performance, 'matched_pt_fraction_pt')
         hname = 'h_{}_matched_pt_JetPt_R{}'.format(self.observable, jetR)
         self.plotting_utils.plot_subjet_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
         
@@ -161,9 +160,14 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
         obs_setting = self.obs_settings[i]
         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
         
-        #output_dir_money = os.path.join(output_dir_performance, 'money_leading')
-        #self.create_output_subdir(output_dir_money, str(obs_setting))
-        #self.plot_subjet_money_plot(self.observable, jetR, R_max, obs_setting, output_dir_money)
+        if (jetR - obs_setting) < 1e-3:
+          continue
+        
+        output_dir_money = os.path.join(output_dir_performance, 'matched_pt_money')
+        self.create_output_subdir(output_dir_money, os.path.join(str(jetR), str(obs_setting)))
+        self.plotting_utils.plot_subjet_money_plot(self.observable, jetR, R_max, self.prong_match_threshold,
+                                                   obs_setting, self.pt_bins_reported,
+                                                   output_dir_money, self.ytitle)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
