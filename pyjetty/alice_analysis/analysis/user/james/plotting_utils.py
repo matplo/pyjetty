@@ -502,7 +502,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     # (pt-det, pt-truth, obs-det, obs-truth)
     name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_obs = self.fMC.Get(name)
-    if hRM_obs.GetSumw2() is 0:
+    if hRM_obs.GetSumw2() == 0:
       hRM_obs.Sumw2()
     
     if self.thermal:
@@ -510,7 +510,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     else:
       name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     hObs_JetPt = self.fData.Get(name)
-    if hObs_JetPt.GetSumw2() is 0:
+    if hObs_JetPt.GetSumw2() == 0:
       hObs_JetPt.Sumw2()
 
     # Plot 2D statistics in data

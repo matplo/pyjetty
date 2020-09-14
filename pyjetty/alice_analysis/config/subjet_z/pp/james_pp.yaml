@@ -23,7 +23,7 @@ use_ev_id_ext: True
 inclusive_subjet_z:
 
   common_settings:
-    xtitle: '#it{z_r}'
+    xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
     pt_bins_reported: [20, 40, 60, 80]
     plot_overlay_list:
@@ -61,7 +61,7 @@ inclusive_subjet_z:
 leading_subjet_z:
 
   common_settings:
-    xtitle: '#it{z_r}'
+    xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
     pt_bins_reported: [20, 40, 60, 80]
     plot_overlay_list:
@@ -99,16 +99,16 @@ leading_subjet_z:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_53358'
+output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/156853'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
-analysis_observable: 'subjet_z'
-do_unfolding: True
+analysis_observable: 'inclusive_subjet_z'
+do_unfolding: False
 force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Work in Progress'
+figure_approval_status: 'ongoing analysis'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
@@ -121,9 +121,9 @@ systematics_list:
   - binning
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/53358/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/52738/AnalysisResultsFinal.root'
-trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/53198/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/156853/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/156453/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/156485/AnalysisResultsFinal.root'
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5
