@@ -48,7 +48,10 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     myBlankHisto.GetYaxis().SetTitleOffset(1.4)
     myBlankHisto.GetXaxis().SetTitleSize(0.05)
     myBlankHisto.GetYaxis().SetTitleSize(0.055)
-    myBlankHisto.SetMaximum(1.61)
+    if self.groomer_studies:
+      myBlankHisto.SetMaximum(1.61)
+    else:
+      myBlankHisto.SetMaximum(2.01)
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.GetYaxis().SetTitle('Subjet purity')
     myBlankHisto.Draw()
@@ -59,7 +62,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
       myLegend2 = ROOT.TLegend(0.76,0.64,0.88,0.83)
       self.setup_legend(myLegend2,0.035)
     else:
-      myLegend = ROOT.TLegend(0.42,0.2,0.75,0.4)
+      myLegend = ROOT.TLegend(0.66,0.6,0.78,0.7)
       self.setup_legend(myLegend,0.043)
     
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
@@ -74,6 +77,9 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
       obs_setting = obs_settings[i]
       grooming_setting = grooming_settings[i]
       obs_label = self.obs_label(obs_setting, grooming_setting)
+      
+      if (jetR - obs_setting) < 1e-3:
+        continue
       
       name = '{}_{}{}{}'.format(name_prefix, obs_setting, self.suffix, self.scaled_suffix)
       hFraction_vs_pt = self.fMC.Get(name)
@@ -114,6 +120,8 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
       if self.groomer_studies:
         if i_reset < 7:
           myLegend.AddEntry(hMatchedFraction_vs_pt, '#it{{R}}_{{subjet}} = {}'.format(obs_setting), 'P')
+      else:
+        myLegend.AddEntry(hMatchedFraction_vs_pt, '#it{{r}} = {}'.format(obs_setting), 'P')
               
       h_list.append(hMatchedFraction_vs_pt)
 
