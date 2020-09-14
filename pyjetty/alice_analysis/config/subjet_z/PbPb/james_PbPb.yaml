@@ -15,6 +15,7 @@ jetR: [0.2, 0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
 reject_tracks_fraction: 0.02
+eta_max: 0.9
 debug_level: 0
 dry_run: False
 fast_simulation: False
@@ -37,9 +38,9 @@ emb_file_list: '/rstorage/alice/data/LHC18qr/413-414/files.txt'
 inclusive_subjet_z:
 
   common_settings:
-    xtitle: '#it{z_r}'
+    xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
-    pt_bins_reported: [20, 40, 60, 80]
+    pt_bins_reported: [40, 60, 80, 100]
     plot_overlay_list:
       - ['config1', 'config2']
       
@@ -77,9 +78,9 @@ inclusive_subjet_z:
 leading_subjet_z:
 
   common_settings:
-    xtitle: '#it{z_r}'
+    xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
-    pt_bins_reported: [20, 40, 60, 80]
+    pt_bins_reported: [40, 60, 80, 100]
     plot_overlay_list:
       - ['config1', 'config2']
       
@@ -117,15 +118,15 @@ leading_subjet_z:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_rg_output_63515_62950'
+output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/157013'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
-analysis_observable: 'subjet_z'
-do_unfolding: True
+analysis_observable: 'leading_subjet_z'
+do_unfolding: False
 force_rebin: False
-do_systematics: True
-do_plot_final_result: True
-do_plot_performance: False
+do_systematics: False
+do_plot_final_result: False
+do_plot_performance: True
 figure_approval_status: 'Work in Progress'
 
 # List of which systematics to perform
@@ -143,10 +144,10 @@ prior1_variation_parameter: 0.5
 prior2_variation_parameter: -0.5
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18qr/63515/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_embedding/62950/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/XXXXXX/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/157013/AnalysisResultsFinal.root'
 #main_response: '/Users/jamesmulligan/Analysis_theta_g/test_process_output_pp_mc_embedded/1/AnalysisResults.root'
-trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_embedding/XXXXX/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/156853/AnalysisResultsFinal.root'
 
 # Thermal closure test
-thermal_closure: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_thermal/64635/AnalysisResultsFinal.root'
+thermal_closure: '/Users/jamesmulligan/Analysis_subjet_z/output_process/156853/AnalysisResultsFinal.root'

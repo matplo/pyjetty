@@ -64,7 +64,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
 
     main_data = config['main_data']
     main_response = config['main_response']
-    if main_data:
+    if os.path.exists(main_data):
       self.fData = ROOT.TFile(main_data, 'READ')
     else:
       self.fData = None
@@ -90,7 +90,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       name = 'hDeltaR_All_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
     else:
       name = 'hDeltaR_combined_ppdet_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
-      
+
     h = self.fMC.Get(name)
     
     c = ROOT.TCanvas("c","c: hist",600,450)
@@ -429,7 +429,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       obs_true_list = [0., 0.05, 0.1, 0.2, 0.5, 1.]
     elif '{z}_{g}' in xtitle:
       obs_true_list = [0.2, 0.3, 0.4, 0.5]
-    elif 'z_{r}}' in xtitle:
+    elif 'z_{r}' in xtitle:
       obs_true_list = [0., 0.2, 0.4, 0.8, 0.8, 1.]
 
     for i in range(0, len(obs_true_list) - 1):

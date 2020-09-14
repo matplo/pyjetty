@@ -133,6 +133,9 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        
+        if (jetR - obs_setting) < 1e-3:
+          continue
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual_pt(jetR, obs_label, self.xtitle, self.pt_bins_reported)
