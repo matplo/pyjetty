@@ -13,9 +13,6 @@ ECM=5020
 # Number of events per pT-hat bin (for statistics)
 NEV_DESIRED=1400000
 
-# Array of the jet radii for which to generate events
-JETR_ARR=(0.2 0.4)
-
 # Lower edges of the pT-hat bins
 PTHAT_BINS=(5 7 9 12 16 21 28 36 45 57 70 85 99 115 132 150 169 190 212 235)
 echo "Number of pT-hat bins: ${#PTHAT_BINS[@]}"
@@ -44,31 +41,19 @@ SEED=$(( ($CORE_IN_BIN - 1) * NEV_PER_JOB + 1111 ))
 # Do the PYTHIA simulation & matching
 OUTDIR="/rstorage/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 mkdir -p $OUTDIR
-cd /home/ezra/pyjetty/pyjetty/alice_analysis/
+module use ~/heppy/modules
+module load heppy/1.0
+module use ~/pyjetty/modules
+module load pyjetty/1.0
+echo "python is" $(which python)
+cd /home/ezra/analysis_env/
+SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/pythia_parton_hadron.py"
+CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/process_angularity.yaml"
 
-for JETR in "${JETR_ARR[@]}"
-do
-	# First do with MPI off
-	FNAME="PythiaResults_R${JETR}_MPIoff.root"
-	if $USE_PTHAT_MAX; then
-		python process/user/ang_pp/pythia_parton_hadron.py --output "$OUTDIR/$FNAME" \
-			--user-seed $SEED --jetR $JETR --py-pthatmin $PTHAT_MIN --py-ecm $ECM --py-noMPI \
-			--nev $NEV_PER_JOB --pythiaopts PhaseSpace:pTHatMax=$PTHAT_MAX
-	else
-		python process/user/ang_pp/pythia_parton_hadron.py --output "$OUTDIR/$FNAME" \
-			--user-seed $SEED --jetR $JETR --py-pthatmin $PTHAT_MIN --py-ecm $ECM \
-			--py-noMPI --nev $NEV_PER_JOB
-	fi
-
-	# ... then with MPI on
-	FNAME="PythiaResults_R${JETR}.root"
-	if $USE_PTHAT_MAX; then
-		python process/user/ang_pp/pythia_parton_hadron.py --output "$OUTDIR/$FNAME" \
-			--user-seed $SEED --jetR $JETR --py-pthatmin $PTHAT_MIN --py-ecm $ECM \
-			--nev $NEV_PER_JOB --pythiaopts PhaseSpace:pTHatMax=$PTHAT_MAX
-	else
-		python process/user/ang_pp/pythia_parton_hadron.py --output "$OUTDIR/$FNAME" \
-			--user-seed $SEED --jetR $JETR --py-pthatmin $PTHAT_MIN \
-			--py-ecm $ECM --nev $NEV_PER_JOB
-	fi
-done
+if $USE_PTHAT_MAX; then
+	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX "
+	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX 
+else
+	pipenv run python "$SCRIPT" -c "$CONFIG" --output-dir "$OUTDIR" \
+		--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB
+fi
