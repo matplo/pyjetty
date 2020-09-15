@@ -90,6 +90,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
         outf.Write()
         outf.Close()
 
+        self.save_output_objects()
 
     #---------------------------------------------------------------
     # Initialize config file into class members
@@ -496,11 +497,11 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
                     # Create THn of response
                     dim = 4
-                    title = ['p_{T}^{jet, parton}', 'p_{T}^{ch jet}',
-                             '#lambda_{#beta}^{parton}', '#lambda_{#beta}^{ch}']
-                    nbins = [10, 20, 100, 100]
-                    min_li = [0.,   0.,   0.,  0.]
-                    max_li = [100., 200., 1.0, 1.0]
+                    title = ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
+                             '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
+                    nbins = [9, 14, 100, 101]
+                    min_li = [10.,   10.,  0., -0.005]
+                    max_li = [100., 150., 1.0, 1.005]
 
                     name = 'hResponse_JetPt_ang_%s' % label
                     nbins = (nbins)
@@ -568,7 +569,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
             if lp:  # prevent divide by 0
                 getattr(self, "hAngResidual_JetPt_%s" % label).Fill(jp.pt(), (lp - lch) / lp)
 
-            x = ([jp.pt(), jch.pt(), lp, lch])
+            x = ([jch.pt(), jp.pt(), lch, lp])
             x_array = array.array('d', x)
             getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(x_array)
 
