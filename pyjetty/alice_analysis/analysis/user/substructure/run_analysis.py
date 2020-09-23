@@ -109,7 +109,7 @@ class RunAnalysis(common_base.CommonBase):
     self.xtitle = self.obs_config_dict['common_settings']['xtitle']
     self.ytitle = self.obs_config_dict['common_settings']['ytitle']
     self.pt_bins_reported = self.obs_config_dict['common_settings']['pt_bins_reported']
-    
+
     self.use_max_reg_param = False
     if 'max_reg_param' in self.obs_config_dict['common_settings']:
       self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']

@@ -380,7 +380,7 @@ class ProcessBase(common_base.CommonBase):
     for attr in dir(self):
       
       obj = getattr(self, attr)
-      
+
       # Write all ROOT histograms and trees to file
       types = (ROOT.TH1, ROOT.THnBase, ROOT.TTree)
       if isinstance(obj, types):
