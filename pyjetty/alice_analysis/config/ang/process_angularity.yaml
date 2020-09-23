@@ -1,6 +1,6 @@
 # Processing parameters
 jetR: [0.2, 0.4]
-betas: [1, 1.5, 2, 3]
+betas: [1.5, 2, 3]
 
 # Initial detector-level binnings. Distributions are rebinned via configs before unfolding
 n_pt_bins: 195

@@ -9,7 +9,7 @@ import sys
 import os
 import argparse
 from array import *
-import numpy
+import numpy as np
 import ROOT
 import yaml
 
@@ -65,6 +65,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_response_file = config['response_file']
       self.rebin_theory_response = config['rebin_theory_response']
       self.theory_rebinned_response_file = config['rebin_response_file']
+      # Load the RooUnfold library
+      ROOT.gSystem.Load(config['roounfold_path'])
       self.do_theory = True
     else:
       self.do_theory = False
@@ -74,6 +76,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.load_theory_histograms()
       print("Loading response matrix for folding theory predictions...")
       self.load_theory_response()
+      print("Folding theory predictions...")
+      self.fold_theory()
+      print("Scaling theory predictions for MPI effects...")
+      self.mpi_scale_theory()
 
 
   #---------------------------------------------------------------
@@ -84,15 +90,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # Create histogram for each value of R and beta
     for jetR in self.jetR_list:
       for beta in self.theory_beta:   # beta value
-        name_cent = "theory_cent_%s_R%s_%s_parton" % (self.observable, str(jetR), str(beta))
+        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+
+        name_cent = "theory_cent_%s_%s_parton" % (self.observable, label)
         hist_cent = ROOT.TH2D(name_cent, name_cent, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 100, -0.005, 0.995)
-        name_min = "theory_min_%s_R%s_%s_parton" % (self.observable, str(jetR), str(beta))
+            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
+        name_min = "theory_min_%s_%s_parton" % (self.observable, label)
         hist_min = ROOT.TH2D(name_min, name_min, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 100, -0.005, 0.995)
-        name_max = "theory_max_%s_R%s_%s_parton" % (self.observable, str(jetR), str(beta))
+            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
+        name_max = "theory_max_%s_%s_parton" % (self.observable, label)
         hist_max = ROOT.TH2D(name_max, name_max, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 100, -0.005, 0.995)
+            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
 
         # Loop through each pT-bin
         for i, pt_min in enumerate(self.theory_pt_bins[0:-1]):
@@ -112,9 +120,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             max_val = [line.split()[1] for line in lines]
 
           for j, val in enumerate(cent_val):
-            hist_cent.SetBinContent(i, j, float(val))
-            hist_min.SetBinContent(i, j, float(min_val[j]))
-            hist_max.SetBinContent(i, j, float(max_val[j]))
+            hist_cent.SetBinContent(i+1, j+1, float(val))
+            hist_min.SetBinContent(i+1, j+1, float(min_val[j]))
+            hist_max.SetBinContent(i+1, j+1, float(max_val[j]))
 
         setattr(self, name_cent, hist_cent)
         setattr(self, name_min, hist_min)
@@ -127,60 +135,312 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def load_theory_response(self):
 
     f = ROOT.TFile(self.theory_response_file, 'READ')
-    while 
     for jetR in self.jetR_list:
       for beta in self.theory_beta:
         label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
-        name = "hResponse_JetPt_%s_%sScaled" % (self.observable, label)
-        thn = f.Get(name)
-        name = "hResponse_theory_%s" % (label)
-        setattr(self, name, thn)
+
+	# Load charged hadron level folding response matrix
+        name_ch = "hResponse_JetPt_%s_ch_%sScaled" % (self.observable, label)
+        thn_ch = f.Get(name_ch)
+        name_ch = "hResponse_theory_ch_%s" % (label)
+        setattr(self, name_ch, thn_ch)
+
+        # Load hadron-level folding response matrix (for comparison histograms)
+        name_h = "hResponse_JetPt_%s_h_%sScaled" % (self.observable, label)
+        thn_h = f.Get(name_h)
+        name_h = "hResponse_theory_h_%s" % (label)
+        setattr(self, name_h, thn_h)
 
         # Create Roounfold object
-        name_roounfold = name + '_Roounfold'
+        name_roounfold_h = name_h + '_Roounfold'
+        name_roounfold_ch = name_ch + '_Roounfold'
         if self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
           # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
           #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
-          # as compared to the usual ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
+          # as compared to the usual
+          #      ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
           det_pt_bin_array = array('d', range(10, 110, 10))
           tru_pt_bin_array = array('d', range(10, 160, 15))
           det_obs_bin_array = array('d', np.linspace(0, 1, 101, endpoint=True))
           tru_obs_bin_array = array('d', np.linspace(-0.005, 1.005, 102, endpoint=True))
           self.utils.rebin_response(
-            self.theory_rebinned_response_file, thn, name+'_Rebinned', name_roounfold, label, 
+            self.theory_rebinned_response_file, thn_ch, name_ch+'_Rebinned', name_roounfold_ch,
+            label, len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1,
+            det_obs_bin_array, len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1,
+            tru_obs_bin_array, self.observable)
+          self.utils.rebin_response(
+            self.theory_rebinned_response_file, thn_h, name_h+'_Rebinned', name_roounfold_h, label, 
             len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
             len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
             self.observable)
-          f = ROOT.TFile(self.theory_rebinned_response_file, 'READ')
-          roounfold_response = f.Get(name_roounfold)
+
+          f_resp = ROOT.TFile(self.theory_rebinned_response_file, 'READ')
+          roounfold_response_ch = f_resp.Get(name_roounfold_ch)
+          roounfold_response_h = f_resp.Get(name_roounfold_h)
           #f.Close()    # Not sure if this destroys the Roounfold object or not?
 
         else:   # Theory folding matrix already has correct binning
-          hist_ch_jet = thn.Projection(2, 0)
-          hist_ch_jet.SetName('hist_ch_jet_%s' % label)
-          hist_p_jet = thn.Projection(3, 1)
+          hist_p_jet = thn_ch.Projection(3, 1)
           hist_p_jet.SetName('hist_p_jet_%s' % label)
-          roounfold_response = ROOT.RooUnfoldResonse(hist_measured, hist_truth, name_roounfold, name_roounfold)
+          hist_h_jet = thn_h.Projection(2, 0)
+          hist_h_jet.SetName('hist_h_jet_%s' % label)
+          hist_ch_jet = thn_ch.Projection(2, 0)
+          hist_ch_jet.SetName('hist_ch_jet_%s' % label)
+          roounfold_response_ch = ROOT.RooUnfoldResponse(
+            hist_ch_jet, hist_p_jet, name_roounfold_ch, name_roounfold_ch)
+          roounfold_response_h = ROOT.RooUnfoldResponse(
+            hist_h_jet, hist_p_jet, name_roounfold_h, name_roounfold_h)
 
-          for bin_0 in range(1, thn.GetAxis(0).GetNbins() + 1):
+          for bin_0 in range(1, thn_ch.GetAxis(0).GetNbins() + 1):
             if bin_0 % 5 == 0:
-              print('{} / {}'.format(bin_0, thn.GetAxis(0).GetNbins() + 1))
-            pt_det = thn.GetAxis(0).GetBinCenter(bin_0)
-            for bin_1 in range(1, thn.GetAxis(1).GetNbins() + 1):
-              pt_true = thn.GetAxis(1).GetBinCenter(bin_1)
-              for bin_2 in range(0, thn.GetAxis(2).GetNbins() + 1):
-                for bin_3 in range(0, thn.GetAxis(3).GetNbins() + 1):
-                  obs_det = thn.GetAxis(2).GetBinCenter(bin_2)
-                  obs_true = thn.GetAxis(3).GetBinCenter(bin_3)
+              print('{} / {}'.format(bin_0, thn_ch.GetAxis(0).GetNbins() + 1))
+            pt_det = thn_ch.GetAxis(0).GetBinCenter(bin_0)
+            for bin_1 in range(1, thn_ch.GetAxis(1).GetNbins() + 1):
+              pt_true = thn_ch.GetAxis(1).GetBinCenter(bin_1)
+              for bin_2 in range(0, thn_ch.GetAxis(2).GetNbins() + 1):
+                for bin_3 in range(0, thn_ch.GetAxis(3).GetNbins() + 1):
+                  obs_det = thn_ch.GetAxis(2).GetBinCenter(bin_2)
+                  obs_true = thn_ch.GetAxis(3).GetBinCenter(bin_3)
                   # Get content of original THn bin
                   x_list = (pt_det, pt_true, obs_det, obs_true)
                   x = array('d', x_list)
-                  global_bin = thn.GetBin(x)
-                  content = thn.GetBinContent(global_bin)
-                  roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
+                  global_bin = thn_ch.GetBin(x)
+                  content = thn_ch.GetBinContent(global_bin)
+                  roounfold_response_ch.Fill(pt_det, obs_det, pt_true, obs_true, content)
 
-        setattr(self, name_roounfold, roounfold_response)
-          
+                  # Assume that thn_h and thn_ch have same binning
+                  obs_det = thn_h.GetAxis(2).GetBinCenter(bin_2)
+                  obs_true = thn_h.GetAxis(3).GetBinCenter(bin_3)
+                  # Get content of original THn bin
+                  x_list = (pt_det, pt_true, obs_det, obs_true)
+                  x = array('d', x_list)
+                  global_bin = thn_h.GetBin(x)
+                  content = thn_h.GetBinContent(global_bin)
+                  roounfold_response_h.Fill(pt_det, obs_det, pt_true, obs_true, content)
+
+        setattr(self, name_roounfold_ch, roounfold_response_ch)
+        setattr(self, name_roounfold_h, roounfold_response_h)
+
+
+  #----------------------------------------------------------------------
+  # Fold theoretical predictions
+  #----------------------------------------------------------------------
+  def fold_theory(self):
+
+    for jetR in self.jetR_list:
+      for beta in self.theory_beta:
+        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+
+        # Load parton-level theory predictions
+        name_cent = "theory_cent_%s_%s_parton" % (self.observable, label)
+        name_min = "theory_min_%s_%s_parton" % (self.observable, label)
+        name_max = "theory_max_%s_%s_parton" % (self.observable, label)
+
+        h_cent = getattr(self, name_cent)
+        h_min = getattr(self, name_min)
+        h_max = getattr(self, name_max)
+
+        # Load parton-to-charged-hadron response matrix
+        response_name_ch = "hResponse_theory_ch_%s_Roounfold" % label
+        response_ch = getattr(self, response_name_ch)
+        response_name_h = "hResponse_theory_h_%s_Roounfold" % label
+        response_h = getattr(self, response_name_h)
+
+        # Fold theory predictions
+        h_cent_folded_ch = response_ch.ApplyToTruth(h_cent)
+        h_min_folded_ch = response_ch.ApplyToTruth(h_min)
+        h_max_folded_ch = response_ch.ApplyToTruth(h_max)
+        h_cent_folded_h = response_h.ApplyToTruth(h_cent)
+        h_min_folded_h = response_h.ApplyToTruth(h_min)
+        h_max_folded_h = response_h.ApplyToTruth(h_max)
+
+        name_cent_ch = name_cent.replace('parton', 'ch')
+        name_min_ch = name_min.replace('parton', 'ch')
+        name_max_ch = name_max.replace('parton', 'ch')
+        name_cent_h = name_cent.replace('parton', 'h')
+        name_min_h = name_min.replace('parton', 'h')
+        name_max_h = name_max.replace('parton', 'h')
+
+        h_cent_folded_ch.SetNameTitle(name_cent_ch, name_cent_ch)
+        h_min_folded_ch.SetNameTitle(name_min_ch, name_min_ch)
+        h_max_folded_ch.SetNameTitle(name_max_ch, name_max_ch)
+        h_cent_folded_h.SetNameTitle(name_cent_h, name_cent_h)
+        h_min_folded_h.SetNameTitle(name_min_h, name_min_h)
+        h_max_folded_h.SetNameTitle(name_max_h, name_max_h)
+
+        # Save folded predictions
+        setattr(self, name_cent_ch, h_cent_folded_ch)
+        setattr(self, name_min_ch, h_min_folded_ch)
+        setattr(self, name_max_ch, h_max_folded_ch)
+        setattr(self, name_cent_h, h_cent_folded_h)
+        setattr(self, name_min_h, h_min_folded_h)
+        setattr(self, name_max_h, h_max_folded_h)
+
+
+  #----------------------------------------------------------------------
+  # Fold theoretical predictions
+  #----------------------------------------------------------------------
+  def mpi_scale_theory(self):
+
+    f = ROOT.TFile(self.theory_response_file, 'READ')
+
+    for jetR in self.jetR_list:
+      for beta in self.theory_beta:
+        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+
+        name_mpi_off = "hAng_JetPt_ch_%sScaled" % label
+        name_mpi_on = "hAng_JetPt_ch_MPIon_%sScaled" % label
+
+        h_mpi_off = f.Get(name_mpi_off)
+        h_mpi_on = f.Get(name_mpi_on)
+
+        # Load parton-level and folded theory predictions
+        name_cent = "theory_cent_%s_%s" % (self.observable, label)
+        name_min = "theory_min_%s_%s" % (self.observable, label)
+        name_max = "theory_max_%s_%s" % (self.observable, label)
+
+        h_cent = getattr(self, name_cent+"_parton")
+        h_min = getattr(self, name_min+"_parton")
+        h_max = getattr(self, name_max+"_parton")
+
+        h_cent_folded_h = getattr(self, name_cent+"_h")
+        h_min_folded_h = getattr(self, name_min+"_h")
+        h_max_folded_h = getattr(self, name_max+"_h")
+
+        h_cent_folded_ch = getattr(self, name_cent+"_ch")
+        h_min_folded_ch = getattr(self, name_min+"_ch")
+        h_max_folded_ch = getattr(self, name_max+"_ch")
+
+        # Ensure that the scaling and theory histograms have the same binning
+        y_rebin_num = h_mpi_off.GetNbinsY() / h_cent_folded_ch.GetNbinsY()
+        if y_rebin_num < 1 or abs(y_rebin_num - int(y_rebin_num)) > 1e-5:
+          print("ERROR: histograms for MPI scaling from response file have insufficienctly binning.")
+          print("       %i versus even multiple of  %i bins required" % \
+                (h_mpi_off.GetNbinsY(), h_cent_folded_ch.GetNbinsY()))
+          exit(1)
+        h_mpi_off.RebinY(int(y_rebin_num))
+        h_mpi_on.RebinY(int(y_rebin_num))
+        if h_mpi_off.GetNbinsY() != h_cent_folded_ch.GetNbinsY():
+          print("ERROR: rebinning histograms for MPI scaling failed.")
+          exit(1)
+
+        mpi_bin_edges = [h_mpi_on.GetXaxis().GetBinLowEdge(i+1)
+                         for i in range(h_mpi_on.GetNbinsX()+1)]
+        mpi_bin_edge_indices = [mpi_bin_edges.index(pt) for pt in self.pt_bins_reported]
+        theory_pt_bin_edge_indices = [self.theory_pt_bins.index(pt) for pt in self.pt_bins_reported]
+        # Loop through each reported pT-bin
+        for index, i in list(enumerate(theory_pt_bin_edge_indices))[0:-1]:
+          j = theory_pt_bin_edge_indices[index+1]
+          pt_min = self.theory_pt_bins[i]
+          pt_max = self.theory_pt_bins[j]
+
+          # Note: bins in ROOT are 1-indexed (0 bin is underflow). Also last bin is inclusive
+          h_mpi_off_proj = h_mpi_off.ProjectionY(
+            name_mpi_off+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+          h_mpi_on_proj = h_mpi_on.ProjectionY(
+            name_mpi_on+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+
+          # Create ratio plot for scaling
+          h_mpi_ratio = h_mpi_on_proj.Clone()
+          title = 'h_theory_mpi_scaling_%s_%s' % (label, str(i))
+          h_mpi_ratio.SetNameTitle(title, title)
+          h_mpi_ratio.Divide(h_mpi_off_proj)
+          h_mpi_ratio.SetDirectory(0)
+          setattr(self, 'h_mpi_ratio_%s_PtBin%i-%i' % (label, pt_min, pt_max), h_mpi_ratio)
+
+          pt_label = '_PtBin'+str(pt_min)+'-'+str(pt_max)
+
+          # Scale the theory bin and save for plotting
+          h_cent_bin = h_cent.ProjectionY(name_cent+"_parton"+pt_label, i+1, j)
+          h_min_bin = h_min.ProjectionY(name_min+"_parton"+pt_label, i+1, j)
+          h_max_bin = h_max.ProjectionY(name_max+"_parton"+pt_label, i+1, j)
+
+          h_cent_folded_h_bin = h_cent_folded_h.ProjectionY(name_cent+"_h"+pt_label, i+1, j)
+          h_min_folded_h_bin = h_min_folded_h.ProjectionY(name_min+"_h"+pt_label, i+1, j)
+          h_max_folded_h_bin = h_max_folded_h.ProjectionY(name_max+"_h"+pt_label, i+1, j)
+
+          h_cent_folded_ch_bin = h_cent_folded_ch.ProjectionY(name_cent+"_ch"+pt_label, i+1, j)
+          h_min_folded_ch_bin = h_min_folded_ch.ProjectionY(name_min+"_ch"+pt_label, i+1, j)
+          h_max_folded_ch_bin = h_max_folded_ch.ProjectionY(name_max+"_ch"+pt_label, i+1, j)
+
+          # Keep normalization by dividing by the number of bins added in projection
+          h_cent_bin.Scale(1/(j-i))
+          h_min_bin.Scale(1/(j-i))
+          h_max_bin.Scale(1/(j-i))
+
+          h_cent_folded_h_bin.Scale(1/(j-i))
+          h_min_folded_h_bin.Scale(1/(j-i))
+          h_max_folded_h_bin.Scale(1/(j-i))
+
+          h_cent_folded_ch_bin.Scale(1/(j-i))
+          h_min_folded_ch_bin.Scale(1/(j-i))
+          h_max_folded_ch_bin.Scale(1/(j-i))
+
+          # Save ratio plots for seeing the change at each level
+          h_cent_ratio_ch_bin = h_cent_folded_ch_bin.Clone()
+          h_cent_ratio_ch_bin.SetNameTitle('h_cent_ratio_ch'+pt_label, 'h_cent_ratio_ch'+pt_label)
+          h_cent_ratio_ch_bin.Divide(h_cent_folded_h_bin)
+          h_cent_ratio_ch_bin.SetDirectory(0)
+          setattr(self, 'h_cent_ratio_ch'+pt_label, h_cent_ratio_ch_bin)
+
+          # Apply the MPI scaling to the charged distribution
+          h_cent_folded_ch_bin.Multiply(h_mpi_ratio)
+          h_min_folded_ch_bin.Multiply(h_mpi_ratio)
+          h_max_folded_ch_bin.Multiply(h_mpi_ratio)
+
+          # Scale all by integral of central prediction values
+          # TODO: See if there's a better way to do this... shouldn't have to scale?
+          #h_min_bin.Scale(1/h_cent_bin.Integral("width"))
+          #h_max_bin.Scale(1/h_cent_bin.Integral("width"))
+          #h_cent_bin.Scale(1/h_cent_bin.Integral("width"))
+
+          h_min_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+          h_max_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+          h_cent_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+
+          h_min_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+          h_max_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+          h_cent_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+
+          # Set new names and titles to prevent issues with saving histograms
+          h_cent_bin.SetNameTitle(name_cent+"_parton"+pt_label, name_cent+"_parton"+pt_label)
+          h_min_bin.SetNameTitle(name_min+"_parton"+pt_label, name_min+"_parton"+pt_label)
+          h_max_bin.SetNameTitle(name_max+"_parton"+pt_label, name_max+"_parton"+pt_label)
+
+          h_cent_folded_h_bin.SetNameTitle(name_cent+"_ch"+pt_label, name_cent+"_h"+pt_label)
+          h_min_folded_h_bin.SetNameTitle(name_min+"_h"+pt_label, name_min+"_h"+pt_label)
+          h_max_folded_h_bin.SetNameTitle(name_max+"_h"+pt_label, name_max+"_h"+pt_label)
+
+          h_cent_folded_ch_bin.SetNameTitle(name_cent+"_ch"+pt_label, name_cent+"_ch"+pt_label)
+          h_min_folded_ch_bin.SetNameTitle(name_min+"_ch"+pt_label, name_min+"_ch"+pt_label)
+          h_max_folded_ch_bin.SetNameTitle(name_max+"_ch"+pt_label, name_max+"_ch"+pt_label)
+
+          # Steal ownership from ROOT
+          h_cent_bin.SetDirectory(0)
+          h_min_bin.SetDirectory(0)
+          h_max_bin.SetDirectory(0)
+
+          h_cent_folded_h_bin.SetDirectory(0)
+          h_min_folded_h_bin.SetDirectory(0)
+          h_max_folded_h_bin.SetDirectory(0)
+
+          h_cent_folded_ch_bin.SetDirectory(0)
+          h_min_folded_ch_bin.SetDirectory(0)
+          h_max_folded_ch_bin.SetDirectory(0)
+
+          # Save as attributes for later access (plotting)
+          setattr(self, name_cent+"_parton"+pt_label, h_cent_bin)
+          setattr(self, name_min+"_parton"+pt_label, h_min_bin)
+          setattr(self, name_max+"_parton"+pt_label, h_max_bin)
+
+          setattr(self, name_cent+"_h"+pt_label, h_cent_folded_h_bin)
+          setattr(self, name_min+"_h"+pt_label, h_min_folded_h_bin)
+          setattr(self, name_max+"_h"+pt_label, h_max_folded_h_bin)
+
+          setattr(self, name_cent+"_ch"+pt_label, h_cent_folded_ch_bin)
+          setattr(self, name_min+"_ch"+pt_label, h_min_folded_ch_bin)
+          setattr(self, name_max+"_ch"+pt_label, h_max_folded_ch_bin)
+
 
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -191,14 +451,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # Plot final result for each 1D substructure distribution (with PYTHIA)
     self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting)
 
+
   #---------------------------------------------------------------
   # This function is called once after all subconfigurations have been looped over, for each R
   #---------------------------------------------------------------
   def plot_all_results(self, jetR):
-
-    if self.do_theory:
-      print("Folding theory predictions...")
-      self.fold_theory()
 
     print('Plotting overlay of all results...')
     
@@ -210,39 +467,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
 
   #----------------------------------------------------------------------
-  # Fold theoretical predictions & apply MPI scaling
-  #----------------------------------------------------------------------
-  def fold_theory(self):
-
-    for jetR in self.jetR_list:
-      for beta in self.theory_beta:
-        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
-
-        # Load parton-level theory predictions
-        name_cent = "theory_cent_%s_R%s_%s_parton" % (self.observable, str(jetR), str(beta))
-        name_min = "theory_min_%s_R%s_%s_parton" % (self.observable, str(jetR), str(beta))
-        name_max = "theory_max_%s_R%s_%s_parton" % (self.observable, str(jetR), str(beta))
-
-        h_cent = getattr(self, name_cent)
-        h_min = getattr(self, name_min)
-        h_max = getattr(self, name_max)
-
-        # Load parton-to-charged-hadron response matrix
-        response_name = "hResponse_JetPt_%s_%sScaled_Roounfold" % (self.observable, label)
-        response = getattr(self, response_name)
-
-        # Fold theory predictions
-        h_cent_folded = response.ApplyToTruth(h_cent)
-        h_min_folded = response.ApplyToTruth(h_min)
-        h_max_folded = response.ApplyToTruth(h_max)
-
-        # Save folded predictions
-        setattr(self, name_cent.replace('parton', 'ch'), h_cent_folded)
-        setattr(self, name_min.replace('parton', 'ch'), h_min_folded)
-        setattr(self, name_max.replace('parton', 'ch'), h_max_folded)
-
-
-  #----------------------------------------------------------------------
   # This function is called once after all subconfigurations and jetR have been looped over
   #----------------------------------------------------------------------
   def plot_performance(self):
@@ -250,10 +474,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     # Initialize performance plotting class
     if self.do_plot_performance:
-      self.plotting_utils = plotting_utils.PlottingUtils(self.observable, self.is_pp,
-                                                         self.main_data, self.main_response,
-                                                         self.output_dir_performance,
-                                                         self.figure_approval_status)
+      self.plotting_utils = plotting_utils.PlottingUtils(
+        self.observable, self.is_pp, self.main_data, self.main_response,
+        self.output_dir_performance, self.figure_approval_status)
       
     # Create output subdirectories
     self.create_output_subdir(self.output_dir_performance, 'jet')
@@ -293,8 +516,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported,
-                                              relative=True)
+        self.plotting_utils.plot_obs_residual(
+          jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
         self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting,
                                                  self.xtitle, self.pt_bins_reported)
         
@@ -313,30 +536,31 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             for match in match_list:
 
               hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
-              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list,
-                                                      self.obs_settings, self.grooming_settings,
-                                                      overlay_list, self.prong_match_threshold)
-              self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list,
-                                                            self.obs_settings, self.grooming_settings,
-                                                            overlay_list, self.prong_match_threshold,
-                                                            min_pt, max_pt, plot_deltaz=False)
+              self.plotting_utils.plot_prong_matching(
+                i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
+                self.grooming_settings, overlay_list, self.prong_match_threshold)
+
+              self.plotting_utils.plot_prong_matching_delta(
+                i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
+                self.grooming_settings, overlay_list, self.prong_match_threshold,
+                min_pt, max_pt, plot_deltaz=False)
 
               hname = 'hProngMatching_{}_{}_JetPtDet_R{}'.format(prong, match, jetR)
-              self.plotting_utils.plot_prong_matching(i, jetR, hname, self.obs_subconfig_list,
-                                                      self.obs_settings, self.grooming_settings,
-                                                      overlay_list, self.prong_match_threshold)
+              self.plotting_utils.plot_prong_matching(
+                i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
+                self.grooming_settings, overlay_list, self.prong_match_threshold)
 
               if 'subleading' in prong:
                 hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
-                self.plotting_utils.plot_prong_matching_delta(i, jetR, hname, self.obs_subconfig_list,
-                                                              self.obs_settings, self.grooming_settings,
-                                                              overlay_list, self.prong_match_threshold,
-                                                              min_pt, max_pt, plot_deltaz=True)
+                self.plotting_utils.plot_prong_matching_delta(
+                  i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
+                  self.grooming_settings, overlay_list, self.prong_match_threshold,
+                  min_pt, max_pt, plot_deltaz=True)
 
           hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}'.format(jetR)
-          self.plotting_utils.plot_prong_matching_correlation(jetR, hname, self.obs_subconfig_list,
-                                                              self.obs_settings, self.grooming_settings,
-                                                              overlay_list, self.prong_match_threshold)
+          self.plotting_utils.plot_prong_matching_correlation(
+            jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings,
+            overlay_list, self.prong_match_threshold)
 
         # Plot subobservable-dependent plots
         for i, _ in enumerate(self.obs_subconfig_list):
@@ -358,9 +582,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       min_pt_truth = self.pt_bins_reported[i]
       max_pt_truth = self.pt_bins_reported[i+1]
       maxbin = self.obs_max_bins(obs_label)[i]
-      
+
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
+
+      if self.do_theory and float(obs_label) in self.theory_beta:
+        self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
+                             min_pt_truth, max_pt_truth, maxbin, plot_pythia=True, plot_theory=True)
+        self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
+                                min_pt_truth, max_pt_truth, maxbin)
 
       if min_pt_truth == 40 and (jetR == 0.2 or jetR == 0.4):
         # Only want to compare to girth with \beta=1
@@ -370,8 +600,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
-                      min_pt_truth, max_pt_truth, maxbin, plot_pythia=False):
-    
+                      min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=False):
+
+    # For theory plots, whether or not to show original parton-level predictions
+    show_parton_theory = True
+
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
@@ -387,7 +620,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     xtitle = getattr(self, 'xtitle')
     ytitle = getattr(self, 'ytitle')
-    color = 600-6
+    color = 1   # black for data
     
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
@@ -409,7 +642,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_sys.SetFillColorAlpha(color, 0.3)
     h_sys.SetFillStyle(1001)
     h_sys.SetLineWidth(0)
-    
+
     n_obs_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
     if maxbin:
@@ -420,11 +653,97 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myBlankHisto.SetXTitle(xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(2.5*h.GetMaximum())
+    myBlankHisto.SetMaximum(2.5*h.GetBinContent(int(0.5*h.GetNbinsX())))
     if self.observable == 'subjet_z' or self.observable == 'jet_axis':
       myBlankHisto.SetMaximum(1.7*h.GetMaximum())
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
+
+    if plot_theory:
+      label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
+
+      if show_parton_theory:
+        # Also plot the theory predictions pre-folding for comparison...
+        name_cent = "theory_cent_%s_%s_parton_PtBin%i-%i" % \
+                    (self.observable, label, min_pt_truth, max_pt_truth)
+        name_min = "theory_min_%s_%s_parton_PtBin%i-%i" % \
+                   (self.observable, label, min_pt_truth, max_pt_truth)
+        name_max = "theory_max_%s_%s_parton_PtBin%i-%i" % \
+                   (self.observable, label, min_pt_truth, max_pt_truth)
+
+        hcent_p = getattr(self, name_cent)
+        hmin_p = getattr(self, name_min)
+        hmax_p = getattr(self, name_max)
+
+        n = hcent_p.GetNbinsX()
+        x = array('d', [hcent_p.GetXaxis().GetBinCenter(i) for i in range(1, hcent_p.GetNbinsX()+1)])
+        y = array('d', [hcent_p.GetBinContent(i) for i in range(1, hcent_p.GetNbinsX()+1)])
+        xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
+        xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
+        yerrup = array('d', [hmax_p.GetBinContent(i)-y[i-1] for i in range(1, hmax_p.GetNbinsX()+1)])
+        yerrdn = array('d', [y[i-1]-hmin_p.GetBinContent(i) for i in range(1, hmin_p.GetNbinsX()+1)])
+        h_parton_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+        
+        color = self.ColorArray[5]
+        h_parton_theory.SetFillColorAlpha(color, 0.25)
+        h_parton_theory.Draw('3 same')
+        
+        hcent_p.SetLineColor(color)
+        hcent_p.SetLineWidth(3)
+        hcent_p.Draw('L hist same')
+
+        # Dotted lines for error bars
+        #hmin_p.SetLineColor(color)
+        #hmin_p.SetLineWidth(1)
+        #hmin_p.SetLineStyle(2)
+        #hmin_p.Draw('L hist same')
+
+        #hmax_p.SetLineColor(color)
+        #hmax_p.SetLineWidth(1)
+        #hmax_p.SetLineStyle(2)
+        #hmax_p.Draw('L hist same')
+
+
+      # Get and plot the folded & MPI-scaled theory predictions
+      name_cent = "theory_cent_%s_%s_ch_PtBin%i-%i" % \
+                  (self.observable, label, min_pt_truth, max_pt_truth)
+      name_min = "theory_min_%s_%s_ch_PtBin%i-%i" % \
+                 (self.observable, label, min_pt_truth, max_pt_truth)
+      name_max = "theory_max_%s_%s_ch_PtBin%i-%i" % \
+                 (self.observable, label, min_pt_truth, max_pt_truth)
+
+      hcent = getattr(self, name_cent)
+      hmin = getattr(self, name_min)
+      hmax = getattr(self, name_max)
+
+      n = hcent.GetNbinsX()
+      x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
+      y = array('d', [hcent.GetBinContent(i) for i in range(1, hcent.GetNbinsX()+1)])
+      xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
+      xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
+      yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for i in range(1, hmax.GetNbinsX()+1)])
+      yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for i in range(1, hmin.GetNbinsX()+1)])
+      h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+
+      color = self.ColorArray[6]
+      h_ch_theory.SetFillColorAlpha(color, 0.25)
+      h_ch_theory.Draw('3 same')
+
+      hcent.SetLineColor(color)
+      hcent.SetLineWidth(3)
+      hcent.Draw('L hist same')
+
+      # Dotted lines for error bars
+      #hmin.SetLineColor(color)
+      #hmin.SetLineWidth(1)
+      #hmin.SetLineStyle(2)
+      #hmin.Draw('L hist same')
+
+      #hmax.SetLineColor(color)
+      #hmax.SetLineWidth(1)
+      #hmax.SetLineStyle(2)
+      #hmax.Draw('L hist same')
+
 
     if plot_pythia:
     
@@ -435,12 +754,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
         hPythia.SetMarkerStyle(21)
-        hPythia.SetMarkerColor(1)
-        hPythia.SetLineColor(1)
+        hPythia.SetMarkerColor(600-6)
+        hPythia.SetLineColor(600-6)
         hPythia.SetLineWidth(1)
         hPythia.Draw('E2 same')
       else:
-        print('No PYTHIA prediction for {} {}'.format(self.observable, obs_label))
+        print('No PYTHIA prediction for %s %s' % (self.observable, obs_label))
         plot_pythia = False
     
     h_sys.DrawCopy('E2 same')
@@ -482,20 +801,28 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           ', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
         text_latex.DrawLatex(0.57, 0.52-delta, text)
 
-    myLegend = ROOT.TLegend(0.25, 0.7, 0.45, 0.85)
-    self.utils.setup_legend(myLegend,0.035)
+    myLegend = ROOT.TLegend(0.22, 0.7, 0.45, 0.9)
+    self.utils.setup_legend(myLegend, 0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
+    if plot_theory:
+      if show_parton_theory:
+        myLegend.AddEntry(hcent_p, 'Full Parton SCET', 'pe')
+      myLegend.AddEntry(hcent, 'Folded/Scaled SCET', 'pe')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
                                              int(min_pt_truth), int(max_pt_truth), self.file_format)
     if plot_pythia:
-      name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(self.utils.remove_periods(jetR),
-                                                      obs_label, int(min_pt_truth),
-                                                      int(max_pt_truth), self.file_format)
+      name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(
+        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+
+    if plot_theory:
+      name = 'hUnfolded_R{}_{}_{}-{}_Theory{}'.format(
+        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+
     output_dir = getattr(self, 'output_dir_final_results')
     output_dir_single = output_dir + '/single_results'
     if not os.path.exists(output_dir_single):
@@ -509,8 +836,123 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
     h.Write()
     h_sys.Write()
-    hPythia.Write()
+    if plot_pythia:
+      hPythia.Write()
+    if plot_theory:
+      hcent.Write()
+      hmin.Write()
+      hmax.Write()
     fFinalResults.Close()
+
+  
+  #----------------------------------------------------------------------
+  def plot_theory_ratios(self, jetR, obs_label, obs_setting, grooming_setting,
+                         min_pt_truth, max_pt_truth, maxbin):
+
+    name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
+    c = ROOT.TCanvas(name, name, 600, 450)
+    c.Draw()
+    
+    c.cd()
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    xtitle = getattr(self, 'xtitle')
+    ytitle = getattr(self, 'ytitle')
+    color = 600-6
+    
+    # Get histograms
+    name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
+                                              min_pt_truth, max_pt_truth)
+    h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+    
+    n_obs_bins_truth = self.n_bins_truth(obs_label)
+    truth_bin_array = self.truth_bin_array(obs_label)
+    if maxbin:
+      truth_bin_array = truth_bin_array[0:maxbin+1]
+      n_obs_bins_truth = len(truth_bin_array)-1
+
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
+
+    h_ratio_ch = getattr(self, 'h_cent_ratio_ch_PtBin%i-%i' % (min_pt_truth, max_pt_truth))
+    h_ratio_ch.SetMarkerSize(0.5)
+    h_ratio_ch.SetMarkerStyle(20)
+    h_ratio_ch.SetMarkerColor(self.ColorArray[5])
+    #h_ratio_ch.SetLineStyle(1)
+    #h_ratio_ch.SetLineWidth(2)
+    #h_ratio_ch.SetLineColor(self.ColorArray[5])
+
+    h_mpi_ratio = getattr(self, "h_mpi_ratio_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth))
+    h_mpi_ratio.SetMarkerSize(0.5)
+    h_mpi_ratio.SetMarkerStyle(20)
+    h_mpi_ratio.SetMarkerColor(self.ColorArray[4])
+    #h_mpi_ratio.SetLineStyle(1)
+    #h_mpi_ratio.SetLineWidth(2)
+    #h_mpi_ratio.SetLineColor(self.ColorArray[4])
+
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.SetXTitle(xtitle)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.SetYTitle(ytitle)
+    val = abs(2.5*h_mpi_ratio.GetBinContent(int(0.5*h_mpi_ratio.GetNbinsX())))
+    myBlankHisto.SetMaximum(val)
+    myBlankHisto.SetMinimum(0)
+    myBlankHisto.Draw("E")
+
+    h_ratio_ch.Draw('P E same')
+    h_mpi_ratio.Draw('P E same')
+
+    # Draw a horizontal line at 1
+    line = ROOT.TLine(0, 1, truth_bin_array[-1], 1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.SetLineWidth(2)
+    line.Draw()
+  
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.57, 0.87, text)
+    
+    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.57, 0.8, text)
+
+    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.DrawLatex(0.57, 0.73, text)
+
+    text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
+    text_latex.DrawLatex(0.57, 0.66, text)
+    
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    delta = 0.
+    if subobs_label:
+      text = '%s = %s' % (subobs_label, obs_setting)
+      text_latex.DrawLatex(0.57, 0.59, text)
+      delta = 0.07
+
+    myLegend = ROOT.TLegend(0.22, 0.7, 0.45, 0.9)
+    self.utils.setup_legend(myLegend, 0.035)
+    myLegend.AddEntry(h_ratio_ch, 'h to ch ratio', 'pe')
+    myLegend.AddEntry(h_mpi_ratio, 'MPI scaling ratio', 'pe')
+    myLegend.Draw()
+
+    name = 'hMPIratio_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                             int(min_pt_truth), int(max_pt_truth), self.file_format)
+
+    output_dir = getattr(self, 'output_dir_final_results')
+    if not os.path.exists(output_dir):
+      os.mkdir(output_dir)
+    outputFilename = os.path.join(output_dir, name)
+    c.SaveAs(outputFilename)
+    c.Close()
+
 
   #----------------------------------------------------------------------
   # Get unfolded data from the previous preliminary result (40-60 GeV/c)
@@ -1091,8 +1533,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
 
     output_dir = getattr(self, 'output_dir_final_results')
-    if not os.path.exists(output_dir):
-      os.mkdir(output_dir)
+    if not os.path.exists(os.path.join(output_dir, 'all_results')):
+      os.mkdir(os.path.join(output_dir, 'all_results'))
     outputFilename = os.path.join(output_dir, 'all_results', name)
     c.SaveAs(outputFilename)
 

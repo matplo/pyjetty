@@ -497,13 +497,33 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
                     # Create THn of response
                     dim = 4
-                    title = ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
+                    title = ['p_{T}^{ch jet}', 'p_{T}^{parton jet}', 
                              '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
                     nbins = [9, 14, 100, 101]
                     min_li = [10.,   10.,  0., -0.005]
                     max_li = [100., 150., 1.0, 1.005]
 
-                    name = 'hResponse_JetPt_ang_%s' % label
+                    name = 'hResponse_JetPt_ang_ch_%s' % label
+                    nbins = (nbins)
+                    xmin = (min_li)
+                    xmax = (max_li)
+                    nbins_array = array.array('i', nbins)
+                    xmin_array = array.array('d', xmin)
+                    xmax_array = array.array('d', xmax)
+                    h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+                    for i in range(0, dim):
+                        h.GetAxis(i).SetTitle(title[i])
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    # Another set of THn for full hadron folding
+                    title = ['p_{T}^{h jet}', 'p_{T}^{parton jet}', 
+                             '#lambda_{#beta}^{h}', '#lambda_{#beta}^{parton}']
+                    nbins = [9, 14, 100, 101]
+                    min_li = [10.,   10.,  0., -0.005]
+                    max_li = [100., 150., 1.0, 1.005]
+
+                    name = 'hResponse_JetPt_ang_h_%s' % label
                     nbins = (nbins)
                     xmin = (min_li)
                     xmax = (max_li)
@@ -571,7 +591,11 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
             x = ([jch.pt(), jp.pt(), lch, lp])
             x_array = array.array('d', x)
-            getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(x_array)
+            getattr(self, 'hResponse_JetPt_ang_ch_%s' % label).Fill(x_array)
+
+            x = ([jh.pt(), jp.pt(), lh, lp])
+            x_array = array.array('d', x)
+            getattr(self, 'hResponse_JetPt_ang_h_%s' % label).Fill(x_array)
 
 
     #---------------------------------------------------------------

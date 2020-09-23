@@ -11,7 +11,7 @@
 ECM=5020
 
 # Number of events per pT-hat bin (for statistics)
-NEV_DESIRED=1400000
+NEV_DESIRED=7000000
 
 # Lower edges of the pT-hat bins
 PTHAT_BINS=(5 7 9 12 16 21 28 36 45 57 70 85 99 115 132 150 169 190 212 235)

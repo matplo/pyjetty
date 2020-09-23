@@ -94,10 +94,10 @@ ang:
 
 ###############################################################################
 # Theory comparison parameters
-theory_beta: [1.5, 2, 3]
+theory_beta: [1.5]
 theory_dir: "/home/ezra/ALICE_table/"
 theory_pt_bins: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
-response_file: "/rstorage/alice/AnalysisResults/ang/158494/AnalysisResultsFinal.root"
+response_file: "/rstorage/alice/AnalysisResults/ang/189878/AnalysisResultsFinal.root"
 rebin_theory_response: False
 rebin_response_file: "RebinnedResponse.root"
 
@@ -109,8 +109,8 @@ output_dir: "./TestAngR02_ptbin1"
 roounfold_path: "/home/ezra/RooUnfold/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: True
-force_rebin: True
+do_unfolding: False
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
