@@ -70,8 +70,8 @@ class ProcessIO_Emb(common_base.CommonBase):
       
     if self.current_event_index >= self.current_file_nevents:
         self.load_file()
-    
-    current_event = self.current_file_df[self.current_event_index]
+        
+    current_event = self.current_file_df.iloc[self.current_event_index]
     self.current_event_index += 1
     #print('Get Pb-Pb event {}/{}'.format(self.current_event_index, self.current_file_nevents))
     return current_event

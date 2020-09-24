@@ -41,7 +41,7 @@ class CommonUtils(common_base.CommonBase):
   #---------------------------------------------------------------
   def obs_settings(self, observable, obs_config_dict, obs_subconfig_list):
 
-    if observable == 'subjet_z':
+    if 'subjet_z' in observable:
       return [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
     elif observable == 'jet_axis':
       return [obs_config_dict[name]['axis'] for name in obs_subconfig_list]

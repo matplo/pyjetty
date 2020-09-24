@@ -43,93 +43,154 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
   
     # Initialize base class
     super(ProcessMC_subjet_z, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
-    
-    self.observable = self.observable_list[0]
+        
+    # User-specific initialization
+    self.initialize_user_config()
 
+  #---------------------------------------------------------------
+  # Initialize config file into class members
+  #---------------------------------------------------------------
+  def initialize_user_config(self):
+      
+    # Define subjet finders (from first observable defined)
+    self.subjet_def = {}
+    for subjetR in self.obs_settings[self.observable_list[0]]:
+      self.subjet_def[subjetR] = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+      
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
   def initialize_user_output_objects_R(self, jetR):
-      
-    if not self.is_pp:
-    
-      for R_max in self.max_distance:
 
-        for subjetR in self.obs_settings[self.observable]:
-      
-          name = 'hDeltaR_combined_ppdet_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-          setattr(self, name, h)
-          
-          name = 'hDeltaR_ppdet_pptrue_{}_R{}_{}_Rmax{}'.format('subjet_z', jetR, subjetR, R_max)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-          setattr(self, name, h)
-          
-      #for subjetR in self.obs_settings[self.observable]:
-      
-        # Create prong matching histograms
-        #self.create_prong_matching_histograms(jetR, subjetR)
+    for observable in self.observable_list:
 
-    for subjetR in self.obs_settings[observable]:
+      for subjetR in self.obs_settings[observable]:
       
-      name = 'hDeltaR_All_{}_R{}_{}'.format(observable, jetR, subjetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-      setattr(self, name, h)
-    
-      name = 'hResidual_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1.0, 1.0)
-      h.GetXaxis().SetTitle('p_{T,truth}')
-      h.GetYaxis().SetTitle('#frac{z_{det}-z_{truth}}{z_{truth}}')
-      setattr(self, name, h)
+        if (jetR - subjetR) < 1e-3:
+          continue
       
-      # Create THn of response for subjet z
-      dim = 4;
-      title = ['p_{T,det}', 'p_{T,truth}', 'z_{det}', 'z_{truth}']
-      nbins = [30, 30, 100, 50]
-      min = [0., 0., 0., 0.]
-      max = [150., 300., 1., 1.]
-      name = 'hResponse_JetPt_{}_R{}_{}'.format(observable, jetR, subjetR)
-      self.create_thn(name, title, dim, nbins, min, max)
+        # Truth histograms
+        name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, subjetR)
+        h = ROOT.TH2F(name, name, 20, 0, 200, 100, 0, 1.0)
+        h.GetXaxis().SetTitle('p_{T,ch jet}')
+        h.GetYaxis().SetTitle('z_{r}')
+        setattr(self, name, h)
+        
+        if self.thermal_model:
+          for R_max in self.max_distance:
+            name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, subjetR)
+            h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.0)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('#z_{r}')
+            setattr(self, name, h)
+            
+        # Subjet matching histograms
+        if not self.is_pp:
+      
+          for R_max in self.max_distance:
+
+            # Subjet matching histograms -- only need one set for inclusive/leading
+            if observable == self.observable_list[0]:
+              name = 'hDeltaR_combined_ppdet_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              setattr(self, name, h)
+              
+              name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              setattr(self, name, h)
+              
+            # Plot deltaR distribution between the truth-detector leading subjets
+            # (since they are not matched geometrically, and can contain "swaps")
+            if 'leading' in observable:
+              name = 'hDeltaR_det_truth_{}_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+              h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#it{z_{r}}')
+              h.GetZaxis().SetTitle('#DeltaR')
+              setattr(self, name, h)
+                        
+            # Create prong matching histograms
+            name = 'h_{}_matched_pt_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+            h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 10, 0., 1.)
+            h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
+            h.GetYaxis().SetTitle('#it{z_{r,det}}')
+            h.GetZaxis().SetTitle('Matched p_{T,det} fraction')
+            setattr(self, name, h)
+            
+            name = 'h_{}_matched_pt_deltaZ_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+            h = ROOT.TH3F(name, name, 30, 0, 300, 10, 0, 1.0, 100, -1., 1.)
+            h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
+            h.GetYaxis().SetTitle('Matched p_{T,det} fraction')
+            h.GetZaxis().SetTitle('#Delta#it{z_{r}}')
+            setattr(self, name, h)
+            
+            name = 'h_{}_matched_pt_deltaR_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+            h = ROOT.TH3F(name, name, 30, 0, 300, 10, 0, 1.0, 100, 0., 1.)
+            h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
+            h.GetYaxis().SetTitle('Matched p_{T,det} fraction')
+            h.GetZaxis().SetTitle('#Delta#it{R}')
+            setattr(self, name, h)
+ 
+        else:
+        
+          # Subjet matching histograms -- only need one set for inclusive/leading
+          if observable == self.observable_list[0]:
+            name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+            setattr(self, name, h)
+            
+          # Plot deltaR distribution between the truth-detector leading subjets
+          # (since they are not matched geometrically, and can contain "swaps")
+          if 'leading' in observable:
+            name = 'hDeltaR_det_truth_{}_R{}_{}'.format(observable, jetR, subjetR)
+            h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+            h.GetXaxis().SetTitle('p_{T,ch jet}')
+            h.GetYaxis().SetTitle('#it{z_{r}}')
+            h.GetZaxis().SetTitle('#DeltaR')
+            setattr(self, name, h)
+
+      # Residuals and responses
+      for subjetR in self.obs_settings[observable]:
+      
+        if (jetR - subjetR) < 1e-3:
+          continue
+      
+        if not self.is_pp:
+      
+          for R_max in self.max_distance:
+            self.create_response_histograms(observable, jetR, subjetR, R_max)
+            if 'leading' in observable and R_max == self.main_R_max:
+              self.create_response_histograms(observable, jetR, subjetR, '{}_matched'.format(R_max))
+          
+        else:
+          self.create_response_histograms(observable, jetR, subjetR)
 
   #---------------------------------------------------------------
-  # Create theta_g response histograms
+  # This function is called once for each jet subconfiguration
+  # Fill 2D histogram of (pt, obs)
   #---------------------------------------------------------------
-  def create_prong_matching_histograms(self, jetR, subjetR):
+  def create_response_histograms(self, observable, jetR, subjetR, R_max = None):
   
-    prong_list = ['leading', 'subleading']
-    match_list = ['leading', 'subleading', 'ungroomed', 'outside']
+    if R_max:
+      suffix = '_Rmax{}'.format(R_max)
+    else:
+      suffix = ''
 
-    for R_max in self.max_distance:
-      for prong in prong_list:
-        for match in match_list:
-
-          name = 'hProngMatching_{}_{}_JetPt_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 20, 0., 2*jetR)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta R_{prong}')
-          setattr(self, name, h)
-          
-          name = 'hProngMatching_{}_{}_JetPtDet_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 20, 0., 2*jetR)
-          h.GetXaxis().SetTitle('p_{T,pp-det}')
-          h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta R_{prong}')
-          setattr(self, name, h)
-          
-          name = 'hProngMatching_{}_{}_JetPtZ_R{}_{}_Rmax{}'.format(prong, match, jetR, grooming_label, R_max)
-          h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 50, -0.5, 0.5)
-          h.GetXaxis().SetTitle('p_{T,truth}')
-          h.GetYaxis().SetTitle('Prong matching fraction')
-          h.GetZaxis().SetTitle('#Delta z_{prong}')
-          setattr(self, name, h)
-
-      name = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)
-      h = ROOT.TH3F(name, name, 20, 0, 200, 15, -0.4, 1.1, 15, -0.4, 1.1)
-      h.GetXaxis().SetTitle('p_{T,pp-det}')
-      h.GetYaxis().SetTitle('Prong matching fraction, leading_subleading')
-      h.GetZaxis().SetTitle('Prong matching fraction, subleading_leading')
-      setattr(self, name, h)
+    # Create THn of response for subjet z
+    dim = 4;
+    title = ['p_{T,det}', 'p_{T,truth}', 'z_{r,det}', 'z_{r,truth}']
+    nbins = [30, 30, 100, 50]
+    min = [0., 0., 0., 0.]
+    max = [150., 300., 1., 1.]
+    name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, subjetR, suffix)
+    self.create_thn(name, title, dim, nbins, min, max)
+    
+    name = 'hResidual_JetPt_{}_R{}_{}{}'.format(observable, jetR, subjetR, suffix)
+    h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0., 1., 200, -2., 2.)
+    h.GetXaxis().SetTitle('p_{T,truth}')
+    h.GetYaxis().SetTitle('z_{r}')
+    h.GetZaxis().SetTitle('#frac{z_{r,det}-z_{r,truth}}{z_{r,truth}}')
+    setattr(self, name, h)
 
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
@@ -137,14 +198,28 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
   #---------------------------------------------------------------
   def fill_observable_histograms(self, hname, jet, jet_groomed_lund, jetR, obs_setting,
                                  grooming_setting, obs_label, jet_pt_ungroomed):
+    
+    if (jetR - obs_setting) < 1e-3:
+      return
   
-    # For a given jet, find subjets of a given radius, and fill histograms
+    # For a given jet, find inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
-    for subjet in subjets:
-      z = subjet.pt() / jet.pt()
-      getattr(self,  hname.format(self.observable, jetR, obs_label)).Fill(jet_pt_ungroomed, z)
+    
+    for observable in self.observable_list:
       
+      # Fill inclusive subjets
+      if 'inclusive' in observable:
+        for subjet in subjets:
+          z = subjet.pt() / jet.pt()
+          getattr(self, hname.format(observable, obs_label)).Fill(jet.pt(), z)
+        
+      # Fill leading subjets
+      if 'leading' in observable:
+        leading_subjet = self.utils.leading_jet(subjets)
+        z_leading = leading_subjet.pt() / jet.pt()
+        getattr(self, hname.format(observable, obs_label)).Fill(jet.pt(), z_leading)
+        
   #---------------------------------------------------------------
   # Fill matched jet histograms
   #---------------------------------------------------------------
@@ -153,7 +228,11 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
                                   obs_setting, grooming_setting, obs_label,
                                   jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
        
+    if (jetR - obs_setting) < 1e-3:
+      return
+       
     # Find subjets
+    subjetR = obs_setting
     cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
     subjets_det = fj.sorted_by_pt(cs_subjet_det.inclusive_jets())
 
@@ -162,15 +241,15 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     
     if not self.is_pp:
       cs_subjet_det_pp = fj.ClusterSequence(jet_pp_det.constituents(), self.subjet_def[subjetR])
-      subjets_det_pp = fj.sorted_by_pt(cs_subjet_truth.inclusive_jets())
+      subjets_det_pp = fj.sorted_by_pt(cs_subjet_det_pp.inclusive_jets())
 
     # Loop through subjets and set subjet matching candidates for each subjet in user_info
     if self.is_pp:
-        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hDeltaR_All_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
+        [[self.set_matching_candidates(subjet_det, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det in subjets_det]
     else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
-        [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hDeltaR_combined_ppdet_subjet_z_R{}_{}'.format(jetR, subjetR), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
-        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets_det_pp]
+        [[self.set_matching_candidates(subjet_det_combined, subjet_det_pp, subjetR, 'hDeltaR_combined_ppdet_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max), fill_jet1_matches_only=True) for subjet_det_pp in subjets_det_pp] for subjet_det_combined in subjets_det]
+        [[self.set_matching_candidates(subjet_det_pp, subjet_truth, subjetR, 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)) for subjet_truth in subjets_truth] for subjet_det_pp in subjets_det_pp]
       
     # Loop through subjets and set accepted matches
     if self.is_pp:
@@ -179,185 +258,99 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
         [self.set_matches_AA(subjet_det_combined, subjetR, 'hSubjetMatchingQA_R{}_{}'.format(jetR, subjetR)) for subjet_det_combined in subjets_det]
 
     # Loop through matches and fill histograms
-    for subjet_det in subjets_det:
+    for observable in self.observable_list:
+    
+      # Fill inclusive subjets
+      if 'inclusive' in observable:
 
-      if subjet_det.has_user_info():
-        subjet_truth = subjet_det.python_info().match
-      
-        if subjet_truth:
+        for subjet_det in subjets_det:
+
+          if subjet_det.has_user_info():
+            subjet_truth = subjet_det.python_info().match
           
-          z_det = subjet_det.pt() / jet_det.pt()
-          z_truth = subjet_truth.pt() / jet_truth.pt()
+            if subjet_truth:
+              
+              z_det = subjet_det.pt() / jet_det.pt()
+              z_truth = subjet_truth.pt() / jet_truth.pt()
+              
+              # In Pb-Pb case, fill matched pt fraction
+              if not self.is_pp:
+                self.fill_subjet_matched_pt_histograms(observable,
+                                                       subjet_det, subjet_truth,
+                                                       z_det, z_truth,
+                                                       jet_truth.pt(), jetR, subjetR, R_max)
+              
+              # Fill histograms
+              # Note that we don't fill 'matched' histograms here, since that is only
+              # meaningful for leading subjets
+              self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                                 z_det, z_truth, obs_label, R_max, prong_match=False)
+                               
+      # Get leading subjet and fill histograms
+      if 'leading' in observable:
+      
+        leading_subjet_det = self.utils.leading_jet(subjets_det)
+        leading_subjet_truth = self.utils.leading_jet(subjets_truth)
+        
+        # Note that we don't want to check whether they are geometrical matches
+        # We rather want to correct the measured leading subjet to the true leading subjet
+        if leading_subjet_det and leading_subjet_truth:
+          
+          z_leading_det = leading_subjet_det.pt() / jet_det.pt()
+          z_leading_truth = leading_subjet_truth.pt() / jet_truth.pt()
+          
+          # In Pb-Pb case, fill matched pt fraction
+          if not self.is_pp:
+            match = self.fill_subjet_matched_pt_histograms(observable,
+                                                           leading_subjet_det, leading_subjet_truth,
+                                                           z_leading_det, z_leading_truth,
+                                                           jet_truth.pt(), jetR, subjetR, R_max)
+          else:
+            match = False
           
           # Fill histograms
-          self.fill_response(self.observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
-                             z_det, z_truth, obs_label, R_max, prong_match = False)
-    
+          self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                             z_leading_det, z_leading_truth, obs_label, R_max, prong_match=match)
+          
+          # Plot deltaR distribution between the detector and truth leading subjets
+          # (since they are not matched geometrically, the true leading may not be the measured leading
+          deltaR = leading_subjet_det.delta_R(leading_subjet_truth)
+          name = 'hDeltaR_det_truth_{}_R{}_{}'.format(observable, jetR, subjetR)
+          if not self.is_pp:
+            name += '_Rmax{}'.format(R_max)
+          getattr(self, name).Fill(jet_truth.pt(), z_leading_truth, deltaR)
+        
   #---------------------------------------------------------------
   # Do prong-matching
   #---------------------------------------------------------------
-  def fill_prong_matching_histograms(self, jet_truth, jet_det, jet_det_groomed_lund, jet_pt_truth_ungroomed,
-                                     jetR, grooming_setting, grooming_label, R_max):
+  def fill_subjet_matched_pt_histograms(self, observable, subjet_det, subjet_truth,
+                                        z_det, z_truth, jet_pt_truth, jetR, subjetR, R_max):
     
-    # Do grooming on pp-det jet, and get prongs
-    jet_pp_det = jet_truth.python_info().match
-      
-    jet_pp_det_groomed_lund = self.utils.groom(jet_pp_det, grooming_setting, jetR)
-    if not jet_pp_det_groomed_lund:
+    # Get pp det-level subjet
+    # Inclusive case: This is matched to the combined subjet (and its pp truth-level subjet)
+    # Leading case: This is matched only to the pp truth-level leading subjet
+    subjet_pp_det = None
+    if subjet_truth.has_user_info():
+      subjet_pp_det = subjet_truth.python_info().match
+    if not subjet_pp_det:
       return
+                                     
+    matched_pt = fjtools.matched_pt(subjet_det, subjet_pp_det)
+    name = 'h_{}_matched_pt_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+    getattr(self, name).Fill(jet_pt_truth, z_det, matched_pt)
     
-    # Groomer shop returns a fjcontrib::LundGenerator
-    #   The prongs can be retrieved directly from this object.
-    #   If the object exists, then it has passed grooming
-    jet_pp_det_prong1 = jet_pp_det_groomed_lund.harder()
-    jet_pp_det_prong2 = jet_pp_det_groomed_lund.softer()
-    has_parents_pp_det = jet_pp_det_groomed_lund
+    # Plot dz between det and truth subjets
+    deltaZ = z_det - z_truth
+    name = 'h_{}_matched_pt_deltaZ_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+    getattr(self, name).Fill(jet_pt_truth, matched_pt, deltaZ)
 
-    # Get prongs of combined jet
-    jet_combined_prong1 = jet_det_groomed_lund.harder()
-    jet_combined_prong2 = jet_det_groomed_lund.softer()
-    has_parents_combined = jet_det_groomed_lund
-    
-    # Get the fastjet::PseudoJets from the fjcontrib::LundGenerators
-    jet_pp_det_groomed = jet_pp_det_groomed_lund.pair()
-    jet_det_groomed = jet_det_groomed_lund.pair()
-          
-    if self.debug_level > 1:
+    # Plot dR between det and truth subjets
+    deltaR = subjet_det.delta_R(subjet_truth)
+    name = 'h_{}_matched_pt_deltaR_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+    getattr(self, name).Fill(jet_pt_truth, matched_pt, deltaR)
 
-        if jet_pt_truth_ungroomed > 80.:
-        
-            print('=======================================================')
-            print('jet_pt_truth_ungroomed: {}'.format(jet_pt_truth_ungroomed))
-            print('jet_pt_pp_det_ungroomed: {}'.format(jet_pp_det.pt()))
-            print('jet_pt_pp_det_groomed: {}'.format(jet_pp_det_groomed.pt()))
-            print('jet_pt_combined_groomed: {}'.format(jet_det_groomed.pt()))
-            print('')
-            print('jet_pp_det tracks: {}'.format([track.user_index() for track in jet_pp_det.constituents()]))
-            print('         track pt: {}'.format([np.around(track.pt(),2) for track in jet_pp_det.constituents()]))
-            print('jet_pp_det_groomed tracks: {}'.format([track.user_index() for track in jet_pp_det_groomed.constituents()]))
-            print('                 track pt: {}'.format([np.around(track.pt(),2) for track in jet_pp_det_groomed.constituents()]))
-            print('jet_combined groomed tracks: {}'.format([track.user_index() for track in jet_det_groomed.constituents()]))
-            print('                   track pt: {}'.format([np.around(track.pt(),2) for track in jet_det_groomed.constituents()]))
-            print('jet_combined ungroomed tracks: {}'.format([track.user_index() for track in jet_det.constituents()]))
-            print('                     track pt: {}'.format([np.around(track.pt(),2) for track in jet_det.constituents()]))
-
-    # Compute fraction of pt of the pp-det prong tracks that is contained in the combined-jet prong,
-    # in order to have a measure of whether the combined-jet prong is the "same" prong as the pp-det prong
-    deltaR_prong1 = -1.
-    deltaR_prong2 = -1.
-    deltaZ = -1.
-    if has_parents_pp_det and has_parents_combined:
-    
-        # Subleading jet pt-matching
-        # --------------------------
-        # (1) Fraction of pt matched: subleading pp-det in subleading combined
-        matched_pt_subleading_subleading = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong2)
-        
-        # (2) Fraction of pt matched: subleading pp-det in leading combined
-        matched_pt_subleading_leading = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong2)
-        
-        # (3) Fraction of pt matched: subleading pp-det in ungroomed combined jet
-        matched_pt_subleading_groomed = fjtools.matched_pt(jet_det_groomed, jet_pp_det_prong2)
-        matched_pt_subleading_ungroomed = fjtools.matched_pt(jet_det, jet_pp_det_prong2)
-        matched_pt_subleading_ungroomed_notgroomed = matched_pt_subleading_ungroomed - matched_pt_subleading_groomed
-        
-        # (4) Fraction of pt matched: subleading pp-det not in ungroomed combined jet
-        matched_pt_subleading_outside = 1 - matched_pt_subleading_ungroomed
-
-        # Leading jet pt-matching
-        # --------------------------
-        # (1) Fraction of pt matched: leading pp-det in subleading combined
-        matched_pt_leading_subleading = fjtools.matched_pt(jet_combined_prong2, jet_pp_det_prong1)
-        
-        # (2) Fraction of pt matched: leading pp-det in leading combined
-        matched_pt_leading_leading = fjtools.matched_pt(jet_combined_prong1, jet_pp_det_prong1)
-
-        # (3) Fraction of pt matched: leading pp-det in ungroomed combined jet
-        matched_pt_leading_groomed = fjtools.matched_pt(jet_det_groomed, jet_pp_det_prong1)
-        matched_pt_leading_ungroomed = fjtools.matched_pt(jet_det, jet_pp_det_prong1)
-        matched_pt_leading_ungroomed_notgroomed = matched_pt_leading_ungroomed - matched_pt_leading_groomed
-        
-        # (4) Fraction of pt matched: leading pp-det not in ungroomed combined jet
-        matched_pt_leading_outside = 1 - matched_pt_leading_ungroomed
-
-        # Compute delta-R between pp-det prong and combined prong
-        # --------------------------
-        deltaR_prong1 = jet_combined_prong1.delta_R(jet_pp_det_prong1)
-        deltaR_prong2 = jet_combined_prong2.delta_R(jet_pp_det_prong2)
-        deltaZ = self.zg(jet_det_groomed) - self.zg(jet_pp_det_groomed)
-        
-        if self.debug_level > 1:
-        
-            if jet_pt_truth_ungroomed > 80.:
-            
-                print('subleading prong tracks -- combined: {}'.format([track.user_index() for track in jet_combined_prong2.constituents()]))
-                print('subleading prong tracks -- pp-det: {}'.format([track.user_index() for track in jet_pp_det_prong2.constituents()]))
-                print('leading prong tracks -- combined: {}'.format([track.user_index() for track in jet_combined_prong1.constituents()]))
-                print('leading prong tracks -- pp-det: {}'.format([track.user_index() for track in jet_pp_det_prong1.constituents()]))
-                print('')
-                print('leading_prong_pt: {}'.format(jet_combined_prong1.pt()))
-                print('matched_pt_leading_subleading fraction: {}'.format(matched_pt_leading_subleading))
-                print('matched_pt_leading_leading fraction: {}'.format(matched_pt_leading_leading))
-                print('matched_pt_leading_ungroomed_notgroomed fraction: {}'.format(matched_pt_leading_ungroomed_notgroomed))
-                print('matched_pt_leading_outside fraction: {}'.format(matched_pt_leading_outside))
-                print('')
-                print('subleading_prong_pt: {}'.format(jet_combined_prong2.pt()))
-                print('matched_pt_subleading_subleading fraction: {}'.format(matched_pt_subleading_subleading))
-                print('matched_pt_subleading_leading fraction: {}'.format(matched_pt_subleading_leading))
-                print('matched_pt_subleading_ungroomed_notgroomed fraction: {}'.format(matched_pt_subleading_ungroomed_notgroomed))
-                print('matched_pt_subleading_outside fraction: {}'.format(matched_pt_subleading_outside))
-                print('')
-                print('deltaR_prong1: {}'.format(deltaR_prong1))
-                print('deltaR_prong2: {}'.format(deltaR_prong2))
-
-    elif has_parents_pp_det: # pp-det passed grooming, but combined jet failed grooming
-        matched_pt_leading_leading = matched_pt_leading_subleading = matched_pt_leading_ungroomed_notgroomed = matched_pt_leading_outside = matched_pt_subleading_leading = matched_pt_subleading_subleading = matched_pt_subleading_ungroomed_notgroomed = matched_pt_subleading_outside = -0.1
-        
-    elif has_parents_combined: # combined jet passed grooming, but pp-det failed grooming
-        matched_pt_leading_leading = matched_pt_leading_subleading = matched_pt_leading_ungroomed_notgroomed = matched_pt_leading_outside = matched_pt_subleading_leading = matched_pt_subleading_subleading = matched_pt_subleading_ungroomed_notgroomed = matched_pt_subleading_outside = -0.2
-        
-    else: # both pp-det and combined jet failed SoftDrop
-        matched_pt_leading_leading = matched_pt_leading_subleading = matched_pt_leading_ungroomed_notgroomed = matched_pt_leading_outside = matched_pt_subleading_leading = matched_pt_subleading_subleading = matched_pt_subleading_ungroomed_notgroomed = matched_pt_subleading_outside = -0.3
-
-    # Leading prong
-    getattr(self, 'hProngMatching_leading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaR_prong1)
-    
-    getattr(self, 'hProngMatching_leading_leading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_leading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_subleading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_subleading, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_ungroomed_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_ungroomed_notgroomed, deltaR_prong1)
-    getattr(self, 'hProngMatching_leading_outside_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_outside, deltaR_prong1)
-    
-    getattr(self, 'hProngMatching_leading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_leading, deltaZ)
-    getattr(self, 'hProngMatching_leading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_subleading, deltaZ)
-    getattr(self, 'hProngMatching_leading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_ungroomed_notgroomed, deltaZ)
-    getattr(self, 'hProngMatching_leading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_leading_outside, deltaZ)
-
-    # Subleading prong
-    getattr(self, 'hProngMatching_subleading_leading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_subleading_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_ungroomed_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_outside_JetPt_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaR_prong2)
-
-    getattr(self, 'hProngMatching_subleading_leading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_leading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_subleading_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_subleading, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_ungroomed_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_ungroomed_notgroomed, deltaR_prong2)
-    getattr(self, 'hProngMatching_subleading_outside_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_subleading_outside, deltaR_prong2)
-
-    getattr(self, 'hProngMatching_subleading_leading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_leading, deltaZ)
-    getattr(self, 'hProngMatching_subleading_subleading_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_subleading, deltaZ)
-    getattr(self, 'hProngMatching_subleading_ungroomed_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_ungroomed_notgroomed, deltaZ)
-    getattr(self, 'hProngMatching_subleading_outside_JetPtZ_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pt_truth_ungroomed, matched_pt_subleading_outside, deltaZ)
-    
-    # Plot correlation of matched pt fraction for leading-subleading and subleading-leading
-    getattr(self, 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}_{}_Rmax{}'.format(jetR, grooming_label, R_max)).Fill(jet_pp_det.pt(), matched_pt_leading_subleading, matched_pt_subleading_leading)
-    
-    subleading_match = (matched_pt_subleading_subleading > 0.5)
-    leading_match = (matched_pt_leading_leading > 0.5)
-    prong_match = subleading_match and leading_match
-    return prong_match
+    match = (matched_pt > 0.5)
+    return match
 
 ##################################################################
 if __name__ == '__main__':

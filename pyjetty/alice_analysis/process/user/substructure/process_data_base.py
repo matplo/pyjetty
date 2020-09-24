@@ -294,6 +294,7 @@ class ProcessDataBase(process_base.ProcessBase):
         hZ.Fill(jet_pt_ungroomed, z)
     
     # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
+    # Note that the subconfigurations are defined by the first observable, if multiple are defined
     observable = self.observable_list[0]
     for i in range(len(self.obs_settings[observable])):
     

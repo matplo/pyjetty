@@ -39,8 +39,8 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   #---------------------------------------------------------------
   def formatted_subobs_label(self, observable):
 
-    if observable == 'subjet_z':
-      return '#it{R}_{subjet}'
+    if 'subjet_z' in observable:
+      return '#it{r}'
     elif observable == 'jet_axis':
       return '#Delta #it{R}_{axis}'
     elif observable == 'ang':
@@ -64,7 +64,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       return math.pow(obs_true, prior_variation_parameter)
     elif self.observable == 'theta_g':
       return (1 + prior_variation_parameter*(2*obs_true - 1))
-    elif self.observable == 'subjet_z':
+    elif 'subjet_z' in self.observable:
       return (1 + obs_true)
     elif self.observable == 'jet_axis':
       return (1 + obs_true)

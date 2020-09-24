@@ -14,7 +14,7 @@ To use this class, the following should be done:
 
   - Specify a configuration file, see examples in the config/ directory
 
-  - Implement a user analysis class inheriting from this one, such as in james/run_analysis_james.py
+  - Implement a user analysis class inheriting from this one, such as in james/run_analysis_theta_g.py
     You should implement the following functions:
       - plot_single_result()
       - plot_all_results()

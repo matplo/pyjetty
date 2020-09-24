@@ -72,9 +72,9 @@ class HFAIO(MPBase):
 			return False
 		pinfo('events from', fname, len(self.event_df.index))
 
-		_d0cuts_base = "(pt_cand > 4.0 & pt_prong0 > 0.5 & pt_prong1 > 0.5 & abs(eta_cand) < 0.8) & "
+		_d0cuts_base = "(pt_cand > 3.0 & pt_prong0 > 0.5 & pt_prong1 > 0.5 & abs(eta_cand) < 0.8) & "
 		_d0cuts_kpi = _d0cuts_base
-		_d0cuts_kpi += "((abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_0 < -900)) | "
+		_d0cuts_kpi += "((abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_1 < -900)) | "
 		_d0cuts_kpi += "(abs(nsigTPC_Pi_1) < 3. & (abs(nsigTOF_Pi_1) < 3. | nsigTOF_Pi_1 < -900) & abs(nsigTPC_K_0) < 3. & (abs(nsigTOF_K_0) < 3. | nsigTOF_K_0 < -900)))"
 
 		self.d0_df = self.pd_tree(path=fname, tname=self.d0_tree_name, squery=_d0cuts_kpi)
@@ -160,7 +160,7 @@ class HFAIO(MPBase):
 		self.tw.fill_branches(dpsj = _d0s)
 		self.tw.fill_branches(dpsjgh = _d0s_gh)
 		self.tw.fill_branches(minv = _d0_imass_list)
-		self.tw.fill_branches(jets = ja.jets_as_psj_vector())
+		# self.tw.fill_branches(jets = ja.jets_as_psj_vector())
 		self.tw.fill_tree()
 
 		self.d0_jet_correl(ja.jets, _d0s, _d0_imass_list)
