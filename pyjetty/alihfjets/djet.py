@@ -72,10 +72,12 @@ class HFAIO(MPBase):
 			return False
 		pinfo('events from', fname, len(self.event_df.index))
 
-		_d0cuts_base = "(pt_cand > 3.0 & pt_prong0 > 0.5 & pt_prong1 > 0.5 & abs(eta_cand) < 0.8) & "
-		_d0cuts_kpi = _d0cuts_base
+		_d0cuts_base = "(pt_cand > 3.0 & pt_prong0 > 0.6 & pt_prong1 > 0.6 & abs(eta_cand) < 0.8) & "
+		_d0cuts_extra = "(dca)<0.03 & abs(cos_t_star)<0.8 & (imp_par_prod)<-0.0001 & (cos_p)>0.9 & "
+		_d0cuts_kpi = _d0cuts_base + _d0cuts_extra
 		_d0cuts_kpi += "((abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_1 < -900)) | "
 		_d0cuts_kpi += "(abs(nsigTPC_Pi_1) < 3. & (abs(nsigTOF_Pi_1) < 3. | nsigTOF_Pi_1 < -900) & abs(nsigTPC_K_0) < 3. & (abs(nsigTOF_K_0) < 3. | nsigTOF_K_0 < -900)))"
+		# Nikki with these cuts:  (pt_cand)>3, (pt_prong0)>0.6, (pt_prong1)>0.6, (dca)<0.03, abs(cos_t_star)<0.8, (imp_par_prod)<-0.0001, (cos_p)>0.9
 
 		self.d0_df = self.pd_tree(path=fname, tname=self.d0_tree_name, squery=_d0cuts_kpi)
 		if self.d0_df is None:
@@ -125,9 +127,7 @@ class HFAIO(MPBase):
 					_d0_index = c.user_index() - self._user_index_offset 
 					_d0 = _d0s[_d0_index]
 					self.twjc.fill_branches(jet = j, d0 = _d0, dR = j.delta_R(_d0), minv = _d0_imass_list[_d0_index], m = _d0.m(), z = _d0.perp() / j.perp())
-					_filled = True
-		if _filled:
-			self.twjc.fill_tree()
+					self.twjc.fill_tree()
 
 	def process_d0s(self, df):
 		self.pbar.update(1)
@@ -145,24 +145,22 @@ class HFAIO(MPBase):
 		_parts = fjext.vectorize_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
 		self._user_index_offset = 10000
 		# _d0s = fjext.vectorize_pt_eta_phi([df['pt_cand']], [df['eta_cand']], [df['phi_cand']], self._user_index_offset)
-		_d0s = fjext.vectorize_pt_eta_phi(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, self._user_index_offset)
+		# _d0s = fjext.vectorize_pt_eta_phi(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, self._user_index_offset)
+		_d0s = fjext.vectorize_pt_eta_phi_m(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, df['inv_mass'].values, self._user_index_offset)
 		_d0s_gh = [p * 1.e-6 for p in _d0s]
+
+		_d0_imass_list = df['inv_mass'].values.tolist()
+		# _d0_imass_list = [df['inv_mass']]
+		self.tw.fill_branches(dpsj = _d0s, dpsjgh = _d0s_gh, minv = _d0_imass_list)
+		self.tw.fill_tree()
 
 		_parts_and_ds = _parts
 		_tmp = [_parts_and_ds.push_back(p) for p in _d0s_gh]
 		# pinfo('n parts = ', len(_parts_and_ds))
-
-		ja = jet_analysis.JetAnalysis(jet_R = 0.4, particle_eta_max=0.9, jet_pt_min=10.0)
+		ja = jet_analysis.JetAnalysis(jet_R = 0.4, particle_eta_max=0.9, jet_pt_min=3.0)
 		ja.analyze_event(_parts_and_ds)
-
-		_d0_imass_list = df['inv_mass'].values.tolist()
-		# _d0_imass_list = [df['inv_mass']]
-		self.tw.fill_branches(dpsj = _d0s)
-		self.tw.fill_branches(dpsjgh = _d0s_gh)
-		self.tw.fill_branches(minv = _d0_imass_list)
-		# self.tw.fill_branches(jets = ja.jets_as_psj_vector())
-		self.tw.fill_tree()
-
+		if len(ja.jets) < 1:
+			return True
 		self.d0_jet_correl(ja.jets, _d0s, _d0_imass_list)
 
 		return True
@@ -183,7 +181,8 @@ class HFAIO(MPBase):
 		_df_tracks.reset_index(drop=True)
 		_parts = fjext.vectorize_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
 		self._user_index_offset = 10000
-		_d0s = fjext.vectorize_pt_eta_phi(_df_d0['pt_cand'].values, _df_d0['eta_cand'].values, _df_d0['phi_cand'].values, self._user_index_offset)
+		# _d0s = fjext.vectorize_pt_eta_phi(_df_d0['pt_cand'].values, _df_d0['eta_cand'].values, _df_d0['phi_cand'].values, self._user_index_offset)
+		_d0s = fjext.vectorize_pt_eta_phi_m(_df_d0['pt_cand'].values, _df_d0['eta_cand'].values, _df_d0['phi_cand'].values, _df_d0['inv_mass'].values, self._user_index_offset)
 		_d0s_gh = [p * 1.e-6 for p in _d0s]
 
 		_parts_and_ds = _parts

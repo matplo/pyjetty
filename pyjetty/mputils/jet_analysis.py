@@ -11,8 +11,8 @@ class JetAnalysis(MPBase):
 
 		self.particle_selector = fj.SelectorAbsEtaMax(self.particle_eta_max)
 
-		# self.jet_eta_max = self.particle_eta_max - self.jet_R * 1.05
-		self.jet_eta_max = self.particle_eta_max - 0.05
+		self.jet_eta_max = self.particle_eta_max - self.jet_R * 1.05
+		# self.jet_eta_max = self.particle_eta_max - 0.05
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
 		self.jet_selector = fj.SelectorPtMin(self.jet_pt_min) & fj.SelectorAbsEtaMax(self.jet_eta_max)
 		self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
