@@ -519,17 +519,8 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     # Another set of THn for full hadron folding
                     title = ['p_{T}^{h jet}', 'p_{T}^{parton jet}', 
                              '#lambda_{#beta}^{h}', '#lambda_{#beta}^{parton}']
-                    nbins = [9, 14, 100, 101]
-                    min_li = [10.,   10.,  0., -0.005]
-                    max_li = [100., 150., 1.0, 1.005]
 
                     name = 'hResponse_JetPt_ang_h_%s' % label
-                    nbins = (nbins)
-                    xmin = (min_li)
-                    xmax = (max_li)
-                    nbins_array = array.array('i', nbins)
-                    xmin_array = array.array('d', xmin)
-                    xmax_array = array.array('d', xmax)
                     h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                     for i in range(0, dim):
                         h.GetAxis(i).SetTitle(title[i])
