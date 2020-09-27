@@ -64,7 +64,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_pt_bins = config['theory_pt_bins']
       self.theory_response_file = config['response_file']
       self.rebin_theory_response = config['rebin_theory_response']
-      self.theory_rebinned_response_file = config['rebin_response_file']
+      self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
       # Load the RooUnfold library
       ROOT.gSystem.Load(config['roounfold_path'])
       self.do_theory = True
@@ -86,6 +86,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   # This function is called once for each subconfiguration
   #---------------------------------------------------------------
   def load_theory_histograms(self):
+
+    # Set central value to exponential distribution
+    exp_test = False
 
     # Create histogram for each value of R and beta
     for jetR in self.jetR_list:
@@ -119,6 +122,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             lines = f.read().split('\n')
             max_val = [line.split()[1] for line in lines]
 
+          if exp_test:
+            max_val = [1/(x+0.4) for x in np.linspace(0, 0.5, 51, True)] + \
+                      [0 for x in np.linspace(0.51, 1, 50, True)] 
+            #np.exp(np.linspace(0, 1, 101, True))
+            cent_val = np.concatenate((np.full(51, 1), np.full(50, 0)))
+            #min_val = [0.6 - x for x in np.linspace(0, 1, 101, True)]
+
           for j, val in enumerate(cent_val):
             hist_cent.SetBinContent(i+1, j+1, float(val))
             hist_min.SetBinContent(i+1, j+1, float(min_val[j]))
@@ -134,7 +144,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #---------------------------------------------------------------
   def load_theory_response(self):
 
+    # Check to see if Roounfold file already exists
+    roounfold_filename = os.path.join(self.output_dir_theory, 'fRoounfold.root')
+    roounfold_exists = os.path.exists(roounfold_filename)
+
+    # 4D response matrix file from PYTHIA model
     f = ROOT.TFile(self.theory_response_file, 'READ')
+
     for jetR in self.jetR_list:
       for beta in self.theory_beta:
         label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
@@ -154,7 +170,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         # Create Roounfold object
         name_roounfold_h = name_h + '_Roounfold'
         name_roounfold_ch = name_ch + '_Roounfold'
-        if self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
+
+        if roounfold_exists and not self.rebin_theory_response:
+          fRoo = ROOT.TFile(roounfold_filename, 'READ')
+          roounfold_response_ch = fRoo.Get(name_roounfold_ch)
+          roounfold_response_h = fRoo.Get(name_roounfold_h)
+          fRoo.Close()
+
+        elif self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
           # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
           #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
           # as compared to the usual
@@ -164,12 +187,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           det_obs_bin_array = array('d', np.linspace(0, 1, 101, endpoint=True))
           tru_obs_bin_array = array('d', np.linspace(-0.005, 1.005, 102, endpoint=True))
           self.utils.rebin_response(
-            self.theory_rebinned_response_file, thn_ch, name_ch+'_Rebinned', name_roounfold_ch,
-            label, len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1,
-            det_obs_bin_array, len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1,
-            tru_obs_bin_array, self.observable)
+            roounfold_filename, thn_ch, name_ch+'_Rebinned', name_roounfold_ch, label,
+            len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
+            len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
+            self.observable)
           self.utils.rebin_response(
-            self.theory_rebinned_response_file, thn_h, name_h+'_Rebinned', name_roounfold_h, label, 
+            roounfold_filename, thn_h, name_h+'_Rebinned', name_roounfold_h, label, 
             len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
             len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
             self.observable)
@@ -177,7 +200,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           f_resp = ROOT.TFile(self.theory_rebinned_response_file, 'READ')
           roounfold_response_ch = f_resp.Get(name_roounfold_ch)
           roounfold_response_h = f_resp.Get(name_roounfold_h)
-          #f.Close()    # Not sure if this destroys the Roounfold object or not?
+          f_resp.Close()
+          
 
         else:   # Theory folding matrix already has correct binning
           hist_p_jet = thn_ch.Projection(3, 1)
@@ -217,6 +241,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                   global_bin = thn_h.GetBin(x)
                   content = thn_h.GetBinContent(global_bin)
                   roounfold_response_h.Fill(pt_det, obs_det, pt_true, obs_true, content)
+
+          fRoo = ROOT.TFile(roounfold_filename, 'UPDATE')
+          roounfold_response_ch.Write()
+          roounfold_response_h.Write()
+          fRoo.Close()
 
         setattr(self, name_roounfold_ch, roounfold_response_ch)
         setattr(self, name_roounfold_h, roounfold_response_h)
@@ -376,18 +405,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           h_min_folded_ch_bin.Scale(1/(j-i))
           h_max_folded_ch_bin.Scale(1/(j-i))
 
-          # Save ratio plots for seeing the change at each level
-          h_cent_ratio_ch_bin = h_cent_folded_ch_bin.Clone()
-          h_cent_ratio_ch_bin.SetNameTitle('h_cent_ratio_ch'+pt_label, 'h_cent_ratio_ch'+pt_label)
-          h_cent_ratio_ch_bin.Divide(h_cent_folded_h_bin)
-          h_cent_ratio_ch_bin.SetDirectory(0)
-          setattr(self, 'h_cent_ratio_ch'+pt_label, h_cent_ratio_ch_bin)
-
-          # Apply the MPI scaling to the charged distribution
-          h_cent_folded_ch_bin.Multiply(h_mpi_ratio)
-          h_min_folded_ch_bin.Multiply(h_mpi_ratio)
-          h_max_folded_ch_bin.Multiply(h_mpi_ratio)
-
           # Scale all by integral of central prediction values
           # TODO: See if there's a better way to do this... shouldn't have to scale?
           #h_min_bin.Scale(1/h_cent_bin.Integral("width"))
@@ -397,6 +414,49 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           h_min_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
           h_max_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
           h_cent_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+
+          h_min_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+          h_max_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+          h_cent_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+
+          # Save ratio plots for seeing the change at each level
+          h_cent_ratio_ch_bin = h_cent_folded_ch_bin.Clone()
+          title = 'h_cent_ratio_ch_%s%s' % (label, pt_label)
+          h_cent_ratio_ch_bin.SetNameTitle(title, title)
+          h_cent_ratio_ch_bin.Divide(h_cent_folded_h_bin)
+          h_cent_ratio_ch_bin.SetDirectory(0)
+          setattr(self, title, h_cent_ratio_ch_bin)
+
+          # Have to shift/average bins since raw theory calculation are points
+          title = 'h_cent_parton_shifted_%s%s' % (label, pt_label)
+          xbins = array('d', np.linspace(0, 1, 101, endpoint=True))
+          h_cent_p_bin = ROOT.TH1D(title, title, len(xbins)-1, xbins)
+          for bi in range(1, h_cent_bin.GetNbinsX()):
+            h_cent_p_bin.SetBinContent(
+              bi, (h_cent_bin.GetBinContent(bi) + h_cent_bin.GetBinContent(bi+1)) / 2)
+            h_cent_p_bin.SetBinError(bi, 0)
+
+          h_cent_ratio_h_bin = h_cent_folded_h_bin.Clone()
+          title = 'h_cent_ratio_h_%s%s' % (label, pt_label)
+          h_cent_ratio_h_bin.SetNameTitle(title, title)
+          h_cent_ratio_h_bin.Divide(h_cent_p_bin)
+          h_cent_ratio_h_bin.SetDirectory(0)
+          setattr(self, title, h_cent_ratio_h_bin)
+
+          # Apply the MPI scaling to the charged distribution
+          h_cent_folded_ch_bin.Multiply(h_mpi_ratio)
+          h_min_folded_ch_bin.Multiply(h_mpi_ratio)
+          h_max_folded_ch_bin.Multiply(h_mpi_ratio)
+
+          # Scale all by integral of central prediction values (again...)
+          # TODO: See if there's a better way to do this... shouldn't have to scale?
+          #h_min_bin.Scale(1/h_cent_bin.Integral("width"))
+          #h_max_bin.Scale(1/h_cent_bin.Integral("width"))
+          #h_cent_bin.Scale(1/h_cent_bin.Integral("width"))
+
+          #h_min_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+          #h_max_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+          #h_cent_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
 
           h_min_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
           h_max_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
@@ -591,6 +651,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                              min_pt_truth, max_pt_truth, maxbin, plot_pythia=True, plot_theory=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
                                 min_pt_truth, max_pt_truth, maxbin)
+        self.plot_theory_response(jetR, obs_label, obs_setting, grooming_setting,
+                                  min_pt_truth, max_pt_truth, maxbin)
 
       if min_pt_truth == 40 and (jetR == 0.2 or jetR == 0.4):
         # Only want to compare to girth with \beta=1
@@ -879,34 +941,55 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
 
-    h_ratio_ch = getattr(self, 'h_cent_ratio_ch_PtBin%i-%i' % (min_pt_truth, max_pt_truth))
+    h_ratio_h = getattr(self, 'h_cent_ratio_h_%s_PtBin%i-%i' % (label, min_pt_truth, max_pt_truth))
+    h_ratio_h.SetMarkerSize(0.5)
+    h_ratio_h.SetMarkerStyle(20)
+    h_ratio_h.SetMarkerColor(self.ColorArray[3])
+    h_ratio_h.SetLineStyle(1)
+    h_ratio_h.SetLineWidth(2)
+    h_ratio_h.SetLineColor(self.ColorArray[3])
+
+    h_ratio_ch = getattr(self, 'h_cent_ratio_ch_%s_PtBin%i-%i' % (label, min_pt_truth, max_pt_truth))
     h_ratio_ch.SetMarkerSize(0.5)
     h_ratio_ch.SetMarkerStyle(20)
     h_ratio_ch.SetMarkerColor(self.ColorArray[5])
-    #h_ratio_ch.SetLineStyle(1)
-    #h_ratio_ch.SetLineWidth(2)
-    #h_ratio_ch.SetLineColor(self.ColorArray[5])
+    h_ratio_ch.SetLineStyle(1)
+    h_ratio_ch.SetLineWidth(2)
+    h_ratio_ch.SetLineColor(self.ColorArray[5])
 
-    h_mpi_ratio = getattr(self, "h_mpi_ratio_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth))
-    h_mpi_ratio.SetMarkerSize(0.5)
-    h_mpi_ratio.SetMarkerStyle(20)
-    h_mpi_ratio.SetMarkerColor(self.ColorArray[4])
-    #h_mpi_ratio.SetLineStyle(1)
-    #h_mpi_ratio.SetLineWidth(2)
-    #h_mpi_ratio.SetLineColor(self.ColorArray[4])
+    h_ratio_mpi = getattr(self, "h_mpi_ratio_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth))
+    h_ratio_mpi.SetMarkerSize(0.5)
+    h_ratio_mpi.SetMarkerStyle(20)
+    h_ratio_mpi.SetMarkerColor(self.ColorArray[4])
+    #h_ratio_mpi.SetLineStyle(1)
+    #h_ratio_mpi.SetLineWidth(2)
+    #h_ratio_mpi.SetLineColor(self.ColorArray[4])
+
+    h_ratio_total = h_ratio_h.Clone()
+    h_ratio_total.SetNameTitle('h_theory_total_ratio_scaling', 'h_theory_total_ratio_scaling')
+    h_ratio_total.Multiply(h_ratio_ch)
+    h_ratio_total.Multiply(h_ratio_mpi)
+    h_ratio_total.SetMarkerSize(1)
+    h_ratio_total.SetMarkerStyle(20)
+    h_ratio_total.SetMarkerColor(1)
+    h_ratio_total.SetLineStyle(1)
+    h_ratio_total.SetLineWidth(3)
+    h_ratio_total.SetLineColor(1)
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(ytitle)
-    val = abs(2.5*h_mpi_ratio.GetBinContent(int(0.5*h_mpi_ratio.GetNbinsX())))
+    val = abs(2.5*h_ratio_mpi.GetBinContent(int(0.5*h_ratio_mpi.GetNbinsX())))
     myBlankHisto.SetMaximum(val)
     myBlankHisto.SetMinimum(0)
     myBlankHisto.Draw("E")
 
-    h_ratio_ch.Draw('P E same')
-    h_mpi_ratio.Draw('P E same')
+    h_ratio_h.Draw('hist E same')
+    h_ratio_ch.Draw('hist E same')
+    h_ratio_mpi.Draw('P E same')
+    h_ratio_total.Draw('hist same')
 
     # Draw a horizontal line at 1
     line = ROOT.TLine(0, 1, truth_bin_array[-1], 1)
@@ -918,40 +1001,89 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.57, 0.87, text)
+    text_latex.DrawLatex(0.6, 0.87, text)
     
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.57, 0.8, text)
+    text_latex.DrawLatex(0.6, 0.8, text)
 
     text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.57, 0.73, text)
+    text_latex.DrawLatex(0.6, 0.73, text)
 
     text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
-    text_latex.DrawLatex(0.57, 0.66, text)
+    text_latex.DrawLatex(0.6, 0.66, text)
     
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     delta = 0.
     if subobs_label:
       text = '%s = %s' % (subobs_label, obs_setting)
-      text_latex.DrawLatex(0.57, 0.59, text)
+      text_latex.DrawLatex(0.6, 0.59, text)
       delta = 0.07
 
-    myLegend = ROOT.TLegend(0.22, 0.7, 0.45, 0.9)
+    myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
     self.utils.setup_legend(myLegend, 0.035)
+    myLegend.AddEntry(h_ratio_total, 'total ratio', 'pe')
+    myLegend.AddEntry(h_ratio_h, 'p to h ratio', 'pe')
     myLegend.AddEntry(h_ratio_ch, 'h to ch ratio', 'pe')
-    myLegend.AddEntry(h_mpi_ratio, 'MPI scaling ratio', 'pe')
+    myLegend.AddEntry(h_ratio_mpi, 'MPI scaling ratio', 'pe')
     myLegend.Draw()
 
-    name = 'hMPIratio_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
+    name = 'hTheoryRatio_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
                                              int(min_pt_truth), int(max_pt_truth), self.file_format)
 
-    output_dir = getattr(self, 'output_dir_final_results')
+    output_dir = self.output_dir_theory
     if not os.path.exists(output_dir):
       os.mkdir(output_dir)
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
+
+
+  #----------------------------------------------------------------------
+  def plot_theory_response(self, jetR, obs_label, obs_setting, grooming_setting,
+                           min_pt_truth, max_pt_truth, maxbin):
+
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
+    
+    # Get histograms
+    thn_ch = getattr(self, "hResponse_theory_ch_%s" % label)
+    thn_h = getattr(self, "hResponse_theory_h_%s" % label)
+
+    # Make projections in pT bins at (charged-)/hadron level
+    thn_ch.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
+    thn_h.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
+
+    #print(thn_ch.GetBinContent(array('i', [3, 3, 20, 20])))
+
+    hTheoryProjection_ch = thn_ch.Projection(2, 3)
+    hTheoryProjection_h = thn_h.Projection(2, 3)
+
+    #print(hTheoryProjection_ch.GetBinContent(20, 20))
+    #exit()
+
+    name_ch = "hResponse_theory_ch_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth)
+    name_h = "hResponse_theory_h_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth)
+
+    hTheoryProjection_ch.SetNameTitle(name_ch, name_ch)
+    hTheoryProjection_h.SetNameTitle(name_h, name_h)
+
+    # Save the histograms
+    output_dir = self.output_dir_theory
+    if not os.path.exists(output_dir):
+      os.mkdir(output_dir)
+
+    text_h = str(min_pt_truth) + ' < #it{p}_{T, h jet} < ' + str(max_pt_truth)
+    text_ch = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
+    self.utils.plot_hist(hTheoryProjection_h, os.path.join(self.output_dir_theory, name_h+'.pdf'),
+                         'colz', False, True, text_h)
+    self.utils.plot_hist(hTheoryProjection_ch, os.path.join(self.output_dir_theory, name_ch+'.pdf'),
+                         'colz', False, True, text_ch)
+
+    outf = ROOT.TFile(os.path.join(self.output_dir_theory, 'fTheoryResponseProj.root'),
+                      'UPDATE')
+    hTheoryProjection_h.Write()
+    hTheoryProjection_ch.Write()
+    outf.Close
 
 
   #----------------------------------------------------------------------

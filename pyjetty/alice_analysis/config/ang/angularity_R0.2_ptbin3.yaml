@@ -86,7 +86,6 @@ theory_dir: "/home/ezra/ALICE_table/"
 theory_pt_bins: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
 response_file: "/rstorage/alice/AnalysisResults/ang/189878/AnalysisResultsFinal.root"
 rebin_theory_response: False
-rebin_response_file: "RebinnedResponse.root"
 
 
 ###############################################################################
