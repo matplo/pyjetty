@@ -23,7 +23,7 @@ import ROOT
 # Base class
 from pyjetty.alice_analysis.analysis.base import common_base
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
-from pyjetty.alice_analysis.analysis.user.james import plotting_utils
+from pyjetty.alice_analysis.analysis.user.james import plotting_utils_theta_g, plotting_utils_subjet_z
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -155,7 +155,7 @@ class PlotGroomers(common_base.CommonBase):
           if observable == 'subjet_z':
           
             self.prong_match_threshold = 0.5
-            self.plotting_utils = plotting_utils.PlottingUtils(output_dir, self.config_file, R_max=R_max,
+            self.plotting_utils = plotting_utils_subjet_z.PlottingUtils(output_dir, self.config_file, R_max=R_max,
                                                                thermal = False, groomer_studies = True)
             
             for i, overlay_list in enumerate(self.plot_overlay_list):
@@ -208,7 +208,7 @@ class PlotGroomers(common_base.CommonBase):
               self.create_output_subdir(output_dir, 'prong_matching_deltaZ')
               self.create_output_subdir(output_dir, 'prong_matching_correlation')
               
-              self.plotting_utils = plotting_utils.PlottingUtils(output_dir, self.config_file, R_max=R_max,
+              self.plotting_utils = plotting_utils_theta_g.PlottingUtils(output_dir, self.config_file, R_max=R_max,
                                                                  thermal = False, groomer_studies = True)
           
               # Plot some subobservable-independent performance plots
@@ -583,14 +583,14 @@ class PlotGroomers(common_base.CommonBase):
     
     pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
     pad1.SetLeftMargin(0.2)
-    pad1.SetTopMargin(0.04)
+    pad1.SetTopMargin(0.03)
     pad1.SetRightMargin(0.04)
     pad1.SetBottomMargin(0.)
     pad1.Draw()
     pad1.cd()
     
     leg = ROOT.TLegend(0.65,0.35,0.8,0.8)
-    self.utils.setup_legend(leg, 0.04)
+    self.utils.setup_legend(leg, 0.05)
     leg.SetHeader('#splitline{PYTHIA subleading}{prong tagged in:}')
     leg.AddEntry(None, '', '')
 
@@ -613,7 +613,7 @@ class PlotGroomers(common_base.CommonBase):
     myBlankHisto.Draw('E')
     
     c.cd()
-    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.3)
+    pad2 = ROOT.TPad('pad2', 'pad2', 0, 0, 1, 0.3)
     pad2.SetTopMargin(0)
     pad2.SetBottomMargin(0.35)
     pad2.SetLeftMargin(0.2)
@@ -629,8 +629,8 @@ class PlotGroomers(common_base.CommonBase):
       leg_ratio2 = ROOT.TLegend(0.43,0.72,0.55,0.95)
       self.utils.setup_legend(leg_ratio2, 0.08)
     else:
-      leg_ratio = ROOT.TLegend(0.65,0.72,0.8,0.95)
-      self.utils.setup_legend(leg_ratio, 0.1)
+      leg_ratio = ROOT.TLegend(0.55,0.72,0.7,0.9)
+      self.utils.setup_legend(leg_ratio, 0.12)
     
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
     ytitle = 'Ratio'
@@ -638,7 +638,7 @@ class PlotGroomers(common_base.CommonBase):
     myBlankHisto2.SetXTitle(self.xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
     myBlankHisto2.GetXaxis().SetTitleFont(43)
-    myBlankHisto2.GetXaxis().SetTitleOffset(3.5)
+    myBlankHisto2.GetXaxis().SetTitleOffset(3.)
     myBlankHisto2.GetXaxis().SetLabelFont(43)
     myBlankHisto2.GetXaxis().SetLabelSize(25)
     myBlankHisto2.GetYaxis().SetTitleSize(25)
