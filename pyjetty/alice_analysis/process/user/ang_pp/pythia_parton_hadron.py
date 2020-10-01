@@ -24,7 +24,8 @@ import pythiafjext
 import pythiaext
 
 from pyjetty.alice_analysis.process.base import process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa
+from pyjetty.alice_analysis.process.user.ang_pp.helpers \
+    import lambda_beta_kappa, lambda_beta_kappa_i
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -269,7 +270,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
             if self.level:  # Only save info at one level w/o matching
                 jets = locals()["jets_%s" % self.level]
                 for jet in jets:
-                    self.fill_unmatched_jet_tree(tw, jetR, iev, jet, MPIon)
+                    self.fill_unmatched_jet_tree(tw, jetR, iev, jet)
                 continue
 
             for i,jchh in enumerate(jets_ch):
@@ -480,18 +481,190 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     getattr(self, hist_list_name).append(h)
 
                 if self.level == None:
-                    name = 'hResponse_ang_p_%s' % label
+                    name = 'hResponse_ang_%s' % label
                     h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
                     h.GetXaxis().SetTitle('#lambda_{#beta=%s}^{parton}' % beta)
                     h.GetYaxis().SetTitle('#lambda_{#beta=%s}^{ch}' % beta)
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
 
+                    name = 'hResponse_ang_PtBinCH20-40_%s' % label
+                    h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
+                    h.GetXaxis().SetTitle('#lambda_{#beta=%s}^{parton}' % beta)
+                    h.GetYaxis().SetTitle('#lambda_{#beta=%s}^{ch}' % beta)
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hResponse_ang_PtBinCH40-60_%s' % label
+                    h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
+                    h.GetXaxis().SetTitle('#lambda_{#beta=%s}^{parton}' % beta)
+                    h.GetYaxis().SetTitle('#lambda_{#beta=%s}^{ch}' % beta)
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hResponse_ang_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
+                    h.GetXaxis().SetTitle('#lambda_{#beta=%s}^{parton}' % beta)
+                    h.GetYaxis().SetTitle('#lambda_{#beta=%s}^{ch}' % beta)
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    # Phase space plots integrated over all pT bins
+                    name = 'hPhaseSpace_DeltaR_Pt_ch_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  150, 0, 1.5)
+                    h.GetXaxis().SetTitle('(p_{T, i})_{ch jet}')
+                    h.GetYaxis().SetTitle('(#Delta R_{i})_{ch jet} / R')
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_DeltaR_ch_%s' % label
+                    h = ROOT.TH2F(name, name, 150, 0, 1.5,
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(#Delta R_{i})_{ch jet} / R')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{ch jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_Pt_ch_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(p_{T, i})_{ch jet}')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{ch jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_DeltaR_Pt_p_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  150, 0, 1.5)
+                    h.GetXaxis().SetTitle('(p_{T, i})_{parton jet}')
+                    h.GetYaxis().SetTitle('(#Delta R_{i})_{parton jet} / R')
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_DeltaR_p_%s' % label
+                    h = ROOT.TH2F(name, name, 150, 0, 1.5,
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(#Delta R_{i})_{parton jet} / R')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{parton jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_Pt_p_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(p_{T, i})_{parton jet}')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{parton jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    # Phase space plots binned in ch jet pT
+                    name = 'hPhaseSpace_DeltaR_Pt_ch_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  150, 0, 1.5)
+                    h.GetXaxis().SetTitle('(p_{T, i})_{ch jet}')
+                    h.GetYaxis().SetTitle('(#Delta R_{i})_{ch jet} / R')
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_DeltaR_Pt_p_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  150, 0, 1.5)
+                    h.GetXaxis().SetTitle('(p_{T, i})_{parton jet}')
+                    h.GetYaxis().SetTitle('(#Delta R_{i})_{parton jet} / R')
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_DeltaR_ch_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(p_{T, i})_{ch jet}')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{ch jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_DeltaR_p_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, 150, 0, 1.5,
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(#Delta R_{i})_{parton jet} / R')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{parton jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_Pt_ch_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(p_{T, i})_{ch jet}')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{ch jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hPhaseSpace_ang_Pt_p_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                                  self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+                    h.GetXaxis().SetTitle('(p_{T, i})_{parton jet}')
+                    h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{parton jet}' % str(beta))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    # Annulus plots for amount of lambda contained within some r < R
+                    self.annulus_plots_num_r = 50
+                    low_bound = 1. / self.annulus_plots_num_r / 2.
+                    up_bound = 1 + low_bound
+
+                    name = 'hAnnulus_ang_ch_%s' % label
+                    h = ROOT.TH2F(name, name, self.annulus_plots_num_r, low_bound, up_bound,
+                                  100, 0, 1.)
+                    h.GetXaxis().SetTitle('(#it{r} / #it{R})_{ch jet}')
+                    h.GetYaxis().SetTitle(
+                        ('(#frac{#lambda_{#beta=%s}(#it{r})}' + \
+                         '{#lambda_{#beta=%s}(#it{R})})_{ch jet}') % (str(beta), str(beta)))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hAnnulus_ang_ch_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, self.annulus_plots_num_r, low_bound, up_bound,
+                                  100, 0, 1.)
+                    h.GetXaxis().SetTitle('(#it{r} / #it{R})_{ch jet}')
+                    h.GetYaxis().SetTitle(
+                        ('(#frac{#lambda_{#beta=%s}(#it{r})}' + \
+                         '{#lambda_{#beta=%s}(#it{R})})_{ch jet}') % (str(beta), str(beta)))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hAnnulus_ang_p_%s' % label
+                    h = ROOT.TH2F(name, name, self.annulus_plots_num_r, low_bound, up_bound,
+                                  100, 0, 1.)
+                    h.GetXaxis().SetTitle('(#it{r} / #it{R})_{parton jet}')
+                    h.GetYaxis().SetTitle(
+                        ('(#frac{#lambda_{#beta=%s}(#it{r})}' + \
+                         '{#lambda_{#beta=%s}(#it{R})})_{parton jet}') % (str(beta), str(beta)))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = 'hAnnulus_ang_p_PtBinCH60-80_%s' % label
+                    h = ROOT.TH2F(name, name, self.annulus_plots_num_r, low_bound, up_bound,
+                                  100, 0, 1.)
+                    h.GetXaxis().SetTitle('(#it{r} / #it{R})_{parton jet}')
+                    h.GetYaxis().SetTitle(
+                        ('(#frac{#lambda_{#beta=%s}(#it{r})}' + \
+                         '{#lambda_{#beta=%s}(#it{R})})_{parton jet}') % (str(beta), str(beta)))
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
                     name = "hAngResidual_JetPt_%s" % label
-                    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+                    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -3., 1.)
                     h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
                     h.GetYaxis().SetTitle('#frac{#lambda_{#beta}^{jet, parton}-#lambda_{#beta}' + \
                                           '^{ch jet}}{#lambda_{#beta}^{jet, parton}}')
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name).append(h)
+
+                    name = "hAngDiff_JetPt_%s" % label
+                    h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+                    h.GetXaxis().SetTitle('#it{p}_{T}^{jet, ch}')
+                    h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}}^{jet, parton}-' + \
+                                          '#it{#lambda}_{#it{#beta}}^{jet, ch}')
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
 
@@ -499,9 +672,9 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     dim = 4
                     title = ['p_{T}^{ch jet}', 'p_{T}^{parton jet}', 
                              '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
-                    nbins = [9, 14, 100, 101]
-                    min_li = [10.,   10.,  0., -0.005]
-                    max_li = [100., 150., 1.0, 1.005]
+                    nbins = [14, 14, 100, 101]
+                    min_li = [ 10.,  10., 0.,  -0.005]
+                    max_li = [150., 150., 1.0,  1.005]
 
                     name = 'hResponse_JetPt_ang_ch_%s' % label
                     nbins = (nbins)
@@ -540,7 +713,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
             getattr(self, 'hJetPt_ch_R%s' % R_label).Fill(jch.pt())
         if self.level in [None, 'h']:
             getattr(self, 'hJetPt_h_R%s' % R_label).Fill(jh.pt())
-        if self.level in [None, 'ch']:
+        if self.level in [None, 'p']:
             getattr(self, 'hJetPt_p_R%s' % R_label).Fill(jp.pt())
 
         if self.level == None:
@@ -576,10 +749,77 @@ class pythia_parton_hadron(process_base.ProcessBase):
             getattr(self, 'hAng_JetPt_p_%s' % label).Fill(jp.pt(), lp)
 
         if self.level == None:
-            getattr(self, 'hResponse_ang_p_%s' % label).Fill(lp, lch)
+            getattr(self, 'hResponse_ang_%s' % label).Fill(lp, lch)
+
+            # Lambda at p-vs-ch-level for various bins in ch jet pT 
+            if 20 <= jch.pt() < 40:
+                getattr(self, 'hResponse_ang_PtBinCH20-40_%s' % label).Fill(lp, lch)
+            elif 40 <= jch.pt() < 60:
+                getattr(self, 'hResponse_ang_PtBinCH40-60_%s' % label).Fill(lp, lch)
+            elif 60 <= jch.pt() < 80:
+                getattr(self, 'hResponse_ang_PtBinCH60-80_%s' % label).Fill(lp, lch)
+
+            # Phase space plots and annulus histograms, including those binned in ch jet pT
+            num_r = self.annulus_plots_num_r
+            ang_per_r_ch = [0] * num_r
+            for particle in jch.constituents():
+                deltaR = particle.delta_R(jch)
+                getattr(self, 'hPhaseSpace_DeltaR_Pt_ch_%s' % label).Fill(
+                    particle.pt(), deltaR / jetR)
+
+                lambda_i = lambda_beta_kappa_i(particle, jch, jetR, beta, 1)
+                getattr(self, 'hPhaseSpace_ang_DeltaR_ch_%s' % label).Fill(deltaR / jetR, lambda_i)
+                getattr(self, 'hPhaseSpace_ang_Pt_ch_%s' % label).Fill(particle.pt(), lambda_i)
+
+                if 60 <= jch.pt() < 80:
+                    getattr(self, 'hPhaseSpace_DeltaR_Pt_ch_PtBinCH60-80_%s' % label).Fill(
+                        particle.pt(), deltaR / jetR)
+                    getattr(self, 'hPhaseSpace_ang_DeltaR_ch_PtBinCH60-80_%s' % label).Fill(
+                        deltaR / jetR, lambda_i)
+                    getattr(self, 'hPhaseSpace_ang_Pt_ch_PtBinCH60-80_%s' % label).Fill(
+                        particle.pt(), lambda_i)
+
+                ang_per_r_ch = [ang_per_r_ch[i] + lambda_i * (deltaR <= ((i+1) * jetR / num_r))
+                             for i in range(0, num_r, 1)]
+
+            ang_per_r_p = [0] * num_r
+            for particle in jp.constituents():
+                deltaR = particle.delta_R(jp)
+                getattr(self, 'hPhaseSpace_DeltaR_Pt_p_%s' % label).Fill(
+                    particle.pt(), deltaR / jetR)
+
+                lambda_i = lambda_beta_kappa_i(particle, jp, jetR, beta, 1)
+                getattr(self, 'hPhaseSpace_ang_DeltaR_p_%s' % label).Fill(deltaR / jetR, lambda_i)
+                getattr(self, 'hPhaseSpace_ang_Pt_p_%s' % label).Fill(particle.pt(), lambda_i)
+
+                if 60 <= jch.pt() < 80:
+                    getattr(self, 'hPhaseSpace_DeltaR_Pt_p_PtBinCH60-80_%s' % label).Fill(
+                        particle.pt(), deltaR / jetR)
+                    getattr(self, 'hPhaseSpace_ang_DeltaR_p_PtBinCH60-80_%s' % label).Fill(
+                        deltaR / jetR, lambda_i)
+                    getattr(self, 'hPhaseSpace_ang_Pt_p_PtBinCH60-80_%s' % label).Fill(
+                        particle.pt(), lambda_i)
+
+                ang_per_r_p = [ang_per_r_p[i] + lambda_i * (deltaR <= ((i+1) * jetR / num_r))
+                             for i in range(0, num_r, 1)]
+
+            for i in range(0, num_r, 1):
+                getattr(self, 'hAnnulus_ang_p_%s' % label).Fill(
+                    (i+1) / num_r, ang_per_r_p[i] / (lp + 1e-11))
+                getattr(self, 'hAnnulus_ang_ch_%s' % label).Fill(
+                    (i+1) / num_r, ang_per_r_ch[i] / (lch + 1e-11))
+                if 60 <= jch.pt() < 80:
+                    getattr(self, 'hAnnulus_ang_p_PtBinCH60-80_%s' % label).Fill(
+                        (i+1) / num_r, ang_per_r_p[i] / (lp + 1e-11))
+                    getattr(self, 'hAnnulus_ang_ch_PtBinCH60-80_%s' % label).Fill(
+                        (i+1) / num_r, ang_per_r_ch[i] / (lch + 1e-11))
+
+            # Residual plots (with and without divisor in y-axis)
+            getattr(self, "hAngDiff_JetPt_%s" % label).Fill(jch.pt(), lp - lch)
             if lp:  # prevent divide by 0
                 getattr(self, "hAngResidual_JetPt_%s" % label).Fill(jp.pt(), (lp - lch) / lp)
 
+            # 4D response matrices for "forward folding" to ch level
             x = ([jch.pt(), jp.pt(), lch, lp])
             x_array = array.array('d', x)
             getattr(self, 'hResponse_JetPt_ang_ch_%s' % label).Fill(x_array)

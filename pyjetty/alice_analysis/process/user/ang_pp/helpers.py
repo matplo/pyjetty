@@ -28,6 +28,10 @@ def lambda_beta_kappa(jet, jetR, beta, kappa):
   return sum( [ (constit.pt() / jet.pt())**kappa * (jet.delta_R(constit) / jetR)**beta 
                 for constit in jet.constituents() ] )
 
+# Return angularity for single fastjet.PseudoJet object with no constituents
+def lambda_beta_kappa_i(constit, jet, jetR, beta, kappa):
+  return (constit.pt() / jet.pt())**kappa * (jet.delta_R(constit) / jetR)**beta
+
 # Helper function for finding the correct jet pT bin
 def pT_bin(jet_pT, pTbins):
   for i, pTmin in list(enumerate(pTbins))[0:-1]:
