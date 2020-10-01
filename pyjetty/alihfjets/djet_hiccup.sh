@@ -18,7 +18,8 @@ if [ -d ${1} ]; then
 	module load pyjetty/1.0
 
 	set -x
-	/home/software/users/ploskon/heppy/scripts/pipenv_heppy.sh run "${PYJETTY_DIR}/pyjetty/alihfjets/djet.py -f ${2} -o hf_${SLURM_JOB_ID}"
+	# /home/software/users/ploskon/heppy/scripts/pipenv_heppy.sh run "${PYJETTY_DIR}/pyjetty/alihfjets/djet.py -f ${2} -o hf_${SLURM_JOB_ID}"
+	/home/software/users/ploskon/heppy/scripts/pipenv_heppy.sh run "${PYJETTY_DIR}/pyjetty/alihfjets/djet_mm.py -f ${2} -o hf_${SLURM_JOB_ID}"
 else
 	echo "[e] batch job output directory does not exists."
 fi
