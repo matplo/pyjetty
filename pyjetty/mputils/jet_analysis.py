@@ -15,7 +15,8 @@ class JetAnalysis(MPBase):
 		# self.jet_eta_max = self.particle_eta_max - 0.05
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
 		self.jet_selector = fj.SelectorPtMin(self.jet_pt_min) & fj.SelectorAbsEtaMax(self.jet_eta_max)
-		self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		# self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		self.jet_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(self.particle_eta_max))
 
 		if self.particles:
 			self.analyze_event(self.particles)
@@ -54,7 +55,8 @@ class JetAnalysisWithRho(JetAnalysis):
 
 		self.bg_rho_range = fj.SelectorAbsEtaMax(self.particle_eta_max)
 		self.bg_jet_def = fj.JetDefinition(fj.kt_algorithm, self.jet_R)
-		self.bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		# self.bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		self.bg_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(self.particle_eta_max))
 		self.bg_estimator = fj.JetMedianBackgroundEstimator(self.bg_rho_range, self.bg_jet_def, self.bg_area_def)
 		self.rho = 0
 
