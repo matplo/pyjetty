@@ -88,7 +88,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def load_theory_histograms(self):
 
     # Set central value to exponential distribution
-    exp_test = False
+    exp_test = True
 
     # Create histogram for each value of R and beta
     for jetR in self.jetR_list:
