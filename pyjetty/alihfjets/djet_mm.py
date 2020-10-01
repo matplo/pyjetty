@@ -73,7 +73,7 @@ class HFAIO(MPBase):
 			return False
 		pinfo('events from', fname, len(self.event_df.index))
 
-		_d0cuts_base = "(pt_cand > 3.0 & pt_prong0 > 0.6 & pt_prong1 > 0.6 & abs(eta_cand) < 0.8) & "
+		_d0cuts_base = "(pt_cand > 3.0 & pt_prong0 > 0.15 & pt_prong1 > 0.15 & abs(eta_cand) < 0.8) & "
 		_d0cuts_extra = "(dca)<0.03 & abs(cos_t_star)<0.8 & (imp_par_prod)<-0.0001 & (cos_p)>0.9 & "
 		_d0cuts_kpi = _d0cuts_base + _d0cuts_extra
 		_d0cuts_kpi += "((abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_1 < -900)) | "
@@ -130,14 +130,15 @@ class HFAIO(MPBase):
 					self.twjc.fill_branches(jet = j, d0 = _d0, dR = j.delta_R(_d0), minv = _d0_imass_list[_d0_index], m = _d0.m(), z = _d0.perp() / j.perp())
 					self.twjc.fill_tree()
 
-	def d0_jet_correl(self, jets, ds, index_offset):
+	def d0_jet_correl(self, jets, ds):
 		_filled = False
 		for j in jets:
 			jc = j.constituents()
+			n_gh_daughters = len([1 for c in jc if c.user_index() >= self.daughter_user_index_offset])
 			for ic in range(len(jc)):
 				c = jc[ic]
-				if c.user_index() >= index_offset:
-					self.twjc.fill_branches(jet = j, d0 = c, dR = j.delta_R(c), minv = c.m(), m = c.m(), z = c.perp() / j.perp())
+				if c.user_index() >= self.D0_index_offset and c.user_index() < self.daughter_user_index_offset:
+					self.twjc.fill_branches(jet = j, d0 = c, dR = j.delta_R(c), minv = c.m(), m = c.m(), z = c.perp() / j.perp(), nghd = n_gh_daughters)
 					self.twjc.fill_tree()
 
 	def process_d0s(self, df):
@@ -158,40 +159,40 @@ class HFAIO(MPBase):
 		djmm.set_ch_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
 		# _parts = fjext.vectorize_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
 		self._user_index_offset = 10000
-		D0_index_offset = 10000
+		self.D0_index_offset = 10000
 		# _d0s = fjext.vectorize_pt_eta_phi([df['pt_cand']], [df['eta_cand']], [df['phi_cand']], self._user_index_offset)
 		# _d0s = fjext.vectorize_pt_eta_phi(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, self._user_index_offset)
 		# _d0s = fjext.vectorize_pt_eta_phi_m(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, df['inv_mass'].values, self._user_index_offset)
-		djmm.set_Ds_pt_eta_phi_m(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, df['inv_mass'].values, D0_index_offset)
+		djmm.set_Ds_pt_eta_phi_m(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, df['inv_mass'].values, self.D0_index_offset)
 		_d0s = djmm.Ds;
 		_d0s_gh = [p * 1.e-6 for p in _d0s]
 
-		for di in range(_d0s.size()):
-			print(djmm.Ds[di].m(), df['inv_mass'].values[di])
+		# for di in range(_d0s.size()):
+		# 	print(djmm.Ds[di].m(), df['inv_mass'].values[di])
 
 		_d0_imass_list = df['inv_mass'].values.tolist()
 		# _d0_imass_list = [df['inv_mass']]
 		self.tw.fill_branches(dpsj = _d0s, dpsjgh = _d0s_gh, minv = _d0_imass_list)
 		self.tw.fill_tree()
 
-		_daughter_user_index_offset = -10000
-		djmm.set_daughters0_pt_eta_phi(df['pt_prong0'].values, df['eta_prong0'].values, df['phi_prong0'].values, _daughter_user_index_offset)
-		djmm.set_daughters1_pt_eta_phi(df['pt_prong1'].values, df['eta_prong1'].values, df['phi_prong1'].values, _daughter_user_index_offset * 2)
+		self.daughter_user_index_offset = self.D0_index_offset * 2
+		djmm.set_daughters0_pt_eta_phi(df['pt_prong0'].values, df['eta_prong0'].values, df['phi_prong0'].values, self.daughter_user_index_offset)
+		djmm.set_daughters1_pt_eta_phi(df['pt_prong1'].values, df['eta_prong1'].values, df['phi_prong1'].values, self.daughter_user_index_offset * 2)
 
 		pinfo('n D0s', len(_d0s))
-		#djmm.match(0.1)
-		#djmm.match(0.01)
-		#djmm.match(0.005)
-		_parts_and_ds = djmm.match(0.001)
+		# djmm.match(0.1)
+		# djmm.match(0.01)
+		# djmm.match(0.005)
+		_parts_and_ds = djmm.match(0.005)
 		# _parts_and_ds = _parts
 		_tmp = [_parts_and_ds.push_back(p) for p in djmm.Ds]
 		# # pinfo('n parts = ', len(_parts_and_ds))
-		ja = jet_analysis.JetAnalysis(jet_R = 0.4, particle_eta_max=0.9, jet_pt_min=3.0)
+		ja = jet_analysis.JetAnalysis(jet_R = 0.2, particle_eta_max=0.9, jet_pt_min=2.0)
 		ja.analyze_event(_parts_and_ds)
 		if len(ja.jets) < 1:
 			return True
 		# self.d0_jet_correl_ghosts(ja.jets, _d0s, _d0_imass_list)
-		self.d0_jet_correl(ja.jets, djmm.Ds, D0_index_offset)
+		self.d0_jet_correl(ja.jets, djmm.Ds)
 
 		return True
 
