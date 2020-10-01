@@ -83,6 +83,7 @@ namespace DJetPyJettyFJTools
 					if (d.delta_R(p) < r)
 					{
 						p = p * 1.e-6;
+						p.set_user_index(d.user_index());
 						nmatch++;
 					}
 				}
@@ -91,6 +92,7 @@ namespace DJetPyJettyFJTools
 					if (d.delta_R(p) < r)
 					{
 						p = p * 1.e-6;
+						p.set_user_index(d.user_index());
 						nmatch++;
 					}
 				}
@@ -106,11 +108,13 @@ namespace DJetPyJettyFJTools
 					if (daughters0[n].delta_R(p) < r)
 						{
 							p = p * 1.e-6;
+							p.set_user_index(daughters0[n].user_index());
 							nmatch++;
 						}				
 					if (daughters1[n].delta_R(p) < r)
 						{
 							p = p * 1.e-6;
+							p.set_user_index(daughters1[n].user_index());
 							nmatch++;
 						}				
 					v.push_back(p);
