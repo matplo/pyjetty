@@ -9,6 +9,14 @@
 namespace DJetPyJettyFJTools
 {
 	DJetMatchMaker::DJetMatchMaker()
+	: ch()
+	, Ds()
+	, daughters0()
+	, daughters1() 
+	, ch_user_index_offset(0)
+	, Dcand_user_index_offset(10000)
+	, daughter0_user_index_offset(20000)
+	, daughter1_user_index_offset(30000)
 	{
 		;
 	}
@@ -16,6 +24,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_daughters0_pt_eta_phi_m(double *pt, int npt, double *eta, int neta, double *phi, int nphi, double *m, int nm, int user_index_offset)
 	{
+		daughter0_user_index_offset = user_index_offset;
 		daughters0.clear();
 		daughters0 = vectorize_pt_eta_phi_m(pt, npt, eta, neta, phi, nphi, m, nm, user_index_offset);
 	}
@@ -23,6 +32,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_daughters1_pt_eta_phi_m(double *pt, int npt, double *eta, int neta, double *phi, int nphi, double *m, int nm, int user_index_offset)
 	{
+		daughter1_user_index_offset = user_index_offset;
 		daughters1.clear();
 		daughters1 = vectorize_pt_eta_phi_m(pt, npt, eta, neta, phi, nphi, m, nm, user_index_offset);
 	}
@@ -30,6 +40,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_Ds_pt_eta_phi_m(double *pt, int npt, double *eta, int neta, double *phi, int nphi, double *m, int nm, int user_index_offset)
 	{
+		Dcand_user_index_offset = user_index_offset;
 		Ds.clear();
 		Ds = vectorize_pt_eta_phi_m(pt, npt, eta, neta, phi, nphi, m, nm, user_index_offset);		
 	}
@@ -37,6 +48,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_ch_pt_eta_phi_m(double *pt, int npt, double *eta, int neta, double *phi, int nphi, double *m, int nm, int user_index_offset)
 	{
+		ch_user_index_offset = user_index_offset;
 		ch.clear();
 		ch = vectorize_pt_eta_phi_m(pt, npt, eta, neta, phi, nphi, m, nm, user_index_offset);		
 	}
@@ -44,6 +56,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_daughters0_pt_eta_phi(double *pt, int npt, double *eta, int neta, double *phi, int nphi, int user_index_offset)
 	{
+		daughter0_user_index_offset = user_index_offset;
 		daughters0.clear();
 		daughters0 = vectorize_pt_eta_phi(pt, npt, eta, neta, phi, nphi, user_index_offset);
 	}
@@ -51,6 +64,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_daughters1_pt_eta_phi(double *pt, int npt, double *eta, int neta, double *phi, int nphi, int user_index_offset)
 	{
+		daughter1_user_index_offset = user_index_offset;
 		daughters1.clear();
 		daughters1 = vectorize_pt_eta_phi(pt, npt, eta, neta, phi, nphi, user_index_offset);
 	}
@@ -58,6 +72,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_Ds_pt_eta_phi(double *pt, int npt, double *eta, int neta, double *phi, int nphi, int user_index_offset)
 	{
+		Dcand_user_index_offset = user_index_offset;
 		Ds.clear();
 		Ds = vectorize_pt_eta_phi(pt, npt, eta, neta, phi, nphi, user_index_offset);		
 	}
@@ -65,6 +80,7 @@ namespace DJetPyJettyFJTools
 	void DJetMatchMaker::
 	set_ch_pt_eta_phi(double *pt, int npt, double *eta, int neta, double *phi, int nphi, int user_index_offset)
 	{
+		ch_user_index_offset = user_index_offset;
 		ch.clear();
 		ch = vectorize_pt_eta_phi(pt, npt, eta, neta, phi, nphi, user_index_offset);		
 	}
@@ -98,6 +114,11 @@ namespace DJetPyJettyFJTools
 				}
 				v.push_back(p);
 			}
+			// for (auto & p : v)
+			// {
+			// 	std::cout << "   " << p.perp() << std::endl;
+			// }
+			// std::cout << "[i] nmatch for dR=" << r << " : " << nmatch << " (of " << daughters0.size() + daughters1.size() << " daughters)" << std::endl;
 		}
 		else
 		{
@@ -122,16 +143,55 @@ namespace DJetPyJettyFJTools
 			}
 			else
 			{
-				std::cerr << "[error] DJetMatchMaker::match : asking to match N beyond D0cand array size" << std::endl;
+				// std::cerr << "[error] DJetMatchMaker::match : asking to match N beyond D0cand array size" << std::endl;
 			}
+			// std::cout << "[i] nmatch for dR=" << r << " : " << nmatch << std::endl;
 		}
-		std::cout << "[i] nmatch for dR=" << r << " : " << nmatch << std::endl;
 		return v;
 	}
 
 	DJetMatchMaker::~DJetMatchMaker()
 	{
 		;
+	}
+
+	std::vector<fastjet::PseudoJet> DJetMatchMaker::filter_D0_jets(const std::vector<fastjet::PseudoJet> &jets)
+	{
+		std::vector<fastjet::PseudoJet> v;
+		for (auto &j : jets)
+		{
+			if (true == is_a_djet(j))
+			{
+				v.push_back(j);
+			}
+		}
+		return v;
+	}
+
+	bool DJetMatchMaker::is_a_djet(const fastjet::PseudoJet &j)
+	{
+		bool djet = false;
+		for (auto &c : j.constituents())
+		{
+			if (c.user_index() >= Dcand_user_index_offset && c.user_index() < daughter0_user_index_offset)
+			{
+				djet = true;
+			}
+		}
+		return djet;
+	}
+
+	std::vector<fastjet::PseudoJet> DJetMatchMaker::get_Dcand_in_jet(const fastjet::PseudoJet &j)
+	{
+		std::vector<fastjet::PseudoJet> v;
+		for (auto &c : j.constituents())
+		{
+			if (c.user_index() >= Dcand_user_index_offset && c.user_index() < daughter0_user_index_offset)
+			{
+				v.push_back(c);
+			}
+		}
+		return v;			
 	}
 
 	// this is copy from HEPPY (for experimental purposes pasted here)

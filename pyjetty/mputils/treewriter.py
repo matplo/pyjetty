@@ -80,6 +80,7 @@ class RTreeWriter(MPBase):
 				self.fill_branch(bname, {	'pt' 	: value.pt(), 
 											'phi' 	: value.phi(), 
 											'eta' 	: value.eta(),
+											'm'     : value.m(),
 											'a' 	: value.area()})
 			else:
 				self.fill_branch(bname, {'pt' : value.pt(), 'phi' : value.phi(), 'eta' : value.eta()})

@@ -73,7 +73,7 @@ class HFAIO(MPBase):
 			return False
 		pinfo('events from', fname, len(self.event_df.index))
 
-		_d0cuts_base = "(pt_cand > 3.0 & pt_prong0 > 0.15 & pt_prong1 > 0.15 & abs(eta_cand) < 0.8) & "
+		_d0cuts_base = "(pt_cand > 2.0 & pt_prong0 > 0.15 & pt_prong1 > 0.15 & abs(eta_cand) < 0.8) & "
 		_d0cuts_extra = "(dca)<0.03 & abs(cos_t_star)<0.8 & (imp_par_prod)<-0.0001 & (cos_p)>0.9 & "
 		_d0cuts_kpi = _d0cuts_base + _d0cuts_extra
 		_d0cuts_kpi += "((abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_1 < -900)) | "
@@ -141,7 +141,105 @@ class HFAIO(MPBase):
 					self.twjc.fill_branches(jet = j, d0 = c, dR = j.delta_R(c), minv = c.m(), m = c.m(), z = c.perp() / j.perp(), nghd = n_gh_daughters)
 					self.twjc.fill_tree()
 
+	def print_jet(self, j):
+		print('- jet:', j.perp(), j.eta(), j.phi(), j.m(), len(j.constituents()))
+		for c in j.constituents():
+			print('     ', c.perp(), c.eta(), c.phi(), c.m(), c.user_index())
+
 	def process_d0s(self, df):
+		self.pbar.update(1)
+		_n_d0s = len(df)
+		if _n_d0s < 1:
+			return
+		# pinfo(df)
+		if 'ev_id_ext' in list(self.event_df):
+			_ev_query = "run_number == {} & ev_id == {} & ev_id_ext == {}".format(df['run_number'].values[0], df['ev_id'].values[0], df['ev_id_ext'].values[0])
+		else:
+			_ev_query = "run_number == {} & ev_id == {}".format(df['run_number'].values[0], df['ev_id'].values[0])
+		_df_tracks = self.track_df.query(_ev_query)
+		_df_tracks.reset_index(drop=True)
+
+		djmm = fjtools.DJetMatchMaker()
+		djmm.set_ch_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
+		djmm.set_Ds_pt_eta_phi_m(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, df['inv_mass'].values)
+		djmm.set_daughters0_pt_eta_phi(df['pt_prong0'].values, df['eta_prong0'].values, df['phi_prong0'].values)
+		djmm.set_daughters1_pt_eta_phi(df['pt_prong1'].values, df['eta_prong1'].values, df['phi_prong1'].values)
+
+		self.tw.fill_branches(dpsj = djmm.Ds)
+		self.tw.fill_tree()
+
+		for id0, d0 in enumerate(djmm.Ds):
+			_parts_and_ds = djmm.match(0.005, id0)
+			_parts_and_ds.push_back(d0)
+			ja = jet_analysis.JetAnalysis(jet_R = 0.4, particle_eta_max=0.9, jet_pt_min=2.0)
+			ja.analyze_event(_parts_and_ds)
+			if len(ja.jets) < 1:
+				continue
+			jets = ja.jets_as_psj_vector()
+			djets = djmm.filter_D0_jets(jets)
+			if len(djets) > 0:
+				j = djets[0]
+				dcand = djmm.get_Dcand_in_jet(j)
+				self.twjc.fill_branches(jet = j, dR = j.delta_R(dcand[0]), D = dcand[0])
+				self.twjc.fill_tree()
+			if len(djets) > 1:
+				perror("more than one jet per D candidate?")
+
+		return True
+
+
+	def process_d0s_1(self, df):
+		self.pbar.update(1)
+		_n_d0s = len(df)
+		if _n_d0s < 1:
+			return
+		# pinfo(df)
+		if 'ev_id_ext' in list(self.event_df):
+			_ev_query = "run_number == {} & ev_id == {} & ev_id_ext == {}".format(df['run_number'].values[0], df['ev_id'].values[0], df['ev_id_ext'].values[0])
+		else:
+			_ev_query = "run_number == {} & ev_id == {}".format(df['run_number'].values[0], df['ev_id'].values[0])
+		_df_tracks = self.track_df.query(_ev_query)
+		_df_tracks.reset_index(drop=True)
+
+		djmm = fjtools.DJetMatchMaker()
+		djmm.set_ch_pt_eta_phi(_df_tracks['ParticlePt'].values, _df_tracks['ParticleEta'].values, _df_tracks['ParticlePhi'].values)
+		djmm.set_Ds_pt_eta_phi_m(df['pt_cand'].values, df['eta_cand'].values, df['phi_cand'].values, df['inv_mass'].values)
+		if _n_d0s > 1:
+			print('-- event break - 2D0 event:')
+			print('pt_cand:  ', df['pt_cand'].values)
+			print('eta_cand: ', df['eta_cand'].values)
+			print('phi_cand: ', df['phi_cand'].values)
+			print('inv_mass: ', df['inv_mass'].values)
+		djmm.set_daughters0_pt_eta_phi(df['pt_prong0'].values, df['eta_prong0'].values, df['phi_prong0'].values)
+		djmm.set_daughters1_pt_eta_phi(df['pt_prong1'].values, df['eta_prong1'].values, df['phi_prong1'].values)
+
+		self.tw.fill_branches(dpsj = djmm.Ds)
+		self.tw.fill_tree()
+
+		_parts_and_ds = djmm.match(0.005)
+		[_parts_and_ds.push_back(p) for p in djmm.Ds]
+		ja = jet_analysis.JetAnalysis(jet_R = 0.2, particle_eta_max=0.9, jet_pt_min=2.0)
+		ja.analyze_event(_parts_and_ds)
+		if len(ja.jets) < 1:
+			return True
+		# self.d0_jet_correl(ja.jets, djmm.Ds)
+		jets = ja.jets_as_psj_vector()
+		djets = djmm.filter_D0_jets(jets)
+
+		_tmp = [self.twjc.fill_branches(jet = j, dR = j.delta_R(dcand), D = dcand) for j in djets for dcand in djmm.get_Dcand_in_jet(j)]
+		if len(_tmp) > 0:
+			self.twjc.fill_tree()
+
+		djpairs = [[j,dcand] for j in djets for dcand in djmm.get_Dcand_in_jet(j)]
+		for p in djpairs:
+			j = p[0]
+			dcand = p[1]
+			if j.delta_R(dcand) < 0.01 and dcand.perp() / j.perp() < 0.55:
+				self.print_jet(j)
+
+		return True
+
+	def process_d0s_0(self, df):
 		self.pbar.update(1)
 		_n_d0s = len(df)
 		if _n_d0s < 1:
