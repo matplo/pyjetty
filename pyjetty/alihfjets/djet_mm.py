@@ -165,18 +165,18 @@ class HFAIO(MPBase):
 		djmm.set_daughters0_pt_eta_phi(df['pt_prong0'].values, df['eta_prong0'].values, df['phi_prong0'].values)
 		djmm.set_daughters1_pt_eta_phi(df['pt_prong1'].values, df['eta_prong1'].values, df['phi_prong1'].values)
 
-		if _n_d0s > 1:
-			print('-- event break - 2D0 event:')
-			print('pt_cand:  ', df['pt_cand'].values)
-			print('eta_cand: ', df['eta_cand'].values)
-			print('phi_cand: ', df['phi_cand'].values)
-			print('inv_mass: ', df['inv_mass'].values)
-			print('pt_prong0:  ', df['pt_prong0'].values)
-			print('eta_prong0: ', df['eta_prong0'].values)
-			print('phi_prong0: ', df['phi_prong0'].values)
-			print('pt_prong1:  ', df['pt_prong1'].values)
-			print('eta_prong1: ', df['eta_prong1'].values)
-			print('phi_prong1: ', df['phi_prong1'].values)
+		# if _n_d0s > 1:
+		# 	print('-- event break - 2D0 event:')
+		# 	print('pt_cand:  ', df['pt_cand'].values)
+		# 	print('eta_cand: ', df['eta_cand'].values)
+		# 	print('phi_cand: ', df['phi_cand'].values)
+		# 	print('inv_mass: ', df['inv_mass'].values)
+		# 	print('pt_prong0:  ', df['pt_prong0'].values)
+		# 	print('eta_prong0: ', df['eta_prong0'].values)
+		# 	print('phi_prong0: ', df['phi_prong0'].values)
+		# 	print('pt_prong1:  ', df['pt_prong1'].values)
+		# 	print('eta_prong1: ', df['eta_prong1'].values)
+		# 	print('phi_prong1: ', df['phi_prong1'].values)
 
 		self.tw.fill_branches(dpsj = djmm.Ds)
 		self.tw.fill_tree()
@@ -193,7 +193,17 @@ class HFAIO(MPBase):
 			if len(djets) > 0:
 				j = djets[0]
 				dcand = djmm.get_Dcand_in_jet(j)
-				self.twjc.fill_branches(jet = j, dR = j.delta_R(dcand[0]), D = dcand[0])
+
+				sja = jet_analysis.JetAnalysis(jet_R = 0.1, particle_eta_max=0.9, jet_pt_min=2.0)
+				sja.analyze_event(j.constituents())
+				lsj = fj.sorted_by_pt(sja.jets_as_psj_vector())
+				sj_dcand = djmm.get_Dcand_in_jet(lsj[0])
+				is_Dsj = 0
+				if len(sj_dcand) > 0:
+					# if sj_dcand[0].m() == dcand[0].m() and sj_dcand[0].perp() == dcand[0].perp():
+					if sj_dcand[0].delta_R(dcand[0]) == 0.0:
+						is_Dsj = 1
+				self.twjc.fill_branches(jet = j, dR = j.delta_R(dcand[0]), D = dcand[0], lsj = lsj[0], Dsj = is_Dsj)
 				self.twjc.fill_tree()
 			if len(djets) > 1:
 				perror("more than one jet per D candidate?")
