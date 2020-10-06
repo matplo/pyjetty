@@ -165,6 +165,19 @@ class HFAIO(MPBase):
 		djmm.set_daughters0_pt_eta_phi(df['pt_prong0'].values, df['eta_prong0'].values, df['phi_prong0'].values)
 		djmm.set_daughters1_pt_eta_phi(df['pt_prong1'].values, df['eta_prong1'].values, df['phi_prong1'].values)
 
+		if _n_d0s > 1:
+			print('-- event break - 2D0 event:')
+			print('pt_cand:  ', df['pt_cand'].values)
+			print('eta_cand: ', df['eta_cand'].values)
+			print('phi_cand: ', df['phi_cand'].values)
+			print('inv_mass: ', df['inv_mass'].values)
+			print('pt_prong0:  ', df['pt_prong0'].values)
+			print('eta_prong0: ', df['eta_prong0'].values)
+			print('phi_prong0: ', df['phi_prong0'].values)
+			print('pt_prong1:  ', df['pt_prong1'].values)
+			print('eta_prong1: ', df['eta_prong1'].values)
+			print('phi_prong1: ', df['phi_prong1'].values)
+
 		self.tw.fill_branches(dpsj = djmm.Ds)
 		self.tw.fill_tree()
 
@@ -210,6 +223,12 @@ class HFAIO(MPBase):
 			print('eta_cand: ', df['eta_cand'].values)
 			print('phi_cand: ', df['phi_cand'].values)
 			print('inv_mass: ', df['inv_mass'].values)
+			print('pt_prong0:  ', df['pt_prong0'].values)
+			print('eta_prong0: ', df['eta_prong0'].values)
+			print('phi_prong0: ', df['phi_prong0'].values)
+			print('pt_prong1:  ', df['pt_prong1'].values)
+			print('eta_prong1: ', df['eta_prong1'].values)
+			print('phi_prong1: ', df['phi_prong1'].values)
 		djmm.set_daughters0_pt_eta_phi(df['pt_prong0'].values, df['eta_prong0'].values, df['phi_prong0'].values)
 		djmm.set_daughters1_pt_eta_phi(df['pt_prong1'].values, df['eta_prong1'].values, df['phi_prong1'].values)
 
