@@ -413,9 +413,23 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
+                name = 'hNconstit_Pt_ch_R%s' % R_label
+                h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
+                h.GetXaxis().SetTitle('#it{p}_{T}^{ch jet}')
+                h.GetYaxis().SetTitle('#it{N}_{constit}^{ch jet}')
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
             if self.level in [None, 'h']:
                 name = 'hJetPt_h_R%s' % R_label
                 h = ROOT.TH1F(name, name+';p_{T}^{jet, h};#frac{dN}{dp_{T}^{jet, h}};', 300, 0, 300)
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+                name = 'hNconstit_Pt_h_R%s' % R_label
+                h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
+                h.GetXaxis().SetTitle('#it{p}_{T}^{h jet}')
+                h.GetYaxis().SetTitle('#it{N}_{constit}^{h jet}')
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -426,19 +440,48 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
+                name = 'hNconstit_Pt_p_R%s' % R_label
+                h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
+                h.GetXaxis().SetTitle('#it{p}_{T}^{p jet}')
+                h.GetYaxis().SetTitle('#it{N}_{constit}^{p jet}')
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
             if self.level == None:
                 name = 'hJetPtRes_R%s' % R_label
                 h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
-                h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
+                h.GetXaxis().SetTitle('#it{p}_{T}^{parton jet}')
                 h.GetYaxis().SetTitle(
-                    '#frac{p_{T}^{jet, parton}-p_{T}^{ch jet}}{p_{T}^{jet, parton}}')
+                    '#frac{#it{p}_{T}^{parton jet}-#it{p}_{T}^{ch jet}}{#it{p}_{T}^{parton jet}}')
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
                 name = 'hResponse_JetPt_R%s' % R_label
                 h = ROOT.TH2F(name, name, 200, 0, 200, 200, 0, 200)
-                h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
-                h.GetYaxis().SetTitle('p_{T}^{ch jet}')
+                h.GetXaxis().SetTitle('#it{p}_{T}^{parotn jet}')
+                h.GetYaxis().SetTitle('#it{p}_{T}^{ch jet}')
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+                # Jet multiplicity for matched jets with a cut at ch-jet level
+                name = 'hNconstit_Pt_ch_PtBinCH60-80_R%s' % R_label
+                h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
+                h.GetXaxis().SetTitle('#it{p}_{T}^{ch jet}')
+                h.GetYaxis().SetTitle('#it{N}_{constit}^{ch jet}')
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+                name = 'hNconstit_Pt_h_PtBinCH60-80_R%s' % R_label
+                h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
+                h.GetXaxis().SetTitle('#it{p}_{T}^{h jet}')
+                h.GetYaxis().SetTitle('#it{N}_{constit}^{h jet}')
+                setattr(self, name, h)
+                getattr(self, hist_list_name).append(h)
+
+                name = 'hNconstit_Pt_p_PtBinCH60-80_R%s' % R_label
+                h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
+                h.GetXaxis().SetTitle('#it{p}_{T}^{parton jet}')
+                h.GetYaxis().SetTitle('#it{N}_{constit}^{parton jet}')
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -576,9 +619,9 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     getattr(self, hist_list_name).append(h)
 
                     name = 'hPhaseSpace_ang_DeltaR_ch_PtBinCH60-80_%s' % label
-                    h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                    h = ROOT.TH2F(name, name, 150, 0, 1.5,
                                   self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-                    h.GetXaxis().SetTitle('(p_{T, i})_{ch jet}')
+                    h.GetXaxis().SetTitle('(#Delta R_{i})_{ch jet} / R')
                     h.GetYaxis().SetTitle('(#lambda_{#beta=%s, i})_{ch jet}' % str(beta))
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
@@ -608,9 +651,10 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     getattr(self, hist_list_name).append(h)
 
                     # Annulus plots for amount of lambda contained within some r < R
-                    self.annulus_plots_num_r = 50
-                    low_bound = 1. / self.annulus_plots_num_r / 2.
-                    up_bound = 1 + low_bound
+                    self.annulus_plots_num_r = 150
+                    self.annulus_plots_max_x = 1.5
+                    low_bound = self.annulus_plots_max_x / self.annulus_plots_num_r / 2.
+                    up_bound = self.annulus_plots_max_x + low_bound
 
                     name = 'hAnnulus_ang_ch_%s' % label
                     h = ROOT.TH2F(name, name, self.annulus_plots_num_r, low_bound, up_bound,
@@ -711,15 +755,26 @@ class pythia_parton_hadron(process_base.ProcessBase):
         # Fill jet histograms which are not dependant on angualrity
         if self.level in [None, 'ch']:
             getattr(self, 'hJetPt_ch_R%s' % R_label).Fill(jch.pt())
+            getattr(self, 'hNconstit_Pt_ch_R%s' % R_label).Fill(jch.pt(), len(jch.constituents()))
         if self.level in [None, 'h']:
             getattr(self, 'hJetPt_h_R%s' % R_label).Fill(jh.pt())
+            getattr(self, 'hNconstit_Pt_h_R%s' % R_label).Fill(jh.pt(), len(jh.constituents()))
         if self.level in [None, 'p']:
             getattr(self, 'hJetPt_p_R%s' % R_label).Fill(jp.pt())
+            getattr(self, 'hNconstit_Pt_p_R%s' % R_label).Fill(jp.pt(), len(jp.constituents()))
 
         if self.level == None:
             if jp.pt():  # prevent divide by 0
                 getattr(self, 'hJetPtRes_R%s' % R_label).Fill(jp.pt(), (jp.pt() - jch.pt()) / jp.pt())
             getattr(self, 'hResponse_JetPt_R%s' % R_label).Fill(jp.pt(), jch.pt())
+            
+            if 60 <= jch.pt() < 80:
+                getattr(self, 'hNconstit_Pt_ch_PtBinCH60-80_R%s' % R_label).Fill(
+                    jch.pt(), len(jch.constituents()))
+                getattr(self, 'hNconstit_Pt_h_PtBinCH60-80_R%s' % R_label).Fill(
+                    jh.pt(), len(jh.constituents()))
+                getattr(self, 'hNconstit_Pt_p_PtBinCH60-80_R%s' % R_label).Fill(
+                    jp.pt(), len(jp.constituents()))
 
         # Fill angularity histograms and response matrices
         for beta in self.beta_list:
@@ -779,8 +834,9 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     getattr(self, 'hPhaseSpace_ang_Pt_ch_PtBinCH60-80_%s' % label).Fill(
                         particle.pt(), lambda_i)
 
-                ang_per_r_ch = [ang_per_r_ch[i] + lambda_i * (deltaR <= ((i+1) * jetR / num_r))
-                             for i in range(0, num_r, 1)]
+                ang_per_r_ch = [ang_per_r_ch[i] + lambda_i * 
+                                (deltaR <= ((i+1) * jetR * self.annulus_plots_max_x / num_r))
+                                for i in range(0, num_r, 1)]
 
             ang_per_r_p = [0] * num_r
             for particle in jp.constituents():
@@ -800,19 +856,20 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     getattr(self, 'hPhaseSpace_ang_Pt_p_PtBinCH60-80_%s' % label).Fill(
                         particle.pt(), lambda_i)
 
-                ang_per_r_p = [ang_per_r_p[i] + lambda_i * (deltaR <= ((i+1) * jetR / num_r))
+                ang_per_r_p = [ang_per_r_p[i] + lambda_i *
+                               (deltaR <= ((i+1) * jetR * self.annulus_plots_max_x / num_r))
                              for i in range(0, num_r, 1)]
 
             for i in range(0, num_r, 1):
                 getattr(self, 'hAnnulus_ang_p_%s' % label).Fill(
-                    (i+1) / num_r, ang_per_r_p[i] / (lp + 1e-11))
+                    (i+1) * self.annulus_plots_max_x / num_r, ang_per_r_p[i] / (lp + 1e-11))
                 getattr(self, 'hAnnulus_ang_ch_%s' % label).Fill(
-                    (i+1) / num_r, ang_per_r_ch[i] / (lch + 1e-11))
+                    (i+1) * self.annulus_plots_max_x / num_r, ang_per_r_ch[i] / (lch + 1e-11))
                 if 60 <= jch.pt() < 80:
                     getattr(self, 'hAnnulus_ang_p_PtBinCH60-80_%s' % label).Fill(
-                        (i+1) / num_r, ang_per_r_p[i] / (lp + 1e-11))
+                        (i+1) * self.annulus_plots_max_x / num_r, ang_per_r_p[i] / (lp + 1e-11))
                     getattr(self, 'hAnnulus_ang_ch_PtBinCH60-80_%s' % label).Fill(
-                        (i+1) / num_r, ang_per_r_ch[i] / (lch + 1e-11))
+                        (i+1) * self.annulus_plots_max_x / num_r, ang_per_r_ch[i] / (lch + 1e-11))
 
             # Residual plots (with and without divisor in y-axis)
             getattr(self, "hAngDiff_JetPt_%s" % label).Fill(jch.pt(), lp - lch)
