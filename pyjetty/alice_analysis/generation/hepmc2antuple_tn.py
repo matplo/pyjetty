@@ -62,6 +62,12 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
       
         self.particles_accepted.add(self.pdg.GetParticle(part.pid).GetName())
         self.t_p.Fill(self.run_number, self.ev_id, part.momentum.pt(), part.momentum.eta(), part.momentum.phi(), part.pid)
+
+      elif self.include_parton and self.accept_particle(part, part.status, part.end_vertex, part.pid, self.pdg, self.gen, parton=True):
+
+        self.partons_accepted.add(self.pdg.GetParticle(part.pid).GetName())
+        self.t_pp.Fill(self.run_number, self.ev_id, part.momentum.pt(), part.momentum.eta(), part.momentum.phi(), part.pid)
+        
         
 #---------------------------------------------------------------
 if __name__ == '__main__':
@@ -74,7 +80,8 @@ if __name__ == '__main__':
   parser.add_argument('--nev', help='number of events', default=-1, type=int)
   parser.add_argument('-g', '--gen', help='generator type: pythia, herwig, jewel, jetscape, martini, hybrid', default='pythia', type=str, required=True)
   parser.add_argument('--no-progress-bar', help='whether to print progress bar', action='store_true', default=False)
+  parser.add_argument('-p', '--include-parton', help='include additional tree of final-state partons', action='store_true', default=False)
   args = parser.parse_args()
   
-  converter = HepMC2antuple(input = args.input, output = args.output, as_data = args.as_data, hepmc = args.hepmc, nev = args.nev, gen = args.gen, no_progress_bar = args.no_progress_bar)
+  converter = HepMC2antuple(input = args.input, output = args.output, as_data = args.as_data, hepmc = args.hepmc, nev = args.nev, gen = args.gen, no_progress_bar = args.no_progress_bar, include_parton = args.include_parton)
   converter.main()

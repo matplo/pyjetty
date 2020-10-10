@@ -18,7 +18,7 @@ class HepMC2antupleBase(common_base.CommonBase):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input = '', output = '', as_data = False, hepmc = 2, nev = 0, gen = 'pythia', no_progress_bar = False, **kwargs):
+  def __init__(self, input = '', output = '', as_data = False, hepmc = 2, nev = 0, gen = 'pythia', no_progress_bar = False, include_parton = False, **kwargs):
     super(HepMC2antupleBase, self).__init__(**kwargs)
     self.input = input
     self.output = output
@@ -27,7 +27,8 @@ class HepMC2antupleBase(common_base.CommonBase):
     self.nev = nev
     self.gen = gen
     self.no_progress_bar = no_progress_bar
-    
+    self.include_parton = include_parton
+
   #---------------------------------------------------------------
   def init(self):
 
@@ -39,6 +40,8 @@ class HepMC2antupleBase(common_base.CommonBase):
       self.t_p = ROOT.TNtuple('tree_Particle', 'tree_Particle', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
     else:
       self.t_p = ROOT.TNtuple('tree_Particle_gen', 'tree_Particle_gen', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
+      if self.include_parton:
+        self.t_pp = ROOT.TNtuple('tree_Particle_gen_parton', 'tree_Particle_gen_parton', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
     self.t_e = ROOT.TNtuple('tree_event_char', 'tree_event_char', 'run_number:ev_id:z_vtx_reco:is_ev_rej')
 
     # run number will be a double - file size in MB
@@ -50,6 +53,8 @@ class HepMC2antupleBase(common_base.CommonBase):
     # use ROOT instead
     self.pdg = ROOT.TDatabasePDG()
     self.particles_accepted = set([])
+    if self.include_parton:
+      self.partons_accepted = set([])
     
     if not self.no_progress_bar:
       if self.nev > 0:
@@ -58,22 +63,22 @@ class HepMC2antupleBase(common_base.CommonBase):
         self.pbar = tqdm.tqdm()
   
   #---------------------------------------------------------------
-  def accept_particle(self, part, status, end_vertex, pid, pdg, gen):
-  
+  def accept_particle(self, part, status, end_vertex, pid, pdg, gen, parton=False):
+
     if gen == 'pythia':
-      return select_particles.accept_particle_pythia(part, status, end_vertex, pid, pdg)
-    if gen == 'herwig':
-      return select_particles.accept_particle_herwig(part, status, end_vertex, pid, pdg)
-    if gen == 'jewel':
-      return select_particles.accept_particle_jewel(part, status, end_vertex, pid, pdg)
+      return select_particles.accept_particle_pythia(part, status, end_vertex, pid, pdg, parton)
+    elif gen == 'herwig':
+      return select_particles.accept_particle_herwig(part, status, end_vertex, pid, pdg, parton)
+    elif gen == 'jewel':
+      return select_particles.accept_particle_jewel(part, status, end_vertex, pid, pdg, parton)
     elif gen == 'jetscape':
-      return select_particles.accept_particle_jetscape(part, pdg)
+      return select_particles.accept_particle_jetscape(part, pdg, parton)
     elif gen == 'martini':
-      return select_particles.accept_particle_martini(part, status, end_vertex, pid, pdg)
+      return select_particles.accept_particle_martini(part, status, end_vertex, pid, pdg, parton)
     elif gen == 'hybrid':
-      return select_particles.accept_particle_hybrid(part, status, end_vertex, pid, pdg)
-    else:
-      sys.exit('Generator type unknown: {}'.format(gen))
+      return select_particles.accept_particle_hybrid(part, status, end_vertex, pid, pdg, parton)
+
+    sys.exit('Generator type unknown: {}'.format(gen))
 
   #---------------------------------------------------------------
   def increment_event(self):
