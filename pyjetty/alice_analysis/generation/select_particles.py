@@ -20,9 +20,10 @@ def accept_particle_pythia(part, status, end_vertex, pid, pdg, parton=False):
 def accept_particle_herwig(part, status, end_vertex, pid, pdg, parton=False):
 
   if parton:
+    raise NotImplementedError('Parton tree implemented but currently not working for Herwig') 
     return accept_particle_status(part, status, end_vertex, pid, pdg, parton, status_accepted = [11])
 
-  return accept_particle_status(part, status, False, pid, pdg, status_accepted = [1])
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
   
 #---------------------------------------------------------------
 def accept_particle_jewel(part, status, end_vertex, pid, pdg, parton=False):
@@ -92,14 +93,16 @@ def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, sta
     return False
   
   # Check that particle does not have any daughter vertex
-  #print(end_vertex)
-  #if end_vertex:
-  #  return False
+  #if not parton and end_vertex:
+  #  print(part, status, pid)
+  if end_vertex:
+    return False
   
   # Check PID for charged particles
   if pdg.GetParticle(part.pid):
-    if parton:
-      print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
+    #if parton:
+    #  print(part, status)
+    #  print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
     if not parton and pdg.GetParticle(part.pid).Charge() == 0:
       return False
   else:
