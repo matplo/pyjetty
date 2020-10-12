@@ -62,7 +62,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_dir = config['theory_dir']
       self.theory_beta = config['theory_beta']
       self.theory_pt_bins = config['theory_pt_bins']
-      self.theory_response_file = config['response_file']
+      self.theory_response_file = ROOT.TFile(config['response_file'], 'READ')
       self.rebin_theory_response = config['rebin_theory_response']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
       # Load the RooUnfold library
@@ -72,71 +72,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.do_theory = False
 
     if self.do_theory:
-      print("Loading theory histograms...")
-      self.load_theory_histograms()
       print("Loading response matrix for folding theory predictions...")
       self.load_theory_response()
-      print("Folding theory predictions...")
-      self.fold_theory()
-      print("Scaling theory predictions for MPI effects...")
-      self.mpi_scale_theory()
-
-
-  #---------------------------------------------------------------
-  # This function is called once for each subconfiguration
-  #---------------------------------------------------------------
-  def load_theory_histograms(self):
-
-    # Set central value to exponential distribution
-    exp_test = True
-
-    # Create histogram for each value of R and beta
-    for jetR in self.jetR_list:
-      for beta in self.theory_beta:   # beta value
-        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
-
-        name_cent = "theory_cent_%s_%s_parton" % (self.observable, label)
-        hist_cent = ROOT.TH2D(name_cent, name_cent, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
-        name_min = "theory_min_%s_%s_parton" % (self.observable, label)
-        hist_min = ROOT.TH2D(name_min, name_min, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
-        name_max = "theory_max_%s_%s_parton" % (self.observable, label)
-        hist_max = ROOT.TH2D(name_max, name_max, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
-
-        # Loop through each pT-bin
-        for i, pt_min in enumerate(self.theory_pt_bins[0:-1]):
-          pt_max = self.theory_pt_bins[i+1]
-          th_dir = os.path.join(self.theory_dir, "R%s" % str(jetR).replace('.', ''), 
-            "pT%s_%s" % (pt_min, pt_max), "beta%s" % str(beta).replace('.', 'p'))
-
-          # Load theory predictions for lambda values
-          with open(os.path.join(th_dir, "cent.txt")) as f:
-            lines = f.read().split('\n')
-            cent_val = [line.split()[1] for line in lines]
-          with open(os.path.join(th_dir, "min.txt")) as f:
-            lines = f.read().split('\n')
-            min_val = [line.split()[1] for line in lines]
-          with open(os.path.join(th_dir, "max.txt")) as f:
-            lines = f.read().split('\n')
-            max_val = [line.split()[1] for line in lines]
-
-          if exp_test:
-            max_val = [1/(x+0.4) for x in np.linspace(0, 0.5, 51, True)] + \
-                      [0 for x in np.linspace(0.51, 1, 50, True)] 
-            #np.exp(np.linspace(0, 1, 101, True))
-            cent_val = np.concatenate((np.full(51, 1), np.full(50, 0)))
-            #min_val = [0.6 - x for x in np.linspace(0, 1, 101, True)]
-
-          for j, val in enumerate(cent_val):
-            hist_cent.SetBinContent(i+1, j+1, float(val))
-            hist_min.SetBinContent(i+1, j+1, float(min_val[j]))
-            hist_max.SetBinContent(i+1, j+1, float(max_val[j]))
-
-        setattr(self, name_cent, hist_cent)
-        setattr(self, name_min, hist_min)
-        setattr(self, name_max, hist_max)
+      print("Loading theory histograms...")
+      self.load_theory_histograms()
 
 
   #---------------------------------------------------------------
@@ -145,11 +84,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def load_theory_response(self):
 
     # Check to see if Roounfold file already exists
+    if not os.path.exists(self.output_dir_theory):
+      os.makedirs(self.output_dir_theory)
     roounfold_filename = os.path.join(self.output_dir_theory, 'fRoounfold.root')
     roounfold_exists = os.path.exists(roounfold_filename)
-
-    # 4D response matrix file from PYTHIA model
-    f = ROOT.TFile(self.theory_response_file, 'READ')
 
     for jetR in self.jetR_list:
       for beta in self.theory_beta:
@@ -157,13 +95,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
 	# Load charged hadron level folding response matrix
         name_ch = "hResponse_JetPt_%s_ch_%sScaled" % (self.observable, label)
-        thn_ch = f.Get(name_ch)
+        thn_ch = self.theory_response_file.Get(name_ch)
         name_ch = "hResponse_theory_ch_%s" % (label)
         setattr(self, name_ch, thn_ch)
 
         # Load hadron-level folding response matrix (for comparison histograms)
         name_h = "hResponse_JetPt_%s_h_%sScaled" % (self.observable, label)
-        thn_h = f.Get(name_h)
+        thn_h = self.theory_response_file.Get(name_h)
         name_h = "hResponse_theory_h_%s" % (label)
         setattr(self, name_h, thn_h)
 
@@ -251,255 +189,323 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         setattr(self, name_roounfold_h, roounfold_response_h)
 
 
-  #----------------------------------------------------------------------
-  # Fold theoretical predictions
-  #----------------------------------------------------------------------
-  def fold_theory(self):
+  #---------------------------------------------------------------
+  # This function is called once for each subconfiguration
+  #---------------------------------------------------------------
+  def load_theory_histograms(self):
 
+    # Set central value to exponential distribution
+    exp_test = False
+
+    # Require that hard scale and jet scale are varied together
+    scale_req = False
+
+    # Create histogram for each value of R and beta
     for jetR in self.jetR_list:
-      for beta in self.theory_beta:
+      for beta in self.theory_beta:   # beta value
         label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
 
-        # Load parton-level theory predictions
         name_cent = "theory_cent_%s_%s_parton" % (self.observable, label)
         name_min = "theory_min_%s_%s_parton" % (self.observable, label)
+        hist_min = ROOT.TH2D(name_min, name_min, len(self.theory_pt_bins) - 1, 
+            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
         name_max = "theory_max_%s_%s_parton" % (self.observable, label)
+        hist_max = ROOT.TH2D(name_max, name_max, len(self.theory_pt_bins) - 1, 
+            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
 
-        h_cent = getattr(self, name_cent)
-        h_min = getattr(self, name_min)
-        h_max = getattr(self, name_max)
+        parton_hists = ( ([], [], []), ([], [], []), ([], [], []) )
 
-        # Load parton-to-charged-hadron response matrix
-        response_name_ch = "hResponse_theory_ch_%s_Roounfold" % label
-        response_ch = getattr(self, response_name_ch)
-        response_name_h = "hResponse_theory_h_%s_Roounfold" % label
-        response_h = getattr(self, response_name_h)
+        for l in range(0, 3):
+          for m in range(0, 3):
+            for n in range(0, 3):
 
-        # Fold theory predictions
-        h_cent_folded_ch = response_ch.ApplyToTruth(h_cent)
-        h_min_folded_ch = response_ch.ApplyToTruth(h_min)
-        h_max_folded_ch = response_ch.ApplyToTruth(h_max)
-        h_cent_folded_h = response_h.ApplyToTruth(h_cent)
-        h_min_folded_h = response_h.ApplyToTruth(h_min)
-        h_max_folded_h = response_h.ApplyToTruth(h_max)
+              name_hist = "theory_%i%i%i_%s_%s_parton" % (l, m, n, self.observable, label)
+              hist = ROOT.TH2D(name_hist, name_hist, len(self.theory_pt_bins) - 1, 
+                               self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
 
-        name_cent_ch = name_cent.replace('parton', 'ch')
-        name_min_ch = name_min.replace('parton', 'ch')
-        name_max_ch = name_max.replace('parton', 'ch')
-        name_cent_h = name_cent.replace('parton', 'h')
-        name_min_h = name_min.replace('parton', 'h')
-        name_max_h = name_max.replace('parton', 'h')
+              if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
+                parton_hists[l][m].append(None)
+                continue
 
-        h_cent_folded_ch.SetNameTitle(name_cent_ch, name_cent_ch)
-        h_min_folded_ch.SetNameTitle(name_min_ch, name_min_ch)
-        h_max_folded_ch.SetNameTitle(name_max_ch, name_max_ch)
-        h_cent_folded_h.SetNameTitle(name_cent_h, name_cent_h)
-        h_min_folded_h.SetNameTitle(name_min_h, name_min_h)
-        h_max_folded_h.SetNameTitle(name_max_h, name_max_h)
+              # Loop through each pT-bin
+              for i, pt_min in enumerate(self.theory_pt_bins[0:-1]):
+                pt_max = self.theory_pt_bins[i+1]
+                th_dir = os.path.join(
+                  self.theory_dir, "R%s" % str(jetR).replace('.', ''), 
+                  "pT%s_%s" % (pt_min, pt_max), "beta%s" % str(beta).replace('.', 'p'))
 
-        # Save folded predictions
-        setattr(self, name_cent_ch, h_cent_folded_ch)
-        setattr(self, name_min_ch, h_min_folded_ch)
-        setattr(self, name_max_ch, h_max_folded_ch)
-        setattr(self, name_cent_h, h_cent_folded_h)
-        setattr(self, name_min_h, h_min_folded_h)
-        setattr(self, name_max_h, h_max_folded_h)
+                # Load theory predictions for lambda values
+                with open(os.path.join(th_dir, "%i%i%i.txt" % (l, m, n))) as f:
+                  lines = f.read().split('\n')
+                  val_li = [line.split()[1] for line in lines]
+
+                if exp_test:
+                  val_li = [1/(x+0.4) for x in np.linspace(0, 0.5, 51, True)] + \
+                            [0 for x in np.linspace(0.51, 1, 50, True)] 
+                  #np.exp(np.linspace(0, 1, 101, True))
+                  #val = np.concatenate((np.full(51, 1), np.full(50, 0)))
+                  #val = [0.6 - x for x in np.linspace(0, 1, 101, True)]
+
+                for j, val in enumerate(val_li):
+                  hist.SetBinContent(i+1, j+1, float(val))
+                  if l == m == n == 0:
+                    hist_min.SetBinContent(i+1, j+1, float(val))
+                    hist_max.SetBinContent(i+1, j+1, float(val))
+                  elif float(val) < hist_min.GetBinContent(i+1, j+1):
+                    hist_min.SetBinContent(i+1, j+1, float(val))
+                  elif float(val) > hist_max.GetBinContent(i+1, j+1):
+                    hist_max.SetBinContent(i+1, j+1, float(val))
+
+              parton_hists[l][m].append(hist)
+
+        setattr(self, name_cent, parton_hists[1][1][1])
+        setattr(self, name_min, hist_min)
+        setattr(self, name_max, hist_max)
+
+        print("Folding theory predictions...")
+        self.fold_theory(jetR, beta, parton_hists, scale_req)
 
 
   #----------------------------------------------------------------------
   # Fold theoretical predictions
   #----------------------------------------------------------------------
-  def mpi_scale_theory(self):
+  def fold_theory(self, jetR, beta, parton_hists, scale_req):
 
-    f = ROOT.TFile(self.theory_response_file, 'READ')
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
 
-    for jetR in self.jetR_list:
-      for beta in self.theory_beta:
-        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+    # Load parton-to-charged-hadron response matrix
+    response_name_ch = "hResponse_theory_ch_%s_Roounfold" % label
+    response_ch = getattr(self, response_name_ch)
+    response_name_h = "hResponse_theory_h_%s_Roounfold" % label
+    response_h = getattr(self, response_name_h)
 
-        name_mpi_off = "hAng_JetPt_ch_%sScaled" % label
-        name_mpi_on = "hAng_JetPt_ch_MPIon_%sScaled" % label
+    folded_ch_hists = ( ([], [], []), ([], [], []), ([], [], []) )
+    folded_h_hists = ( ([], [], []), ([], [], []), ([], [], []) )
 
-        h_mpi_off = f.Get(name_mpi_off)
-        h_mpi_on = f.Get(name_mpi_on)
+    for i in range(0, 3):
+      for j in range(0, 3):
+        for k in range(0, 3):
 
-        # Load parton-level and folded theory predictions
-        name_cent = "theory_cent_%s_%s" % (self.observable, label)
-        name_min = "theory_min_%s_%s" % (self.observable, label)
-        name_max = "theory_max_%s_%s" % (self.observable, label)
+          if (scale_req and j != k) or (0 in (i, j, k) and 2 in (i, j, k)):
+            folded_h_hists[i][j].append(None)
+            folded_ch_hists[i][j].append(None)
+            continue
 
-        h_cent = getattr(self, name_cent+"_parton")
-        h_min = getattr(self, name_min+"_parton")
-        h_max = getattr(self, name_max+"_parton")
+          # Fold theory predictions
+          h_folded_ch = response_ch.ApplyToTruth(parton_hists[i][j][k])
+          h_folded_h = response_ch.ApplyToTruth(parton_hists[i][j][k])
 
-        h_cent_folded_h = getattr(self, name_cent+"_h")
-        h_min_folded_h = getattr(self, name_min+"_h")
-        h_max_folded_h = getattr(self, name_max+"_h")
+          name_ch = "theory_%i%i%i_%s_%s_ch" % (i, j, k, self.observable, label)
+          name_h = "theory_%i%i%i_%s_%s_h" % (i, j, k, self.observable, label)
 
-        h_cent_folded_ch = getattr(self, name_cent+"_ch")
-        h_min_folded_ch = getattr(self, name_min+"_ch")
-        h_max_folded_ch = getattr(self, name_max+"_ch")
+          h_folded_ch.SetNameTitle(name_ch, name_ch)
+          h_folded_h.SetNameTitle(name_h, name_h)
 
-        # Ensure that the scaling and theory histograms have the same binning
-        y_rebin_num = h_mpi_off.GetNbinsY() / h_cent_folded_ch.GetNbinsY()
-        if y_rebin_num < 1 or abs(y_rebin_num - int(y_rebin_num)) > 1e-5:
-          print("ERROR: histograms for MPI scaling from response file have insufficienctly binning.")
-          print("       %i versus even multiple of  %i bins required" % \
-                (h_mpi_off.GetNbinsY(), h_cent_folded_ch.GetNbinsY()))
-          exit(1)
-        h_mpi_off.RebinY(int(y_rebin_num))
-        h_mpi_on.RebinY(int(y_rebin_num))
-        if h_mpi_off.GetNbinsY() != h_cent_folded_ch.GetNbinsY():
-          print("ERROR: rebinning histograms for MPI scaling failed.")
-          exit(1)
+          folded_ch_hists[i][j].append(h_folded_ch)
+          folded_h_hists[i][j].append(h_folded_h)
 
-        mpi_bin_edges = [h_mpi_on.GetXaxis().GetBinLowEdge(i+1)
+    print("Scaling theory predictions for MPI effects...")
+    self.mpi_scale_theory(jetR, beta, folded_ch_hists, folded_h_hists, scale_req)
+
+
+  #----------------------------------------------------------------------
+  # Fold theoretical predictions
+  #----------------------------------------------------------------------
+  def mpi_scale_theory(self, jetR, beta, folded_ch_hists, folded_h_hists, scale_req):
+
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+
+    name_mpi_off = "hAng_JetPt_ch_%sScaled" % label
+    name_mpi_on = "hAng_JetPt_ch_MPIon_%sScaled" % label
+
+    h_mpi_off = self.theory_response_file.Get(name_mpi_off)
+    h_mpi_on = self.theory_response_file.Get(name_mpi_on)
+
+    # Load parton-level theory predictions
+    name_cent = "theory_cent_%s_%s" % (self.observable, label)
+    name_min = "theory_min_%s_%s" % (self.observable, label)
+    name_max = "theory_max_%s_%s" % (self.observable, label)
+
+    h_cent = getattr(self, name_cent+"_parton")
+    h_min = getattr(self, name_min+"_parton")
+    h_max = getattr(self, name_max+"_parton")
+
+    # Ensure that the scaling and theory histograms have the same binning
+    y_rebin_num = h_mpi_off.GetNbinsY() / folded_ch_hists[1][1][1].GetNbinsY()
+    if y_rebin_num < 1 or abs(y_rebin_num - int(y_rebin_num)) > 1e-5:
+      print("ERROR: histograms for MPI scaling from response file have insufficienctly binning.")
+      print("       %i versus even multiple of  %i bins required" % \
+            (h_mpi_off.GetNbinsY(), folded_ch_hists[1][1][1].GetNbinsY()))
+      exit(1)
+    h_mpi_off.RebinY(int(y_rebin_num))
+    h_mpi_on.RebinY(int(y_rebin_num))
+    if h_mpi_off.GetNbinsY() != folded_ch_hists[1][1][1].GetNbinsY():
+      print("ERROR: rebinning histograms for MPI scaling failed.")
+      exit(1)
+
+    mpi_bin_edges = [h_mpi_on.GetXaxis().GetBinLowEdge(i+1)
                          for i in range(h_mpi_on.GetNbinsX()+1)]
-        mpi_bin_edge_indices = [mpi_bin_edges.index(pt) for pt in self.pt_bins_reported]
-        theory_pt_bin_edge_indices = [self.theory_pt_bins.index(pt) for pt in self.pt_bins_reported]
-        # Loop through each reported pT-bin
-        for index, i in list(enumerate(theory_pt_bin_edge_indices))[0:-1]:
-          j = theory_pt_bin_edge_indices[index+1]
-          pt_min = self.theory_pt_bins[i]
-          pt_max = self.theory_pt_bins[j]
+    mpi_bin_edge_indices = [mpi_bin_edges.index(pt) for pt in self.pt_bins_reported]
+    theory_pt_bin_edge_indices = [self.theory_pt_bins.index(pt) for pt in self.pt_bins_reported]
+    # Loop through each reported pT-bin
+    for index, i in list(enumerate(theory_pt_bin_edge_indices))[0:-1]:
+      j = theory_pt_bin_edge_indices[index+1]
+      pt_min = self.theory_pt_bins[i]
+      pt_max = self.theory_pt_bins[j]
 
-          # Note: bins in ROOT are 1-indexed (0 bin is underflow). Also last bin is inclusive
-          h_mpi_off_proj = h_mpi_off.ProjectionY(
-            name_mpi_off+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
-          h_mpi_on_proj = h_mpi_on.ProjectionY(
-            name_mpi_on+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+      # Note: bins in ROOT are 1-indexed (0 bin is underflow). Also last bin is inclusive
+      h_mpi_off_proj = h_mpi_off.ProjectionY(
+        name_mpi_off+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+      h_mpi_on_proj = h_mpi_on.ProjectionY(
+        name_mpi_on+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
 
-          # Create ratio plot for scaling
-          h_mpi_ratio = h_mpi_on_proj.Clone()
-          title = 'h_theory_mpi_scaling_%s_%s' % (label, str(i))
-          h_mpi_ratio.SetNameTitle(title, title)
-          h_mpi_ratio.Divide(h_mpi_off_proj)
-          h_mpi_ratio.SetDirectory(0)
-          setattr(self, 'h_mpi_ratio_%s_PtBin%i-%i' % (label, pt_min, pt_max), h_mpi_ratio)
+      # Create ratio plot for scaling
+      h_mpi_ratio = h_mpi_on_proj.Clone()
+      title = 'h_theory_mpi_scaling_%s_%s' % (label, str(i))
+      h_mpi_ratio.SetNameTitle(title, title)
+      h_mpi_ratio.Divide(h_mpi_off_proj)
+      h_mpi_ratio.SetDirectory(0)
+      setattr(self, 'h_mpi_ratio_%s_PtBin%i-%i' % (label, pt_min, pt_max), h_mpi_ratio)
 
-          pt_label = '_PtBin'+str(pt_min)+'-'+str(pt_max)
+      pt_label = '_PtBin'+str(pt_min)+'-'+str(pt_max)
 
-          # Scale the theory bin and save for plotting
-          h_cent_bin = h_cent.ProjectionY(name_cent+"_parton"+pt_label, i+1, j)
-          h_min_bin = h_min.ProjectionY(name_min+"_parton"+pt_label, i+1, j)
-          h_max_bin = h_max.ProjectionY(name_max+"_parton"+pt_label, i+1, j)
+      h_cent_bin = h_cent.ProjectionY(name_cent+"_parton"+pt_label, i+1, j)
+      h_min_bin = h_min.ProjectionY(name_min+"_parton"+pt_label, i+1, j)
+      h_max_bin = h_max.ProjectionY(name_max+"_parton"+pt_label, i+1, j)
 
-          h_cent_folded_h_bin = h_cent_folded_h.ProjectionY(name_cent+"_h"+pt_label, i+1, j)
-          h_min_folded_h_bin = h_min_folded_h.ProjectionY(name_min+"_h"+pt_label, i+1, j)
-          h_max_folded_h_bin = h_max_folded_h.ProjectionY(name_max+"_h"+pt_label, i+1, j)
+      # Keep normalization by dividing by the number of bins added in projection
+      h_cent_bin.Scale(1/(j-i))
+      h_min_bin.Scale(1/(j-i))
+      h_max_bin.Scale(1/(j-i))
 
-          h_cent_folded_ch_bin = h_cent_folded_ch.ProjectionY(name_cent+"_ch"+pt_label, i+1, j)
-          h_min_folded_ch_bin = h_min_folded_ch.ProjectionY(name_min+"_ch"+pt_label, i+1, j)
-          h_max_folded_ch_bin = h_max_folded_ch.ProjectionY(name_max+"_ch"+pt_label, i+1, j)
+      # Set new names and titles to prevent issues with saving histograms
+      h_cent_bin.SetNameTitle(name_cent+"_parton"+pt_label, name_cent+"_parton"+pt_label)
+      h_min_bin.SetNameTitle(name_min+"_parton"+pt_label, name_min+"_parton"+pt_label)
+      h_max_bin.SetNameTitle(name_max+"_parton"+pt_label, name_max+"_parton"+pt_label)
 
-          # Keep normalization by dividing by the number of bins added in projection
-          h_cent_bin.Scale(1/(j-i))
-          h_min_bin.Scale(1/(j-i))
-          h_max_bin.Scale(1/(j-i))
+      # Have to shift/average bins since raw theory calculation are points
+      title = 'h_cent_parton_shifted_%s%s' % (label, pt_label)
+      xbins = array('d', np.linspace(0, 1, 101, endpoint=True))
+      h_cent_p_bin = ROOT.TH1D(title, title, len(xbins)-1, xbins)
+      for bi in range(1, h_cent_bin.GetNbinsX()):
+        h_cent_p_bin.SetBinContent(
+          bi, (h_cent_bin.GetBinContent(bi) + h_cent_bin.GetBinContent(bi+1)) / 2)
+        h_cent_p_bin.SetBinError(bi, 0)
 
-          h_cent_folded_h_bin.Scale(1/(j-i))
-          h_min_folded_h_bin.Scale(1/(j-i))
-          h_max_folded_h_bin.Scale(1/(j-i))
+      # Initialize h and ch histograms
+      h_cent_ch_bin = None
+      h_min_ch_bin = None
+      h_max_ch_bin = None
 
-          h_cent_folded_ch_bin.Scale(1/(j-i))
-          h_min_folded_ch_bin.Scale(1/(j-i))
-          h_max_folded_ch_bin.Scale(1/(j-i))
+      h_cent_h_bin = None
+      h_min_h_bin = None
+      h_max_h_bin = None
 
-          # Scale all by integral of central prediction values
-          # TODO: See if there's a better way to do this... shouldn't have to scale?
-          #h_min_bin.Scale(1/h_cent_bin.Integral("width"))
-          #h_max_bin.Scale(1/h_cent_bin.Integral("width"))
-          #h_cent_bin.Scale(1/h_cent_bin.Integral("width"))
+      # Scale the theory bin and save for plotting
+      for l in range(0, 3):
+        for m in range(0, 3):
+          for n in range(0, 3):
 
-          h_min_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
-          h_max_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
-          h_cent_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+            if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
+              continue
 
-          h_min_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
-          h_max_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
-          h_cent_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+            h_folded_h_bin = folded_h_hists[l][m][n].ProjectionY(name_cent+"_h"+pt_label, i+1, j)
+            h_folded_ch_bin = folded_ch_hists[l][m][n].ProjectionY(name_cent+"_ch"+pt_label, i+1, j)
 
-          # Save ratio plots for seeing the change at each level
-          h_cent_ratio_ch_bin = h_cent_folded_ch_bin.Clone()
-          title = 'h_cent_ratio_ch_%s%s' % (label, pt_label)
-          h_cent_ratio_ch_bin.SetNameTitle(title, title)
-          h_cent_ratio_ch_bin.Divide(h_cent_folded_h_bin)
-          h_cent_ratio_ch_bin.SetDirectory(0)
-          setattr(self, title, h_cent_ratio_ch_bin)
+            h_folded_h_bin.Scale(1/(j-i))
+            h_folded_ch_bin.Scale(1/(j-i))
 
-          # Have to shift/average bins since raw theory calculation are points
-          title = 'h_cent_parton_shifted_%s%s' % (label, pt_label)
-          xbins = array('d', np.linspace(0, 1, 101, endpoint=True))
-          h_cent_p_bin = ROOT.TH1D(title, title, len(xbins)-1, xbins)
-          for bi in range(1, h_cent_bin.GetNbinsX()):
-            h_cent_p_bin.SetBinContent(
-              bi, (h_cent_bin.GetBinContent(bi) + h_cent_bin.GetBinContent(bi+1)) / 2)
-            h_cent_p_bin.SetBinError(bi, 0)
+            # Scale all by integral of central prediction values
+            # TODO: See if there's a better way to do this... shouldn't have to scale?
 
-          h_cent_ratio_h_bin = h_cent_folded_h_bin.Clone()
-          title = 'h_cent_ratio_h_%s%s' % (label, pt_label)
-          h_cent_ratio_h_bin.SetNameTitle(title, title)
-          h_cent_ratio_h_bin.Divide(h_cent_p_bin)
-          h_cent_ratio_h_bin.SetDirectory(0)
-          setattr(self, title, h_cent_ratio_h_bin)
+            h_folded_h_bin.Scale(1/h_folded_h_bin.Integral("width"))
+            h_folded_ch_bin.Scale(1/h_folded_ch_bin.Integral("width"))
 
-          # Apply the MPI scaling to the charged distribution
-          h_cent_folded_ch_bin.Multiply(h_mpi_ratio)
-          h_min_folded_ch_bin.Multiply(h_mpi_ratio)
-          h_max_folded_ch_bin.Multiply(h_mpi_ratio)
+            # Apply the MPI scaling to the charged distribution
+            h_folded_ch_bin.Multiply(h_mpi_ratio)
+            h_folded_ch_bin.Scale(1/h_folded_ch_bin.Integral("width"))
 
-          # Scale all by integral of central prediction values (again...)
-          # TODO: See if there's a better way to do this... shouldn't have to scale?
-          #h_min_bin.Scale(1/h_cent_bin.Integral("width"))
-          #h_max_bin.Scale(1/h_cent_bin.Integral("width"))
-          #h_cent_bin.Scale(1/h_cent_bin.Integral("width"))
+            # Save / update the min/max/cent histograms
+            if l == m == n == 0:  # Initialize the min/max histograms
+              h_min_ch_bin = h_folded_ch_bin.Clone()
+              h_max_ch_bin = h_folded_ch_bin.Clone()
+              h_min_ch_bin.SetNameTitle(name_min+"_ch"+pt_label, name_min+"_ch"+pt_label)
+              h_max_ch_bin.SetNameTitle(name_max+"_ch"+pt_label, name_max+"_ch"+pt_label)
 
-          #h_min_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
-          #h_max_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
-          #h_cent_folded_h_bin.Scale(1/h_cent_folded_h_bin.Integral("width"))
+              h_min_h_bin = h_folded_h_bin.Clone()
+              h_max_h_bin = h_folded_h_bin.Clone()
+              h_min_h_bin.SetNameTitle(name_min+"_h"+pt_label, name_min+"_h"+pt_label)
+              h_max_h_bin.SetNameTitle(name_max+"_h"+pt_label, name_max+"_h"+pt_label)
+            else:  # Update the min/max histograms
+              for b in range(1, h_folded_h_bin.GetNbinsX()+1):
 
-          h_min_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
-          h_max_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
-          h_cent_folded_ch_bin.Scale(1/h_cent_folded_ch_bin.Integral("width"))
+                h_val = h_folded_h_bin.GetBinContent(b)
+                if h_val < h_min_h_bin.GetBinContent(b):
+                  h_min_h_bin.SetBinContent(b, h_val)
+                elif h_val > h_max_h_bin.GetBinContent(b):
+                  h_max_h_bin.SetBinContent(b, h_val)
 
-          # Set new names and titles to prevent issues with saving histograms
-          h_cent_bin.SetNameTitle(name_cent+"_parton"+pt_label, name_cent+"_parton"+pt_label)
-          h_min_bin.SetNameTitle(name_min+"_parton"+pt_label, name_min+"_parton"+pt_label)
-          h_max_bin.SetNameTitle(name_max+"_parton"+pt_label, name_max+"_parton"+pt_label)
+                ch_val = h_folded_ch_bin.GetBinContent(b)
+                if ch_val < h_min_ch_bin.GetBinContent(b):
+                  h_min_ch_bin.SetBinContent(b, ch_val)
+                elif ch_val > h_max_ch_bin.GetBinContent(b):
+                  h_max_ch_bin.SetBinContent(b, ch_val)
 
-          h_cent_folded_h_bin.SetNameTitle(name_cent+"_ch"+pt_label, name_cent+"_h"+pt_label)
-          h_min_folded_h_bin.SetNameTitle(name_min+"_h"+pt_label, name_min+"_h"+pt_label)
-          h_max_folded_h_bin.SetNameTitle(name_max+"_h"+pt_label, name_max+"_h"+pt_label)
+            # Save ratio plots for seeing the change at each level
+            if l == m == n == 1:
+              h_cent_ch_bin = h_folded_ch_bin.Clone()
+              h_cent_h_bin = h_folded_h_bin.Clone()
+              h_cent_ch_bin.SetNameTitle(name_cent+"_ch"+pt_label, name_cent+"_ch"+pt_label)
+              h_cent_h_bin.SetNameTitle(name_cent+"_h"+pt_label, name_cent+"_h"+pt_label)
 
-          h_cent_folded_ch_bin.SetNameTitle(name_cent+"_ch"+pt_label, name_cent+"_ch"+pt_label)
-          h_min_folded_ch_bin.SetNameTitle(name_min+"_ch"+pt_label, name_min+"_ch"+pt_label)
-          h_max_folded_ch_bin.SetNameTitle(name_max+"_ch"+pt_label, name_max+"_ch"+pt_label)
+              h_cent_ratio_ch_bin = h_folded_ch_bin.Clone()
+              title = 'h_cent_ratio_ch_%s%s' % (label, pt_label)
+              h_cent_ratio_ch_bin.SetNameTitle(title, title)
+              h_cent_ratio_ch_bin.Divide(h_cent_h_bin)
+              h_cent_ratio_ch_bin.SetDirectory(0)
+              setattr(self, title, h_cent_ratio_ch_bin)
 
-          # Steal ownership from ROOT
-          h_cent_bin.SetDirectory(0)
-          h_min_bin.SetDirectory(0)
-          h_max_bin.SetDirectory(0)
+              h_cent_ratio_h_bin = h_folded_h_bin.Clone()
+              title = 'h_cent_ratio_h_%s%s' % (label, pt_label)
+              h_cent_ratio_h_bin.SetNameTitle(title, title)
+              h_cent_ratio_h_bin.Divide(h_cent_p_bin)
+              h_cent_ratio_h_bin.SetDirectory(0)
+              setattr(self, title, h_cent_ratio_h_bin)
 
-          h_cent_folded_h_bin.SetDirectory(0)
-          h_min_folded_h_bin.SetDirectory(0)
-          h_max_folded_h_bin.SetDirectory(0)
+      # Steal ownership from ROOT
+      h_cent_bin.SetDirectory(0)
+      h_min_bin.SetDirectory(0)
+      h_max_bin.SetDirectory(0)
 
-          h_cent_folded_ch_bin.SetDirectory(0)
-          h_min_folded_ch_bin.SetDirectory(0)
-          h_max_folded_ch_bin.SetDirectory(0)
+      h_cent_h_bin.SetDirectory(0)
+      h_min_h_bin.SetDirectory(0)
+      h_max_h_bin.SetDirectory(0)
 
-          # Save as attributes for later access (plotting)
-          setattr(self, name_cent+"_parton"+pt_label, h_cent_bin)
-          setattr(self, name_min+"_parton"+pt_label, h_min_bin)
-          setattr(self, name_max+"_parton"+pt_label, h_max_bin)
+      h_cent_ch_bin.SetDirectory(0)
+      h_min_ch_bin.SetDirectory(0)
+      h_max_ch_bin.SetDirectory(0)
 
-          setattr(self, name_cent+"_h"+pt_label, h_cent_folded_h_bin)
-          setattr(self, name_min+"_h"+pt_label, h_min_folded_h_bin)
-          setattr(self, name_max+"_h"+pt_label, h_max_folded_h_bin)
+      # Save as attributes for later access (plotting)
+      setattr(self, name_cent+"_parton"+pt_label, h_cent_bin)
+      setattr(self, name_min+"_parton"+pt_label, h_min_bin)
+      setattr(self, name_max+"_parton"+pt_label, h_max_bin)
 
-          setattr(self, name_cent+"_ch"+pt_label, h_cent_folded_ch_bin)
-          setattr(self, name_min+"_ch"+pt_label, h_min_folded_ch_bin)
-          setattr(self, name_max+"_ch"+pt_label, h_max_folded_ch_bin)
+      setattr(self, name_cent+"_h"+pt_label, h_cent_h_bin)
+      setattr(self, name_min+"_h"+pt_label, h_min_h_bin)
+      setattr(self, name_max+"_h"+pt_label, h_max_h_bin)
+
+      setattr(self, name_cent+"_ch"+pt_label, h_cent_ch_bin)
+      setattr(self, name_min+"_ch"+pt_label, h_min_ch_bin)
+      setattr(self, name_max+"_ch"+pt_label, h_max_ch_bin)
+
+          
+    # Save 2D folded predictions
+    #setattr(self, name_cent+'_ch', h_cent_folded_ch)
+    #setattr(self, name_min+'_ch', h_min_folded_ch)
+    #setattr(self, name_max+'_ch', h_max_folded_ch)
+    #setattr(self, name_cent+'_h', h_cent_folded_h)
+    #setattr(self, name_min+'_h', h_min_folded_h)
+    #setattr(self, name_max+'_h', h_max_folded_h)
 
 
   #---------------------------------------------------------------
