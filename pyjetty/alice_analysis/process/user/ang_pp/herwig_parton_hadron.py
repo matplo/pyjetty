@@ -673,7 +673,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
 
                     continue
 
-                elif line[0].isnumeric():
+                elif line[2].isnumeric():
                     # Save the hadron name for charge descrimination
                     i = 1
                     while line[i].isnumeric():
@@ -681,7 +681,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     hadron_type = line[i:].split()[0]
                     continue
 
-                elif line[0] == line[1] == ' ':  # and len(vals) == 5:
+                elif line[2] == ' ':  # and len(line.split()) == 5:
                     # Reading hadron information
                     vals = line.split()
                     if not MPIon:
