@@ -1,6 +1,6 @@
 #! /bin/bash
 
-#SBATCH --job-name="pythiagen"
+#SBATCH --job-name="HerwigGen"
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
@@ -33,14 +33,6 @@ fi
 
 SEED=$(( ($CORE_IN_BIN - 1) * NEV_PER_JOB + 1111 ))
 
-# Set modules and load Herwig environment
-module use ~/heppy/modules
-module load heppy/1.0
-module use ~/pyjetty/modules
-module load pyjetty/1.0
-echo "python is" $(which python)
-source /software/users/james/herwig/bin/activate
-
 HERWIG_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_infiles/$BIN/LHC_5020.run"
 HERWIG_SCRIPT_MPI="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_infiles/$BIN/LHC_5020_MPI.run"
 PYTHON_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_parton_hadron.py"
@@ -49,13 +41,21 @@ OUTDIR="/rstorage/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BI
 mkdir -p $OUTDIR
 cd $OUTDIR
 
-echo "\n\n\nRunning Herwig7 with MPI switched off...\n\n\n"
+# Load Herwig environment and generate events
+source /software/users/james/herwig/bin/activate
+echo "Running Herwig7 with MPI switched off..."
 Herwig run $HERWIG_SCRIPT -d2 -N $NEV_PER_JOB -s $SEED
-echo "\n\n\nRunning Herwig7 with MPI switched on...\n\n\n"
+echo "Running Herwig7 with MPI switched on..."
 Herwig run $HERWIG_SCRIPT_MPI -d2 -N $NEV_PER_JOB -s $SEED
 
+# Set modules and load Herwig environment
+module use ~/heppy/modules
+module load heppy/1.0
+module use ~/pyjetty/modules
+module load pyjetty/1.0
+echo "python is" $(which python)
 cd /home/ezra/analysis_env/
-pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $OUTDIR/LHC_5020.log --input-file-mpi $OUTDIR/LHC_5020_MPI.log --output-dir $OUTDIR
+pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR
 
 # Clean up Herwig7 files to save space
 rm $OUTDIR/LHC_5020*
