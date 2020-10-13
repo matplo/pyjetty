@@ -1,0 +1,61 @@
+# -*- ThePEG-repository -*-
+
+##################################################
+# Example generator based on LHC parameters
+# usage: Herwig read LHC.in
+##################################################
+
+read snippets/PPCollider.in
+
+##################################################
+# LHC physics parameters (override defaults here) 
+##################################################
+
+set /Herwig/Generators/EventGenerator:EventHandler:LuminosityFunction:Energy 5020.0
+
+##################################################
+# Matrix Elements for hadron-hadron collisions 
+##################################################
+
+# QCD 2-2 scattering
+cd /Herwig/MatrixElements
+insert SubProcess:MatrixElements[0] MEQCD2to2
+
+##################################################
+#  Set cuts
+##################################################
+
+# Cut directly on jet pt
+set /Herwig/Cuts/JetKtCut:MinKT 9.*GeV
+set /Herwig/Cuts/JetKtCut:MaxKT 16.*GeV
+
+# Or, cut on Q^2?
+#set /Herwig/Cuts/Cuts:MHatMin 100.*GeV
+#set /Herwig/Cuts/Cuts:MHatMax 200.*GeV
+
+set /Herwig/Cuts/JetKtCut:MinEta -1.5
+set /Herwig/Cuts/JetKtCut:MaxEta 1.5
+
+# Make particles with c*tau > 10 mm stable:
+set /Herwig/Decays/DecayHandler:MaxLifeTime 10*mm
+set /Herwig/Decays/DecayHandler:LifeTimeOption Average
+
+##################################################
+## To turn off MPI and/or hadronization: 
+##################################################
+#cd /Herwig/EventHandlers
+#set EventHandler:CascadeHandler:MPIHandler NULL
+#set EventHandler:HadronizationHandler NULL
+
+##################################################
+## HepMC output
+##################################################
+
+#read snippets/HepMC.in
+#set /Herwig/Analysis/HepMC:PrintEvent 1000
+
+##################################################
+# Save run for later usage with 'Herwig run'
+##################################################
+set /Herwig/Generators/EventGenerator:PrintEvent 1000000
+saverun LHC_5020_MPI /Herwig/Generators/EventGenerator

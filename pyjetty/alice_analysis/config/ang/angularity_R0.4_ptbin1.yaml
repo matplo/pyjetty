@@ -112,7 +112,7 @@ force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Preliminary'
+figure_approval_status: 'Work In Progress'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
