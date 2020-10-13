@@ -4,18 +4,18 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-320
+#SBATCH --array=1-640
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 # Number of events per pT-hat bin (for statistics)
-NEV_DESIRED=3200000
+NEV_DESIRED=6400000
 
 # Lower edges of the pT-hat bins
-PTHAT_BINS=(5 9 16 28 45 70 99 132 169 212)
+PTHAT_BINS=(9 16 28 45 70 99 132 169 212 259)
 echo "Number of pT-hat bins: ${#PTHAT_BINS[@]}"
 
 # Currently we have 8 nodes * 20 cores active
-NCORES=320
+NCORES=640
 NEV_PER_JOB=$(( $NEV_DESIRED * ${#PTHAT_BINS[@]} / $NCORES ))
 echo "Number of events per job: $NEV_PER_JOB"
 NCORES_PER_BIN=$(( $NCORES / ${#PTHAT_BINS[@]} ))
@@ -41,17 +41,21 @@ module load pyjetty/1.0
 echo "python is" $(which python)
 source /software/users/james/herwig/bin/activate
 
-HERWIG_SCRIPT="/home/ezra/herwig_infiles/$BIN/LHC_5020.run"
+HERWIG_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_infiles/$BIN/LHC_5020.run"
+HERWIG_SCRIPT_MPI="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_infiles/$BIN/LHC_5020_MPI.run"
 PYTHON_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_parton_hadron.py"
 CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/process_angularity.yaml"
 OUTDIR="/rstorage/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 mkdir -p $OUTDIR
 cd $OUTDIR
 
+echo "\n\n\nRunning Herwig7 with MPI switched off...\n\n\n"
 Herwig run $HERWIG_SCRIPT -d2 -N $NEV_PER_JOB -s $SEED
+echo "\n\n\nRunning Herwig7 with MPI switched on...\n\n\n"
+Herwig run $HERWIG_SCRIPT_MPI -d2 -N $NEV_PER_JOB -s $SEED
 
 cd /home/ezra/analysis_env/
-pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $OUTDIR/LHC_5020.log --output-dir $OUTDIR
+pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $OUTDIR/LHC_5020.log --input-file-mpi $OUTDIR/LHC_5020_MPI.log --output-dir $OUTDIR
 
 # Clean up Herwig7 files to save space
 rm $OUTDIR/LHC_5020*

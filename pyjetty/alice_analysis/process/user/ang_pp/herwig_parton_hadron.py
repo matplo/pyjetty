@@ -58,6 +58,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
             os.makedirs(self.output_dir)
 
         self.herwig_file = args.input_file
+        self.herwig_file_MPI = args.input_file_mpi
 
         # Defaults to None if not in use
         self.level = args.no_match_level
@@ -83,6 +84,10 @@ class herwig_parton_hadron(process_base.ProcessBase):
         # Whether or not to rescale final jet histograms based on sigma/N
         self.no_scale = args.no_scale
 
+        # Initialize variables for final cross sections from event generator
+        self.xsec = None
+        self.xsec_MPI = None
+
 
     #---------------------------------------------------------------
     # Main processing function
@@ -97,18 +102,20 @@ class herwig_parton_hadron(process_base.ProcessBase):
         # Initialize response histograms
         self.initialize_hist()
 
-        # print the banner first
+        # Print the banner first
         fj.ClusterSequence.print_banner()
         print()
 
         self.init_jet_tools()
         self.parse_events()
+        if self.herwig_file_MPI: 
+            self.parse_events(MPIon=True)
 
         for jetR in self.jetR_list:
             getattr(self, "tw_R%s" % str(jetR).replace('.', '')).fill_tree()
 
-        # TODO: scale histograms
-        #self.scale_print_final_info(pythia, pythia_MPI)
+        # Scale histograms
+        self.scale_print_final_info()
 
         outf.Write()
         outf.Close()
@@ -537,12 +544,14 @@ class herwig_parton_hadron(process_base.ProcessBase):
 
         if MPIon:
             hNevents = self.hNeventsMPI
+            infile = self.herwig_file_MPI
         else:
             hNevents = self.hNevents
+            infile = self.herwig_file
 
-        print("Reading events from %s..." % self.herwig_file)
+        print("Reading events from %s..." % infile)
 
-        with open(self.herwig_file, 'r') as f:
+        with open(infile, 'r') as f:
             ev_num = 0
 
             # Flags to assist with keeping track of place within file
@@ -580,9 +589,14 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     if "Event number" in line:
                         reading_ev = True
                         ev_num = int(line.split()[2])
-                        if not ev_num % 100:
+                        if not ev_num % 1000:
                             print("Event number", ev_num, end="\r")
                         hNevents.Fill(0)
+                    elif "Total integrated xsec:" in line:
+                        if MPIon:
+                            self.xsec_MPI = float(line.split()[3])
+                        else:
+                            self.xsec = float(line.split()[3])
                     continue
                 
                 # Reading event
@@ -597,7 +611,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     continue
                 
                 # Get showered partons
-                elif not parton_finished:
+                elif not MPIon and not parton_finished:
                     # Read parton information
                     vals = line.split()
                     if line[0] == '-':
@@ -631,11 +645,12 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     hadron_final = False
                     
                     # Get correct structure for finding jets
-                    partons.append(fjext.vectorize_px_py_pz_e(
-                        partons_px, partons_py, partons_pz, partons_e))
+                    if not MPIon:
+                        partons.append(fjext.vectorize_px_py_pz_e(
+                            partons_px, partons_py, partons_pz, partons_e))
 
-                    hadrons.append(fjext.vectorize_px_py_pz_e(
-                        hadrons_px, hadrons_py, hadrons_pz, hadrons_e))
+                        hadrons.append(fjext.vectorize_px_py_pz_e(
+                            hadrons_px, hadrons_py, hadrons_pz, hadrons_e))
 
                     ch_hadrons.append(fjext.vectorize_px_py_pz_e(
                         ch_hadrons_px, ch_hadrons_py, ch_hadrons_pz, ch_hadrons_e))
@@ -669,11 +684,12 @@ class herwig_parton_hadron(process_base.ProcessBase):
                 elif line[0] == line[1] == ' ':  # and len(vals) == 5:
                     # Reading hadron information
                     vals = line.split()
-                    hadrons_px.append(vals[0])
-                    hadrons_py.append(vals[1])
-                    hadrons_pz.append(vals[2])
-                    hadrons_e.append(vals[3])
-                    #hadrons_q.append(vals[4])
+                    if not MPIon:
+                        hadrons_px.append(vals[0])
+                        hadrons_py.append(vals[1])
+                        hadrons_pz.append(vals[2])
+                        hadrons_e.append(vals[3])
+                        #hadrons_q.append(vals[4])
 
                     if '+' in hadron_type or '-' in hadron_type:
                         ch_hadrons_px.append(vals[0])
@@ -702,15 +718,16 @@ class herwig_parton_hadron(process_base.ProcessBase):
             count1 = getattr(self, "count1_R%s" % jetR_str)
             count2 = getattr(self, "count2_R%s" % jetR_str)
 
-            for iev in range(len(partons_per_event)):
-                if not (iev+1) % 100:
-                    print("Event number %s" % str(iev+1), end='\r')
-                
-                jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons_per_event[iev])))
-                jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons_per_event[iev])))
-                jets_ch = fj.sorted_by_pt(jet_selector(jet_def(ch_hadrons_per_event[iev])))
+            for iev in range(len(ch_hadrons_per_event)):
 
-                if MPIon:
+                if not (iev+1) % 1000:
+                    print("Event number %s" % str(iev+1), end='\r')
+
+                jets_ch = fj.sorted_by_pt(jet_selector(jet_def(ch_hadrons_per_event[iev])))
+                if not MPIon:  # Only need ch jets for MPI histograms
+                    jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons_per_event[iev])))
+                    jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons_per_event[iev])))
+                else:
                     for jet in jets_ch:
                         self.fill_MPI_histograms(jetR, jet, sd)
                     continue
@@ -837,7 +854,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
 
             kappa = 1
             h.Fill(jet.pt(), lambda_beta_kappa(jet, jetR, beta, kappa))
-            
+
             if sd != None:
                 pass  # TODO
 
@@ -986,22 +1003,25 @@ class herwig_parton_hadron(process_base.ProcessBase):
     #---------------------------------------------------------------
     # Initiate scaling of all histograms and print final simulation info
     #---------------------------------------------------------------
-    def scale_print_final_info(self, pythia, pythia_MPI):
+    def scale_print_final_info(self):
 
         # Scale all jet histograms by the appropriate factor from generated cross section
         # and the number of accepted events
         if not self.no_scale:
-            scale_f = pythia.info.sigmaGen() / self.hNevents.GetBinContent(1)
-            print("Weight MPIoff tree by (cross section)/(N events) =", scale_f)
-            MPI_scale_f = pythia_MPI.info.sigmaGen() / self.hNeventsMPI.GetBinContent(1)
-            print("Weight MPIon tree by (cross section)/(N events) =", MPI_scale_f)
+            scale_f = self.xsec / self.hNevents.GetBinContent(1)
+            print("Weight MPIoff histograms by (cross section)/(N events) =", scale_f)
+
+            MPI_scale_f = None
+            if self.herwig_file_MPI:
+                MPI_scale_f = self.xsec_MPI / self.hNeventsMPI.GetBinContent(1)
+                print("Weight MPIon histograms by (cross section)/(N events) =", MPI_scale_f)
+
             self.scale_jet_histograms(scale_f, MPI_scale_f)
         print()
 
-        print("N total final MPI-off events:", int(self.hNevents.GetBinContent(1)), "with",
-              int(pythia.info.nAccepted() - self.hNevents.GetBinContent(1)),
-              "events rejected at hadronization step")
         self.hNevents.SetBinError(1, 0)
+        if self.herwig_file_MPI:
+            self.hNeventsMPI.SetBinError(1, 0)
 
         for jetR in self.jetR_list:
             jetR_str = str(jetR).replace('.', '')
@@ -1023,9 +1043,10 @@ class herwig_parton_hadron(process_base.ProcessBase):
             for h in getattr(self, hist_list_name):
                 h.Scale(scale_f)
 
-            for beta in self.beta_list:
-                label = ("R%s_%sScaled" % (str(jetR), str(beta))).replace('.', '')
-                getattr(self, 'hAng_JetPt_ch_MPIon_%s' % label).Scale(MPI_scale_f)
+            if self.herwig_file_MPI:
+                for beta in self.beta_list:
+                    label = ("R%s_%sScaled" % (str(jetR), str(beta))).replace('.', '')
+                    getattr(self, 'hAng_JetPt_ch_MPIon_%s' % label).Scale(MPI_scale_f)
 
 
 ################################################################
@@ -1034,6 +1055,8 @@ if __name__ == '__main__':
                                      prog=os.path.basename(__file__))
     parser.add_argument('-i', '--input-file', action='store', type=str, default='LHC.log',
                         help='Input .log file from Herwig7 analysis')
+    parser.add_argument('-m', '--input-file-mpi', action='store', type=str, default=None,
+                        help='Input .log file with MPI on from Herwig7 analysis')
     parser.add_argument('-o', '--output-dir', action='store', type=str, default='./', 
                         help='Output directory for generated ROOT file(s)')
     parser.add_argument('--tree-output-fname', default="AnalysisResults.root", type=str,
@@ -1042,7 +1065,8 @@ if __name__ == '__main__':
                         "no matching. Options: 'p', 'h', 'ch'", default=None, type=str)
     parser.add_argument('--no-scale', help="Turn off rescaling all histograms by cross section / N",
                         action='store_true', default=False)
-    parser.add_argument('-c', '--config-file', action='store', type=str, default='config/angularity.yaml',
+    parser.add_argument('-c', '--config-file', action='store', type=str,
+                        default='config/angularity.yaml',
                         help="Path of config file for observable configurations")
     args = parser.parse_args()
 
@@ -1055,5 +1079,6 @@ if __name__ == '__main__':
         print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
         sys.exit(0)
 
-    process = herwig_parton_hadron(config_file=args.config_file, output_dir=args.output_dir, args=args)
+    process = herwig_parton_hadron(
+        config_file=args.config_file, output_dir=args.output_dir, args=args)
     process.herwig_parton_hadron(args)
