@@ -1,7 +1,7 @@
 #! /bin/bash
 
 #SBATCH --job-name="HerwigGen"
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=5
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-640
@@ -37,9 +37,11 @@ HERWIG_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/her
 HERWIG_SCRIPT_MPI="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_infiles/$BIN/LHC_5020_MPI.run"
 PYTHON_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/herwig_parton_hadron.py"
 CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/process_angularity.yaml"
+TEMP_OUTDIR="/storage/u/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 OUTDIR="/rstorage/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
+mkdir -p $TEMP_OUTDIR
 mkdir -p $OUTDIR
-cd $OUTDIR
+cd $TEMP_OUTDIR
 
 # Load Herwig environment and generate events
 source /software/users/james/herwig/bin/activate
@@ -55,7 +57,7 @@ module use ~/pyjetty/modules
 module load pyjetty/1.0
 echo "python is" $(which python)
 cd /home/ezra/analysis_env/
-pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR
+pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $TEMP_OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $TEMP_OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR
 
 # Clean up Herwig7 files to save space
-rm $OUTDIR/LHC_5020*
+rm $TEMP_OUTDIR/LHC_5020*
