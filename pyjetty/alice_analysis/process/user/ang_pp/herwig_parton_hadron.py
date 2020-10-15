@@ -531,17 +531,6 @@ class herwig_parton_hadron(process_base.ProcessBase):
     #---------------------------------------------------------------
     def parse_events(self, MPIon=False):
 
-        partons_per_event, hadrons_per_event, ch_hadrons_per_event = self.parse_events_from_file(MPIon)
-        print()
-
-        self.find_jets_fill_hist(partons_per_event, hadrons_per_event, ch_hadrons_per_event, MPIon)
-
-
-    #---------------------------------------------------------------
-    # Read events from output, find jets, and fill histograms
-    #---------------------------------------------------------------
-    def parse_events_from_file(self, MPIon=False):
-
         if MPIon:
             hNevents = self.hNeventsMPI
             infile = self.herwig_file_MPI
@@ -577,10 +566,6 @@ class herwig_parton_hadron(process_base.ProcessBase):
             ch_hadrons_pz = []
             ch_hadrons_e = []
             #ch_hadrons_q = []
-
-            partons = []
-            hadrons = []
-            ch_hadrons = []
 
             for line in f:
 
@@ -645,15 +630,19 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     hadron_final = False
                     
                     # Get correct structure for finding jets
+                    partons = None
+                    hadrons = None
                     if not MPIon:
-                        partons.append(fjext.vectorize_px_py_pz_e(
-                            partons_px, partons_py, partons_pz, partons_e))
+                        partons = fjext.vectorize_px_py_pz_e(
+                            partons_px, partons_py, partons_pz, partons_e)
 
-                        hadrons.append(fjext.vectorize_px_py_pz_e(
-                            hadrons_px, hadrons_py, hadrons_pz, hadrons_e))
+                        hadrons = fjext.vectorize_px_py_pz_e(
+                            hadrons_px, hadrons_py, hadrons_pz, hadrons_e)
 
-                    ch_hadrons.append(fjext.vectorize_px_py_pz_e(
-                        ch_hadrons_px, ch_hadrons_py, ch_hadrons_pz, ch_hadrons_e))
+                    ch_hadrons = fjext.vectorize_px_py_pz_e(
+                        ch_hadrons_px, ch_hadrons_py, ch_hadrons_pz, ch_hadrons_e)
+
+                    self.find_jets_fill_hist(partons, hadrons, ch_hadrons, ev_num, MPIon)
 
                     partons_px = []
                     partons_py = []
@@ -703,11 +692,11 @@ class herwig_parton_hadron(process_base.ProcessBase):
     #---------------------------------------------------------------
     # Read events from output, find jets, and fill histograms
     #---------------------------------------------------------------
-    def find_jets_fill_hist(self, partons_per_event, hadrons_per_event,
-                            ch_hadrons_per_event, MPIon=False):
+    def find_jets_fill_hist(self, partons, hadrons,
+                            ch_hadrons, iev, MPIon=False):
 
         for jetR in self.jetR_list:
-            print("Filling jet histograms for R = %s..." % str(jetR))
+            #print("Filling jet histograms for R = %s..." % str(jetR))
             
             jetR_str = str(jetR).replace('.', '')
             jet_selector = getattr(self, "jet_selector_R%s" % jetR_str)
@@ -718,60 +707,58 @@ class herwig_parton_hadron(process_base.ProcessBase):
             count1 = getattr(self, "count1_R%s" % jetR_str)
             count2 = getattr(self, "count2_R%s" % jetR_str)
 
-            for iev in range(len(ch_hadrons_per_event)):
+            #if not (iev+1) % 1000:
+            #    print("Event number %s" % str(iev+1), end='\r')
 
-                if not (iev+1) % 1000:
-                    print("Event number %s" % str(iev+1), end='\r')
+            jets_ch = fj.sorted_by_pt(jet_selector(jet_def(ch_hadrons)))
+            if not MPIon:  # Only need ch jets for MPI histograms
+                jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons)))
+                jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons)))
+            else:
+                for jet in jets_ch:
+                    self.fill_MPI_histograms(jetR, jet, sd)
+                continue
 
-                jets_ch = fj.sorted_by_pt(jet_selector(jet_def(ch_hadrons_per_event[iev])))
-                if not MPIon:  # Only need ch jets for MPI histograms
-                    jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons_per_event[iev])))
-                    jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons_per_event[iev])))
-                else:
-                    for jet in jets_ch:
-                        self.fill_MPI_histograms(jetR, jet, sd)
-                    continue
+            if self.level:  # Only save info at one level w/o matching
+                jets = locals()["jets_%s" % self.level]
+                for jet in jets:
+                    self.fill_unmatched_jet_tree(tw, jetR, iev, jet)
+                continue
 
-                if self.level:  # Only save info at one level w/o matching
-                    jets = locals()["jets_%s" % self.level]
-                    for jet in jets:
-                        self.fill_unmatched_jet_tree(tw, jetR, iev, jet)
-                    continue
+            for i,jchh in enumerate(jets_ch):
 
-                for i,jchh in enumerate(jets_ch):
+                # match hadron (full) jet
+                drhh_list = []
+                for j, jh in enumerate(jets_h):
+                    drhh = jchh.delta_R(jh)
+                    if drhh < jetR / 2.:
+                        drhh_list.append((j,jh))
+                if len(drhh_list) != 1:
+                    count1 += 1
+                else:  # Require unique match
+                    j, jh = drhh_list[0]
 
-                    # match hadron (full) jet
-                    drhh_list = []
-                    for j, jh in enumerate(jets_h):
-                        drhh = jchh.delta_R(jh)
-                        if drhh < jetR / 2.:
-                            drhh_list.append((j,jh))
-                    if len(drhh_list) != 1:
-                        count1 += 1
-                    else:  # Require unique match
-                        j, jh = drhh_list[0]
+                    # match parton level jet
+                    dr_list = []
+                    for k, jp in enumerate(jets_p):
+                        dr = jh.delta_R(jp)
+                        if dr < jetR / 2.:
+                            dr_list.append((k, jp))
+                    if len(dr_list) != 1:
+                        count2 += 1
+                    else:
+                        k, jp = dr_list[0]
 
-                        # match parton level jet
-                        dr_list = []
-                        for k, jp in enumerate(jets_p):
-                            dr = jh.delta_R(jp)
-                            if dr < jetR / 2.:
-                                dr_list.append((k, jp))
-                        if len(dr_list) != 1:
-                            count2 += 1
-                        else:
-                            k, jp = dr_list[0]
+                        if self.debug_level > 0:
+                            pwarning('event', iev)
+                            pinfo('matched jets: ch.h:', jchh.pt(), 'h:', jh.pt(),
+                                  'p:', jp.pt(), 'dr:', dr)
 
-                            if self.debug_level > 0:
-                                pwarning('event', iev)
-                                pinfo('matched jets: ch.h:', jchh.pt(), 'h:', jh.pt(),
-                                      'p:', jp.pt(), 'dr:', dr)
+                        self.fill_matched_jet_tree(tw, jetR, iev, jp, jh, jchh, sd)
+                        self.fill_jet_histograms(jetR, jp, jh, jchh, sd)
 
-                            self.fill_matched_jet_tree(tw, jetR, iev, jp, jh, jchh, sd)
-                            self.fill_jet_histograms(jetR, jp, jh, jchh, sd)
-
-                    #print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(
-                    #    sd_info.z, sd_info.dR, sd_info.mu))
+                #print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(
+                #    sd_info.z, sd_info.dR, sd_info.mu))
 
             setattr(self, "count1_R%s" % jetR_str, count1)
             setattr(self, "count2_R%s" % jetR_str, count2)
