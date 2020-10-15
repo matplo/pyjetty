@@ -65,6 +65,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_response_file = ROOT.TFile(config['response_file'], 'READ')
       self.rebin_theory_response = config['rebin_theory_response']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
+      self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
       # Load the RooUnfold library
       ROOT.gSystem.Load(config['roounfold_path'])
       self.do_theory = True
@@ -654,7 +655,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       if self.do_theory and float(obs_label) in self.theory_beta:
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
-                             min_pt_truth, max_pt_truth, maxbin, plot_pythia=True, plot_theory=True)
+                             min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
                                 min_pt_truth, max_pt_truth, maxbin)
         self.plot_theory_response(jetR, obs_label, obs_setting, grooming_setting,
@@ -672,6 +673,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = True
+
+    # For theory plots, whether or not to show the folded uncertainty bands
+    show_folded_uncertainty = True
 
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -750,15 +754,54 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
         yerrup = array('d', [hmax_p.GetBinContent(i)-y[i-1] for i in range(1, hmax_p.GetNbinsX()+1)])
         yerrdn = array('d', [y[i-1]-hmin_p.GetBinContent(i) for i in range(1, hmin_p.GetNbinsX()+1)])
-        h_parton_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+
+        # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
+        # Formula assumes that jet pT xsec falls like pT^(-5.5)
+        formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5)/(min_pt_truth**-4.5 - max_pt_truth**-4.5)
+        lambda_np_cutoff = round(self.Lambda / (formula_pt * jetR), 2)
+        if lambda_np_cutoff > 1:
+          lambda_np_cutoff = 1
+        index_np_cutoff = [round(val, 2) for val in x].index(lambda_np_cutoff)
+
+        #+1 to include lambda in NP
+        h_parton_theory_np = ROOT.TGraphAsymmErrors(
+          index_np_cutoff+1, x[:index_np_cutoff+1], y[:index_np_cutoff+1], xerrdn[:index_np_cutoff+1],
+          xerrup[:index_np_cutoff+1], yerrdn[:index_np_cutoff+1], yerrup[:index_np_cutoff+1])
+        h_parton_theory_p = ROOT.TGraphAsymmErrors(
+          n-index_np_cutoff, x[index_np_cutoff:], y[index_np_cutoff:], xerrdn[index_np_cutoff:],
+          xerrup[index_np_cutoff:], yerrdn[index_np_cutoff:], yerrup[index_np_cutoff:])
         
         color = self.ColorArray[5]
-        h_parton_theory.SetFillColorAlpha(color, 0.25)
-        h_parton_theory.Draw('3 same')
-        
-        hcent_p.SetLineColor(color)
-        hcent_p.SetLineWidth(3)
-        hcent_p.Draw('L hist same')
+        h_parton_theory_np.SetFillColorAlpha(color, 0.5)
+        h_parton_theory_p.SetFillColorAlpha(color, 0.25)
+        h_parton_theory_np.SetFillStyle(3002)
+        h_parton_theory_np.Draw('3 same')
+        h_parton_theory_p.Draw('3 same')
+
+        # Split central parton curve in NP and P regions
+        hcent_p_np = ROOT.TH1F(
+          name_cent+"_nonpert", name_cent+"_nonpert", index_np_cutoff+1, 
+          array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(1, index_np_cutoff+3)]))
+        hcent_p_p = ROOT.TH1F(
+          name_cent+"_pert", name_cent+"_pert", n-index_np_cutoff, 
+          array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(index_np_cutoff+1, n+2)]))
+        for i in range(1, index_np_cutoff+2):
+          hcent_p_np.SetBinContent(i, y[i-1])
+        for i in range(1, n+1-index_np_cutoff):
+          hcent_p_p.SetBinContent(i, y[i-1+index_np_cutoff])
+
+        hcent_p_np.SetLineStyle(5)
+        hcent_p_np.SetLineColor(color)
+        hcent_p_np.SetLineWidth(3)
+        hcent_p_np.Draw('L hist same')
+
+        hcent_p_p.SetLineColor(color)
+        hcent_p_p.SetLineWidth(3)
+        hcent_p_p.Draw('L hist same')
+
+        #hcent_p.SetLineColor(color)
+        #hcent_p.SetLineWidth(3)
+        #hcent_p.Draw('L hist same')
 
         # Dotted lines for error bars
         #hmin_p.SetLineColor(color)
@@ -783,19 +826,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hcent = getattr(self, name_cent)
       hmin = getattr(self, name_min)
       hmax = getattr(self, name_max)
-
-      n = hcent.GetNbinsX()
-      x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
-      y = array('d', [hcent.GetBinContent(i) for i in range(1, hcent.GetNbinsX()+1)])
-      xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
-      xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
-      yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for i in range(1, hmax.GetNbinsX()+1)])
-      yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for i in range(1, hmin.GetNbinsX()+1)])
-      h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
-
       color = self.ColorArray[6]
-      h_ch_theory.SetFillColorAlpha(color, 0.25)
-      h_ch_theory.Draw('3 same')
+
+      if show_folded_uncertainty:
+        n = hcent.GetNbinsX()
+        x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
+        y = array('d', [hcent.GetBinContent(i) for i in range(1, hcent.GetNbinsX()+1)])
+        xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
+        xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
+        yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for i in range(1, hmax.GetNbinsX()+1)])
+        yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for i in range(1, hmin.GetNbinsX()+1)])
+        h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+
+        h_ch_theory.SetFillColorAlpha(color, 0.25)
+        h_ch_theory.Draw('3 same')
 
       hcent.SetLineColor(color)
       hcent.SetLineWidth(3)
@@ -869,7 +913,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           ', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
         text_latex.DrawLatex(0.57, 0.52-delta, text)
 
-    myLegend = ROOT.TLegend(0.22, 0.7, 0.45, 0.9)
+    myLegend = ROOT.TLegend(0.22, 0.65, 0.45, 0.9)
     self.utils.setup_legend(myLegend, 0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
@@ -877,8 +921,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     if plot_theory:
       if show_parton_theory:
-        myLegend.AddEntry(hcent_p, 'Full Parton SCET', 'pe')
-      myLegend.AddEntry(hcent, 'Folded/Scaled SCET', 'pe')
+        myLegend.AddEntry(hcent_p_np, 'NP Parton SCET', 'lf')
+        myLegend.AddEntry(hcent_p_p, 'P Parton SCET', 'lf')
+      myLegend.AddEntry(hcent, 'Folded/Scaled SCET', 'lf')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
