@@ -26,8 +26,8 @@ insert SubProcess:MatrixElements[0] MEQCD2to2
 ##################################################
 
 # Cut directly on jet pt
-set /Herwig/Cuts/JetKtCut:MinKT 70.*GeV
-set /Herwig/Cuts/JetKtCut:MaxKT 99.*GeV
+set /Herwig/Cuts/JetKtCut:MinKT 21.*GeV
+set /Herwig/Cuts/JetKtCut:MaxKT 28.*GeV
 
 # Or, cut on Q^2?
 #set /Herwig/Cuts/Cuts:MHatMin 100.*GeV

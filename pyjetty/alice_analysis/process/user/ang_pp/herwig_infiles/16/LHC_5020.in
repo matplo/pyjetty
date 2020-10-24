@@ -26,8 +26,8 @@ insert SubProcess:MatrixElements[0] MEQCD2to2
 ##################################################
 
 # Cut directly on jet pt
-set /Herwig/Cuts/JetKtCut:MinKT 7.*GeV
-set /Herwig/Cuts/JetKtCut:MaxKT 9.*GeV
+set /Herwig/Cuts/JetKtCut:MinKT 169.*GeV
+set /Herwig/Cuts/JetKtCut:MaxKT 190.*GeV
 
 # Or, cut on Q^2?
 #set /Herwig/Cuts/Cuts:MHatMin 100.*GeV
@@ -43,8 +43,8 @@ set /Herwig/Decays/DecayHandler:LifeTimeOption Average
 ##################################################
 ## To turn off MPI and/or hadronization: 
 ##################################################
-#cd /Herwig/EventHandlers
-#set EventHandler:CascadeHandler:MPIHandler NULL
+cd /Herwig/EventHandlers
+set EventHandler:CascadeHandler:MPIHandler NULL
 #set EventHandler:HadronizationHandler NULL
 
 ##################################################
@@ -58,4 +58,4 @@ set /Herwig/Decays/DecayHandler:LifeTimeOption Average
 # Save run for later usage with 'Herwig run'
 ##################################################
 set /Herwig/Generators/EventGenerator:PrintEvent 1000000
-saverun LHC_5020_MPI /Herwig/Generators/EventGenerator
+saverun LHC_5020 /Herwig/Generators/EventGenerator

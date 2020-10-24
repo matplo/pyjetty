@@ -62,7 +62,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_dir = config['theory_dir']
       self.theory_beta = config['theory_beta']
       self.theory_pt_bins = config['theory_pt_bins']
-      self.theory_response_file = ROOT.TFile(config['response_file'], 'READ')
+      self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
+      self.theory_response_labels = config['response_labels']
       self.rebin_theory_response = config['rebin_theory_response']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
       self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
@@ -94,100 +95,101 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       for beta in self.theory_beta:
         label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
 
-	# Load charged hadron level folding response matrix
-        name_ch = "hResponse_JetPt_%s_ch_%sScaled" % (self.observable, label)
-        thn_ch = self.theory_response_file.Get(name_ch)
-        name_ch = "hResponse_theory_ch_%s" % (label)
-        setattr(self, name_ch, thn_ch)
+        for ri, response in enumerate(self.theory_response_files):
+          # Load charged hadron level folding response matrix
+          name_ch = "hResponse_JetPt_%s_ch_%sScaled" % (self.observable, label)
+          thn_ch = response.Get(name_ch)
+          name_ch = "hResponse_theory_ch_%s" % label
+          setattr(self, '%s_%i' % (name_ch, ri), thn_ch)
 
-        # Load hadron-level folding response matrix (for comparison histograms)
-        name_h = "hResponse_JetPt_%s_h_%sScaled" % (self.observable, label)
-        thn_h = self.theory_response_file.Get(name_h)
-        name_h = "hResponse_theory_h_%s" % (label)
-        setattr(self, name_h, thn_h)
+          # Load hadron-level folding response matrix (for comparison histograms)
+          name_h = "hResponse_JetPt_%s_h_%sScaled" % (self.observable, label)
+          thn_h = response.Get(name_h)
+          name_h = "hResponse_theory_h_%s" % label
+          setattr(self, '%s_%i' % (name_h, ri), thn_h)
 
-        # Create Roounfold object
-        name_roounfold_h = name_h + '_Roounfold'
-        name_roounfold_ch = name_ch + '_Roounfold'
+          # Create Roounfold object
+          name_roounfold_h = '%s_Roounfold_%i' % (name_h, ri)
+          name_roounfold_ch = '%s_Roounfold_%i' % (name_ch, ri)
 
-        if roounfold_exists and not self.rebin_theory_response:
-          fRoo = ROOT.TFile(roounfold_filename, 'READ')
-          roounfold_response_ch = fRoo.Get(name_roounfold_ch)
-          roounfold_response_h = fRoo.Get(name_roounfold_h)
-          fRoo.Close()
+          if roounfold_exists and not self.rebin_theory_response:
+            fRoo = ROOT.TFile(roounfold_filename, 'READ')
+            roounfold_response_ch = fRoo.Get(name_roounfold_ch)
+            roounfold_response_h = fRoo.Get(name_roounfold_h)
+            fRoo.Close()
 
-        elif self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
-          # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
-          #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
-          # as compared to the usual
-          #      ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-          det_pt_bin_array = array('d', range(10, 110, 10))
-          tru_pt_bin_array = array('d', range(10, 160, 15))
-          det_obs_bin_array = array('d', np.linspace(0, 1, 101, endpoint=True))
-          tru_obs_bin_array = array('d', np.linspace(-0.005, 1.005, 102, endpoint=True))
-          self.utils.rebin_response(
-            roounfold_filename, thn_ch, name_ch+'_Rebinned', name_roounfold_ch, label,
-            len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
-            len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
-            self.observable)
-          self.utils.rebin_response(
-            roounfold_filename, thn_h, name_h+'_Rebinned', name_roounfold_h, label, 
-            len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
-            len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
-            self.observable)
+          elif self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
+            # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
+            #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
+            # as compared to the usual
+            #      ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
+            det_pt_bin_array = array('d', range(10, 110, 10))
+            tru_pt_bin_array = array('d', range(10, 160, 15))
+            det_obs_bin_array = array('d', np.linspace(0, 1, 101, endpoint=True))
+            tru_obs_bin_array = array('d', np.linspace(-0.005, 1.005, 102, endpoint=True))
+            self.utils.rebin_response(
+              roounfold_filename, thn_ch, '%s_Rebinned_%i' % (name_ch, ri), name_roounfold_ch, label,
+              len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
+              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
+              self.observable)
+            self.utils.rebin_response(
+              roounfold_filename, thn_h, '%s_Rebinned_%i' % (name_h, ri), name_roounfold_h, label, 
+              len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
+              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
+              self.observable)
 
-          f_resp = ROOT.TFile(self.theory_rebinned_response_file, 'READ')
-          roounfold_response_ch = f_resp.Get(name_roounfold_ch)
-          roounfold_response_h = f_resp.Get(name_roounfold_h)
-          f_resp.Close()
+            f_resp = ROOT.TFile(self.theory_rebinned_response_file, 'READ')
+            roounfold_response_ch = f_resp.Get(name_roounfold_ch)
+            roounfold_response_h = f_resp.Get(name_roounfold_h)
+            f_resp.Close()
           
 
-        else:   # Theory folding matrix already has correct binning
-          hist_p_jet = thn_ch.Projection(3, 1)
-          hist_p_jet.SetName('hist_p_jet_%s' % label)
-          hist_h_jet = thn_h.Projection(2, 0)
-          hist_h_jet.SetName('hist_h_jet_%s' % label)
-          hist_ch_jet = thn_ch.Projection(2, 0)
-          hist_ch_jet.SetName('hist_ch_jet_%s' % label)
-          roounfold_response_ch = ROOT.RooUnfoldResponse(
-            hist_ch_jet, hist_p_jet, name_roounfold_ch, name_roounfold_ch)
-          roounfold_response_h = ROOT.RooUnfoldResponse(
-            hist_h_jet, hist_p_jet, name_roounfold_h, name_roounfold_h)
+          else:   # Theory folding matrix already has correct binning
+            hist_p_jet = thn_ch.Projection(3, 1)
+            hist_p_jet.SetName('hist_p_jet_%s_%i' % (label, ri))
+            hist_h_jet = thn_h.Projection(2, 0)
+            hist_h_jet.SetName('hist_h_jet_%s_%i' % (label, ri))
+            hist_ch_jet = thn_ch.Projection(2, 0)
+            hist_ch_jet.SetName('hist_ch_jet_%s_%i' % (label, ri))
+            roounfold_response_ch = ROOT.RooUnfoldResponse(
+              hist_ch_jet, hist_p_jet, name_roounfold_ch, name_roounfold_ch)
+            roounfold_response_h = ROOT.RooUnfoldResponse(
+              hist_h_jet, hist_p_jet, name_roounfold_h, name_roounfold_h)
 
-          for bin_0 in range(1, thn_ch.GetAxis(0).GetNbins() + 1):
-            if bin_0 % 5 == 0:
-              print('{} / {}'.format(bin_0, thn_ch.GetAxis(0).GetNbins() + 1))
-            pt_det = thn_ch.GetAxis(0).GetBinCenter(bin_0)
-            for bin_1 in range(1, thn_ch.GetAxis(1).GetNbins() + 1):
-              pt_true = thn_ch.GetAxis(1).GetBinCenter(bin_1)
-              for bin_2 in range(0, thn_ch.GetAxis(2).GetNbins() + 1):
-                for bin_3 in range(0, thn_ch.GetAxis(3).GetNbins() + 1):
-                  obs_det = thn_ch.GetAxis(2).GetBinCenter(bin_2)
-                  obs_true = thn_ch.GetAxis(3).GetBinCenter(bin_3)
-                  # Get content of original THn bin
-                  x_list = (pt_det, pt_true, obs_det, obs_true)
-                  x = array('d', x_list)
-                  global_bin = thn_ch.GetBin(x)
-                  content = thn_ch.GetBinContent(global_bin)
-                  roounfold_response_ch.Fill(pt_det, obs_det, pt_true, obs_true, content)
+            for bin_0 in range(1, thn_ch.GetAxis(0).GetNbins() + 1):
+              if bin_0 % 5 == 0:
+                print('{} / {}'.format(bin_0, thn_ch.GetAxis(0).GetNbins() + 1))
+              pt_det = thn_ch.GetAxis(0).GetBinCenter(bin_0)
+              for bin_1 in range(1, thn_ch.GetAxis(1).GetNbins() + 1):
+                pt_true = thn_ch.GetAxis(1).GetBinCenter(bin_1)
+                for bin_2 in range(0, thn_ch.GetAxis(2).GetNbins() + 1):
+                  for bin_3 in range(0, thn_ch.GetAxis(3).GetNbins() + 1):
+                    obs_det = thn_ch.GetAxis(2).GetBinCenter(bin_2)
+                    obs_true = thn_ch.GetAxis(3).GetBinCenter(bin_3)
+                    # Get content of original THn bin
+                    x_list = (pt_det, pt_true, obs_det, obs_true)
+                    x = array('d', x_list)
+                    global_bin = thn_ch.GetBin(x)
+                    content = thn_ch.GetBinContent(global_bin)
+                    roounfold_response_ch.Fill(pt_det, obs_det, pt_true, obs_true, content)
 
-                  # Assume that thn_h and thn_ch have same binning
-                  obs_det = thn_h.GetAxis(2).GetBinCenter(bin_2)
-                  obs_true = thn_h.GetAxis(3).GetBinCenter(bin_3)
-                  # Get content of original THn bin
-                  x_list = (pt_det, pt_true, obs_det, obs_true)
-                  x = array('d', x_list)
-                  global_bin = thn_h.GetBin(x)
-                  content = thn_h.GetBinContent(global_bin)
-                  roounfold_response_h.Fill(pt_det, obs_det, pt_true, obs_true, content)
+                    # Assume that thn_h and thn_ch have same binning
+                    obs_det = thn_h.GetAxis(2).GetBinCenter(bin_2)
+                    obs_true = thn_h.GetAxis(3).GetBinCenter(bin_3)
+                    # Get content of original THn bin
+                    x_list = (pt_det, pt_true, obs_det, obs_true)
+                    x = array('d', x_list)
+                    global_bin = thn_h.GetBin(x)
+                    content = thn_h.GetBinContent(global_bin)
+                    roounfold_response_h.Fill(pt_det, obs_det, pt_true, obs_true, content)
 
-          fRoo = ROOT.TFile(roounfold_filename, 'UPDATE')
-          roounfold_response_ch.Write()
-          roounfold_response_h.Write()
-          fRoo.Close()
+            fRoo = ROOT.TFile(roounfold_filename, 'UPDATE')
+            roounfold_response_ch.Write()
+            roounfold_response_h.Write()
+            fRoo.Close()
 
-        setattr(self, name_roounfold_ch, roounfold_response_ch)
-        setattr(self, name_roounfold_h, roounfold_response_h)
+          setattr(self, name_roounfold_ch, roounfold_response_ch)
+          setattr(self, name_roounfold_h, roounfold_response_h)
 
 
   #---------------------------------------------------------------
@@ -241,7 +243,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                   val_li = [line.split()[1] for line in lines]
 
                 if exp_test:
-                  val_li = [1/(x+0.4) for x in np.linspace(0, 0.5, 51, True)] + \
+                  val_li = [1/(x+0.4+l) for x in np.linspace(0, 0.5, 51, True)] + \
                             [0 for x in np.linspace(0.51, 1, 50, True)] 
                   #np.exp(np.linspace(0, 1, 101, True))
                   #val = np.concatenate((np.full(51, 1), np.full(50, 0)))
@@ -274,53 +276,49 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
 
-    # Load parton-to-charged-hadron response matrix
-    response_name_ch = "hResponse_theory_ch_%s_Roounfold" % label
-    response_ch = getattr(self, response_name_ch)
-    response_name_h = "hResponse_theory_h_%s_Roounfold" % label
-    response_h = getattr(self, response_name_h)
+    for ri, response in enumerate(self.theory_response_files):
 
-    folded_ch_hists = ( ([], [], []), ([], [], []), ([], [], []) )
-    folded_h_hists = ( ([], [], []), ([], [], []), ([], [], []) )
+      # Load parton-to-charged-hadron response matrix
+      response_name_ch = "hResponse_theory_ch_%s_Roounfold_%i" % (label, ri)
+      response_ch = getattr(self, response_name_ch)
+      response_name_h = "hResponse_theory_h_%s_Roounfold_%i" % (label, ri)
+      response_h = getattr(self, response_name_h)
 
-    for i in range(0, 3):
-      for j in range(0, 3):
-        for k in range(0, 3):
+      folded_ch_hists = ( ([], [], []), ([], [], []), ([], [], []) )
+      folded_h_hists = ( ([], [], []), ([], [], []), ([], [], []) )
 
-          if (scale_req and j != k) or (0 in (i, j, k) and 2 in (i, j, k)):
-            folded_h_hists[i][j].append(None)
-            folded_ch_hists[i][j].append(None)
-            continue
+      for i in range(0, 3):
+        for j in range(0, 3):
+          for k in range(0, 3):
 
-          # Fold theory predictions
-          h_folded_ch = response_ch.ApplyToTruth(parton_hists[i][j][k])
-          h_folded_h = response_ch.ApplyToTruth(parton_hists[i][j][k])
+            if (scale_req and j != k) or (0 in (i, j, k) and 2 in (i, j, k)):
+              folded_h_hists[i][j].append(None)
+              folded_ch_hists[i][j].append(None)
+              continue
 
-          name_ch = "theory_%i%i%i_%s_%s_ch" % (i, j, k, self.observable, label)
-          name_h = "theory_%i%i%i_%s_%s_h" % (i, j, k, self.observable, label)
+            # Fold theory predictions
+            h_folded_ch = response_ch.ApplyToTruth(parton_hists[i][j][k])
+            h_folded_h = response_h.ApplyToTruth(parton_hists[i][j][k])
 
-          h_folded_ch.SetNameTitle(name_ch, name_ch)
-          h_folded_h.SetNameTitle(name_h, name_h)
+            name_ch = "theory_%i%i%i_%s_%s_ch_%i" % (i, j, k, self.observable, label, ri)
+            name_h = "theory_%i%i%i_%s_%s_h_%i" % (i, j, k, self.observable, label, ri)
 
-          folded_ch_hists[i][j].append(h_folded_ch)
-          folded_h_hists[i][j].append(h_folded_h)
+            h_folded_ch.SetNameTitle(name_ch, name_ch)
+            h_folded_h.SetNameTitle(name_h, name_h)
 
-    print("Scaling theory predictions for MPI effects...")
-    self.mpi_scale_theory(jetR, beta, folded_ch_hists, folded_h_hists, scale_req)
+            folded_ch_hists[i][j].append(h_folded_ch)
+            folded_h_hists[i][j].append(h_folded_h)
+
+      print("Scaling theory predictions for MPI effects for %s..." % self.theory_response_labels[ri])
+      self.mpi_scale_theory(jetR, beta, ri, response, folded_ch_hists, folded_h_hists, scale_req)
 
 
   #----------------------------------------------------------------------
   # Fold theoretical predictions
   #----------------------------------------------------------------------
-  def mpi_scale_theory(self, jetR, beta, folded_ch_hists, folded_h_hists, scale_req):
+  def mpi_scale_theory(self, jetR, beta, ri, response, folded_ch_hists, folded_h_hists, scale_req):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
-
-    name_mpi_off = "hAng_JetPt_ch_%sScaled" % label
-    name_mpi_on = "hAng_JetPt_ch_MPIon_%sScaled" % label
-
-    h_mpi_off = self.theory_response_file.Get(name_mpi_off)
-    h_mpi_on = self.theory_response_file.Get(name_mpi_on)
 
     # Load parton-level theory predictions
     name_cent = "theory_cent_%s_%s" % (self.observable, label)
@@ -330,6 +328,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_cent = getattr(self, name_cent+"_parton")
     h_min = getattr(self, name_min+"_parton")
     h_max = getattr(self, name_max+"_parton")
+
+    name_mpi_off = "hAng_JetPt_ch_%sScaled" % label
+    name_mpi_on = "hAng_JetPt_ch_MPIon_%sScaled" % label
+
+    h_mpi_off = response.Get(name_mpi_off)
+    h_mpi_on = response.Get(name_mpi_on)
 
     # Ensure that the scaling and theory histograms have the same binning
     y_rebin_num = h_mpi_off.GetNbinsY() / folded_ch_hists[1][1][1].GetNbinsY()
@@ -345,7 +349,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       exit(1)
 
     mpi_bin_edges = [h_mpi_on.GetXaxis().GetBinLowEdge(i+1)
-                         for i in range(h_mpi_on.GetNbinsX()+1)]
+                     for i in range(h_mpi_on.GetNbinsX()+1)]
     mpi_bin_edge_indices = [mpi_bin_edges.index(pt) for pt in self.pt_bins_reported]
     theory_pt_bin_edge_indices = [self.theory_pt_bins.index(pt) for pt in self.pt_bins_reported]
     # Loop through each reported pT-bin
@@ -356,23 +360,23 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       # Note: bins in ROOT are 1-indexed (0 bin is underflow). Also last bin is inclusive
       h_mpi_off_proj = h_mpi_off.ProjectionY(
-        name_mpi_off+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+        '%s_py_%s_%i' % (name_mpi_off, str(i), ri), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
       h_mpi_on_proj = h_mpi_on.ProjectionY(
-        name_mpi_on+'_py_'+str(i), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+        '%s_py_%s_%i' % (name_mpi_on, str(i), ri), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
 
       # Create ratio plot for scaling
       h_mpi_ratio = h_mpi_on_proj.Clone()
-      title = 'h_theory_mpi_scaling_%s_%s' % (label, str(i))
+      title = 'h_theory_mpi_scaling_%s_%s_%i' % (label, str(i), ri)
       h_mpi_ratio.SetNameTitle(title, title)
       h_mpi_ratio.Divide(h_mpi_off_proj)
       h_mpi_ratio.SetDirectory(0)
-      setattr(self, 'h_mpi_ratio_%s_PtBin%i-%i' % (label, pt_min, pt_max), h_mpi_ratio)
+      setattr(self, 'h_mpi_ratio_%s_PtBin%i-%i_%i' % (label, pt_min, pt_max, ri), h_mpi_ratio)
 
       pt_label = '_PtBin'+str(pt_min)+'-'+str(pt_max)
 
-      h_cent_bin = h_cent.ProjectionY(name_cent+"_parton"+pt_label, i+1, j)
-      h_min_bin = h_min.ProjectionY(name_min+"_parton"+pt_label, i+1, j)
-      h_max_bin = h_max.ProjectionY(name_max+"_parton"+pt_label, i+1, j)
+      h_cent_bin = h_cent.ProjectionY("%s_parton%s" % (name_cent, pt_label), i+1, j)
+      h_min_bin = h_min.ProjectionY("%s_parton%s" % (name_min, pt_label), i+1, j)
+      h_max_bin = h_max.ProjectionY("%s_parton%s" % (name_max, pt_label), i+1, j)
 
       # Keep normalization by dividing by the number of bins added in projection
       h_cent_bin.Scale(1/(j-i))
@@ -380,9 +384,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h_max_bin.Scale(1/(j-i))
 
       # Set new names and titles to prevent issues with saving histograms
-      h_cent_bin.SetNameTitle(name_cent+"_parton"+pt_label, name_cent+"_parton"+pt_label)
-      h_min_bin.SetNameTitle(name_min+"_parton"+pt_label, name_min+"_parton"+pt_label)
-      h_max_bin.SetNameTitle(name_max+"_parton"+pt_label, name_max+"_parton"+pt_label)
+      h_cent_bin.SetNameTitle("%s_parton%s" % (name_cent, pt_label),
+                              "%s_parton%s" % (name_cent, pt_label))
+      h_min_bin.SetNameTitle("%s_parton%s" % (name_min, pt_label),
+                             "%s_parton%s" % (name_min, pt_label))
+      h_max_bin.SetNameTitle("%s_parton%s" % (name_max, pt_label),
+                             "%s_parton%s" % (name_max, pt_label))
 
       # Have to shift/average bins since raw theory calculation are points
       title = 'h_cent_parton_shifted_%s%s' % (label, pt_label)
@@ -410,8 +417,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
               continue
 
-            h_folded_h_bin = folded_h_hists[l][m][n].ProjectionY(name_cent+"_h"+pt_label, i+1, j)
-            h_folded_ch_bin = folded_ch_hists[l][m][n].ProjectionY(name_cent+"_ch"+pt_label, i+1, j)
+            h_folded_h_bin = folded_h_hists[l][m][n].ProjectionY(
+              name_cent + ("_h%s_%i" % (pt_label, ri)), i+1, j)
+            h_folded_ch_bin = folded_ch_hists[l][m][n].ProjectionY(
+              name_cent + ("_ch%s_%i" % (pt_label, ri)), i+1, j)
 
             h_folded_h_bin.Scale(1/(j-i))
             h_folded_ch_bin.Scale(1/(j-i))
@@ -422,21 +431,49 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             h_folded_h_bin.Scale(1/h_folded_h_bin.Integral("width"))
             h_folded_ch_bin.Scale(1/h_folded_ch_bin.Integral("width"))
 
+            # Save ratio plots for seeing the change at each level
+            if l == m == n == 1:
+              h_cent_ratio_ch_bin = h_folded_ch_bin.Clone()
+              title = 'h_cent_ratio_ch_%s%s_%i' % (label, pt_label, ri)
+              h_cent_ratio_ch_bin.SetNameTitle(title, title)
+              h_cent_ratio_ch_bin.Divide(h_folded_h_bin)
+              h_cent_ratio_ch_bin.SetDirectory(0)
+              setattr(self, title, h_cent_ratio_ch_bin)
+
+              h_cent_ratio_h_bin = h_folded_h_bin.Clone()
+              title = 'h_cent_ratio_h_%s%s_%i' % (label, pt_label, ri)
+              h_cent_ratio_h_bin.SetNameTitle(title, title)
+              h_cent_ratio_h_bin.Divide(h_cent_p_bin)
+              h_cent_ratio_h_bin.SetDirectory(0)
+              setattr(self, title, h_cent_ratio_h_bin)
+
             # Apply the MPI scaling to the charged distribution
             h_folded_ch_bin.Multiply(h_mpi_ratio)
             h_folded_ch_bin.Scale(1/h_folded_ch_bin.Integral("width"))
+
+            if l == m == n == 1:
+              h_cent_ch_bin = h_folded_ch_bin.Clone()
+              h_cent_h_bin = h_folded_h_bin.Clone()
+              h_cent_ch_bin.SetNameTitle(
+                name_cent + ("_ch%s_%i" % (pt_label, ri)), name_cent + ("_ch%s_%i" % (pt_label, ri)))
+              h_cent_h_bin.SetNameTitle(
+                name_cent + ("_h%s_%i" % (pt_label, ri)), name_cent + ("_h%s_%i" % (pt_label, ri)))
 
             # Save / update the min/max/cent histograms
             if l == m == n == 0:  # Initialize the min/max histograms
               h_min_ch_bin = h_folded_ch_bin.Clone()
               h_max_ch_bin = h_folded_ch_bin.Clone()
-              h_min_ch_bin.SetNameTitle(name_min+"_ch"+pt_label, name_min+"_ch"+pt_label)
-              h_max_ch_bin.SetNameTitle(name_max+"_ch"+pt_label, name_max+"_ch"+pt_label)
+              h_min_ch_bin.SetNameTitle(
+                name_min + ("_ch%s_%i" % (pt_label, ri)), name_min + ("_ch%s_%i" % (pt_label, ri)))
+              h_max_ch_bin.SetNameTitle(
+                name_max + ("_ch%s_%i" % (pt_label, ri)), name_max + ("_ch%s_%i" % (pt_label, ri)))
 
               h_min_h_bin = h_folded_h_bin.Clone()
               h_max_h_bin = h_folded_h_bin.Clone()
-              h_min_h_bin.SetNameTitle(name_min+"_h"+pt_label, name_min+"_h"+pt_label)
-              h_max_h_bin.SetNameTitle(name_max+"_h"+pt_label, name_max+"_h"+pt_label)
+              h_min_h_bin.SetNameTitle(
+                name_min + ("_h%s_%i" % (pt_label, ri)), name_min + ("_h%s_%i" % (pt_label, ri)))
+              h_max_h_bin.SetNameTitle(
+                name_max + ("_h%s_%i" % (pt_label, ri)), name_max + ("_h%s_%i" % (pt_label, ri)))
             else:  # Update the min/max histograms
               for b in range(1, h_folded_h_bin.GetNbinsX()+1):
 
@@ -452,26 +489,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 elif ch_val > h_max_ch_bin.GetBinContent(b):
                   h_max_ch_bin.SetBinContent(b, ch_val)
 
-            # Save ratio plots for seeing the change at each level
-            if l == m == n == 1:
-              h_cent_ch_bin = h_folded_ch_bin.Clone()
-              h_cent_h_bin = h_folded_h_bin.Clone()
-              h_cent_ch_bin.SetNameTitle(name_cent+"_ch"+pt_label, name_cent+"_ch"+pt_label)
-              h_cent_h_bin.SetNameTitle(name_cent+"_h"+pt_label, name_cent+"_h"+pt_label)
-
-              h_cent_ratio_ch_bin = h_folded_ch_bin.Clone()
-              title = 'h_cent_ratio_ch_%s%s' % (label, pt_label)
-              h_cent_ratio_ch_bin.SetNameTitle(title, title)
-              h_cent_ratio_ch_bin.Divide(h_cent_h_bin)
-              h_cent_ratio_ch_bin.SetDirectory(0)
-              setattr(self, title, h_cent_ratio_ch_bin)
-
-              h_cent_ratio_h_bin = h_folded_h_bin.Clone()
-              title = 'h_cent_ratio_h_%s%s' % (label, pt_label)
-              h_cent_ratio_h_bin.SetNameTitle(title, title)
-              h_cent_ratio_h_bin.Divide(h_cent_p_bin)
-              h_cent_ratio_h_bin.SetDirectory(0)
-              setattr(self, title, h_cent_ratio_h_bin)
 
       # Steal ownership from ROOT
       h_cent_bin.SetDirectory(0)
@@ -487,26 +504,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h_max_ch_bin.SetDirectory(0)
 
       # Save as attributes for later access (plotting)
-      setattr(self, name_cent+"_parton"+pt_label, h_cent_bin)
-      setattr(self, name_min+"_parton"+pt_label, h_min_bin)
-      setattr(self, name_max+"_parton"+pt_label, h_max_bin)
+      setattr(self, "%s_parton%s" % (name_cent, pt_label), h_cent_bin)
+      setattr(self, "%s_parton%s" % (name_min, pt_label), h_min_bin)
+      setattr(self, "%s_parton%s" % (name_max, pt_label), h_max_bin)
 
-      setattr(self, name_cent+"_h"+pt_label, h_cent_h_bin)
-      setattr(self, name_min+"_h"+pt_label, h_min_h_bin)
-      setattr(self, name_max+"_h"+pt_label, h_max_h_bin)
+      setattr(self, "%s_h%s_%i" % (name_cent, pt_label, ri), h_cent_h_bin)
+      setattr(self, "%s_h%s_%i" % (name_min, pt_label, ri), h_min_h_bin)
+      setattr(self, "%s_h%s_%i" % (name_max, pt_label, ri), h_max_h_bin)
 
-      setattr(self, name_cent+"_ch"+pt_label, h_cent_ch_bin)
-      setattr(self, name_min+"_ch"+pt_label, h_min_ch_bin)
-      setattr(self, name_max+"_ch"+pt_label, h_max_ch_bin)
-
-          
-    # Save 2D folded predictions
-    #setattr(self, name_cent+'_ch', h_cent_folded_ch)
-    #setattr(self, name_min+'_ch', h_min_folded_ch)
-    #setattr(self, name_max+'_ch', h_max_folded_ch)
-    #setattr(self, name_cent+'_h', h_cent_folded_h)
-    #setattr(self, name_min+'_h', h_min_folded_h)
-    #setattr(self, name_max+'_h', h_max_folded_h)
+      setattr(self, "%s_ch%s_%i" % (name_cent, pt_label, ri), h_cent_ch_bin)
+      setattr(self, "%s_ch%s_%i" % (name_min, pt_label, ri), h_min_ch_bin)
+      setattr(self, "%s_ch%s_%i" % (name_max, pt_label, ri), h_max_ch_bin)
 
 
   #---------------------------------------------------------------
@@ -674,6 +682,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = True
 
+    # For theory plots, whether or not to show the NP / P region
+    show_np_region = True
+
     # For theory plots, whether or not to show the folded uncertainty bands
     show_folded_uncertainty = True
 
@@ -755,53 +766,58 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         yerrup = array('d', [hmax_p.GetBinContent(i)-y[i-1] for i in range(1, hmax_p.GetNbinsX()+1)])
         yerrdn = array('d', [y[i-1]-hmin_p.GetBinContent(i) for i in range(1, hmin_p.GetNbinsX()+1)])
 
-        # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
-        # Formula assumes that jet pT xsec falls like pT^(-5.5)
-        formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5)/(min_pt_truth**-4.5 - max_pt_truth**-4.5)
-        lambda_np_cutoff = round(self.Lambda / (formula_pt * jetR), 2)
-        if lambda_np_cutoff > 1:
-          lambda_np_cutoff = 1
-        index_np_cutoff = [round(val, 2) for val in x].index(lambda_np_cutoff)
+        color = self.ColorArray[4]
+        if show_np_region:
+          # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
+          # Formula assumes that jet pT xsec falls like pT^(-5.5)
+          formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5)/(min_pt_truth**-4.5 - max_pt_truth**-4.5)
+          lambda_np_cutoff = round(self.Lambda / (formula_pt * jetR), 2)
+          if lambda_np_cutoff > 1:
+            lambda_np_cutoff = 1
+          index_np_cutoff = [round(val, 2) for val in x].index(lambda_np_cutoff)
 
-        #+1 to include lambda in NP
-        h_parton_theory_np = ROOT.TGraphAsymmErrors(
-          index_np_cutoff+1, x[:index_np_cutoff+1], y[:index_np_cutoff+1], xerrdn[:index_np_cutoff+1],
-          xerrup[:index_np_cutoff+1], yerrdn[:index_np_cutoff+1], yerrup[:index_np_cutoff+1])
-        h_parton_theory_p = ROOT.TGraphAsymmErrors(
-          n-index_np_cutoff, x[index_np_cutoff:], y[index_np_cutoff:], xerrdn[index_np_cutoff:],
-          xerrup[index_np_cutoff:], yerrdn[index_np_cutoff:], yerrup[index_np_cutoff:])
-        
-        color = self.ColorArray[5]
-        h_parton_theory_np.SetFillColorAlpha(color, 0.5)
-        h_parton_theory_p.SetFillColorAlpha(color, 0.25)
-        h_parton_theory_np.SetFillStyle(3002)
-        h_parton_theory_np.Draw('3 same')
-        h_parton_theory_p.Draw('3 same')
+          #+1 to include lambda in NP
+          h_parton_theory_np = ROOT.TGraphAsymmErrors(
+            index_np_cutoff+1, x[:index_np_cutoff+1], y[:index_np_cutoff+1], xerrdn[:index_np_cutoff+1],
+            xerrup[:index_np_cutoff+1], yerrdn[:index_np_cutoff+1], yerrup[:index_np_cutoff+1])
+          h_parton_theory_p = ROOT.TGraphAsymmErrors(
+            n-index_np_cutoff, x[index_np_cutoff:], y[index_np_cutoff:], xerrdn[index_np_cutoff:],
+            xerrup[index_np_cutoff:], yerrdn[index_np_cutoff:], yerrup[index_np_cutoff:])
 
-        # Split central parton curve in NP and P regions
-        hcent_p_np = ROOT.TH1F(
-          name_cent+"_nonpert", name_cent+"_nonpert", index_np_cutoff+1, 
-          array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(1, index_np_cutoff+3)]))
-        hcent_p_p = ROOT.TH1F(
-          name_cent+"_pert", name_cent+"_pert", n-index_np_cutoff, 
-          array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(index_np_cutoff+1, n+2)]))
-        for i in range(1, index_np_cutoff+2):
-          hcent_p_np.SetBinContent(i, y[i-1])
-        for i in range(1, n+1-index_np_cutoff):
-          hcent_p_p.SetBinContent(i, y[i-1+index_np_cutoff])
+          h_parton_theory_np.SetFillColorAlpha(color, 0.5)
+          h_parton_theory_p.SetFillColorAlpha(color, 0.25)
+          h_parton_theory_np.SetFillStyle(3002)
+          h_parton_theory_np.Draw('3 same')
+          h_parton_theory_p.Draw('3 same')
 
-        hcent_p_np.SetLineStyle(5)
-        hcent_p_np.SetLineColor(color)
-        hcent_p_np.SetLineWidth(3)
-        hcent_p_np.Draw('L hist same')
+          # Split central parton curve in NP and P regions
+          hcent_p_np = ROOT.TH1F(
+            name_cent+"_nonpert", name_cent+"_nonpert", index_np_cutoff+1, 
+            array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(1, index_np_cutoff+3)]))
+          hcent_p_p = ROOT.TH1F(
+            name_cent+"_pert", name_cent+"_pert", n-index_np_cutoff, 
+            array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(index_np_cutoff+1, n+2)]))
+          for i in range(1, index_np_cutoff+2):
+            hcent_p_np.SetBinContent(i, y[i-1])
+          for i in range(1, n+1-index_np_cutoff):
+            hcent_p_p.SetBinContent(i, y[i-1+index_np_cutoff])
 
-        hcent_p_p.SetLineColor(color)
-        hcent_p_p.SetLineWidth(3)
-        hcent_p_p.Draw('L hist same')
+          hcent_p_np.SetLineStyle(5)
+          hcent_p_np.SetLineColor(color)
+          hcent_p_np.SetLineWidth(3)
+          hcent_p_np.Draw('L hist same')
 
-        #hcent_p.SetLineColor(color)
-        #hcent_p.SetLineWidth(3)
-        #hcent_p.Draw('L hist same')
+          hcent_p_p.SetLineColor(color)
+          hcent_p_p.SetLineWidth(3)
+          hcent_p_p.Draw('L hist same')
+
+        else:   # don't show NP / P region on the plot
+          h_parton_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+          h_parton_theory.SetFillColorAlpha(color, 0.25)
+          h_parton_theory.Draw('3 same')
+          hcent_p.SetLineColor(color)
+          hcent_p.SetLineWidth(3)
+          hcent_p.Draw('L hist same')
 
         # Dotted lines for error bars
         #hmin_p.SetLineColor(color)
@@ -814,47 +830,51 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         #hmax_p.SetLineStyle(2)
         #hmax_p.Draw('L hist same')
 
+      hcent_list = []   # List of items for legend
+      hasym_list = []   # List to prevent hists from being garbage collected by python
+      for ri in range(len(self.theory_response_files)):
+        # Get and plot the folded & MPI-scaled theory predictions
+        name_cent = "theory_cent_%s_%s_ch_PtBin%i-%i_%i" % \
+                    (self.observable, label, min_pt_truth, max_pt_truth, ri)
+        name_min = "theory_min_%s_%s_ch_PtBin%i-%i_%i" % \
+                   (self.observable, label, min_pt_truth, max_pt_truth, ri)
+        name_max = "theory_max_%s_%s_ch_PtBin%i-%i_%i" % \
+                   (self.observable, label, min_pt_truth, max_pt_truth, ri)
 
-      # Get and plot the folded & MPI-scaled theory predictions
-      name_cent = "theory_cent_%s_%s_ch_PtBin%i-%i" % \
-                  (self.observable, label, min_pt_truth, max_pt_truth)
-      name_min = "theory_min_%s_%s_ch_PtBin%i-%i" % \
-                 (self.observable, label, min_pt_truth, max_pt_truth)
-      name_max = "theory_max_%s_%s_ch_PtBin%i-%i" % \
-                 (self.observable, label, min_pt_truth, max_pt_truth)
+        hcent = getattr(self, name_cent)
+        hmin = getattr(self, name_min)
+        hmax = getattr(self, name_max)
+        color = self.ColorArray[5 + ri]
 
-      hcent = getattr(self, name_cent)
-      hmin = getattr(self, name_min)
-      hmax = getattr(self, name_max)
-      color = self.ColorArray[6]
+        if show_folded_uncertainty:
+          n = hcent.GetNbinsX()
+          x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
+          y = array('d', [hcent.GetBinContent(i) for i in range(1, hcent.GetNbinsX()+1)])
+          xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
+          xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
+          yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for i in range(1, hmax.GetNbinsX()+1)])
+          yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for i in range(1, hmin.GetNbinsX()+1)])
+          h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
 
-      if show_folded_uncertainty:
-        n = hcent.GetNbinsX()
-        x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
-        y = array('d', [hcent.GetBinContent(i) for i in range(1, hcent.GetNbinsX()+1)])
-        xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
-        xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
-        yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for i in range(1, hmax.GetNbinsX()+1)])
-        yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for i in range(1, hmin.GetNbinsX()+1)])
-        h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+          h_ch_theory.SetFillColorAlpha(color, 0.25)
+          h_ch_theory.Draw('3 same')
+          hasym_list.append(h_ch_theory)
 
-        h_ch_theory.SetFillColorAlpha(color, 0.25)
-        h_ch_theory.Draw('3 same')
+        hcent.SetLineColor(color)
+        hcent.SetLineWidth(3)
+        hcent.Draw('L hist same')
+        hcent_list.append(hcent)  # Save for legend
 
-      hcent.SetLineColor(color)
-      hcent.SetLineWidth(3)
-      hcent.Draw('L hist same')
+        # Dotted lines for error bars
+        #hmin.SetLineColor(color)
+        #hmin.SetLineWidth(1)
+        #hmin.SetLineStyle(2)
+        #hmin.Draw('L hist same')
 
-      # Dotted lines for error bars
-      #hmin.SetLineColor(color)
-      #hmin.SetLineWidth(1)
-      #hmin.SetLineStyle(2)
-      #hmin.Draw('L hist same')
-
-      #hmax.SetLineColor(color)
-      #hmax.SetLineWidth(1)
-      #hmax.SetLineStyle(2)
-      #hmax.Draw('L hist same')
+        #hmax.SetLineColor(color)
+        #hmax.SetLineWidth(1)
+        #hmax.SetLineStyle(2)
+        #hmax.Draw('L hist same')
 
 
     if plot_pythia:
@@ -880,32 +900,32 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.57, 0.87, text)
+    text_latex.DrawLatex(0.58, 0.87, text)
     
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.57, 0.8, text)
+    text_latex.DrawLatex(0.58, 0.8, text)
 
     text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.57, 0.73, text)
+    text_latex.DrawLatex(0.58, 0.73, text)
 
     text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
-    text_latex.DrawLatex(0.57, 0.66, text)
+    text_latex.DrawLatex(0.58, 0.66, text)
     
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     delta = 0.
     if subobs_label:
       text = '%s = %s' % (subobs_label, obs_setting)
-      text_latex.DrawLatex(0.57, 0.59, text)
+      text_latex.DrawLatex(0.58, 0.59, text)
       delta = 0.07
     
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting)
-      text_latex.DrawLatex(0.57, 0.59-delta, text)
+      text_latex.DrawLatex(0.58, 0.59-delta, text)
       
       text_latex.SetTextSize(0.04)
       text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-      text_latex.DrawLatex(0.57, 0.52-delta, text)
+      text_latex.DrawLatex(0.58, 0.52-delta, text)
     
       if plot_pythia:
         text_latex.SetTextSize(0.04)
@@ -921,9 +941,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     if plot_theory:
       if show_parton_theory:
-        myLegend.AddEntry(hcent_p_np, 'NP Parton SCET', 'lf')
-        myLegend.AddEntry(hcent_p_p, 'P Parton SCET', 'lf')
-      myLegend.AddEntry(hcent, 'Folded/Scaled SCET', 'lf')
+        if show_np_region:
+          myLegend.AddEntry(hcent_p_np, 'NLO+NLL (non-perturbative)', 'lf')
+          myLegend.AddEntry(hcent_p_p, 'NLO+NLL (perturbative)', 'lf')
+        else:
+          myLegend.AddEntry(hcent_p, 'NLO+NLL (Parton)', 'lf')
+      for ri, lab in enumerate(self.theory_response_labels):
+        myLegend.AddEntry(hcent_list[ri], 'NLO+NLL #otimes '+lab, 'lf')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
@@ -961,23 +985,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   def plot_theory_ratios(self, jetR, obs_label, obs_setting, grooming_setting,
                          min_pt_truth, max_pt_truth, maxbin):
-
-    name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
-    c = ROOT.TCanvas(name, name, 600, 450)
-    c.Draw()
-    
-    c.cd()
-    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-    myPad.SetLeftMargin(0.2)
-    myPad.SetTopMargin(0.07)
-    myPad.SetRightMargin(0.04)
-    myPad.SetBottomMargin(0.13)
-    myPad.Draw()
-    myPad.cd()
-    
-    xtitle = getattr(self, 'xtitle')
-    ytitle = getattr(self, 'ytitle')
-    color = 600-6
     
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
@@ -992,102 +999,127 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
 
-    h_ratio_h = getattr(self, 'h_cent_ratio_h_%s_PtBin%i-%i' % (label, min_pt_truth, max_pt_truth))
-    h_ratio_h.SetMarkerSize(0.5)
-    h_ratio_h.SetMarkerStyle(20)
-    h_ratio_h.SetMarkerColor(self.ColorArray[3])
-    h_ratio_h.SetLineStyle(1)
-    h_ratio_h.SetLineWidth(2)
-    h_ratio_h.SetLineColor(self.ColorArray[3])
+    for ri in range(len(self.theory_response_files)):
+      
+      name = 'cResult_R{}_{}_{}-{}_{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth, ri)
+      c = ROOT.TCanvas(name, name, 600, 450)
+      c.Draw()
 
-    h_ratio_ch = getattr(self, 'h_cent_ratio_ch_%s_PtBin%i-%i' % (label, min_pt_truth, max_pt_truth))
-    h_ratio_ch.SetMarkerSize(0.5)
-    h_ratio_ch.SetMarkerStyle(20)
-    h_ratio_ch.SetMarkerColor(self.ColorArray[5])
-    h_ratio_ch.SetLineStyle(1)
-    h_ratio_ch.SetLineWidth(2)
-    h_ratio_ch.SetLineColor(self.ColorArray[5])
+      c.cd()
+      myPad = ROOT.TPad('myPad_%i' % ri, 'The pad %i' % ri, 0, 0, 1, 1)
+      myPad.SetLeftMargin(0.2)
+      myPad.SetTopMargin(0.07)
+      myPad.SetRightMargin(0.04)
+      myPad.SetBottomMargin(0.13)
+      myPad.Draw()
+      myPad.cd()
 
-    h_ratio_mpi = getattr(self, "h_mpi_ratio_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth))
-    h_ratio_mpi.SetMarkerSize(0.5)
-    h_ratio_mpi.SetMarkerStyle(20)
-    h_ratio_mpi.SetMarkerColor(self.ColorArray[4])
-    #h_ratio_mpi.SetLineStyle(1)
-    #h_ratio_mpi.SetLineWidth(2)
-    #h_ratio_mpi.SetLineColor(self.ColorArray[4])
+      xtitle = getattr(self, 'xtitle')
+      ytitle = getattr(self, 'ytitle')
+      color = 600-6
 
-    h_ratio_total = h_ratio_h.Clone()
-    h_ratio_total.SetNameTitle('h_theory_total_ratio_scaling', 'h_theory_total_ratio_scaling')
-    h_ratio_total.Multiply(h_ratio_ch)
-    h_ratio_total.Multiply(h_ratio_mpi)
-    h_ratio_total.SetMarkerSize(1)
-    h_ratio_total.SetMarkerStyle(20)
-    h_ratio_total.SetMarkerColor(1)
-    h_ratio_total.SetLineStyle(1)
-    h_ratio_total.SetLineWidth(3)
-    h_ratio_total.SetLineColor(1)
+      h_ratio_h = getattr(self, 'h_cent_ratio_h_%s_PtBin%i-%i_%i' % \
+                          (label, min_pt_truth, max_pt_truth, ri))
+      h_ratio_h.SetMarkerSize(0.5)
+      h_ratio_h.SetMarkerStyle(20)
+      h_ratio_h.SetMarkerColor(self.ColorArray[3])
+      h_ratio_h.SetLineStyle(1)
+      h_ratio_h.SetLineWidth(2)
+      h_ratio_h.SetLineColor(self.ColorArray[3])
 
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
-    myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(xtitle)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(ytitle)
-    val = abs(2.5*h_ratio_mpi.GetBinContent(int(0.5*h_ratio_mpi.GetNbinsX())))
-    myBlankHisto.SetMaximum(val)
-    myBlankHisto.SetMinimum(0)
-    myBlankHisto.Draw("E")
+      h_ratio_ch = getattr(self, 'h_cent_ratio_ch_%s_PtBin%i-%i_%i' % \
+                           (label, min_pt_truth, max_pt_truth, ri))
+      h_ratio_ch.SetMarkerSize(0.5)
+      h_ratio_ch.SetMarkerStyle(20)
+      h_ratio_ch.SetMarkerColor(self.ColorArray[5])
+      h_ratio_ch.SetLineStyle(1)
+      h_ratio_ch.SetLineWidth(2)
+      h_ratio_ch.SetLineColor(self.ColorArray[5])
 
-    h_ratio_h.Draw('hist E same')
-    h_ratio_ch.Draw('hist E same')
-    h_ratio_mpi.Draw('P E same')
-    h_ratio_total.Draw('hist same')
+      h_ratio_mpi = getattr(self, "h_mpi_ratio_%s_PtBin%i-%i_%i" % \
+                            (label, min_pt_truth, max_pt_truth, ri))
+      h_ratio_mpi.SetMarkerSize(0.5)
+      h_ratio_mpi.SetMarkerStyle(20)
+      h_ratio_mpi.SetMarkerColor(self.ColorArray[4])
+      #h_ratio_mpi.SetLineStyle(1)
+      #h_ratio_mpi.SetLineWidth(2)
+      #h_ratio_mpi.SetLineColor(self.ColorArray[4])
 
-    # Draw a horizontal line at 1
-    line = ROOT.TLine(0, 1, truth_bin_array[-1], 1)
-    line.SetLineColor(920+2)
-    line.SetLineStyle(2)
-    line.SetLineWidth(2)
-    line.Draw()
-  
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.6, 0.87, text)
-    
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.6, 0.8, text)
+      h_ratio_total = h_ratio_h.Clone()
+      h_ratio_total.SetNameTitle('h_theory_total_ratio_scaling_%i' % ri,
+                                 'h_theory_total_ratio_scaling_%i' % ri)
+      h_ratio_total.Multiply(h_ratio_ch)
+      h_ratio_total.Multiply(h_ratio_mpi)
+      h_ratio_total.SetMarkerSize(1)
+      h_ratio_total.SetMarkerStyle(20)
+      h_ratio_total.SetMarkerColor(1)
+      h_ratio_total.SetLineStyle(1)
+      h_ratio_total.SetLineWidth(3)
+      h_ratio_total.SetLineColor(1)
 
-    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.6, 0.73, text)
+      myBlankHisto = ROOT.TH1F('myBlankHisto_%i' % ri,'Blank Histogram %i' % ri,
+                               n_obs_bins_truth, truth_bin_array)
+      myBlankHisto.SetNdivisions(505)
+      myBlankHisto.SetXTitle(xtitle)
+      myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+      myBlankHisto.SetYTitle(ytitle)
+      val = abs(2.5*h_ratio_mpi.GetBinContent(int(0.5*h_ratio_mpi.GetNbinsX())))
+      myBlankHisto.SetMaximum(val)
+      myBlankHisto.SetMinimum(0)
+      myBlankHisto.Draw("E")
 
-    text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
-    text_latex.DrawLatex(0.6, 0.66, text)
-    
-    subobs_label = self.utils.formatted_subobs_label(self.observable)
-    delta = 0.
-    if subobs_label:
-      text = '%s = %s' % (subobs_label, obs_setting)
-      text_latex.DrawLatex(0.6, 0.59, text)
-      delta = 0.07
+      h_ratio_h.Draw('hist E same')
+      h_ratio_ch.Draw('hist E same')
+      h_ratio_mpi.Draw('P E same')
+      h_ratio_total.Draw('hist same')
 
-    myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
-    self.utils.setup_legend(myLegend, 0.035)
-    myLegend.AddEntry(h_ratio_total, 'total ratio', 'pe')
-    myLegend.AddEntry(h_ratio_h, 'p to h ratio', 'pe')
-    myLegend.AddEntry(h_ratio_ch, 'h to ch ratio', 'pe')
-    myLegend.AddEntry(h_ratio_mpi, 'MPI scaling ratio', 'pe')
-    myLegend.Draw()
+      # Draw a horizontal line at 1
+      line = ROOT.TLine(0, 1, truth_bin_array[-1], 1)
+      line.SetLineColor(920+2)
+      line.SetLineStyle(2)
+      line.SetLineWidth(2)
+      line.Draw()
 
-    name = 'hTheoryRatio_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
-                                             int(min_pt_truth), int(max_pt_truth), self.file_format)
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text = 'ALICE {}'.format(self.figure_approval_status)
+      text_latex.DrawLatex(0.6, 0.87, text)
 
-    output_dir = self.output_dir_theory
-    if not os.path.exists(output_dir):
-      os.mkdir(output_dir)
-    outputFilename = os.path.join(output_dir, name)
-    c.SaveAs(outputFilename)
-    c.Close()
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+      text_latex.SetTextSize(0.045)
+      text_latex.DrawLatex(0.6, 0.8, text)
+
+      text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+      text_latex.DrawLatex(0.6, 0.73, text)
+
+      text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
+      text_latex.DrawLatex(0.6, 0.66, text)
+
+      subobs_label = self.utils.formatted_subobs_label(self.observable)
+      delta = 0.
+      if subobs_label:
+        text = '%s = %s' % (subobs_label, obs_setting)
+        text_latex.DrawLatex(0.6, 0.59, text)
+        delta = 0.07
+
+      myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
+      self.utils.setup_legend(myLegend, 0.035)
+      myLegend.AddEntry(h_ratio_total, 'total ratio', 'pe')
+      myLegend.AddEntry(h_ratio_h, 'p to h ratio', 'pe')
+      myLegend.AddEntry(h_ratio_ch, 'h to ch ratio', 'pe')
+      myLegend.AddEntry(h_ratio_mpi, 'MPI scaling ratio', 'pe')
+      myLegend.Draw()
+
+      name = 'hTheoryRatio_R{}_{}_{}-{}_{}{}'.format(
+        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth),
+        self.theory_response_labels[ri], self.file_format)
+
+      output_dir = self.output_dir_theory
+      if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+      outputFilename = os.path.join(output_dir, name)
+      c.SaveAs(outputFilename)
+      c.Close()
 
 
   #----------------------------------------------------------------------
@@ -1095,45 +1127,48 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                            min_pt_truth, max_pt_truth, maxbin):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
-    
-    # Get histograms
-    thn_ch = getattr(self, "hResponse_theory_ch_%s" % label)
-    thn_h = getattr(self, "hResponse_theory_h_%s" % label)
+    outf = ROOT.TFile(os.path.join(self.output_dir_theory, 'fTheoryResponseProj.root'), 'UPDATE')
 
-    # Make projections in pT bins at (charged-)/hadron level
-    thn_ch.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
-    thn_h.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
+    for ri in range(len(self.theory_response_files)):
+      # Get histograms
+      thn_ch = getattr(self, "hResponse_theory_ch_%s_%i" % (label, ri))
+      thn_h = getattr(self, "hResponse_theory_h_%s_%i" % (label, ri))
 
-    #print(thn_ch.GetBinContent(array('i', [3, 3, 20, 20])))
+      # Make projections in pT bins at (charged-)/hadron level
+      thn_ch.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
+      thn_h.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
 
-    hTheoryProjection_ch = thn_ch.Projection(2, 3)
-    hTheoryProjection_h = thn_h.Projection(2, 3)
+      #print(thn_ch.GetBinContent(array('i', [3, 3, 20, 20])))
 
-    #print(hTheoryProjection_ch.GetBinContent(20, 20))
-    #exit()
+      hTheoryProjection_ch = thn_ch.Projection(2, 3)
+      hTheoryProjection_h = thn_h.Projection(2, 3)
 
-    name_ch = "hResponse_theory_ch_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth)
-    name_h = "hResponse_theory_h_%s_PtBin%i-%i" % (label, min_pt_truth, max_pt_truth)
+      #print(hTheoryProjection_ch.GetBinContent(20, 20))
+      #exit()
 
-    hTheoryProjection_ch.SetNameTitle(name_ch, name_ch)
-    hTheoryProjection_h.SetNameTitle(name_h, name_h)
+      name_ch = "hResponse_theory_ch_%s_PtBin%i-%i_%s" % \
+                (label, min_pt_truth, max_pt_truth, self.theory_response_labels[ri])
+      name_h = "hResponse_theory_h_%s_PtBin%i-%i_%s" % \
+               (label, min_pt_truth, max_pt_truth, self.theory_response_labels[ri])
 
-    # Save the histograms
-    output_dir = self.output_dir_theory
-    if not os.path.exists(output_dir):
-      os.mkdir(output_dir)
+      hTheoryProjection_ch.SetNameTitle(name_ch, name_ch)
+      hTheoryProjection_h.SetNameTitle(name_h, name_h)
 
-    text_h = str(min_pt_truth) + ' < #it{p}_{T, h jet} < ' + str(max_pt_truth)
-    text_ch = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
-    self.utils.plot_hist(hTheoryProjection_h, os.path.join(self.output_dir_theory, name_h+'.pdf'),
-                         'colz', False, True, text_h)
-    self.utils.plot_hist(hTheoryProjection_ch, os.path.join(self.output_dir_theory, name_ch+'.pdf'),
-                         'colz', False, True, text_ch)
+      # Save the histograms
+      output_dir = self.output_dir_theory
+      if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
 
-    outf = ROOT.TFile(os.path.join(self.output_dir_theory, 'fTheoryResponseProj.root'),
-                      'UPDATE')
-    hTheoryProjection_h.Write()
-    hTheoryProjection_ch.Write()
+      text_h = str(min_pt_truth) + ' < #it{p}_{T, h jet} < ' + str(max_pt_truth)
+      text_ch = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
+      self.utils.plot_hist(hTheoryProjection_h, os.path.join(self.output_dir_theory, name_h+'.pdf'),
+                           'colz', False, True, text_h)
+      self.utils.plot_hist(hTheoryProjection_ch, os.path.join(self.output_dir_theory, name_ch+'.pdf'),
+                           'colz', False, True, text_ch)
+
+      hTheoryProjection_h.Write()
+      hTheoryProjection_ch.Write()
+
     outf.Close
 
 
