@@ -1,21 +1,21 @@
 #! /bin/bash
 
 #SBATCH --job-name="HerwigGen"
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=5
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=2
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-640
+#SBATCH --array=1-1000
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 # Number of events per pT-hat bin (for statistics)
-NEV_DESIRED=6400000
+NEV_DESIRED=10000000
 
 # Lower edges of the pT-hat bins
-PTHAT_BINS=(9 16 28 45 70 99 132 169 212 259)
+PTHAT_BINS=(7 9 12 16 21 28 36 45 57 70 85 99 115 132 150 169 190 212 235 260)
 echo "Number of pT-hat bins: ${#PTHAT_BINS[@]}"
 
 # Currently we have 8 nodes * 20 cores active
-NCORES=640
+NCORES=1000
 NEV_PER_JOB=$(( $NEV_DESIRED * ${#PTHAT_BINS[@]} / $NCORES ))
 echo "Number of events per job: $NEV_PER_JOB"
 NCORES_PER_BIN=$(( $NCORES / ${#PTHAT_BINS[@]} ))
@@ -41,10 +41,11 @@ TEMP_OUTDIR="/storage/u/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE
 OUTDIR="/rstorage/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 mkdir -p $TEMP_OUTDIR
 mkdir -p $OUTDIR
-cd $TEMP_OUTDIR
 
 # Load Herwig environment and generate events
 source /software/users/james/herwig/bin/activate
+cd $TEMP_OUTDIR
+echo $PWD
 echo "Running Herwig7 with MPI switched off..."
 Herwig run $HERWIG_SCRIPT -d2 -N $NEV_PER_JOB -s $SEED
 echo "Running Herwig7 with MPI switched on..."
@@ -60,4 +61,5 @@ cd /home/ezra/analysis_env/
 pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $TEMP_OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $TEMP_OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR
 
 # Clean up Herwig7 files to save space
-rm $TEMP_OUTDIR/LHC_5020*
+rm $TEMP_OUTDIR/LHC_5020-S$SEED.*
+rm $TEMP_OUTDIR/LHC_5020_MPI-S$SEED.*
