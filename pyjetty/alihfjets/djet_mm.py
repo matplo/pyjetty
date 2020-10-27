@@ -73,7 +73,7 @@ class HFAIO(MPBase):
 			return False
 		pinfo('events from', fname, len(self.event_df.index))
 
-		_d0cuts_base = "(pt_cand > 2.0 & pt_prong0 > 0.15 & pt_prong1 > 0.15 & abs(eta_cand) < 0.8) & "
+		_d0cuts_base = "(pt_cand > 2.0 & pt_prong0 > 0.5 & pt_prong1 > 0.5 & abs(eta_cand) < 0.8) & "
 		_d0cuts_extra = "(dca)<0.03 & abs(cos_t_star)<0.8 & (imp_par_prod)<-0.0001 & (cos_p)>0.9 & "
 		_d0cuts_kpi = _d0cuts_base + _d0cuts_extra
 		_d0cuts_kpi += "((abs(nsigTPC_Pi_0) < 3. & (abs(nsigTOF_Pi_0) < 3. | nsigTOF_Pi_0 < -900) & abs(nsigTPC_K_1) < 3. & (abs(nsigTOF_K_1) < 3. | nsigTOF_K_1 < -900)) | "
@@ -203,7 +203,11 @@ class HFAIO(MPBase):
 					# if sj_dcand[0].m() == dcand[0].m() and sj_dcand[0].perp() == dcand[0].perp():
 					if sj_dcand[0].delta_R(dcand[0]) == 0.0:
 						is_Dsj = 1
-				self.twjc.fill_branches(jet = j, dR = j.delta_R(dcand[0]), D = dcand[0], lsj = lsj[0], Dsj = is_Dsj)
+				self.twjc.fill_branches(jet = j, dR = j.delta_R(dcand[0]), D = dcand[0], lsj = lsj[0], Dsj = is_Dsj
+										, a10 = fjext.angularity(j,  1.0, 0.4)
+										, a15 = fjext.angularity(j,  0.5, 0.4)
+										, a20 = fjext.angularity(j,  0.0, 0.4)
+										, a30 = fjext.angularity(j, -1.0, 0.4))
 				self.twjc.fill_tree()
 			if len(djets) > 1:
 				perror("more than one jet per D candidate?")

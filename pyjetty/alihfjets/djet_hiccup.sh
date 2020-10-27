@@ -2,8 +2,8 @@
 
 #SBATCH --job-name=djet
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --partition=std
-#SBATCH --time=4:00:00
+#SBATCH --partition=quick
+#SBATCH --time=1:00:00
 
 id
 hostname
