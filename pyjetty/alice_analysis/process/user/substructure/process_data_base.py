@@ -304,7 +304,7 @@ class ProcessDataBase(process_base.ProcessBase):
     
       # Groom jet, if applicable
       if grooming_setting:
-        gshop = fjcontrib.GroomerShop(jet, jetR, fj.cambridge_algorithm)
+        gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
         jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
         if not jet_groomed_lund:
           continue

@@ -89,6 +89,19 @@ class ProcessBase(common_base.CommonBase):
       self.ghost_area = constituent_subtractor['ghost_area']
     else:
       print('Constituent subtractor is disabled.')
+      
+    # Set reclustering algorithm (optional)
+    if 'reclustering_algorithm' in config:
+        self.recluster_alg = config['reclustering_algorithm']
+        if self.recluster_alg == 'CA':
+            self.reclustering_algorithm = fj.cambridge_algorithm
+        elif self.recluster_alg == 'KT':
+            self.reclustering_algorithm = fj.kt_algorithm
+        elif self.recluster_alg == 'AKT':
+            self.reclustering_algorithm = fj.antikt_algorithm
+    else:
+        self.recluster_alg = 'CA'
+        self.reclustering_algorithm = fj.cambridge_algorithm
 
   #---------------------------------------------------------------
   # Create thn and set as class attribute from name, dim
