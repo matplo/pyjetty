@@ -67,7 +67,7 @@ class ProcessIO(common_base.CommonBase):
         self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej', 'centrality']
       self.min_centrality = min_cent
       self.max_centrality = max_cent
-  
+    
   #---------------------------------------------------------------
   # Clear dataframes
   #---------------------------------------------------------------
@@ -118,6 +118,9 @@ class ProcessIO(common_base.CommonBase):
     self.event_df_orig = event_tree.pandas.df(self.event_columns)
     
     # Check if there are duplicated event ids
+    #print(self.event_df_orig)
+    #d = self.event_df_orig.duplicated(self.unique_identifier, keep=False)
+    #print(self.event_df_orig[d])
     n_duplicates = sum(self.event_df_orig.duplicated(self.unique_identifier))
     if n_duplicates > 0:
       sys.exit('ERROR: There appear to be {} duplicate events in the event dataframe'.format(n_duplicates))

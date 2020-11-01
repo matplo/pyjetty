@@ -9,7 +9,7 @@ import ROOT
 import yaml
 
 from pyjetty.alice_analysis.analysis.user.james import run_analysis_james_base
-from pyjetty.alice_analysis.analysis.user.james import plotting_utils
+from pyjetty.alice_analysis.analysis.user.james import plotting_utils_theta_g
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -72,7 +72,7 @@ class RunAnalysisThetaG(run_analysis_james_base.RunAnalysisJamesBase):
     # Initialize performance plotting class, and plot
     if self.is_pp:
     
-      self.plotting_utils = plotting_utils.PlottingUtils(self.output_dir_performance, self.config_file)
+      self.plotting_utils = plotting_utils_theta_g.PlottingUtils(self.output_dir_performance, self.config_file)
       self.plot_single_performance(self.output_dir_performance)
       
     else:
@@ -81,14 +81,14 @@ class RunAnalysisThetaG(run_analysis_james_base.RunAnalysisJamesBase):
       for R_max in self.max_distance:
       
         output_dir_performance = os.path.join(self.output_dir_performance, 'Rmax{}'.format(R_max))
-        self.plotting_utils = plotting_utils.PlottingUtils(output_dir_performance, self.config_file, R_max = R_max)
+        self.plotting_utils = plotting_utils_theta_g.PlottingUtils(output_dir_performance, self.config_file, R_max = R_max)
         self.plot_single_performance(output_dir_performance, R_max)
 
         # Plot for thermal model
         if self.do_thermal_closure and R_max == self.R_max:
           
           output_dir_performance = os.path.join(self.output_dir_performance, 'thermal')
-          self.plotting_utils = plotting_utils.PlottingUtils(output_dir_performance, self.config_file, R_max = R_max, thermal = True)
+          self.plotting_utils = plotting_utils_theta_g.PlottingUtils(output_dir_performance, self.config_file, R_max = R_max, thermal = True)
           self.plot_single_performance(output_dir_performance, R_max)
 
   #----------------------------------------------------------------------
