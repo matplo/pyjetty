@@ -139,6 +139,10 @@ class process_ang_mc(process_base.ProcessBase):
     self.n_lambda_bins = config['n_lambda_bins']
     self.lambda_limits = config['lambda_limits']
 
+    # Detector kinematics
+    self.eta_max = 0.9
+
+    # Grooming settings
     self.sd_zcut = config["sd_zcut"]
     self.sd_beta = config["sd_beta"]
     self.grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
@@ -158,7 +162,7 @@ class process_ang_mc(process_base.ProcessBase):
     for jetR in self.jetR_list:
 
       name = 'hJetPt_Truth_R%s' % str(jetR).replace('.', '')
-      h = ROOT.TH1F(name, name+';#it{p}_{T,tru}^{ch jet};#frac{d#it{N}}{d#it{p}_{T,tru}^{ch jet};', 300, 0, 300)
+      h = ROOT.TH1F(name, name+';#it{p}_{T,tru}^{ch jet};#frac{d#it{N}}{d#it{p}_{T,tru}^{ch jet}};', 300, 0, 300)
       setattr(self, name, h)
 
       name = 'hJES_R%s' % str(jetR).replace('.', '')
@@ -227,7 +231,7 @@ class process_ang_mc(process_base.ProcessBase):
         '''
 
         name = "hAngResidual_JetPt_%s" % label
-        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
+        h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 2.)
         h.GetXaxis().SetTitle('#it{p}_{T,truth}^{ch jet}')
         h.GetYaxis().SetTitle('#frac{#it{#lambda}_{#it{#beta},det}-#it{#lambda}_{#it{#beta},truth}}{#it{#lambda}_{#it{#beta},truth}}')
         setattr(self, name, h)
@@ -296,8 +300,8 @@ class process_ang_mc(process_base.ProcessBase):
 
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-      jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-      jet_selector_truth_matched = fj.SelectorPtMin(5.0)
+      jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+      jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max - jetR)
       print('jet definition is:', jet_def)
       print('jet selector for det-level is:', jet_selector_det,'\n')
       print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
@@ -361,7 +365,7 @@ class process_ang_mc(process_base.ProcessBase):
     cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
     jets_det = fj.sorted_by_pt(cs_det.inclusive_jets())
     jets_det_selected = jet_selector_det(jets_det)
-    
+
     cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
     jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
     jets_truth_selected = jet_selector_det(jets_truth)
@@ -521,6 +525,9 @@ class process_ang_mc(process_base.ProcessBase):
       # soft drop jet
       jet_sd_det = sd.result(jet_det)
       jet_sd_tru = sd.result(jet_truth)
+      if abs(jet_sd_det.eta()) > (self.eta_max - jetR) or \
+         abs(jet_sd_tru.eta()) > (self.eta_max - jetR):      # Cut these for theory comparisons
+        continue
 
       # lambda for soft drop jet
       l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
