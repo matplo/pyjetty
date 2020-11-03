@@ -48,7 +48,7 @@ module load pyjetty/1.0
 echo "python is" $(which python)
 cd /home/ezra/analysis_env/
 SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/pythia_parton_hadron.py"
-CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/process_angularity.yaml"
+CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/gen_angularity.yaml"
 
 if $USE_PTHAT_MAX; then
 	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX "
