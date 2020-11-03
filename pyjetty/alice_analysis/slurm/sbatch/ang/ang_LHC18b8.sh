@@ -4,10 +4,10 @@
 # process the input file and write an output ROOT file.
 # The main use is to give this script to a slurm script.
 
-# Take three command line arguments -- (1) input file path, (2) job ID, (3) task ID
+# Take two command line arguments -- (1) input file path, (2) output dir prefix
 if [ "$1" != "" ]; then
   INPUT_FILE=$1
-  echo "Input file: $INPUT_FILE"
+  #echo "Input file: $INPUT_FILE"
 else
   echo "Wrong command line arguments"
 fi
@@ -29,9 +29,9 @@ fi
 # Define output path from relevant sub-path of input file
 OUTPUT_PREFIX="AnalysisResults/ang/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-8)
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
 #echo $OUTPUT_SUFFIX
-OUTPUT_DIR="/rstorage/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX/"
+OUTPUT_DIR="/rstorage/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 mkdir -p $OUTPUT_DIR
 echo "Output dir: $OUTPUT_DIR"
 
@@ -43,8 +43,8 @@ module load pyjetty/1.0
 module list
 
 # Run python script via pipenv
-cd /home/ezra/pyjetty/pyjetty/alice_analysis/
-python process/user/ang_pp/ang_data.py -c config/ang/process_angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+cd /home/ezra/pyjetty/pyjetty/alice_analysis
+python process/user/ang_pp/ang_mc.py -c config/ang/process_angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/ang/${JOB_ID}
