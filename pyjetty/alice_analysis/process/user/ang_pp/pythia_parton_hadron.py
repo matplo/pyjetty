@@ -66,6 +66,8 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
         # PYTHIA instance with MPI off
         setattr(args, "py_noMPI", True)
+        print(args)
+        exit()
         pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
 
         # print the banner first

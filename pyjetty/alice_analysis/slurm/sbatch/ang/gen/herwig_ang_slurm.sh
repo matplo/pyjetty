@@ -1,14 +1,14 @@
 #! /bin/bash
 
 #SBATCH --job-name="HerwigGen"
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=2
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-1000
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 # Number of events per pT-hat bin (for statistics)
-NEV_DESIRED=10000000
+NEV_DESIRED=5000000
 
 # Lower edges of the pT-hat bins
 PTHAT_BINS=(7 9 12 16 21 28 36 45 57 70 85 99 115 132 150 169 190 212 235 260)
