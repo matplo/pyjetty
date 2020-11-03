@@ -141,6 +141,8 @@ class process_ang_mc(process_base.ProcessBase):
 
     self.sd_zcut = config["sd_zcut"]
     self.sd_beta = config["sd_beta"]
+    self.grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
+    self.grooming_labels = [self.utils.grooming_label(gs) for gs in self.grooming_settings]
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -156,37 +158,29 @@ class process_ang_mc(process_base.ProcessBase):
     for jetR in self.jetR_list:
 
       name = 'hJetPt_Truth_R%s' % str(jetR).replace('.', '')
-      h = ROOT.TH1F(name, name+';p_{T,tru,ch jet};#frac{dN}{dp_{T,tru,ch jet};', 300, 0, 300)
+      h = ROOT.TH1F(name, name+';#it{p}_{T,tru}^{ch jet};#frac{d#it{N}}{d#it{p}_{T,tru}^{ch jet};', 300, 0, 300)
       setattr(self, name, h)
 
       name = 'hJES_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
-      h.GetXaxis().SetTitle('p_{T,truth}')
-      h.GetYaxis().SetTitle('#frac{p_{T,det,ch jet}-p_{T,tru,ch jet}}{p_{T,tru,ch jet}}')
+      h.GetXaxis().SetTitle('#it{p}_{T,truth}')
+      h.GetYaxis().SetTitle('#frac{#it{p}_{T,det}^{ch jet}-#it{p}_{T,tru}^{ch jet}}{#it{p}_{T,tru}^{ch jet}}')
       setattr(self, name, h)
 
       name = 'hDeltaR_All_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 100, 0, 100, 100, 0., 2.)
       setattr(self, name, h)
-      '''
-      name = 'hZ_Truth_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-      setattr(self, name, h)
-      
-      name = 'hZ_Det_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-      setattr(self, name, h)
-      '''
+
       name = 'hResponse_JetPt_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 200, 0, 200, 200, 0, 200)
-      h.GetXaxis().SetTitle('p_{T,det,ch jet}')
-      h.GetYaxis().SetTitle('p_{T,tru,ch jet}')
+      h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
+      h.GetYaxis().SetTitle('#it{p}_{T,tru}^{ch jet}')
       setattr(self, name, h)
 
       name = 'hJetPt_N_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 100)
-      h.GetXaxis().SetTitle('p_{T,tru,ch jet}')
-      h.GetYaxis().SetTitle('N_{constit}')
+      h.GetXaxis().SetTitle('#it{p}_{T,tru}^{ch jet}')
+      h.GetYaxis().SetTitle('#it{N}_{constit}')
       setattr(self, name, h)
 
       for beta in self.beta_list:
@@ -195,28 +189,22 @@ class process_ang_mc(process_base.ProcessBase):
 
         name = 'hResponse_ang_%s' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
-        h.GetXaxis().SetTitle('#lambda_{%s,det}' % beta)
-        h.GetYaxis().SetTitle('#lambda_{%s,tru}' % beta)
-        setattr(self, name, h)
-
-        name = 'hResponse_ang_%s_SD' % label
-        h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
-        h.GetXaxis().SetTitle('#lambda_{%s,det,SD}' % beta)
-        h.GetYaxis().SetTitle('#lambda_{%s,tru,SD}' % beta)
+        h.GetXaxis().SetTitle('#it{#lambda}_{%s,det}' % beta)
+        h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru}' % beta)
         setattr(self, name, h)
 
         name = 'hAng_JetPt_det_%s' % label
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('p_{T,det}')
-        h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{det,%s}}' % str(beta))
+        h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
+        h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s}}' % str(beta))
         setattr(self, name, h)
 
         name = 'hAng_JetPt_tru_%s' % label
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('p_{T,tru}')
-        h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{tru,%s}}' % str(beta))
+        h.GetXaxis().SetTitle('#it{p}_{T,tru}^{ch jet}')
+        h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s}}' % str(beta))
         setattr(self, name, h)
 
         '''
@@ -240,17 +228,18 @@ class process_ang_mc(process_base.ProcessBase):
 
         name = "hAngResidual_JetPt_%s" % label
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
-        h.GetXaxis().SetTitle('p_{T,truth}')
-        h.GetYaxis().SetTitle('#frac{#lambda_{det}-#lambda_{truth}}{#lambda_{truth}}')
+        h.GetXaxis().SetTitle('#it{p}_{T,truth}^{ch jet}')
+        h.GetYaxis().SetTitle('#frac{#it{#lambda}_{#it{#beta},det}-#it{#lambda}_{#it{#beta},truth}}{#it{#lambda}_{#it{#beta},truth}}')
         setattr(self, name, h)
 
         # Create THn of response
         dim = 4;
-        title = ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
+        title = ['#it{p}_{T,det}^{ch jet}', '#it{p}_{T,truth}^{ch jet}', 
+                 '#it{#lambda}_{#it{#beta},det}', '#it{#lambda}_{#it{#beta},truth}']
         nbins = [20, 40, 200, 100]
         min_li = [0.,   0.,   0.,  0.]
         max_li = [100., 200., 1.0, 1.0]
-        
+
         name = 'hResponse_JetPt_ang_%s' % label
         nbins = (nbins)
         xmin = (min_li)
@@ -262,6 +251,34 @@ class process_ang_mc(process_base.ProcessBase):
         for i in range(0, dim):
           h.GetAxis(i).SetTitle(title[i])
         setattr(self, name, h)
+
+        # SoftDrop groomed jet response matrices
+        for gl in self.grooming_labels:
+          name = 'hResponse_ang_%s_%s' % (label, gl)
+          h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
+          h.GetXaxis().SetTitle('#it{#lambda}_{%s,det,SD}' % beta)
+          h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru,SD}' % beta)
+          setattr(self, name, h)
+
+          name = 'hAng_JetPt_det_%s_%s' % (label, gl)
+          h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                        self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+          h.GetXaxis().SetTitle('#it{p}_{T,det,SD}^{ch jet}')
+          h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s,SD}}' % str(beta))
+          setattr(self, name, h)
+
+          name = 'hAng_JetPt_tru_%s_%s' % (label, gl)
+          h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
+                        self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+          h.GetXaxis().SetTitle('#it{p}_{T,tru,SD}^{ch jet}')
+          h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s,SD}}' % str(beta))
+          setattr(self, name, h)
+
+          name = 'hResponse_JetPt_ang_%s_%s' % (label, gl)
+          h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+          for i in range(0, dim):
+            h.GetAxis(i).SetTitle(title[i])
+          setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -276,22 +293,37 @@ class process_ang_mc(process_base.ProcessBase):
     print()
     
     for jetR in self.jetR_list:
+
+      # Set jet definition and a jet selector
+      jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+      jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      jet_selector_truth_matched = fj.SelectorPtMin(5.0)
+      print('jet definition is:', jet_def)
+      print('jet selector for det-level is:', jet_selector_det,'\n')
+      print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
+
+      # For now assuming only SoftDrop is used
+      groomers = []
+      for gs in self.grooming_settings:
+        sd = fjcontrib.SoftDrop(gs['sd'][1], gs['sd'][0], jetR)   # sd_beta, sd_zcut, jetR
+        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+        reclusterer = fjcontrib.Recluster(jet_def_recluster)
+        sd.set_reclustering(True, reclusterer)
+        if self.debug_level > 2:
+          print('SoftDrop groomer is: {}'.format(sd.description()));
+        groomers.append(sd)
+
       for beta in self.beta_list:
-      
-        # Set jet definition and a jet selector
-        jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-        jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-        jet_selector_truth_matched = fj.SelectorPtMin(5.0)
-        print('jet definition is:', jet_def)
-        print('jet selector for det-level is:', jet_selector_det,'\n')
-        print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
-        
-        # Then can use list comprehension to iterate over the groupby and do jet-finding
-        # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-        result = [ self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
-                                    jet_selector_truth_matched, beta)
-                   for fj_particles_det, fj_particles_truth in
-                   zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth']) ]
+
+        # Iterate over the groupby and do jet-finding simultaneously for 
+        # fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
+        for fj_particles_det, fj_particles_truth in \
+            zip(self.df_fjparticles['fj_particles_det'],
+                self.df_fjparticles['fj_particles_truth']):
+
+          self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def,
+                           jet_selector_det, jet_selector_truth_matched, beta, groomers)
+                   
 
   #---------------------------------------------------------------
   # Fill track histograms.
@@ -312,7 +344,7 @@ class process_ang_mc(process_base.ProcessBase):
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
   def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
-                  jet_selector_truth_matched, beta):
+                  jet_selector_truth_matched, beta, groomers):
 
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -354,33 +386,26 @@ class process_ang_mc(process_base.ProcessBase):
 
     # Loop through jets and set jet matching candidates for each jet in user_info
     hname = "hDeltaR_All_R%s" % str(jetR).replace('.', '')
-    [ [ self.set_matching_candidates(jet_det, jet_truth, jetR, hname) 
-        for jet_truth in jets_truth_selected_matched ] for jet_det in jets_det_selected ]
+    for jet_det in jets_det_selected:
+      for jet_truth in jets_truth_selected_matched:
+        self.set_matching_candidates(jet_det, jet_truth, jetR, hname)
    
     # Loop through jets and set accepted matches
     hname = 'hJetMatchingQA_R%s' % str(jetR).replace('.', '')
-    [ self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected ]
+    for jet_det in jets_det_selected:
+      self.set_matches_pp(jet_det, hname)
     
     # Loop through jets and fill matching histograms
-    result = [ self.fill_matching_histograms(jet_det, jetR) for jet_det in jets_det_selected ]
+    for jet_det in jets_det_selected:
+      self.fill_matching_histograms(jet_det, jetR)
 
-    # Loop through jets and fill response if both det and truth jets are unique match
-    for jetR in self.jetR_list:
-      for beta in self.beta_list:
-
-        result = [ self.fill_jet_matches(jet_det, jetR, beta) for jet_det in jets_det_selected ]
+    for jet_det in jets_det_selected:
+      self.fill_jet_matches(jet_det, jetR, beta, groomers)
 
   #---------------------------------------------------------------
   # Loop through jets and fill response if both det and truth jets are unique match
   #---------------------------------------------------------------
-  def fill_jet_matches(self, jet_det, jetR, beta):
-
-    sd = fjcontrib.SoftDrop(self.sd_beta, self.sd_zcut, jetR)
-    jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-    reclusterer = fjcontrib.Recluster(jet_def_recluster)
-    sd.set_reclustering(True, reclusterer)
-    if self.debug_level > 2:
-      print('SoftDrop groomer is: {}'.format(sd.description()));
+  def fill_jet_matches(self, jet_det, jetR, beta, groomers):
 
     # Check additional acceptance criteria
     # skip event if not satisfied -- since first jet in event is highest pt
@@ -391,7 +416,7 @@ class process_ang_mc(process_base.ProcessBase):
       jet_truth = jet_det.python_info().match
       
       if jet_truth:
-        self.fill_response_histograms(jet_det, jet_truth, sd, jetR, beta)
+        self.fill_response_histograms(jet_det, jet_truth, jetR, beta, groomers)
 
   '''
   #---------------------------------------------------------------
@@ -415,6 +440,7 @@ class process_ang_mc(process_base.ProcessBase):
           jet_det.set_user_index(jet_det.user_index() + 1)
           jet_truth.set_user_index(jet_truth.user_index() + 1)
   '''
+
   #---------------------------------------------------------------
   # Fill truth jet histograms
   #---------------------------------------------------------------
@@ -423,22 +449,14 @@ class process_ang_mc(process_base.ProcessBase):
     getattr(self, 'hJetPt_Truth_R%s' % str(jetR).replace('.', '')).Fill(jet.pt())
     getattr(self, 'hJetPt_N_R%s' % str(jetR).replace('.', '')).Fill(jet.pt(), len(jet.constituents()))
 
-    '''
-    for constituent in jet.constituents():
-      z = constituent.pt() / jet.pt()
-      getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
-    '''
-
 
   '''
   #---------------------------------------------------------------
   # Fill det jet histograms
   #---------------------------------------------------------------
   def fill_det_before_matching(self, jet, jetR):
-    
-    for constituent in jet.constituents():
-      z = constituent.pt() / jet.pt()
-      getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet.pt(), z)
+    # Implement here
+    pass
   '''
 
   #---------------------------------------------------------------
@@ -450,7 +468,6 @@ class process_ang_mc(process_base.ProcessBase):
       jet_truth = jet_det.python_info().match
       
       if jet_truth:
-        
         jet_pt_det_ungroomed = jet_det.pt()
         jet_pt_truth_ungroomed = jet_truth.pt()
         JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
@@ -462,7 +479,7 @@ class process_ang_mc(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_response_histograms(self, jet_det, jet_truth, sd, jetR, beta):
+  def fill_response_histograms(self, jet_det, jet_truth, jetR, beta, groomers):
 
     # Ungroomed jet pT
     jet_pt_det = jet_det.pt()
@@ -471,14 +488,6 @@ class process_ang_mc(process_base.ProcessBase):
     # just use kappa = 1 for now
     l_det = lambda_beta_kappa(jet_det, jetR, beta, 1) 
     l_tru = lambda_beta_kappa(jet_truth, jetR, beta, 1)
-
-    # soft drop jet
-    jet_sd_det = sd.result(jet_det)
-    jet_sd_tru = sd.result(jet_truth)
-
-    # lambda for soft drop jet
-    l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
-    l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
 
     label = "R%s_%s" % (str(jetR), str(beta))
 
@@ -500,11 +509,29 @@ class process_ang_mc(process_base.ProcessBase):
     getattr(self, 'hAng_JetPt_det_%s' % label).Fill(jet_pt_det, l_det)
     getattr(self, 'hAng_JetPt_tru_%s' % label).Fill(jet_pt_truth, l_tru)
     getattr(self, 'hResponse_ang_%s' % label).Fill(l_det, l_tru)
-    getattr(self, 'hResponse_ang_%s_SD' % label).Fill(l_sd_det, l_sd_tru)
 
     x = ([jet_pt_det, jet_pt_truth, l_det, l_tru])
     x_array = array('d', x)
     getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(x_array)
+
+    for i, gs in enumerate(self.grooming_settings):
+      gl = self.grooming_labels[i]
+      sd = groomers[i]
+
+      # soft drop jet
+      jet_sd_det = sd.result(jet_det)
+      jet_sd_tru = sd.result(jet_truth)
+
+      # lambda for soft drop jet
+      l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
+      l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
+
+      getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_sd_det.pt(), l_sd_det)
+      getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet_sd_tru.pt(), l_sd_tru)
+      getattr(self, 'hResponse_ang_%s_%s' % (label, gl)).Fill(l_sd_det, l_sd_tru)
+      x = ([jet_sd_det.pt(), jet_sd_tru.pt(), l_sd_det, l_sd_tru])
+      x_array = array('d', x)
+      getattr(self, 'hResponse_JetPt_ang_%s_%s' % (label, gl)).Fill(x_array)
 
 
 ##################################################################
