@@ -601,7 +601,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     vals = line.split()
                     if line[0] == '-':
                         parton_finished = True
-                    elif len(vals) == 5 and line[0] == ' ':
+                    elif len(vals) == 5 and line[2] == ' ':
                         partons_px.append(vals[0])
                         partons_py.append(vals[1])
                         partons_pz.append(vals[2])
