@@ -29,7 +29,7 @@ fi
 # Define output path from relevant sub-path of input file
 OUTPUT_PREFIX="AnalysisResults/ang/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f6-11)
 #echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/rstorage/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 mkdir -p $OUTPUT_DIR
