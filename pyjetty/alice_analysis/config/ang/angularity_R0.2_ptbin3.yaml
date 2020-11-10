@@ -1,0 +1,124 @@
+# Processing parameters
+#jetR: [0.2, 0.4]
+jetR: [0.2]
+betas: [1, 1.5, 2, 3]
+
+# Initial detector-level binnings. Distributions are rebinned via configs before unfolding
+n_pt_bins: 195
+pt_limits: [5, 200]
+n_lambda_bins: 200
+lambda_limits: [0, 1]
+n_rap_bins: 20            # just for fun, look at lambda distribution vs rapidity
+rap_limits: [-0.5, 0.5]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0
+
+# SoftDrop setting (current same for all SD plots)
+sd_zcut: 0.1    # multiplier
+sd_beta: 0      # exponent on (deltaR / R)
+
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  common_settings:
+    xtitle: '#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}}'
+    pt_bins_reported: [60, 80]
+    plot_overlay_list:
+      - ['config_R0.2_B1', 'config_R0.2_B1.5', 'config_R0.2_B2', 'config_R0.2_B3']
+    max_reg_param: 10
+
+  # Different R & beta configurations
+  config_R0.2_B1:
+    R: 0.2
+    beta: 1
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150]
+    pt_bins_det_sys_truncation: [10, 15, 20, 30, 35, 40, 45, 50, 60, 70, 80, 100]
+    obs_bins_truth: [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75]
+    obs_max_reported: [0.5]
+    obs_bins_det: [0, 0.1, 0.15, 0.20, 0.25, 0.3, 0.5, 0.75]
+    obs_bins_det_sys_binning: [0, 0.09, 0.14, 0.19, 0.24, 0.32, 0.5, 0.75]
+
+  config_R0.2_B1.5:
+    R: 0.2
+    beta: 1.5
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100, 120, 150]
+    pt_bins_det_sys_truncation: [10, 15, 20, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    obs_bins_truth: [0, 0.05, 0.08, 0.12, 0.17, 0.25, 0.4, 0.7]
+    obs_max_reported: [0.4]
+    obs_bins_det: [0, 0.05, 0.08, 0.12, 0.17, 0.25, 0.4, 0.7]
+    obs_bins_det_sys_binning: [0, 0.045, 0.075, 0.11, 0.16, 0.27, 0.4, 0.7]
+
+  config_R0.2_B2:
+    R: 0.2
+    beta: 2
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100, 120, 150]
+    pt_bins_det_sys_truncation: [10, 15, 20, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    obs_bins_truth: [0, 0.02, 0.04, 0.07, 0.1, 0.13, 0.2, 0.3, 0.5, 0.7]
+    obs_max_reported: [0.3]
+    obs_bins_det: [0, 0.02, 0.04, 0.06, 0.09, 0.12, 0.18, 0.3, 0.5, 0.7]
+    obs_bins_det_sys_binning: [0, 0.025, 0.045, 0.065, 0.085, 0.13, 0.15, 0.21, 0.3, 0.5, 0.7]
+
+  config_R0.2_B3:
+    R: 0.2
+    beta: 3
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 80, 100, 120, 150]
+    pt_bins_det_sys_truncation: [10, 15, 20, 30, 35, 40, 45, 50, 55, 60, 80, 100]
+    obs_bins_truth: [0, 0.01, 0.02, 0.04, 0.06, 0.08, 0.12, 0.25, 0.35]
+    obs_max_reported: [0.25]
+    obs_bins_det: [0, 0.01, 0.02, 0.04, 0.06, 0.08, 0.12, 0.25, 0.35]
+    obs_bins_det_sys_binning: [0, 0.01, 0.025, 0.045, 0.065, 0.09, 0.13, 0.25, 0.35]
+
+
+###############################################################################
+# Theory comparison parameters
+theory_beta: [1.5, 2, 3]
+theory_dir: "/home/ezra/ALICE_table/"
+theory_pt_bins: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
+response_files: ["/rstorage/alice/AnalysisResults/ang/196181/AnalysisResultsFinal.root",
+                 "/rstorage/alice/AnalysisResults/ang/225271/AnalysisResultsFinal.root"]
+response_labels: ["PYTHIA8", "Herwig7"]
+rebin_theory_response: False
+
+
+###############################################################################
+# Analysis & plotting parameters
+file_format: ".pdf"
+output_dir: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin3"
+roounfold_path: "/home/ezra/RooUnfold/libRooUnfold.so"
+
+analysis_observable: 'ang'
+do_unfolding: False
+force_rebin: False
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: False
+figure_approval_status: 'Preliminary'
+
+# List of which systematics to perform
+# Options: [main, trkeff, prior1, prior2, truncation, binning]
+systematics_list:
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
+
+# Paths to processing output, to be used for unfolding
+main_data: '/rstorage/alice/AnalysisResults/ang/230386/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/230547/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/230548/AnalysisResultsFinal.root'
+
+# Prior variation parameters
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5

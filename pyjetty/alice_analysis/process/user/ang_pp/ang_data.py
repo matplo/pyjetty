@@ -103,12 +103,17 @@ class process_ang_data(process_base.ProcessBase):
     self.n_rap_bins = config["n_rap_bins"]
     self.rap_limits = config["rap_limits"]
 
+    # Detector kinematics
+    self.eta_max = 0.9
+
     # SoftDrop configuration
     self.sd_zcut = config["sd_zcut"]
     self.sd_beta = config["sd_beta"]
+    self.grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
+    self.grooming_labels = [self.utils.grooming_label(gs) for gs in self.grooming_settings]
 
     # Configs for each jetR / beta
-    self.config_dict = config["ang"]
+    #self.config_dict = config["ang"]
   
   #---------------------------------------------------------------
   # Initialize histograms
@@ -122,8 +127,8 @@ class process_ang_data(process_base.ProcessBase):
 
       name = 'hJetPt_R%s' % jetR
       h = ROOT.TH1F(name, name, 300, 0, 300)
-      h.GetXaxis().SetTitle('p_{T,ch jet}')
-      h.GetYaxis().SetTitle('dN/dp_{T}')
+      h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
+      h.GetYaxis().SetTitle('d#it{N}/d#it{p}_{T}')
       setattr(self, name, h)
 
       '''
@@ -159,33 +164,34 @@ class process_ang_data(process_base.ProcessBase):
         name = "h_ang_JetPt_R%s_%s" % (jetR, beta)
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
-        setattr(self, name, h)
-
-        # Lambda vs pT plots with fine binning -- with soft drop
-        name = "h_ang_JetPt_R%s_%s_SD" % (jetR, beta)
-        h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
-                      self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('p_{T,ch jet}')
-        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+        h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
+        h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
         setattr(self, name, h)
 
         # Lambda vs rapidity plots with fine binning
         name = "h_ang_JetRap_R%s_%s" % (jetR, beta)
         h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('#eta_{ch jet}')
-        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
+        h.GetXaxis().SetTitle('#it{#eta}_{ch jet}')
+        h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
         setattr(self, name, h)
 
-        # Lambda vs pT plots with fine binning -- with soft drop
-        name = "h_ang_JetRap_R%s_%s_SD" % (jetR, beta)
-        h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
-                      self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
-        h.GetXaxis().SetTitle('#eta_{ch jet}')
-        h.GetYaxis().SetTitle('#lambda_{%s}' % beta)
-        setattr(self, name, h)
+        for gl in self.grooming_labels:
+          # Lambda vs pT plots with fine binning -- with soft drop
+          name = "h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl)
+          h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
+                        self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+          h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
+          h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+          setattr(self, name, h)
+
+          # Lambda vs pT plots with fine binning -- with soft drop
+          name = "h_ang_JetRap_R%s_%s_%s" % (jetR, beta, gl)
+          h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
+                        self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+          h.GetXaxis().SetTitle('#it{#eta}_{ch jet}')
+          h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+          setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -199,25 +205,31 @@ class process_ang_data(process_base.ProcessBase):
       
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+      jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max - jetR)
       print('jet definition is:', jet_def)
       print('jet selector is:', jet_selector,'\n')
-        
-      # Define SoftDrop settings
-      sd = fjcontrib.SoftDrop(self.sd_beta, self.sd_zcut, jetR)
-      print('SoftDrop groomer is: {}'.format(sd.description()));
+
+      # For now assuming only SoftDrop is used
+      groomers = []
+      for gs in self.grooming_settings:
+        sd = fjcontrib.SoftDrop(gs['sd'][1], gs['sd'][0], jetR)   # sd_beta, sd_zcut, jetR
+        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
+        reclusterer = fjcontrib.Recluster(jet_def_recluster)
+        sd.set_reclustering(True, reclusterer)
+        if self.debug_level > 2:
+          print('SoftDrop groomer is: {}'.format(sd.description()));
+        groomers.append(sd)
       
       for beta in self.beta_list:
-
-        # Use list comprehension to do jet-finding and fill histograms
-        result = [self.analyzeJets(fj_particles, jet_def, jet_selector, beta, sd)
-                  for fj_particles in self.df_fjparticles]
+        for fj_particles in self.df_fjparticles:
+          # do jet-finding and fill histograms
+          self.analyzeJets(fj_particles, jet_def, jet_selector, beta, groomers)
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles, jet_def, jet_selector, beta, sd):
+  def analyzeJets(self, fj_particles, jet_def, jet_selector, beta, groomers):
     
     # Do jet finding
     cs = fj.ClusterSequence(fj_particles, jet_def)
@@ -237,50 +249,33 @@ class process_ang_data(process_base.ProcessBase):
         continue
       
       # Fill histograms
-      self.fillJetHistograms(jet, jetR, beta, sd)
+      self.fillJetHistograms(jet, jetR, beta, groomers)
 
 
   #---------------------------------------------------------------
   # Fill jet histograms
   #---------------------------------------------------------------
-  def fillJetHistograms(self, jet, jetR, beta, sd):
+  def fillJetHistograms(self, jet, jetR, beta, groomers):
 
-    jet_pt = jet.pt()
-    config = ("R%s_B%s" % (jetR, beta)).replace('.', '')
-
-    # jet with softdrop
-    jet_sd = sd.result(jet)
-
-    # Calculate observable for this jet
-    # just use kappa = 1 for now
     l = lambda_beta_kappa(jet, jetR, beta, 1)
-    lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
 
     # Fill plots
-    getattr(self, ("h_ang_JetPt_R%s_%s" % (jetR, beta))).Fill(jet_pt, l)
-    getattr(self, ("h_ang_JetPt_R%s_%s_SD" % (jetR, beta))).Fill(jet_sd.pt(), lsd)
-    getattr(self, ("h_ang_JetRap_R%s_%s" % (jetR, beta))).Fill(jet.rap(), l)
-    getattr(self, ("h_ang_JetRap_R%s_%s_SD" % (jetR, beta))).Fill(jet_sd.rap(), lsd)
+    getattr(self, "h_ang_JetPt_R%s_%s" % (jetR, beta)).Fill(jet.pt(), l)
+    getattr(self, "h_ang_JetRap_R%s_%s" % (jetR, beta)).Fill(jet.rap(), l)
 
-    '''
-    # just use kappa = 1 for now
-    l = lambda_beta_kappa(jet, jetR, beta, 1)
-    (pTmin, pTmax) = pT_bin(jet_pt, self.pTbins)
-    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
-      getattr(self, ("hLambda_pT%i-%i_%s" % (pTmin, pTmax, config))).Fill(l)
-      getattr(self, ("hLambda_JetpT_%s" % config)).Fill(jet_pt, l)
+    getattr(self, "hJetPt_R%s" % str(jetR)).Fill(jet.pt())
+    #getattr(self, "hM_JetPt_R%s" % str(jetR)).Fill(jet_pt, jet.m())
 
-    # jet with softdrop
-    jet_sd = sd.result(jet)
-    lsd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
-    (pTmin, pTmax) = pT_bin(jet_sd.pt(), self.pTbins)
-    if pTmin > -1e-3:  # pTmin will be -1 if not a valid bin
-      getattr(self, ("hLambda_pT%i-%i_%s_SD" % (pTmin, pTmax, config))).Fill(lsd)
-      getattr(self, ("hLambda_JetpT_%s_SD" % config)).Fill(jet_sd.pt(), lsd)
-    '''
+    for i, gs in enumerate(self.grooming_settings):
+      gl = self.grooming_labels[i]
 
-    getattr(self, 'hJetPt_R%s' % str(jetR)).Fill(jet_pt)
-    #getattr(self, 'hM_JetPt_R%s' % str(jetR)).Fill(jet_pt, jet.m())
+      jet_sd = groomers[i].result(jet)
+      #if abs(jet_sd.eta()) > (self.eta_max - jetR):  # Cut these for theory comparisons
+      #  continue
+        
+      l_sd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
+      getattr(self, ("h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet_sd.pt(), l_sd)
+      getattr(self, ("h_ang_JetRap_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet_sd.rap(), l_sd)
 
 
 ##################################################################

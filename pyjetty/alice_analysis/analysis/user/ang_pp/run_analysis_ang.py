@@ -112,8 +112,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
       self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], 
                                                              self.grooming_settings[0]))
-      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(self.obs_settings[0],
-                                                                              self.grooming_settings[0]))
+      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(
+        self.obs_settings[0], self.grooming_settings[0]))
       
       # Plot subobservable-dependent performance plots
       for i, _ in enumerate(self.obs_subconfig_list):
@@ -286,16 +286,16 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.8, text)
 
-    text = str(min_pt_truth) + ' < #it{p}_{T}^{jet, ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.57, 0.73, text)
 
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
+    text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
     text_latex.DrawLatex(0.57, 0.66, text)
     
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     delta = 0.
     if subobs_label:
-      text = '{} = {}'.format(subobs_label, obs_setting)
+      text = '%s = %s' % (subobs_label, obs_setting)
       text_latex.DrawLatex(0.57, 0.59, text)
       delta = 0.07
     
@@ -490,10 +490,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.8, text)
 
-    text = str(min_pt_truth) + ' < #it{p}_{T}^{jet, ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.57, 0.73, text)
 
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
+    text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
     text_latex.DrawLatex(0.57, 0.66, text)
     
     subobs_label = self.utils.formatted_subobs_label(self.observable)
@@ -639,13 +639,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.SetTopMargin(0.07)
     pad1.SetRightMargin(0.04)
     pad1.SetBottomMargin(0.13)
+    pad1.SetTicks(0,1)
     if plot_ratio:
       pad1.SetBottomMargin(0.)
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.66, 0.65, 0.8, 0.85)
-    self.utils.setup_legend(myLegend, 0.035)
+    myLegend = ROOT.TLegend(0.56, 0.62, 0.84, 0.89)
+    self.utils.setup_legend(myLegend, 0.045)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = self.get_maximum(name, overlay_list)
@@ -665,19 +666,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       
       if subconfig_name == overlay_list[0]:
         marker = 20
-        marker_pythia = marker+4
+        marker_pythia = 24
         color = 1
       elif subconfig_name == overlay_list[1]:
         marker = 21
-        marker_pythia = marker+4
+        marker_pythia = 25
         color = 600-6
       elif subconfig_name == overlay_list[2]:
-        marker = 22
-        marker_pythia = marker+4
+        marker = 33
+        marker_pythia = 27
         color = 632-4
       else:  # subconfig_name == overlay_list[3]:
-        marker = 23
-        marker_pythia = 32
+        marker = 34
+        marker_pythia = 28
         color = 416-2
 
       name = 'hmain_{}_R{}_{}_{}-{}'.format(
@@ -741,7 +742,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if min_pt_truth == 20:
             myBlankHisto.SetMaximum(1.5*ymax)
           elif min_pt_truth == 40:
-            myBlankHisto.SetMaximum(1.4*ymax)
+            myBlankHisto.SetMaximum(1.35*ymax)
           elif min_pt_truth == 60:
             myBlankHisto.SetMaximum(1.15*ymax)
           else:
@@ -765,6 +766,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           pad2.SetBottomMargin(0.4)
           pad2.SetLeftMargin(0.2)
           pad2.SetRightMargin(0.04)
+          pad2.SetTicks(1,1)
           pad2.Draw()
           pad2.cd()
           
@@ -786,7 +788,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             if jetR == 0.2:
               myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.75)
             elif jetR == 0.4:
-              myBlankHisto2.GetYaxis().SetRangeUser(0, 1.99)
+              myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.9)
             else: 
               myBlankHisto2.GetYaxis().SetRangeUser(0, 2.2)
           elif jetR == 0.2:
@@ -875,7 +877,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
       if subobs_label:
-        text += '{} = {}'.format(subobs_label, obs_setting)
+        text += '%s = %s' % (subobs_label, obs_setting)
       if grooming_setting:
         text += self.utils.formatted_grooming_label(grooming_setting)
       text_list.append(text)
@@ -901,13 +903,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.75, text)
     
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < %s' % str(0.9 - jetR)
+    text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
     text_latex.DrawLatex(0.25, 0.69, text)
     
-    text = str(min_pt_truth) + ' < #it{p}_{T}^{jet, ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.25, 0.63, text)
-    
+
     myLegend.Draw()
 
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, 
@@ -917,11 +919,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR),
                                                  int(min_pt_truth), int(max_pt_truth),
                                                  i_config, self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results') + '/all_results'
+
+
+    output_dir = getattr(self, 'output_dir_final_results')
     if not os.path.exists(output_dir):
       os.mkdir(output_dir)
-    outputFilename = os.path.join(output_dir, name)
+    outputFilename = os.path.join(output_dir, 'all_results', name)
     c.SaveAs(outputFilename)
+
+    # Write result to ROOT file
+    final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+    fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+    c.Write()
+
     c.Close()
 
   #----------------------------------------------------------------------

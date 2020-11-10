@@ -66,8 +66,8 @@ class process_ang_data(process_base.ProcessBase):
     for jetR in self.jetR_list:
       inf_MPIon = self.input_dir + "PythiaResults_R%s.root" % str(jetR)
       inf_MPIoff = self.input_dir + "PythiaResults_R%s_MPIoff.root" % str(jetR)
-      io = process_io_pyth.ProcessIO(input_file_MPIon=inf_MPIon, input_file_MPIoff=inf_MPIoff,
-                                     betas=self.beta_list)
+      io = process_io_pyth.ProcessIO(input_file_MPIoff=inf_MPIoff, input_file_MPIon=inf_MPIon,
+                                     mergebetween=False, betas=self.beta_list)
       self.df_ang_jets = io.load_data()
       print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -105,9 +105,6 @@ class process_ang_data(process_base.ProcessBase):
     self.lambda_limits = config["lambda_limits"]
     self.n_rap_bins = config["n_rap_bins"]
     self.rap_limits = config["rap_limits"]
-
-    # Configs for each jetR / beta
-    self.config_dict = config["ang"]
   
   #---------------------------------------------------------------
   # Initialize histograms
@@ -192,7 +189,9 @@ class process_ang_data(process_base.ProcessBase):
   #---------------------------------------------------------------
   def analyzeJets(self, jetR):
 
-    for index, ang_jets in tqdm(self.df_ang_jets.iterrows()):
+    # Use tqdm for following number of iterations when not running on slurm
+    #for index, ang_jets in tqdm(self.df_ang_jets.iterrows()):
+    for index, ang_jets in self.df_ang_jets.iterrows():
 
       if abs(ang_jets["ch_eta"]) > 0.9:
         continue
