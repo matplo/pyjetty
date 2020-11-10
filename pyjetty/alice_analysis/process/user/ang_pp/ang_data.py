@@ -270,8 +270,8 @@ class process_ang_data(process_base.ProcessBase):
       gl = self.grooming_labels[i]
 
       jet_sd = groomers[i].result(jet)
-      if abs(jet_sd.eta()) > (self.eta_max - jetR):  # Cut these for theory comparisons
-        continue
+      #if abs(jet_sd.eta()) > (self.eta_max - jetR):  # Cut these for theory comparisons
+      #  continue
         
       l_sd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
       getattr(self, ("h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet_sd.pt(), l_sd)

@@ -290,8 +290,8 @@ class process_ang_mc(process_base.ProcessBase):
   def analyzeEvents(self):
     
     # Fill det track histograms
-    [ self.fillTrackHistograms(fj_particles_det) 
-      for fj_particles_det in self.df_fjparticles['fj_particles_det'] ]
+    for fj_particles_det in self.df_fjparticles['fj_particles_det']:
+      self.fillTrackHistograms(fj_particles_det)
     
     fj.ClusterSequence.print_banner()
     print()
@@ -303,7 +303,7 @@ class process_ang_mc(process_base.ProcessBase):
       jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max - jetR)
       jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max - jetR)
       print('jet definition is:', jet_def)
-      print('jet selector for det-level is:', jet_selector_det,'\n')
+      print('jet selector for det-level is:', jet_selector_det)
       print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
 
       # For now assuming only SoftDrop is used
@@ -317,16 +317,14 @@ class process_ang_mc(process_base.ProcessBase):
           print('SoftDrop groomer is: {}'.format(sd.description()));
         groomers.append(sd)
 
-      for beta in self.beta_list:
+      # Iterate over the groupby and do jet-finding simultaneously for 
+      # fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
+      for fj_particles_det, fj_particles_truth in \
+          zip(self.df_fjparticles['fj_particles_det'],
+              self.df_fjparticles['fj_particles_truth']):
 
-        # Iterate over the groupby and do jet-finding simultaneously for 
-        # fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-        for fj_particles_det, fj_particles_truth in \
-            zip(self.df_fjparticles['fj_particles_det'],
-                self.df_fjparticles['fj_particles_truth']):
-
-          self.analyzeJets(fj_particles_det, fj_particles_truth, jet_def,
-                           jet_selector_det, jet_selector_truth_matched, beta, groomers)
+        self.analyze_jets(fj_particles_det, fj_particles_truth, jet_def,
+                          jet_selector_det, jet_selector_truth_matched, groomers)
                    
 
   #---------------------------------------------------------------
@@ -347,8 +345,8 @@ class process_ang_mc(process_base.ProcessBase):
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
-                  jet_selector_truth_matched, beta, groomers):
+  def analyze_jets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
+                   jet_selector_truth_matched, groomers):
 
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -380,6 +378,8 @@ class process_ang_mc(process_base.ProcessBase):
       # skip event if not satisfied -- since first jet in event is highest pt
       if not self.utils.is_det_jet_accepted(jet_det):
         self.hNevents.Fill(0)
+        if self.debug_level > 1:
+          print('event rejected due to jet acceptance')
         return
       
       #self.fill_det_before_matching(jet_det, jetR)
@@ -389,38 +389,25 @@ class process_ang_mc(process_base.ProcessBase):
       self.fill_truth_before_matching(jet_truth, jetR)
 
     # Loop through jets and set jet matching candidates for each jet in user_info
-    hname = "hDeltaR_All_R%s" % str(jetR).replace('.', '')
+    hname_deltaR = "hDeltaR_All_R%s" % str(jetR).replace('.', '')
     for jet_det in jets_det_selected:
       for jet_truth in jets_truth_selected_matched:
-        self.set_matching_candidates(jet_det, jet_truth, jetR, hname)
-   
+        self.set_matching_candidates(jet_det, jet_truth, jetR, hname_deltaR)
+
     # Loop through jets and set accepted matches
-    hname = 'hJetMatchingQA_R%s' % str(jetR).replace('.', '')
+    hname_QA = 'hJetMatchingQA_R%s' % str(jetR).replace('.', '')
     for jet_det in jets_det_selected:
-      self.set_matches_pp(jet_det, hname)
+      self.set_matches_pp(jet_det, hname_QA)
     
-    # Loop through jets and fill matching histograms
-    for jet_det in jets_det_selected:
-      self.fill_matching_histograms(jet_det, jetR)
+      # Fill matching histograms
+      if jet_det.has_user_info():
+        jet_truth = jet_det.python_info().match
+        if jet_truth:
+          self.fill_matching_histograms(jet_det, jet_truth, jetR)
 
-    for jet_det in jets_det_selected:
-      self.fill_jet_matches(jet_det, jetR, beta, groomers)
-
-  #---------------------------------------------------------------
-  # Loop through jets and fill response if both det and truth jets are unique match
-  #---------------------------------------------------------------
-  def fill_jet_matches(self, jet_det, jetR, beta, groomers):
-
-    # Check additional acceptance criteria
-    # skip event if not satisfied -- since first jet in event is highest pt
-    if not self.utils.is_det_jet_accepted(jet_det):
-      return
-
-    if jet_det.has_user_info():
-      jet_truth = jet_det.python_info().match
-      
-      if jet_truth:
-        self.fill_response_histograms(jet_det, jet_truth, jetR, beta, groomers)
+          # Fill response matrices for each subobservable
+          for beta in self.beta_list:
+            self.fill_response_histograms(jet_det, jet_truth, jetR, beta, groomers)
 
   '''
   #---------------------------------------------------------------
@@ -466,19 +453,15 @@ class process_ang_mc(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
   #---------------------------------------------------------------
-  def fill_matching_histograms(self, jet_det, jetR):
-      
-    if jet_det.has_user_info():
-      jet_truth = jet_det.python_info().match
-      
-      if jet_truth:
-        jet_pt_det_ungroomed = jet_det.pt()
-        jet_pt_truth_ungroomed = jet_truth.pt()
-        JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
-        getattr(self, 'hJES_R%s' % str(jetR).replace('.', '')).Fill(jet_pt_truth_ungroomed, JES)
+  def fill_matching_histograms(self, jet_det, jet_truth, jetR):
 
-        getattr(self, 'hResponse_JetPt_R%s' % 
-                str(jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
+    jet_pt_det_ungroomed = jet_det.pt()
+    jet_pt_truth_ungroomed = jet_truth.pt()
+    JES = (jet_pt_det_ungroomed - jet_pt_truth_ungroomed) / jet_pt_truth_ungroomed
+    getattr(self, 'hJES_R%s' % str(jetR).replace('.', '')).Fill(jet_pt_truth_ungroomed, JES)
+
+    getattr(self, 'hResponse_JetPt_R%s' % 
+            str(jetR).replace('.', '')).Fill(jet_pt_det_ungroomed, jet_pt_truth_ungroomed)
 
   #---------------------------------------------------------------
   # Fill response histograms
@@ -525,9 +508,9 @@ class process_ang_mc(process_base.ProcessBase):
       # soft drop jet
       jet_sd_det = sd.result(jet_det)
       jet_sd_tru = sd.result(jet_truth)
-      if abs(jet_sd_det.eta()) > (self.eta_max - jetR) or \
-         abs(jet_sd_tru.eta()) > (self.eta_max - jetR):      # Cut these for theory comparisons
-        continue
+      #if abs(jet_sd_det.eta()) > (self.eta_max - jetR) or \
+      #   abs(jet_sd_tru.eta()) > (self.eta_max - jetR):      # Cut these for theory comparisons
+      #  continue
 
       # lambda for soft drop jet
       l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
