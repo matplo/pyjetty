@@ -93,7 +93,7 @@ rebin_theory_response: False
 ###############################################################################
 # Analysis & plotting parameters
 file_format: ".pdf"
-output_dir: "/rstorage/alice/AnalysisResults/ang/TestAngR04_ptbin3"
+output_dir: "/rstorage/alice/AnalysisResults/ang/AngR04_ptbin3"
 roounfold_path: "/home/ezra/RooUnfold/libRooUnfold.so"
 
 analysis_observable: 'ang'
@@ -115,9 +115,9 @@ systematics_list:
   - binning
 
 # Paths to processing output, to be used for unfolding
-main_data: '/rstorage/alice/AnalysisResults/ang/44195/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/61681/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/61683/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/ang/230386/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/230547/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/230548/AnalysisResultsFinal.root'
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5

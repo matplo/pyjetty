@@ -233,6 +233,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               # Loop through each pT-bin
               for i, pt_min in enumerate(self.theory_pt_bins[0:-1]):
                 pt_max = self.theory_pt_bins[i+1]
+
+                # Get scale factor for this pT bin.
+                # This reverses the self-normalization of 1/sigma for correct pT scaling
+                #     when doing doing projections onto the y-axis.
+                scale_f = self.pt_scale_factor(pt_min, pt_max, -5.5)
+
                 th_dir = os.path.join(
                   self.theory_dir, "R%s" % str(jetR).replace('.', ''), 
                   "pT%s_%s" % (pt_min, pt_max), "beta%s" % str(beta).replace('.', 'p'))
@@ -240,7 +246,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 # Load theory predictions for lambda values
                 with open(os.path.join(th_dir, "%i%i%i.txt" % (l, m, n))) as f:
                   lines = f.read().split('\n')
-                  val_li = [line.split()[1] for line in lines]
+                  val_li = [float(line.split()[1])*scale_f for line in lines]
 
                 if exp_test:
                   val_li = [1/(x+0.4+l) for x in np.linspace(0, 0.5, 51, True)] + \
@@ -250,14 +256,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                   #val = [0.6 - x for x in np.linspace(0, 1, 101, True)]
 
                 for j, val in enumerate(val_li):
-                  hist.SetBinContent(i+1, j+1, float(val))
+                  hist.SetBinContent(i+1, j+1, val)
                   if l == m == n == 0:
-                    hist_min.SetBinContent(i+1, j+1, float(val))
-                    hist_max.SetBinContent(i+1, j+1, float(val))
+                    hist_min.SetBinContent(i+1, j+1, val)
+                    hist_max.SetBinContent(i+1, j+1, val)
                   elif float(val) < hist_min.GetBinContent(i+1, j+1):
-                    hist_min.SetBinContent(i+1, j+1, float(val))
+                    hist_min.SetBinContent(i+1, j+1, val)
                   elif float(val) > hist_max.GetBinContent(i+1, j+1):
-                    hist_max.SetBinContent(i+1, j+1, float(val))
+                    hist_max.SetBinContent(i+1, j+1, val)
 
               parton_hists[l][m].append(hist)
 
@@ -358,11 +364,18 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       pt_min = self.theory_pt_bins[i]
       pt_max = self.theory_pt_bins[j]
 
+      # Get scale factor for this pT bin.
+      # This reverses the self-normalization of 1/sigma for correct pT scaling
+      #     when doing doing projections onto the y-axis.
+      scale_f = self.pt_scale_factor(pt_min, pt_max, -5.5)
+
       # Note: bins in ROOT are 1-indexed (0 bin is underflow). Also last bin is inclusive
       h_mpi_off_proj = h_mpi_off.ProjectionY(
-        '%s_py_%s_%i' % (name_mpi_off, str(i), ri), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+        '%s_py_%s_%i' % (name_mpi_off, str(i), ri),
+        mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
       h_mpi_on_proj = h_mpi_on.ProjectionY(
-        '%s_py_%s_%i' % (name_mpi_on, str(i), ri), mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
+        '%s_py_%s_%i' % (name_mpi_on, str(i), ri),
+        mpi_bin_edge_indices[index]+1, mpi_bin_edge_indices[index+1])
 
       # Create ratio plot for scaling
       h_mpi_ratio = h_mpi_on_proj.Clone()
@@ -378,10 +391,18 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h_min_bin = h_min.ProjectionY("%s_parton%s" % (name_min, pt_label), i+1, j)
       h_max_bin = h_max.ProjectionY("%s_parton%s" % (name_max, pt_label), i+1, j)
 
-      # Keep normalization by dividing by the number of bins added in projection
-      h_cent_bin.Scale(1/(j-i))
-      h_min_bin.Scale(1/(j-i))
-      h_max_bin.Scale(1/(j-i))
+      # Keep normalization by dividing by the scale factor
+      #h_cent_bin.Scale(1/(j-i))
+      #h_min_bin.Scale(1/(j-i))
+      #h_max_bin.Scale(1/(j-i))
+      h_cent_bin.Scale(1/scale_f)
+      h_min_bin.Scale(1/scale_f)
+      h_max_bin.Scale(1/scale_f)
+      # I think there might be some small constant factor differences here...
+      # so we make sure normalization is correct
+      h_min_bin.Scale(1/h_cent_bin.Integral("width"))
+      h_max_bin.Scale(1/h_cent_bin.Integral("width"))
+      h_cent_bin.Scale(1/h_cent_bin.Integral("width"))
 
       # Set new names and titles to prevent issues with saving histograms
       h_cent_bin.SetNameTitle("%s_parton%s" % (name_cent, pt_label),
@@ -422,8 +443,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             h_folded_ch_bin = folded_ch_hists[l][m][n].ProjectionY(
               name_cent + ("_ch%s_%i" % (pt_label, ri)), i+1, j)
 
-            h_folded_h_bin.Scale(1/(j-i))
-            h_folded_ch_bin.Scale(1/(j-i))
+            #h_folded_h_bin.Scale(1/(j-i))
+            #h_folded_ch_bin.Scale(1/(j-i))
 
             # Scale all by integral of central prediction values
             # TODO: See if there's a better way to do this... shouldn't have to scale?
@@ -515,6 +536,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       setattr(self, "%s_ch%s_%i" % (name_cent, pt_label, ri), h_cent_ch_bin)
       setattr(self, "%s_ch%s_%i" % (name_min, pt_label, ri), h_min_ch_bin)
       setattr(self, "%s_ch%s_%i" % (name_max, pt_label, ri), h_max_ch_bin)
+
+
+  #---------------------------------------------------------------
+  # Returns number proportional to the integral of power law pTjet^alpha
+  #---------------------------------------------------------------
+  def pt_scale_factor(self, ptmin, ptmax, alpha):
+    return 1e9 * (ptmin**(alpha + 1) - ptmax**(alpha + 1))
 
 
   #---------------------------------------------------------------
@@ -652,6 +680,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
+    if self.do_theory and float(obs_label) in self.theory_beta:
+      # Compare parton-level theory to parton-level event generators
+      self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
+
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
     for i in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[i]
@@ -680,10 +712,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                       min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=False):
 
     # For theory plots, whether or not to show original parton-level predictions
-    show_parton_theory = True
+    show_parton_theory = False
+    show_everything_else = True  # set 'False' to show *only* parton-level theory
+    rebin_folded = True  # combine every 2 bins to reduce statistical fluctuations
 
     # For theory plots, whether or not to show the NP / P region
     show_np_region = True
+    lambda_np_cutoff = None   # initialize variable for setting later
 
     # For theory plots, whether or not to show the folded uncertainty bands
     show_folded_uncertainty = True
@@ -734,48 +769,60 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(xtitle)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.02)
+    myBlankHisto.GetXaxis().SetTitleSize(0.055)
     myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(2.5*h.GetBinContent(int(0.5*h.GetNbinsX())))
-    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
-      myBlankHisto.SetMaximum(1.7*h.GetMaximum())
+    myBlankHisto.GetYaxis().SetTitleOffset(1.1)
+    myBlankHisto.GetYaxis().SetTitleSize(0.055)
     myBlankHisto.SetMinimum(0.)
-    myBlankHisto.Draw("E")
+    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
+      maxval = 1.7*h.GetMaximum()
+      myBlankHisto.SetMaximum(maxval)
+      myBlankHisto.Draw("E")
+    elif not plot_theory or not show_parton_theory:
+      maxval = 2.3*h.GetBinContent(int(0.4*h.GetNbinsX()))
+      myBlankHisto.SetMaximum(maxval)
+      myBlankHisto.Draw("E")
 
     if plot_theory:
       label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
 
+      # Also plot the theory predictions pre-folding for comparison...
+      name_cent = "theory_cent_%s_%s_parton_PtBin%i-%i" % \
+                  (self.observable, label, min_pt_truth, max_pt_truth)
+      name_min = "theory_min_%s_%s_parton_PtBin%i-%i" % \
+                 (self.observable, label, min_pt_truth, max_pt_truth)
+      name_max = "theory_max_%s_%s_parton_PtBin%i-%i" % \
+                 (self.observable, label, min_pt_truth, max_pt_truth)
+
+      hcent_p = getattr(self, name_cent)
+      hmin_p = getattr(self, name_min)
+      hmax_p = getattr(self, name_max)
+
       if show_parton_theory:
-        # Also plot the theory predictions pre-folding for comparison...
-        name_cent = "theory_cent_%s_%s_parton_PtBin%i-%i" % \
-                    (self.observable, label, min_pt_truth, max_pt_truth)
-        name_min = "theory_min_%s_%s_parton_PtBin%i-%i" % \
-                   (self.observable, label, min_pt_truth, max_pt_truth)
-        name_max = "theory_max_%s_%s_parton_PtBin%i-%i" % \
-                   (self.observable, label, min_pt_truth, max_pt_truth)
+        myBlankHisto.SetMaximum(1.25*hmax_p.GetMaximum())
+        myBlankHisto.Draw("E")
 
-        hcent_p = getattr(self, name_cent)
-        hmin_p = getattr(self, name_min)
-        hmax_p = getattr(self, name_max)
+      n = hcent_p.GetNbinsX()
+      x = array('d', [hcent_p.GetXaxis().GetBinCenter(i) for i in range(1, hcent_p.GetNbinsX()+1)])
+      y = array('d', [hcent_p.GetBinContent(i) for i in range(1, hcent_p.GetNbinsX()+1)])
+      xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
+      xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
+      yerrup = array('d', [hmax_p.GetBinContent(i)-y[i-1] for i in range(1, hmax_p.GetNbinsX()+1)])
+      yerrdn = array('d', [y[i-1]-hmin_p.GetBinContent(i) for i in range(1, hmin_p.GetNbinsX()+1)])
 
-        n = hcent_p.GetNbinsX()
-        x = array('d', [hcent_p.GetXaxis().GetBinCenter(i) for i in range(1, hcent_p.GetNbinsX()+1)])
-        y = array('d', [hcent_p.GetBinContent(i) for i in range(1, hcent_p.GetNbinsX()+1)])
-        xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
-        xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
-        yerrup = array('d', [hmax_p.GetBinContent(i)-y[i-1] for i in range(1, hmax_p.GetNbinsX()+1)])
-        yerrdn = array('d', [y[i-1]-hmin_p.GetBinContent(i) for i in range(1, hmin_p.GetNbinsX()+1)])
+      color = self.ColorArray[4]
 
-        color = self.ColorArray[4]
-        if show_np_region:
-          # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
-          # Formula assumes that jet pT xsec falls like pT^(-5.5)
-          formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5)/(min_pt_truth**-4.5 - max_pt_truth**-4.5)
-          lambda_np_cutoff = round(self.Lambda / (formula_pt * jetR), 2)
-          if lambda_np_cutoff > 1:
-            lambda_np_cutoff = 1
-          index_np_cutoff = [round(val, 2) for val in x].index(lambda_np_cutoff)
+      if show_np_region:
+        # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
+        # Formula assumes that jet pT xsec falls like pT^(-5.5)
+        formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5)/(min_pt_truth**-4.5 - max_pt_truth**-4.5)
+        lambda_np_cutoff = round(self.Lambda / (formula_pt * jetR), 2)
+        if lambda_np_cutoff > 1:
+          lambda_np_cutoff = 1
+        index_np_cutoff = [round(val, 2) for val in x].index(lambda_np_cutoff)
 
+        if show_parton_theory:
           #+1 to include lambda in NP
           h_parton_theory_np = ROOT.TGraphAsymmErrors(
             index_np_cutoff+1, x[:index_np_cutoff+1], y[:index_np_cutoff+1], xerrdn[:index_np_cutoff+1],
@@ -785,39 +832,23 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             xerrup[index_np_cutoff:], yerrdn[index_np_cutoff:], yerrup[index_np_cutoff:])
 
           h_parton_theory_np.SetFillColorAlpha(color, 0.5)
-          h_parton_theory_p.SetFillColorAlpha(color, 0.25)
           h_parton_theory_np.SetFillStyle(3002)
-          h_parton_theory_np.Draw('3 same')
-          h_parton_theory_p.Draw('3 same')
+          h_parton_theory_np.SetLineStyle(5)
+          h_parton_theory_np.SetLineColor(color)
+          h_parton_theory_np.SetLineWidth(3)
+          h_parton_theory_np.Draw('L 3 same')
 
-          # Split central parton curve in NP and P regions
-          hcent_p_np = ROOT.TH1F(
-            name_cent+"_nonpert", name_cent+"_nonpert", index_np_cutoff+1, 
-            array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(1, index_np_cutoff+3)]))
-          hcent_p_p = ROOT.TH1F(
-            name_cent+"_pert", name_cent+"_pert", n-index_np_cutoff, 
-            array('d', [hcent_p.GetXaxis().GetBinLowEdge(i) for i in range(index_np_cutoff+1, n+2)]))
-          for i in range(1, index_np_cutoff+2):
-            hcent_p_np.SetBinContent(i, y[i-1])
-          for i in range(1, n+1-index_np_cutoff):
-            hcent_p_p.SetBinContent(i, y[i-1+index_np_cutoff])
+          h_parton_theory_p.SetFillColorAlpha(color, 0.25)
+          h_parton_theory_p.SetLineColor(color)
+          h_parton_theory_p.SetLineWidth(3)
+          h_parton_theory_p.Draw('L 3 same')
 
-          hcent_p_np.SetLineStyle(5)
-          hcent_p_np.SetLineColor(color)
-          hcent_p_np.SetLineWidth(3)
-          hcent_p_np.Draw('L hist same')
-
-          hcent_p_p.SetLineColor(color)
-          hcent_p_p.SetLineWidth(3)
-          hcent_p_p.Draw('L hist same')
-
-        else:   # don't show NP / P region on the plot
-          h_parton_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
-          h_parton_theory.SetFillColorAlpha(color, 0.25)
-          h_parton_theory.Draw('3 same')
-          hcent_p.SetLineColor(color)
-          hcent_p.SetLineWidth(3)
-          hcent_p.Draw('L hist same')
+      elif show_parton_theory:   # don't show NP / P region on the plot
+        h_parton_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+        h_parton_theory.SetFillColorAlpha(color, 0.25)
+        h_parton_theory.SetLineColor(color)
+        h_parton_theory.SetLineWidth(3)
+        h_parton_theory.Draw('L 3 same')
 
         # Dotted lines for error bars
         #hmin_p.SetLineColor(color)
@@ -846,6 +877,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hmax = getattr(self, name_max)
         color = self.ColorArray[5 + ri]
 
+        if rebin_folded:
+          hcent = hcent.Rebin(); hcent.Scale(1/2)
+          hmin = hmin.Rebin(); hmin.Scale(1/2)
+          hmax = hmax.Rebin(); hmax.Scale(1/2)
+
         if show_folded_uncertainty:
           n = hcent.GetNbinsX()
           x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
@@ -857,13 +893,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
 
           h_ch_theory.SetFillColorAlpha(color, 0.25)
-          h_ch_theory.Draw('3 same')
+          h_ch_theory.SetLineColor(color)
+          h_ch_theory.SetLineWidth(3)
+          if show_everything_else:
+            h_ch_theory.Draw('L 3 same')
           hasym_list.append(h_ch_theory)
 
-        hcent.SetLineColor(color)
-        hcent.SetLineWidth(3)
-        hcent.Draw('L hist same')
-        hcent_list.append(hcent)  # Save for legend
+        if show_everything_else and not show_folded_uncertainty:
+          hcent.SetLineColor(color)
+          hcent.SetLineWidth(3)
+          hcent.Draw('L hist same')
+          hcent_list.append(hcent)  # Save for legend
 
         # Dotted lines for error bars
         #hmin.SetLineColor(color)
@@ -875,7 +915,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         #hmax.SetLineWidth(1)
         #hmax.SetLineStyle(2)
         #hmax.Draw('L hist same')
-
 
     if plot_pythia:
     
@@ -893,61 +932,89 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       else:
         print('No PYTHIA prediction for %s %s' % (self.observable, obs_label))
         plot_pythia = False
-    
-    h_sys.DrawCopy('E2 same')
-    h.DrawCopy('PE X0 same')
+
+    # Vertical line for perturbative / non-perturbative region
+    if plot_theory and show_everything_else:
+      # Can provide different max values between legend and bin text
+      if lambda_np_cutoff < 0.58 * truth_bin_array[-1]:
+        m = 0.53 * maxval
+      else:
+        m = 0.53 * maxval
+      line = ROOT.TLine(lambda_np_cutoff, 0, lambda_np_cutoff, m)
+      line.SetLineColor(self.ColorArray[4])
+      line.SetLineStyle(2)
+      line.SetLineWidth(2)
+      line.Draw()
+
+    if show_everything_else:
+      h_sys.DrawCopy('E2 same')
+      h.DrawCopy('PE X0 same')
   
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
+    text_xval = 0.63
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.58, 0.87, text)
+    text_latex.DrawLatex(text_xval, 0.87, text)
     
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.58, 0.8, text)
+    text_latex.DrawLatex(text_xval, 0.8, text)
 
-    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.58, 0.73, text)
+    text = "anti-#it{k}_{T} jets,   #it{R} = %s" % str(jetR)
+    text_latex.DrawLatex(text_xval, 0.73, text)
 
-    text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
-    text_latex.DrawLatex(0.58, 0.66, text)
-    
+    if plot_theory and show_parton_theory and not show_everything_else:
+      text = str(min_pt_truth) + ' < #it{p}_{T,jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    else:
+      text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.DrawLatex(text_xval, 0.66, text)
+
+    text = '| #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
     subobs_label = self.utils.formatted_subobs_label(self.observable)
-    delta = 0.
     if subobs_label:
-      text = '%s = %s' % (subobs_label, obs_setting)
-      text_latex.DrawLatex(0.58, 0.59, text)
-      delta = 0.07
+      text += ',   %s = %s' % (subobs_label, obs_setting)
+    delta = 0.07
+    text_latex.DrawLatex(text_xval, 0.66-delta, text)
     
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting)
-      text_latex.DrawLatex(0.58, 0.59-delta, text)
+      text_latex.DrawLatex(text_xval, 0.66-2*delta, text)
       
       text_latex.SetTextSize(0.04)
       text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-      text_latex.DrawLatex(0.58, 0.52-delta, text)
+      text_latex.DrawLatex(text_xval, 0.66-3*delta, text)
     
       if plot_pythia:
         text_latex.SetTextSize(0.04)
         text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (
           ', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
-        text_latex.DrawLatex(0.57, 0.52-delta, text)
+        text_latex.DrawLatex(text_xval, 0.66-3*delta, text)
 
-    myLegend = ROOT.TLegend(0.22, 0.65, 0.45, 0.9)
+    if plot_theory and show_parton_theory and not show_everything_else:
+      myLegend = ROOT.TLegend(0.21, 0.79, 0.45, 0.91)
+    else:
+      myLegend = ROOT.TLegend(0.23, 0.57, text_xval-0.02, 0.92)
     self.utils.setup_legend(myLegend, 0.035)
-    myLegend.AddEntry(h, 'ALICE pp', 'pe')
-    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+    if show_everything_else:
+      myLegend.AddEntry(h, 'ALICE pp', 'pe')
+      myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     if plot_theory:
       if show_parton_theory:
         if show_np_region:
-          myLegend.AddEntry(hcent_p_np, 'NLO+NLL (non-perturbative)', 'lf')
-          myLegend.AddEntry(hcent_p_p, 'NLO+NLL (perturbative)', 'lf')
+          myLegend.AddEntry(h_parton_theory_np, 'NLO+NLL (non-perturbative)', 'lf')
+          myLegend.AddEntry(h_parton_theory_p, 'NLO+NLL (perturbative)', 'lf')
         else:
           myLegend.AddEntry(hcent_p, 'NLO+NLL (Parton)', 'lf')
-      for ri, lab in enumerate(self.theory_response_labels):
-        myLegend.AddEntry(hcent_list[ri], 'NLO+NLL #otimes '+lab, 'lf')
+      if show_everything_else:
+        if show_folded_uncertainty:
+          for ri, lab in enumerate(self.theory_response_labels):
+            myLegend.AddEntry(hasym_list[ri], 'NLO+NLL #otimes '+lab, 'lf')
+        else:
+          for ri, lab in enumerate(self.theory_response_labels):
+            myLegend.AddEntry(hcent_list[ri], 'NLO+NLL #otimes '+lab, 'lf')
+        myLegend.AddEntry(line, '#it{#lambda}_{#it{#beta}}^{NP region} #leq #Lambda / (#it{p}_{T,jet}^{ch} #it{R})', 'lf')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
@@ -1063,7 +1130,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myBlankHisto.SetXTitle(xtitle)
       myBlankHisto.GetYaxis().SetTitleOffset(1.5)
       myBlankHisto.SetYTitle(ytitle)
-      val = abs(2.5*h_ratio_mpi.GetBinContent(int(0.5*h_ratio_mpi.GetNbinsX())))
+      val = 2.5*max([h_ratio_total.GetBinContent(i) for i in range(5, h_ratio_total.GetNbinsX())])
       myBlankHisto.SetMaximum(val)
       myBlankHisto.SetMinimum(0)
       myBlankHisto.Draw("E")
@@ -1099,12 +1166,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       delta = 0.
       if subobs_label:
         text = '%s = %s' % (subobs_label, obs_setting)
+        text += ',   %s' % self.theory_response_labels[ri]
         text_latex.DrawLatex(0.6, 0.59, text)
         delta = 0.07
 
       myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
       self.utils.setup_legend(myLegend, 0.035)
-      myLegend.AddEntry(h_ratio_total, 'total ratio', 'pe')
+      myLegend.AddEntry(h_ratio_total, 'Total ratio', 'pe')
       myLegend.AddEntry(h_ratio_h, 'p to h ratio', 'pe')
       myLegend.AddEntry(h_ratio_ch, 'h to ch ratio', 'pe')
       myLegend.AddEntry(h_ratio_mpi, 'MPI scaling ratio', 'pe')
@@ -1169,7 +1237,162 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hTheoryProjection_h.Write()
       hTheoryProjection_ch.Write()
 
-    outf.Close
+      # Reset axes zoom in case histograms used later
+      thn_ch.GetAxis(0).UnZoom()
+      thn_h.GetAxis(0).UnZoom()
+
+    outf.Close()
+
+
+  #----------------------------------------------------------------------
+  def plot_parton_comp(self, jetR, obs_label, obs_setting, grooming_setting):
+
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
+
+    # Directory to save the histograms
+    output_dir = os.path.join(self.output_dir_theory, "parton_comp")
+    if not os.path.exists(output_dir):
+      os.mkdir(output_dir)
+
+    hcent_p = getattr(self, "theory_cent_%s_%s_parton" % (self.observable, label))
+    hmin_p = getattr(self, "theory_min_%s_%s_parton" % (self.observable, label))
+    hmax_p = getattr(self, "theory_max_%s_%s_parton" % (self.observable, label))
+
+    n_obs_bins = hcent_p.GetYaxis().GetNbins()
+    obs_edges = [round(hcent_p.GetYaxis().GetBinLowEdge(i), 3) for i in range(1, n_obs_bins+2)]
+
+    # Make projections in pT bins at parton level
+    for i, min_pt in list(enumerate(self.theory_pt_bins))[:-1]:
+      max_pt = self.theory_pt_bins[i+1]
+
+      # Get the theory prediction
+      hcent_p.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
+      hmin_p.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
+      hmax_p.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
+
+      hcent_proj_p = hcent_p.ProjectionY()
+      hmin_proj_p = hmin_p.ProjectionY()
+      hmax_proj_p = hmax_p.ProjectionY()
+
+      # Fix normalization
+      hmin_proj_p.Scale(1/hcent_proj_p.Integral("width"))
+      hmax_proj_p.Scale(1/hcent_proj_p.Integral("width"))
+      hcent_proj_p.Scale(1/hcent_proj_p.Integral("width"))
+
+      # Initialize canvas & pad for plotting
+      name = 'cTheoryComp_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt, max_pt)
+      c = ROOT.TCanvas(name, name, 600, 450)
+      c.Draw()
+      c.cd()
+
+      name = 'pTheoryComp_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt, max_pt)
+      myPad = ROOT.TPad(name, name, 0, 0, 1, 1)
+      myPad.SetLeftMargin(0.2)
+      myPad.SetTopMargin(0.07)
+      myPad.SetRightMargin(0.04)
+      myPad.SetBottomMargin(0.13)
+      myPad.Draw()
+      myPad.cd()
+
+      # Find the max bin: the last bin where the angularity is 0
+      maxbin = hcent_proj_p.GetNbinsX()   # initialize
+      while hmax_proj_p.GetBinContent(maxbin) < 1e-3 and maxbin > 1:
+        maxbin -= 1
+
+      # Use blank histogram to initialize this range
+      bin_array = array('d', obs_edges[0:maxbin+1])
+      name = 'hTheoryComp_R{}_{}_{}-{}_Blank'.format(jetR, obs_label, min_pt, max_pt)
+      myBlankHisto = ROOT.TH1F(name, name, maxbin, bin_array)
+      myBlankHisto.SetNdivisions(505)
+      myBlankHisto.SetXTitle(self.xtitle)
+      myBlankHisto.GetXaxis().SetTitleOffset(1.02)
+      myBlankHisto.GetXaxis().SetTitleSize(0.055)
+      myBlankHisto.SetYTitle(self.ytitle)
+      myBlankHisto.GetYaxis().SetTitleOffset(1.1)
+      myBlankHisto.GetYaxis().SetTitleSize(0.055)
+      myBlankHisto.SetMinimum(0.)
+      myBlankHisto.SetMaximum(1.7*hmax_proj_p.GetMaximum())
+      myBlankHisto.Draw()
+
+      x = array('d', [round(hcent_proj_p.GetXaxis().GetBinCenter(i), 2) for i in range(1, maxbin+1)])
+      y = array('d', [hcent_proj_p.GetBinContent(i) for i in range(1, maxbin+1)])
+      xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)] + [0])
+      xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)])
+      yerrup = array('d', [hmax_proj_p.GetBinContent(i)-y[i-1] for i in range(1, maxbin+1)])
+      yerrdn = array('d', [y[i-1]-hmin_proj_p.GetBinContent(i) for i in range(1, maxbin+1)])
+      h_theory = ROOT.TGraphAsymmErrors(maxbin, x, y, xerrdn, xerrup, yerrdn, yerrup)
+      color = self.ColorArray[4]
+      h_theory.SetFillColorAlpha(color, 0.25)
+      h_theory.SetLineColor(color)
+      h_theory.SetLineWidth(3)
+      h_theory.Draw('L 3 same')
+
+      h_resp_list = []
+      for ri in range(len(self.theory_response_files)):
+        # Get event generator histogram
+        thn = getattr(self, "hResponse_theory_ch_%s_%i" % (label, ri))
+
+        # Get the response matrix prediction
+        thn.GetAxis(1).SetRangeUser(int(min_pt), int(max_pt))
+        h_response_projection = thn.Projection(3)
+        name = "hTheoryComp_p_%s_PtBin%i-%i_%s" % \
+                  (label, min_pt, max_pt, self.theory_response_labels[ri])
+        h_response_projection.SetNameTitle(name, name)
+        h_response_projection.SetDirectory(0)
+
+        # Rescale by integral for correct normalization
+        h_response_projection.Scale(1/h_response_projection.Integral("width"))
+
+        color = self.ColorArray[4+1+ri]
+        h_response_projection.SetLineColor(color)
+        h_response_projection.SetLineWidth(3)
+        h_response_projection.Draw('L hist same')
+        h_resp_list.append(h_response_projection)
+
+        # Reset thn range in case used later
+        thn.GetAxis(1).UnZoom()
+
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text_xval = 0.61
+      text = 'ALICE {}'.format(self.figure_approval_status)
+      text_latex.DrawLatex(text_xval, 0.87, text)
+
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+      text_latex.SetTextSize(0.045)
+      text_latex.DrawLatex(text_xval, 0.8, text)
+
+      text = "anti-#it{k}_{T} jets,   #it{R} = %s" % str(jetR)
+      text_latex.DrawLatex(text_xval, 0.73, text)
+
+      text = str(min_pt) + ' < #it{p}_{T,jet}^{parton} < ' + str(max_pt) + ' GeV/#it{c}'
+      text_latex.DrawLatex(text_xval, 0.66, text)
+
+      text = '| #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
+      subobs_label = self.utils.formatted_subobs_label(self.observable)
+      if subobs_label:
+        text += ',   %s = %s' % (subobs_label, obs_setting)
+      delta = 0.07
+      text_latex.DrawLatex(text_xval, 0.66-delta, text)
+
+      myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
+      self.utils.setup_legend(myLegend, 0.035)
+      myLegend.AddEntry(h_theory, 'NLO+NLL', 'lf')
+      for rl, l in enumerate(self.theory_response_labels):
+        myLegend.AddEntry(h_resp_list[rl], l, 'lf')
+      myLegend.Draw()
+
+      name = 'hTheoryRatio_R{}_{}_{}-{}{}'.format(
+        self.utils.remove_periods(jetR), obs_label,
+        int(min_pt), int(max_pt), self.file_format)
+      outputFilename = os.path.join(output_dir, name)
+      c.SaveAs(outputFilename)
+      c.Close()
+
+    # Reset parton-level range in case used later
+    hcent_p.GetXaxis().UnZoom()
+    hmin_p.GetXaxis().UnZoom()
+    hmax_p.GetXaxis().UnZoom()
 
 
   #----------------------------------------------------------------------
