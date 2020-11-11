@@ -144,7 +144,7 @@ class ProcessMCBase(process_base.ProcessBase):
       tree_dir = 'PWGHF_TreeCreator'
     io_det = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                   track_tree_name='tree_Particle', use_ev_id_ext=self.use_ev_id_ext)
-    df_fjparticles_det = io_det.load_data(reject_tracks_fraction=self.reject_tracks_fraction)
+    df_fjparticles_det = io_det.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
@@ -155,7 +155,7 @@ class ProcessMCBase(process_base.ProcessBase):
     # a SeriesGroupBy object of fastjet particles per event
     io_truth = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                     track_tree_name='tree_Particle_gen', use_ev_id_ext=self.use_ev_id_ext)
-    df_fjparticles_truth = io_truth.load_data()
+    df_fjparticles_truth = io_truth.load_data(m=self.m)
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
@@ -173,7 +173,7 @@ class ProcessMCBase(process_base.ProcessBase):
     
     # Set up the Pb-Pb embedding object
     if not self.is_pp and not self.thermal_model:
-        self.process_io_emb = process_io_emb.ProcessIO_Emb(self.emb_file_list, track_tree_name='tree_Particle')
+        self.process_io_emb = process_io_emb.ProcessIO_Emb(self.emb_file_list, track_tree_name='tree_Particle', m=self.m)
     
     # ------------------------------------------------------------------------
 
