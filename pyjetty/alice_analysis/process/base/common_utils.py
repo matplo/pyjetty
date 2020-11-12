@@ -67,6 +67,8 @@ class CommonUtils(common_base.CommonBase):
     obs_label = ''
     if obs_setting:
       obs_label += '{}'.format(obs_setting)
+      if grooming_setting:
+        obs_label += '_'
     if grooming_setting:
       obs_label += '{}'.format(self.grooming_label(grooming_setting))
     return obs_label
