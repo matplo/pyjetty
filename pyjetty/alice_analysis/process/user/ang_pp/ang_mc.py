@@ -32,7 +32,7 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io, process_utils, jet_info, process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa, pT_bin
+#from pyjetty.alice_analysis.process.user.ang_pp.helpers import pT_bin
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -473,8 +473,9 @@ class process_ang_mc(process_base.ProcessBase):
     jet_pt_truth = jet_truth.pt()
 
     # just use kappa = 1 for now
-    l_det = lambda_beta_kappa(jet_det, jetR, beta, 1) 
-    l_tru = lambda_beta_kappa(jet_truth, jetR, beta, 1)
+    kappa = 1
+    l_det = fjext.lambda_beta_kappa(jet_det, beta, kappa, jetR) 
+    l_tru = fjext.lambda_beta_kappa(jet_truth, beta, kappa, jetR)
 
     label = "R%s_%s" % (str(jetR), str(beta))
 
@@ -513,13 +514,14 @@ class process_ang_mc(process_base.ProcessBase):
       #  continue
 
       # lambda for soft drop jet
-      l_sd_det = lambda_beta_kappa(jet_sd_det, jetR, beta, 1)
-      l_sd_tru = lambda_beta_kappa(jet_sd_tru, jetR, beta, 1)
+      l_sd_det = fjext.lambda_beta_kappa(jet_sd_det, beta, kappa, jetR)
+      l_sd_tru = fjext.lambda_beta_kappa(jet_sd_tru, beta, kappa, jetR)
 
-      getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_sd_det.pt(), l_sd_det)
-      getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet_sd_tru.pt(), l_sd_tru)
+      # Should fill histograms using the ungroomed jet pT
+      getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_pt_det, l_sd_det)
+      getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet_pt_truth, l_sd_tru)
       getattr(self, 'hResponse_ang_%s_%s' % (label, gl)).Fill(l_sd_det, l_sd_tru)
-      x = ([jet_sd_det.pt(), jet_sd_tru.pt(), l_sd_det, l_sd_tru])
+      x = ([jet_pt_det, jet_pt_truth, l_sd_det, l_sd_tru])
       x_array = array('d', x)
       getattr(self, 'hResponse_JetPt_ang_%s_%s' % (label, gl)).Fill(x_array)
 

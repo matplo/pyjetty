@@ -32,7 +32,6 @@ import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io, process_utils, process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa, pT_bin
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -257,7 +256,8 @@ class process_ang_data(process_base.ProcessBase):
   #---------------------------------------------------------------
   def fillJetHistograms(self, jet, jetR, beta, groomers):
 
-    l = lambda_beta_kappa(jet, jetR, beta, 1)
+    kappa = 1
+    l = fjext.lambda_beta_kappa(jet, beta, kappa, jetR)
 
     # Fill plots
     getattr(self, "h_ang_JetPt_R%s_%s" % (jetR, beta)).Fill(jet.pt(), l)
@@ -272,10 +272,11 @@ class process_ang_data(process_base.ProcessBase):
       jet_sd = groomers[i].result(jet)
       #if abs(jet_sd.eta()) > (self.eta_max - jetR):  # Cut these for theory comparisons
       #  continue
-        
-      l_sd = lambda_beta_kappa(jet_sd, jetR, beta, 1)
-      getattr(self, ("h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet_sd.pt(), l_sd)
-      getattr(self, ("h_ang_JetRap_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet_sd.rap(), l_sd)
+
+      l_sd = fjext.lambda_beta_kappa(jet_sd, beta, kappa, jetR)
+      # Should fill histograms using the ungroomed jet pT & rapidity
+      getattr(self, ("h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet.pt(), l_sd)
+      getattr(self, ("h_ang_JetRap_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet.rap(), l_sd)
 
 
 ##################################################################

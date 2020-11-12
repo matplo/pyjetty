@@ -24,9 +24,10 @@ def deltaR(pjet1, pjet2):
 '''
 
 # Return jet angularity for fastjet.PseudoJet object
-def lambda_beta_kappa(jet, jetR, beta, kappa):
-  return sum( [ (constit.pt() / jet.pt())**kappa * (jet.delta_R(constit) / jetR)**beta 
-                for constit in jet.constituents() ] )
+# OBSOLETE: PLEASE USE fjext.lambda_beta_kappa(jet, beta, kappa, jetR) within heppy
+#def lambda_beta_kappa(jet, jetR, beta, kappa):
+#  return sum( [ (constit.pt() / jet.pt())**kappa * (jet.delta_R(constit) / jetR)**beta 
+#                for constit in jet.constituents() ] )
 
 # Return angularity for single fastjet.PseudoJet object with no constituents
 def lambda_beta_kappa_i(constit, jet, jetR, beta, kappa):
