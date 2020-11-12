@@ -111,7 +111,7 @@ class ProcessDataBase(process_base.ProcessBase):
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle',
                               is_pp=self.is_pp, use_ev_id_ext=self.use_ev_id_ext)
-    self.df_fjparticles = io.load_data()
+    self.df_fjparticles = io.load_data(m=self.m)
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))

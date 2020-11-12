@@ -102,6 +102,11 @@ class ProcessBase(common_base.CommonBase):
     else:
         self.recluster_alg = 'CA'
         self.reclustering_algorithm = fj.cambridge_algorithm
+        
+    if 'm' in config:
+        self.m = config['m']
+    else:
+        self.m = 0.1396
 
   #---------------------------------------------------------------
   # Create thn and set as class attribute from name, dim

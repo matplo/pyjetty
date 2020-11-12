@@ -79,7 +79,7 @@ class ProcessIO(common_base.CommonBase):
   # Convert ROOT TTree to SeriesGroupBy object of fastjet particles per event.
   # Optionally, remove a certain random fraction of tracks
   #---------------------------------------------------------------
-  def load_data(self, reject_tracks_fraction=0., offset_indices=False, group_by_evid=True):
+  def load_data(self, m=0.1396, reject_tracks_fraction=0., offset_indices=False, group_by_evid=True):
     
     self.reject_tracks_fraction = reject_tracks_fraction
     self.reset_dataframes()
@@ -96,7 +96,7 @@ class ProcessIO(common_base.CommonBase):
       indices_remove = np.random.choice(self.track_df.index, n_remove, replace=False)
       self.track_df.drop(indices_remove, inplace=True)
 
-    df_fjparticles = self.group_fjparticles(offset_indices, group_by_evid)
+    df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid)
 
     return df_fjparticles
   
@@ -210,7 +210,7 @@ class ProcessIO(common_base.CommonBase):
   # Transform the track dataframe into a SeriesGroupBy object
   # of fastjet particles per event.
   #---------------------------------------------------------------
-  def group_fjparticles(self, offset_indices=False, group_by_evid=True):
+  def group_fjparticles(self, m, offset_indices=False, group_by_evid=True):
 
     if group_by_evid:
       print("Transform the track dataframe into a series object of fastjet particles per event...")
@@ -222,7 +222,8 @@ class ProcessIO(common_base.CommonBase):
     
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
       df_fjparticles = None
-      df_fjparticles = track_df_grouped.apply(self.get_fjparticles, offset_indices=offset_indices)
+      df_fjparticles = track_df_grouped.apply(self.get_fjparticles, m=m,
+                                              offset_indices=offset_indices)
     
     else:
       print("Transform the track dataframe into a dataframe of fastjet particles per track...")
@@ -237,14 +238,19 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   # Return fastjet:PseudoJets from a given track dataframe
   #---------------------------------------------------------------
-  def get_fjparticles(self, df_tracks, offset_indices=False):
+  def get_fjparticles(self, df_tracks, m, offset_indices=False):
     
     # If offset_indices is true, then offset the user_index by a large negative value
     user_index_offset = 0
     if offset_indices:
         user_index_offset = int(-1e6)
+        
+    m_array = np.full((df_tracks['ParticlePt'].values.size), m)
     
     # Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
-    fj_particles = fjext.vectorize_pt_eta_phi(df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values, df_tracks['ParticlePhi'].values, user_index_offset)
-    
+    fj_particles = fjext.vectorize_pt_eta_phi_m(df_tracks['ParticlePt'].values,
+                                               df_tracks['ParticleEta'].values,
+                                               df_tracks['ParticlePhi'].values,
+                                               m_array,
+                                               user_index_offset)
     return fj_particles
