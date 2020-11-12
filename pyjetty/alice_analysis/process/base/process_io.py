@@ -79,7 +79,8 @@ class ProcessIO(common_base.CommonBase):
   # Convert ROOT TTree to SeriesGroupBy object of fastjet particles per event.
   # Optionally, remove a certain random fraction of tracks
   #---------------------------------------------------------------
-  def load_data(self, m=0.1396, reject_tracks_fraction=0., offset_indices=False, group_by_evid=True):
+  def load_data(self, m=0.1396, reject_tracks_fraction=0., offset_indices=False,
+                group_by_evid=True, random_mass=False):
     
     self.reject_tracks_fraction = reject_tracks_fraction
     self.reset_dataframes()
@@ -91,12 +92,13 @@ class ProcessIO(common_base.CommonBase):
     
     if self.reject_tracks_fraction > 1e-3:
       n_remove = int(reject_tracks_fraction * len(self.track_df.index))
-      print('    Removing {} of {} tracks from {}'.format(n_remove, len(self.track_df.index), self.track_tree_name))
+      print('    Removing {} of {} tracks from {}'.format(
+        n_remove, len(self.track_df.index), self.track_tree_name))
       np.random.seed()
       indices_remove = np.random.choice(self.track_df.index, n_remove, replace=False)
       self.track_df.drop(indices_remove, inplace=True)
 
-    df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid)
+    df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid, random_mass)
 
     return df_fjparticles
   
@@ -210,7 +212,7 @@ class ProcessIO(common_base.CommonBase):
   # Transform the track dataframe into a SeriesGroupBy object
   # of fastjet particles per event.
   #---------------------------------------------------------------
-  def group_fjparticles(self, m, offset_indices=False, group_by_evid=True):
+  def group_fjparticles(self, m, offset_indices=False, group_by_evid=True, random_mass=False):
 
     if group_by_evid:
       print("Transform the track dataframe into a series object of fastjet particles per event...")
@@ -222,23 +224,24 @@ class ProcessIO(common_base.CommonBase):
     
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
       df_fjparticles = None
-      df_fjparticles = track_df_grouped.apply(self.get_fjparticles, m=m,
-                                              offset_indices=offset_indices)
+      df_fjparticles = track_df_grouped.apply(
+        self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass)
     
     else:
       print("Transform the track dataframe into a dataframe of fastjet particles per track...")
 
       # Transform into a DataFrame of fastjet particles
       df = self.track_df
-      df_fjparticles = pandas.DataFrame( {"run_number": df["run_number"], "ev_id": df["ev_id"],
-                                               "fj_particle": self.get_fjparticles(self.track_df)} )
+      df_fjparticles = pandas.DataFrame( 
+        {"run_number": df["run_number"], "ev_id": df["ev_id"],
+         "fj_particle": self.get_fjparticles(self.track_df, m, offset_indices, random_mass)} )
 
     return df_fjparticles
 
   #---------------------------------------------------------------
   # Return fastjet:PseudoJets from a given track dataframe
   #---------------------------------------------------------------
-  def get_fjparticles(self, df_tracks, m, offset_indices=False):
+  def get_fjparticles(self, df_tracks, m, offset_indices=False, random_mass=False):
     
     # If offset_indices is true, then offset the user_index by a large negative value
     user_index_offset = 0
@@ -246,11 +249,25 @@ class ProcessIO(common_base.CommonBase):
         user_index_offset = int(-1e6)
         
     m_array = np.full((df_tracks['ParticlePt'].values.size), m)
+
+    # Randomly assign K and p mass for systematic check
+    if random_mass:
+      rand_val = np.random.random((len(m_array)))
+      K_mass = 0.4937     # GeV/c^2
+      p_mass = 0.938272   # GeV/c^2
+      # (p + pbar) / (pi+ + pi-) ~ 5.5%
+      # (K+ + K-) / (pi+ + pi-) ~ 13%
+      # But these are numbers with respect to the final _unreplaced_ pions, so there is
+      # an additional factor of 1/(1 + 5.5% + 13%) to get things right
+      K_factor = 0.13; p_factor = 0.055
+      K_prob = K_factor / (1 + K_factor + p_factor)
+      p_prob = 1 - p_factor / (1 + K_factor + p_factor)   # 1- just to look at diff random vals
+      m_array = np.where(rand_val < K_prob, K_mass, m_array)
+      m_array = np.where(rand_val > p_prob, p_mass, m_array)
     
     # Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
-    fj_particles = fjext.vectorize_pt_eta_phi_m(df_tracks['ParticlePt'].values,
-                                               df_tracks['ParticleEta'].values,
-                                               df_tracks['ParticlePhi'].values,
-                                               m_array,
-                                               user_index_offset)
+    fj_particles = fjext.vectorize_pt_eta_phi_m(
+      df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values,
+      df_tracks['ParticlePhi'].values, m_array, user_index_offset)
     return fj_particles
+
