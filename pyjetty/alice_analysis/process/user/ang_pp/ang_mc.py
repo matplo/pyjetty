@@ -63,7 +63,9 @@ class process_ang_mc(process_base.ProcessBase):
     print('--- {} seconds ---'.format(time.time() - start_time))
     io_det = process_io.ProcessIO(input_file=self.input_file, tree_dir="PWGHF_TreeCreator",
                                    track_tree_name="tree_Particle", event_tree_name="tree_event_char")
-    df_fjparticles_det = io_det.load_data(self.reject_tracks_fraction)
+    df_fjparticles_det = io_det.load_data(
+      m=self.track_mass, reject_tracks_fraction=self.reject_tracks_fraction,
+      random_mass=self.track_random_mass)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
     print('--- {} seconds ---'.format(time.time() - start_time))
@@ -75,7 +77,7 @@ class process_ang_mc(process_base.ProcessBase):
     io_truth = process_io.ProcessIO(input_file=self.input_file, tree_dir="PWGHF_TreeCreator",
                                      track_tree_name="tree_Particle_gen", 
                                      event_tree_name="tree_event_char")
-    df_fjparticles_truth = io_truth.load_data()
+    df_fjparticles_truth = io_truth.load_data(m=self.track_mass, random_mass=self.track_random_mass)
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
     print('--- {} seconds ---'.format(time.time() - start_time))
@@ -141,6 +143,10 @@ class process_ang_mc(process_base.ProcessBase):
 
     # Detector kinematics
     self.eta_max = 0.9
+
+    # Mass assumption for jet reconstruction
+    self.track_mass = config["track_mass"]
+    self.track_random_mass = config["track_random_mass"]   # randomly assign K or p mass to tracks
 
     # Grooming settings
     self.sd_zcut = config["sd_zcut"]
@@ -306,17 +312,6 @@ class process_ang_mc(process_base.ProcessBase):
       print('jet selector for det-level is:', jet_selector_det)
       print('jet selector for truth-level matches is:', jet_selector_truth_matched,'\n')
 
-      # For now assuming only SoftDrop is used
-      groomers = []
-      for gs in self.grooming_settings:
-        sd = fjcontrib.SoftDrop(gs['sd'][1], gs['sd'][0], jetR)   # sd_beta, sd_zcut, jetR
-        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-        reclusterer = fjcontrib.Recluster(jet_def_recluster)
-        sd.set_reclustering(True, reclusterer)
-        if self.debug_level > 2:
-          print('SoftDrop groomer is: {}'.format(sd.description()));
-        groomers.append(sd)
-
       # Iterate over the groupby and do jet-finding simultaneously for 
       # fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
       for fj_particles_det, fj_particles_truth in \
@@ -324,7 +319,7 @@ class process_ang_mc(process_base.ProcessBase):
               self.df_fjparticles['fj_particles_truth']):
 
         self.analyze_jets(fj_particles_det, fj_particles_truth, jet_def,
-                          jet_selector_det, jet_selector_truth_matched, groomers)
+                          jet_selector_det, jet_selector_truth_matched)
                    
 
   #---------------------------------------------------------------
@@ -346,7 +341,7 @@ class process_ang_mc(process_base.ProcessBase):
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
   def analyze_jets(self, fj_particles_det, fj_particles_truth, jet_def, jet_selector_det,
-                   jet_selector_truth_matched, groomers):
+                   jet_selector_truth_matched):
 
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
@@ -407,7 +402,7 @@ class process_ang_mc(process_base.ProcessBase):
 
           # Fill response matrices for each subobservable
           for beta in self.beta_list:
-            self.fill_response_histograms(jet_det, jet_truth, jetR, beta, groomers)
+            self.fill_response_histograms(jet_det, jet_truth, jetR, beta)
 
   '''
   #---------------------------------------------------------------
@@ -466,16 +461,16 @@ class process_ang_mc(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_response_histograms(self, jet_det, jet_truth, jetR, beta, groomers):
+  def fill_response_histograms(self, jet_det, jet_tru, jetR, beta):
 
     # Ungroomed jet pT
     jet_pt_det = jet_det.pt()
-    jet_pt_truth = jet_truth.pt()
+    jet_pt_tru = jet_tru.pt()
 
     # just use kappa = 1 for now
     kappa = 1
     l_det = fjext.lambda_beta_kappa(jet_det, beta, kappa, jetR) 
-    l_tru = fjext.lambda_beta_kappa(jet_truth, beta, kappa, jetR)
+    l_tru = fjext.lambda_beta_kappa(jet_tru, beta, kappa, jetR)
 
     label = "R%s_%s" % (str(jetR), str(beta))
 
@@ -491,27 +486,25 @@ class process_ang_mc(process_base.ProcessBase):
 
     if l_tru != 0:
       lambda_resolution = (l_det - l_tru) / l_tru
-      getattr(self, 'hAngResidual_JetPt_%s' % label).Fill(jet_pt_truth, lambda_resolution)
+      getattr(self, 'hAngResidual_JetPt_%s' % label).Fill(jet_pt_tru, lambda_resolution)
 
     # Observable plots
     getattr(self, 'hAng_JetPt_det_%s' % label).Fill(jet_pt_det, l_det)
-    getattr(self, 'hAng_JetPt_tru_%s' % label).Fill(jet_pt_truth, l_tru)
+    getattr(self, 'hAng_JetPt_tru_%s' % label).Fill(jet_pt_tru, l_tru)
     getattr(self, 'hResponse_ang_%s' % label).Fill(l_det, l_tru)
 
-    x = ([jet_pt_det, jet_pt_truth, l_det, l_tru])
+    x = ([jet_pt_det, jet_pt_tru, l_det, l_tru])
     x_array = array('d', x)
     getattr(self, 'hResponse_JetPt_ang_%s' % label).Fill(x_array)
 
     for i, gs in enumerate(self.grooming_settings):
       gl = self.grooming_labels[i]
-      sd = groomers[i]
 
       # soft drop jet
-      jet_sd_det = sd.result(jet_det)
-      jet_sd_tru = sd.result(jet_truth)
-      #if abs(jet_sd_det.eta()) > (self.eta_max - jetR) or \
-      #   abs(jet_sd_tru.eta()) > (self.eta_max - jetR):      # Cut these for theory comparisons
-      #  continue
+      gshop_det = fjcontrib.GroomerShop(jet_det, jetR, self.reclustering_algorithm)
+      jet_sd_det = self.utils.groom(gshop_det, gs, jetR).pair()
+      gshop_tru = fjcontrib.GroomerShop(jet_tru, jetR, self.reclustering_algorithm)
+      jet_sd_tru = self.utils.groom(gshop_tru, gs, jetR).pair()
 
       # lambda for soft drop jet
       l_sd_det = fjext.lambda_beta_kappa(jet_sd_det, beta, kappa, jetR)
@@ -519,9 +512,9 @@ class process_ang_mc(process_base.ProcessBase):
 
       # Should fill histograms using the ungroomed jet pT
       getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_pt_det, l_sd_det)
-      getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet_pt_truth, l_sd_tru)
+      getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet_pt_tru, l_sd_tru)
       getattr(self, 'hResponse_ang_%s_%s' % (label, gl)).Fill(l_sd_det, l_sd_tru)
-      x = ([jet_pt_det, jet_pt_truth, l_sd_det, l_sd_tru])
+      x = ([jet_pt_det, jet_pt_tru, l_sd_det, l_sd_tru])
       x_array = array('d', x)
       getattr(self, 'hResponse_JetPt_ang_%s_%s' % (label, gl)).Fill(x_array)
 

@@ -57,7 +57,7 @@ class process_ang_data(process_base.ProcessBase):
     # of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - start_time))
     io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle')
-    self.df_fjparticles = io.load_data()
+    self.df_fjparticles = io.load_data(m=self.track_mass, random_mass=self.track_random_mass)
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
     print('--- {} seconds ---'.format(time.time() - start_time))
@@ -104,6 +104,10 @@ class process_ang_data(process_base.ProcessBase):
 
     # Detector kinematics
     self.eta_max = 0.9
+
+    # Mass assumption for jet reconstruction
+    self.track_mass = config["track_mass"]
+    self.track_random_mass = config["track_random_mass"]   # randomly assign K or p mass to tracks
 
     # SoftDrop configuration
     self.sd_zcut = config["sd_zcut"]
@@ -207,28 +211,17 @@ class process_ang_data(process_base.ProcessBase):
       jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(self.eta_max - jetR)
       print('jet definition is:', jet_def)
       print('jet selector is:', jet_selector,'\n')
-
-      # For now assuming only SoftDrop is used
-      groomers = []
-      for gs in self.grooming_settings:
-        sd = fjcontrib.SoftDrop(gs['sd'][1], gs['sd'][0], jetR)   # sd_beta, sd_zcut, jetR
-        jet_def_recluster = fj.JetDefinition(fj.cambridge_algorithm, jetR)
-        reclusterer = fjcontrib.Recluster(jet_def_recluster)
-        sd.set_reclustering(True, reclusterer)
-        if self.debug_level > 2:
-          print('SoftDrop groomer is: {}'.format(sd.description()));
-        groomers.append(sd)
       
       for beta in self.beta_list:
         for fj_particles in self.df_fjparticles:
           # do jet-finding and fill histograms
-          self.analyzeJets(fj_particles, jet_def, jet_selector, beta, groomers)
+          self.analyzeJets(fj_particles, jet_def, jet_selector, beta)
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles, jet_def, jet_selector, beta, groomers):
+  def analyzeJets(self, fj_particles, jet_def, jet_selector, beta):
     
     # Do jet finding
     cs = fj.ClusterSequence(fj_particles, jet_def)
@@ -248,13 +241,13 @@ class process_ang_data(process_base.ProcessBase):
         continue
       
       # Fill histograms
-      self.fillJetHistograms(jet, jetR, beta, groomers)
+      self.fillJetHistograms(jet, jetR, beta)
 
 
   #---------------------------------------------------------------
   # Fill jet histograms
   #---------------------------------------------------------------
-  def fillJetHistograms(self, jet, jetR, beta, groomers):
+  def fillJetHistograms(self, jet, jetR, beta):
 
     kappa = 1
     l = fjext.lambda_beta_kappa(jet, beta, kappa, jetR)
@@ -268,10 +261,8 @@ class process_ang_data(process_base.ProcessBase):
 
     for i, gs in enumerate(self.grooming_settings):
       gl = self.grooming_labels[i]
-
-      jet_sd = groomers[i].result(jet)
-      #if abs(jet_sd.eta()) > (self.eta_max - jetR):  # Cut these for theory comparisons
-      #  continue
+      gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
+      jet_sd = self.utils.groom(gshop, gs, jetR).pair()
 
       l_sd = fjext.lambda_beta_kappa(jet_sd, beta, kappa, jetR)
       # Should fill histograms using the ungroomed jet pT & rapidity
