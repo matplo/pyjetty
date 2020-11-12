@@ -77,7 +77,9 @@ class ProcessIO(common_base.CommonBase):
   
   #---------------------------------------------------------------
   # Convert ROOT TTree to SeriesGroupBy object of fastjet particles per event.
-  # Optionally, remove a certain random fraction of tracks
+  # Optionally, define the mass assumption used in the jet reconstruction;
+  #             remove a certain random fraction of tracks;
+  #             randomly assign proton and kaon mass to some tracks
   #---------------------------------------------------------------
   def load_data(self, m=0.1396, reject_tracks_fraction=0., offset_indices=False,
                 group_by_evid=True, random_mass=False):
@@ -97,6 +99,9 @@ class ProcessIO(common_base.CommonBase):
       np.random.seed()
       indices_remove = np.random.choice(self.track_df.index, n_remove, replace=False)
       self.track_df.drop(indices_remove, inplace=True)
+
+    if random_mass:
+      print('    \033[93mRandomly assigning proton and kaon mass to some tracks.\033[0m') 
 
     df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid, random_mass)
 
