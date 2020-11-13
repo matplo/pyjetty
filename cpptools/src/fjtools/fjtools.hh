@@ -2,6 +2,8 @@
 #define __PYJETTY_FJTOOLS_HH
 
 class TF1;
+class TH2F;
+class THn;
 #include <string>
 #include <vector>
 #include <fastjet/PseudoJet.hh>
@@ -51,6 +53,10 @@ namespace PyJettyFJTools
 	std::vector<int> matched_Ry(const fastjet::PseudoJet &j, const std::vector<fastjet::PseudoJet> &v, double Rmatch);
 	// return indices of jets matched to j jet - using pseudorapidity to calculate deltaR
 	std::vector<int> matched_Reta(const fastjet::PseudoJet &j, const std::vector<fastjet::PseudoJet> &v, double Rmatch);
+
+    // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
+    TH2F* rebin_th2(TH2F* h, std::string hname, int n_x_bins, double* x_bins,
+                    int n_y_bins, double* y_bins, bool move_y_underflow = false);
 
 };
 

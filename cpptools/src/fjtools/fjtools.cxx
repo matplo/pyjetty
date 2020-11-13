@@ -1,6 +1,8 @@
 #include "fjtools.hh"
 
 #include <TF1.h>
+#include <TH2F.h>
+#include <THn.h>
 #include <TMath.h>
 #include <TString.h>
 #include <TRandom.h>
@@ -56,6 +58,65 @@ namespace PyJettyFJTools
 		}
 		return retv;
 	}
+
+    // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
+    // If move_y_underflow is set, y-underflow bins in h_to_rebin are added to (x, 1) bin
+    //     [WARNING: it is NOT preserved in y-underflow bin: it is really added to (x, 1)]
+    // RETURNS: pointer to a new rebinned TH2F on the heap
+    TH2F* rebin_th2(TH2F* h_to_rebin, std::string hname, int n_x_bins, double* x_bins,
+                    int n_y_bins, double* y_bins, bool move_y_underflow /*= false*/) {
+
+        // Initialize the new empty histogram
+        std::string name = hname + "_rebinned";
+        TH2F* h = new TH2F(name.c_str(), name.c_str(), n_x_bins, x_bins, n_y_bins, y_bins);
+
+        /*  Probably don't need this check
+        // Check whether sumw2 has been previously set, just for our info
+        if (h->GetSumw2() == 0) {
+            std::cout << "rebin_th2() -- sumw2 has not been set" << std::endl;
+        } else {
+            std::cout << "rebin_th2() -- sumw2 has been set" << std::endl;
+        }  // if (h->GetSumw2() == 0)
+        */
+
+        // Loop over all bins and fill rebinned histogram
+        for (unsigned int bin_x = 1; bin_x <= h_to_rebin->GetNbinsX(); bin_x++) {
+            for (unsigned int bin_y = 0; bin_y <= h_to_rebin->GetNbinsY(); bin_y++) {
+
+                // If underflow bin of observable, and if use_underflow is activated,
+                //   put the contents of the underflow bin into the first bin of the rebinned TH2
+                if (bin_y == 0) {
+                    if (move_y_underflow) {
+                        h->Fill(h_to_rebin->GetXaxis()->GetBinCenter(bin_x),
+                                h->GetYaxis()->GetBinCenter(1),
+                                h_to_rebin->GetBinContent(bin_x, bin_y));
+                    }
+                    continue;
+                }  // biny == 0
+
+                h->Fill(h_to_rebin->GetXaxis()->GetBinCenter(bin_x),
+                        h_to_rebin->GetYaxis()->GetBinCenter(bin_y),
+                        h_to_rebin->GetBinContent(bin_x, bin_y));
+
+            }  // for(biny)
+        }  // for(binx)
+
+        // We need to manually set the uncertainties, since sumw2 does the wrong thing in this case
+        // Specifically: We fill the rebinned histo from several separate weighted fills, so sumw2
+        // gives sqrt(a^2+b^2) where we simply want counting uncertainties of sqrt(a+b).
+        for (unsigned int i = 0; i <= h->GetNcells(); i++) {
+            h->SetBinError(i, std::sqrt(h->GetBinContent(i)));
+        }
+
+        // We want to make sure sumw2 is set after rebinning, since
+        // we will scale etc. this histogram
+        if (h->GetSumw2() == 0) {
+            h->Sumw2();
+        }
+
+        return h;
+
+    }  // rebin_th2
 
 	double boltzmann_norm(double *x, double *par)
 	{
