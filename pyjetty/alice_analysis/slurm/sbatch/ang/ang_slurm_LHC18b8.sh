@@ -7,7 +7,7 @@
 #SBATCH --array=1-640
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/alice/data/LHC18b8/449/files.txt'
+FILE_PATHS='/rstorage/alice/data/LHC18b8/520/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
