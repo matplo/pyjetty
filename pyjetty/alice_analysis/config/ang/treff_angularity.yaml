@@ -10,6 +10,10 @@ lambda_limits: [0, 1]
 n_rap_bins: 50            # just for fun, look at lambda distribution vs rapidity
 rap_limits: [-1, 1]
 
+# Mass assumption for track/jet reconstruction
+track_mass: 0.13957         # Pion mass in GeV/c^2
+track_random_mass: False    # Whether to randomly assign K and p mass to some tracks
+
 # For extra verbose output in some functions
 debug_level: 0
 
