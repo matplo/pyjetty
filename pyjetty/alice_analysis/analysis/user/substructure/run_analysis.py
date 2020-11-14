@@ -234,7 +234,7 @@ class RunAnalysis(common_base.CommonBase):
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
         obs_label = self.obs_labels[i]
-        self.get_obs_max_bins(self.obs_config_dict[subconfig], obs_label)
+        self.get_obs_max_bins(self.obs_config_dict[subconfig], obs_label, grooming_setting)
 
         # Compute systematics and attach to main results
         if self.do_systematics:
@@ -325,7 +325,7 @@ class RunAnalysis(common_base.CommonBase):
     return rebin_response
 
   #----------------------------------------------------------------------
-  def get_obs_max_bins(self, subconfig, obs_label):
+  def get_obs_max_bins(self, subconfig, obs_label, grooming_setting):
 
     if "obs_max_reported" in subconfig:
       obs_bins_truth = self.truth_bin_array(obs_label)
@@ -343,7 +343,11 @@ class RunAnalysis(common_base.CommonBase):
           raise ValueError("Final bin cutoff {} is not in the bin edges list {}".format(
             val, obs_bins_truth))
 
-      obs_max_bins = [obs_bins_truth.index(i) for i in obs_max_reported]
+      if grooming_setting:
+        # Need to add 1 in grooming case to account for rebinned distributions having underflow bin
+        obs_max_bins = [obs_bins_truth.index(i)+1 for i in obs_max_reported]
+      else:
+        obs_max_bins = [obs_bins_truth.index(i) for i in obs_max_reported]
 
     else:
       obs_max_bins = [None for i in self.pt_bins_reported]
