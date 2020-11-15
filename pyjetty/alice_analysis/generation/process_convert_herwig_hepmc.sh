@@ -27,9 +27,9 @@ fi
 
 # Define output path from relevant sub-path of input file
 # Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f4-7)
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f6-8)
 echo $OUTPUT_SUFFIX
-OUTPUT_DIR="/rstorage/generators/herwig_alice/$JOB_ID/$OUTPUT_SUFFIX"
+OUTPUT_DIR="/rstorage/generators/herwig_alice/tree_gen/$JOB_ID/$OUTPUT_SUFFIX/"
 echo "Output dir: $OUTPUT_DIR"
 mkdir -p $OUTPUT_DIR
 
@@ -41,9 +41,10 @@ module load pyjetty/1.0
 module list
 
 # Run main script
-python hepmc2antuple_tn.py -i $INPUT_FILE -o $OUTPUT_DIR -g herwig --no-progress-bar
+cd /software/users/james/pyjetty/pyjetty/alice_analysis/generation
+python hepmc2antuple_tn.py -i $INPUT_FILE -o $OUTPUT_DIR/AnalysisResultsGen.root -g herwig --no-progress-bar
 
 # Move stdout to appropriate folder
-mv /rstorage/generators/herwig_alice/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/generators/herwig_alice/${JOB_ID}/
+mv /rstorage/generators/herwig_alice/tree_gen/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/generators/herwig_alice/tree_gen/${JOB_ID}/
 
 

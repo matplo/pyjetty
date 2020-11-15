@@ -1,18 +1,18 @@
 #! /bin/bash
 
 #SBATCH --job-name=convert-herwig
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=5
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-160
-#SBATCH --output=/rstorage/generators/herwig_alice/slurm-%A_%a.out
+#SBATCH --array=1-500
+#SBATCH --output=/rstorage/generators/herwig_alice/tree_gen/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/generators/herwig_alice/245558/hepmc_filelist.txt'
+FILE_PATHS='/rstorage/generators/herwig_alice/hepmc/245558/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 8 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 160 + 1 ))
+FILES_PER_JOB=$(( $NFILES / 500 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 
 STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))
