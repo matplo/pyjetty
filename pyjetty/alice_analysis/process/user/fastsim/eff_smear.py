@@ -101,7 +101,8 @@ class eff_smear:
         # a SeriesGroupBy object of fastjet particles per event
         self.io = process_io.ProcessIO(input_file=self.input_file, output_dir=self.output_dir,
                                         tree_dir='PWGHF_TreeCreator',
-                                        track_tree_name='tree_Particle_gen')
+                                        track_tree_name='tree_Particle_gen',
+                                        use_ev_id_ext=False)
         self.df_fjparticles = self.io.load_dataframe()
         self.nTracks_truth = len(self.df_fjparticles)
         print("DataFrame loaded from data.")

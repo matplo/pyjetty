@@ -5,7 +5,7 @@
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-500
-#SBATCH --output=/rstorage/generators/herwig_alice/tree_fastim/slurm-%A_%a.out
+#SBATCH --output=/rstorage/generators/herwig_alice/tree_fastsim/slurm-%A_%a.out
 
 FILE_PATHS='/rstorage/generators/herwig_alice/tree_gen/248766/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)

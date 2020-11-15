@@ -27,7 +27,7 @@ fi
 
 # Define output path from relevant sub-path of input file
 # Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f6-8)
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f6-9)
 echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/rstorage/generators/herwig_alice/tree_fastsim/$JOB_ID/$OUTPUT_SUFFIX"
 echo "Output dir: $OUTPUT_DIR"
@@ -41,7 +41,7 @@ module load pyjetty/1.0
 module list
 
 # Run main script
-cd /software/users/james/pyjetty/pyjetty/alice_analysis/processs/user/fastsim
+cd /software/users/james/pyjetty/pyjetty/alice_analysis/process/user/fastsim
 python eff_smear.py -i $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
