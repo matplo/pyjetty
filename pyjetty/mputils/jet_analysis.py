@@ -6,7 +6,7 @@ import fjtools
 
 class JetAnalysis(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, jet_pt_min=0.0, particles=None)
+		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, jet_pt_min=0.0, particles=None, explicit_ghosts=False)
 		super(JetAnalysis, self).__init__(**kwargs)
 
 		self.particle_selector = fj.SelectorAbsEtaMax(self.particle_eta_max)
@@ -15,8 +15,10 @@ class JetAnalysis(MPBase):
 		# self.jet_eta_max = self.particle_eta_max - 0.05
 		self.jet_def = fj.JetDefinition(self.jet_algorithm, self.jet_R)
 		self.jet_selector = fj.SelectorPtMin(self.jet_pt_min) & fj.SelectorAbsEtaMax(self.jet_eta_max)
-		# self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
-		self.jet_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(self.particle_eta_max))
+		if self.explicit_ghosts:
+			self.jet_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		else:
+			self.jet_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(self.particle_eta_max))
 
 		if self.particles:
 			self.analyze_event(self.particles)
@@ -55,8 +57,10 @@ class JetAnalysisWithRho(JetAnalysis):
 
 		self.bg_rho_range = fj.SelectorAbsEtaMax(self.particle_eta_max)
 		self.bg_jet_def = fj.JetDefinition(fj.kt_algorithm, self.jet_R)
-		# self.bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
-		self.bg_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(self.particle_eta_max))
+		if self.explicit_ghosts:
+			self.bg_area_def = fj.AreaDefinition(fj.active_area_explicit_ghosts, fj.GhostedAreaSpec(self.particle_eta_max))
+		else:
+			self.bg_area_def = fj.AreaDefinition(fj.active_area, fj.GhostedAreaSpec(self.particle_eta_max))
 		self.bg_estimator = fj.JetMedianBackgroundEstimator(self.bg_rho_range, self.bg_jet_def, self.bg_area_def)
 		self.rho = 0
 
