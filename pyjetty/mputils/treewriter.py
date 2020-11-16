@@ -83,7 +83,7 @@ class RTreeWriter(MPBase):
 											'm'     : value.m(),
 											'a' 	: value.area()})
 			else:
-				self.fill_branch(bname, {'pt' : value.pt(), 'phi' : value.phi(), 'eta' : value.eta()})
+				self.fill_branch(bname, {'pt' : value.pt(), 'phi' : value.phi(), 'eta' : value.eta(), 'm' : value.m()})
 			if value.has_constituents():
 				self.fill_branch(bname, {'nconst': len(value.constituents())})
 			return
