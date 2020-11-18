@@ -152,6 +152,8 @@ class RunAnalysis(common_base.CommonBase):
 
     if 'trkeff' in self.systematics_list:
       self.trkeff_response = config['trkeff_response']
+    if 'fastsim_generator0' in self.systematics_list:
+      self.fastsim_response_list = config['fastsim_response']
 
     self.prior1_variation_parameter = config['prior1_variation_parameter']
     self.prior2_variation_parameter = config['prior2_variation_parameter']
@@ -288,6 +290,10 @@ class RunAnalysis(common_base.CommonBase):
         R_max = self.R_max2
       elif systematic == 'prong_matching':
         prong_matching_response = True
+      elif systematic == 'fastsim_generator0':
+        response = self.fastsim_response_list[0]
+      elif systematic == 'fastsim_generator1':
+        response = self.fastsim_response_list[1]
 
       analysis = roounfold_obs.Roounfold_Obs(
         self.observable, data, response, self.config_file, output_dir, self.file_format,
@@ -574,6 +580,11 @@ class RunAnalysis(common_base.CommonBase):
             sys_label = 'subtraction'
           else:
             continue
+        elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
+          if systematic == 'fastsim_generator1':
+            sys_label = 'generator'
+          else:
+            continue
         else:
           sys_label = systematic
         name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
@@ -603,6 +614,21 @@ class RunAnalysis(common_base.CommonBase):
             h_systematic_ratio = self.construct_systematic_average(
               hMain, 'prior', jetR, obs_label, reg_param,
               min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+          else:
+            continue
+            
+        # For model-depedence, take the difference between two fastsim generators
+        elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
+          if systematic == 'fastsim_generator1':
+          
+            # Get reference generator unfolded result (e.g. pythia fastsim)
+            name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format('fastsim_generator0', self.observable, jetR, obs_label,
+                                                    reg_param, min_pt_truth, max_pt_truth)
+            h_reference = getattr(self, name)
+            
+            # Take the difference of generator to reference generator (e.g. herwig fastsim)
+            h_systematic_ratio = self.construct_systematic_percentage(h_reference, 'fastsim_generator1', jetR, obs_label,
+                                                 reg_param, min_pt_truth, max_pt_truth, maxbin)
           else:
             continue
         
@@ -709,6 +735,9 @@ class RunAnalysis(common_base.CommonBase):
                                             reg_param, min_pt_truth, max_pt_truth)
     h_systematic = getattr(self, name)
 
+    if 'fastsim_generator1' in systematic:
+        systematic = 'generator'  # For generator systematic, need to set label here
+    
     name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
       self.observable, systematic, jetR, obs_label,
       reg_param, min_pt_truth, max_pt_truth)
@@ -841,6 +870,8 @@ class RunAnalysis(common_base.CommonBase):
             legend_label = 'reg param'
           elif 'prior' in h.GetName():
             legend_label = 'prior'
+          elif 'generator' in h.GetName():
+            legend_label = 'generator'
           elif 'subtraction' in h.GetName():
             legend_label = 'subtraction'
         leg.AddEntry(h, legend_label, 'P')

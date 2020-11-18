@@ -28,7 +28,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='',
                output_dir='', file_format='', rebin_response=False, truncation=False,
                binning=False, prior_variation_parameter=0., R_max = None,
-               prong_matching_response = False, thermal_model = False, **kwargs):
+               prong_matching_response = False, thermal_model = False, suffix='', **kwargs):
 
     super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file,
                                         output_dir, file_format, **kwargs)
@@ -43,6 +43,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.R_max = R_max
     self.prong_matching_response = prong_matching_response
     self.thermal_model = thermal_model
+    self.suffix = suffix
 
     self.initialize_config()
 
