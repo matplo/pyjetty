@@ -236,7 +236,7 @@ class RunAnalysis(common_base.CommonBase):
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
         obs_label = self.obs_labels[i]
-        self.get_obs_max_bins(self.obs_config_dict[subconfig], obs_label, grooming_setting)
+        self.get_obs_max_bins(self.obs_config_dict[subconfig], obs_label)
 
         # Compute systematics and attach to main results
         if self.do_systematics:
@@ -331,7 +331,7 @@ class RunAnalysis(common_base.CommonBase):
     return rebin_response
 
   #----------------------------------------------------------------------
-  def get_obs_max_bins(self, subconfig, obs_label, grooming_setting):
+  def get_obs_max_bins(self, subconfig, obs_label):
 
     if "obs_max_reported" in subconfig:
       obs_bins_truth = self.truth_bin_array(obs_label)
@@ -349,11 +349,7 @@ class RunAnalysis(common_base.CommonBase):
           raise ValueError("Final bin cutoff {} is not in the bin edges list {}".format(
             val, obs_bins_truth))
 
-      if grooming_setting:
-        # Need to add 1 in grooming case to account for rebinned distributions having underflow bin
-        obs_max_bins = [obs_bins_truth.index(i)+1 for i in obs_max_reported]
-      else:
-        obs_max_bins = [obs_bins_truth.index(i) for i in obs_max_reported]
+      obs_max_bins = [obs_bins_truth.index(i) for i in obs_max_reported]
 
     else:
       obs_max_bins = [None for i in self.pt_bins_reported]
@@ -370,14 +366,18 @@ class RunAnalysis(common_base.CommonBase):
     print(text)
 
     # Select final regularization parameter
-    if self.use_max_reg_param:
-      reg_param_final = self.max_reg_param
-      min_reg_param = 3
-    else:
+    try:
       reg_param_final = self.utils.get_reg_param(
         self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
         self.obs_config_dict, obs_label, jetR)
       min_reg_param = reg_param_final
+    except:
+      if self.use_max_reg_param:
+        reg_param_final = self.max_reg_param
+        min_reg_param = 3
+      else:
+        print("ERROR: No max_reg_param or reg_param set in config file for", obs_label)
+        exit(1)
 
     # First, calculate systematics for all possible reg params
     for reg_param in range(min_reg_param, reg_param_final + 1):
@@ -405,15 +405,23 @@ class RunAnalysis(common_base.CommonBase):
       max_pt_truth = self.pt_bins_reported[i+1]
       maxbin = self.obs_max_bins(obs_label)[i]
 
-      if self.use_max_reg_param:
-        reg_param_final = self.determine_reg_param_final(
-          jetR, obs_label, obs_setting, grooming_setting,
-          min_pt_truth, max_pt_truth, maxbin)
-        text = 'Optimal regularization parameter for pT={}-{} determined to be {} = {}.'.format(
-        min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final)
-        with open(self.logfile, 'a') as myfile:
-          myfile.write(text + '\n')
-        print(text)
+      try:
+        reg_param_final = self.utils.get_reg_param(
+          self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
+          self.obs_config_dict, obs_label, jetR)
+      except:
+        if self.use_max_reg_param:
+          reg_param_final = self.determine_reg_param_final(
+            jetR, obs_label, obs_setting, grooming_setting,
+            min_pt_truth, max_pt_truth, maxbin)
+          text = 'Optimal regularization parameter for pT={}-{} determined to be {} = {}.'.format(
+            min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final)
+          with open(self.logfile, 'a') as myfile:
+            myfile.write(text + '\n')
+          print(text)
+        else:
+          print("ERROR: No max_reg_param or reg_param set in config file for", obs_label)
+          exit(1)
 
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, maxbin, final=True)
@@ -609,15 +617,25 @@ class RunAnalysis(common_base.CommonBase):
         
         # Combine certain systematics as average or max
         if systematic == 'main':
-          h_systematic_ratio = self.construct_systematic_average(
-            hMain, 'RegParam', jetR, obs_label, reg_param,
-            min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
+          if grooming_setting and maxbin:
+            h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'RegParam', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=False)
+          else:
+            h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'RegParam', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
         
         elif systematic in ['prior1', 'prior2']:
           if systematic == 'prior1':
-            h_systematic_ratio = self.construct_systematic_average(
-              hMain, 'prior', jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+            if grooming_setting and maxbin:
+              h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'prior', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
+            else:
+              h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'prior', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
           else:
             continue
             
@@ -638,9 +656,14 @@ class RunAnalysis(common_base.CommonBase):
         
         elif systematic in ['subtraction1', 'subtraction2']:
           if systematic == 'subtraction1':
-            h_systematic_ratio = self.construct_systematic_average(
-              hMain, 'subtraction', jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+            if grooming_setting and maxbin:
+              h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'subtraction', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
+            else:
+              h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'subtraction', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
           else:
             continue
         
@@ -658,7 +681,10 @@ class RunAnalysis(common_base.CommonBase):
           self.change_to_per(h_systematic_ratio_temp)
           h_systematic_ratio_temp.SetMinimum(0.)
           h_systematic_ratio_temp.SetMaximum(1.5*h_systematic_ratio_temp.GetMaximum())
-          h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
+          if grooming_setting and maxbin:
+            h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin+1, name_ratio)
+          else:
+            h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
           setattr(self, name_ratio, h_systematic_ratio)
         
         else:
@@ -695,7 +721,10 @@ class RunAnalysis(common_base.CommonBase):
       name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
         self.observable, jetR, obs_label, reg_param,
         int(min_pt_truth), int(max_pt_truth))
-      hResult_sys = self.truncate_hist(hMain.Clone(), maxbin, name)
+      if grooming_setting and maxbin:
+        hResult_sys = self.truncate_hist(hMain.Clone(), maxbin+1, name)
+      else:
+        hResult_sys = self.truncate_hist(hMain.Clone(), maxbin, name)
       hResult_sys.SetDirectory(0)
       self.AttachErrToHist(hResult_sys, hSystematic_Total)
       setattr(self, name, hResult_sys)
@@ -958,21 +987,15 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   # Finds the regularization parameter than minimizes statistical and
   # all calculated systematic uncertainties when added in quadrature
+  # 
   def determine_reg_param_final(self, jetR, obs_label, obs_setting, grooming_setting,
                                 min_pt_truth, max_pt_truth, maxbin):
 
+    assert self.use_max_reg_param == True
+
     # Obtain the total systematic uncertainty histograms from memory
     min_reg_param = 3
-
-    # Select final regularization parameter
-    if self.use_max_reg_param:
-      reg_param_final = self.max_reg_param
-    else:
-      reg_param_final = self.utils.get_reg_param(
-        self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
-        self.obs_config_dict, obs_label, jetR)
-
-    reg_params = range(min_reg_param, reg_param_final + 1)
+    reg_params = range(min_reg_param, self.max_reg_param + 1)
     names = ["hSystematic_Unfolding_R{}_{}_n{}_{}-{}".format(
       self.utils.remove_periods(jetR), obs_label, reg_param, int(min_pt_truth),
       int(max_pt_truth)) for reg_param in reg_params]
