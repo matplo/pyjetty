@@ -118,6 +118,149 @@ namespace PyJettyFJTools
 
     }  // rebin_th2
 
+	
+	//---------------------------------------------------------------
+	// Rebin THn according to specified binnings; return pointer to rebinned THn
+	//---------------------------------------------------------------
+	THnF* rebin_thn(THnF* thn, const std::string & name_thn_rebinned,
+					const unsigned int & n_dim, const int* axes_n_bins,
+					double** axes_bin_arrays, const double & prior_variation_parameter/*=0.*/,
+					bool move_underflow/*=false*/, bool do_roounfoldresponse/*=true*/) {
+
+		// Initialize char* array of axes titles
+		const char** axes_titles = new const char*[n_dim];
+		for (unsigned int i = 0; i < n_dim; i++) {
+			axes_titles[i] = thn->GetAxis(i)->GetTitle();
+		}
+
+	    // Create empty THn with specified binnings
+		THnF* thn_rebinned = create_empty_thn(
+			name_thn_rebinned.c_str(), n_dim, axes_titles, axes_n_bins, axes_bin_arrays);
+
+		// Loop through THn and fill rebinned THn
+		fill_rebinned_thn(thn, thn_rebinned, n_dim, prior_variation_parameter, move_underflow);
+
+		// clean up memory
+		delete[] axes_titles;
+
+		return thn_rebinned;
+
+	}  // rebin_thn
+
+
+	//---------------------------------------------------------------
+	// Create an empty THn according to specified binnings
+	//---------------------------------------------------------------
+	THnF* create_empty_thn(const char* name, const unsigned int & n_dim, const char** axes_titles,
+						   const int* axes_n_bins, double** axes_bin_arrays) {
+
+        // Initialize array of min & max values
+		double* min = new double[n_dim];
+		double* max = new double[n_dim];
+
+		for (unsigned int i = 0; i < n_dim; i++) {
+			min[i] = axes_bin_arrays[i][0];
+			max[i] = axes_bin_arrays[i][axes_n_bins[i]];
+		}
+
+		// Create the new THn and set correct axes titles / bin edges
+		THnF* h = new THnF(name, name, n_dim, axes_n_bins, min, max);
+		for (unsigned int i = 0; i < n_dim; i++) {
+			h->GetAxis(i)->SetTitle(axes_titles[i]);
+			h->SetBinEdges(i, axes_bin_arrays[i]);
+		}
+
+		// clean up memory
+		delete[] min;
+		delete[] max;
+
+		return h;
+
+	}  // create_empty_thn
+
+
+	//---------------------------------------------------------------
+	// Fill thn_rebinned with data from thn
+	void fill_rebinned_thn(THnF* thn, THnF* thn_rebinned, const unsigned int & n_dim,
+						   const double & prior_variation_parameter/*=0.*/,
+						   bool move_underflow/*=false*/) {
+
+		// Only working for n_dim == 4 at the moment; generalizing to N dimensions
+		// will require some sort of recursive implementation
+		if (n_dim != 4) {
+			std::cerr << "ERROR: Not Implemented: Assertion n_dim == 4 failed in " 
+					  << "fjtools.cxx::fill_rebinned_thn()" << std::endl;
+			std::terminate();
+		}
+
+		// loop through all axes
+		const unsigned int n_bins_0 = thn->GetAxis(0)->GetNbins();
+		const unsigned int n_bins_1 = thn->GetAxis(1)->GetNbins();
+		const unsigned int n_bins_2 = thn->GetAxis(2)->GetNbins();
+		const unsigned int n_bins_3 = thn->GetAxis(3)->GetNbins();
+
+		int* global_bin = new int[n_dim];
+		double* x = new double[n_dim];
+		for (unsigned int bin_0 = 1; bin_0 < n_bins_0; bin_0++) {
+			global_bin[0] = bin_0;
+			x[0] = thn->GetAxis(0)->GetBinCenter(bin_0);
+
+			// print helpful message while waiting
+			std::cout << x[0] << " / " << n_bins_0 << '\r' << std::flush;
+
+			for (unsigned int bin_1 = 1; bin_1 < n_bins_1; bin_1++) {
+				global_bin[1] = bin_1;
+				x[1] = thn->GetAxis(1)->GetBinCenter(bin_1);
+
+				for (unsigned int bin_2 = 0; bin_2 < n_bins_2; bin_2++) {
+					global_bin[2] = bin_2;
+					x[2] = thn->GetAxis(2)->GetBinCenter(bin_2);
+
+					for (unsigned int bin_3 = 0; bin_3 < n_bins_3; bin_3++) {
+						global_bin[3] = bin_3;
+						x[3] = thn->GetAxis(3)->GetBinCenter(bin_3);
+
+						double content = thn->GetBinContent(global_bin);
+
+						// Impose a custom prior, if desired
+						if (std::abs(prior_variation_parameter) > 1e-5 && x[1] > 0 && x[3] > 0) {
+							content *= std::pow(x[1], prior_variation_parameter);
+						}  // scale prior
+
+						// If underflow bin, and if move_underflow flag is activated,
+						// put the contents of the underflow bin into first bin of thn_rebinned
+						if (bin_2 == 0 || bin_3 == 0) {
+							if (move_underflow) {
+								if (bin_2 == 0) {
+									x[2] = thn_rebinned->GetAxis(2)->GetBinCenter(1);
+								}  // bin_2 == 0
+								if (bin_3 == 0) {
+									x[3] = thn_rebinned->GetAxis(3)->GetBinCenter(1);
+									std::string name(thn->GetName());
+									if (name.find("matched") != std::string::npos) {
+										if (bin_2 == 0) { content = 1; }
+										else { content = 0; }
+									}
+								}  // bin_3 == 0
+							} else { continue; }  // move_underflow
+						}  // underflow bins
+
+						thn_rebinned->Fill(x, content);
+
+					}  // bin_3 loop
+				}  // bin_2 loop
+			}  // bin_1 loop
+		}  // bin_0 loop
+
+		// clean up memory
+		delete[] global_bin;
+		delete[] x;
+
+		return;
+
+	}  // fill_rebinned_thn
+
+
 	double boltzmann_norm(double *x, double *par)
 	{
 		// double fval = par[1] / x[0] * x[0] * TMath::Exp(-(2. / par[0]) * x[0]);

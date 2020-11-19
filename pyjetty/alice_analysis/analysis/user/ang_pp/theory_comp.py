@@ -14,7 +14,6 @@ import ROOT
 import yaml
 
 from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
-from pyjetty.alice_analysis.analysis.user.james import plotting_utils
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -55,6 +54,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         self.is_pp = True
     print('is_pp: {}'.format(self.is_pp))
 
+    # Whether or not to use the previous preliminary result in final plots
+    self.use_prev_prelim = config['use_prev_prelim']
+
     # Theory comparisons
     if 'fPythia' in config:
       self.fPythia_name = config['fPythia']
@@ -69,7 +71,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
       # Load the RooUnfold library
       ROOT.gSystem.Load(config['roounfold_path'])
-      self.do_theory = True
+      self.do_theory = config['do_theory_comp']
     else:
       self.do_theory = False
 
@@ -574,104 +576,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   def plot_performance(self):
     print('Plotting performance plots...')
-    
-    # Initialize performance plotting class
-    if self.do_plot_performance:
-      self.plotting_utils = plotting_utils.PlottingUtils(
-        self.observable, self.is_pp, self.main_data, self.main_response,
-        self.output_dir_performance, self.figure_approval_status)
-      
-    # Create output subdirectories
-    self.create_output_subdir(self.output_dir_performance, 'jet')
-    self.create_output_subdir(self.output_dir_performance, 'resolution')
-    self.create_output_subdir(self.output_dir_performance, 'residual')
-    self.create_output_subdir(self.output_dir_performance, 'residual_relative')
-    self.create_output_subdir(self.output_dir_performance, 'mc_projections_det')
-    self.create_output_subdir(self.output_dir_performance, 'mc_projections_truth')
-    self.create_output_subdir(self.output_dir_performance, 'statistics')
-    self.create_output_subdir(self.output_dir_performance, 'lund')
-    if not self.is_pp:
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_pt')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_fraction_ptdet')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_deltaR')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_deltaZ')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_correlation')
-      self.create_output_subdir(self.output_dir_performance, 'prong_matching_N_z')
-    
-    # Generate performance plots
-    for jetR in self.jetR_list:
-  
-      # Plot some subobservable-independent performance plots
-      self.plotting_utils.plot_DeltaR(jetR, self.jet_matching_distance)
-      self.plotting_utils.plot_JES(jetR)
-      self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
-      self.plotting_utils.plotJER(jetR, self.utils.obs_label(self.obs_settings[0], 
-                                                             self.grooming_settings[0]))
-      self.plotting_utils.plot_jet_reco_efficiency(jetR, self.utils.obs_label(
-        self.obs_settings[0], self.grooming_settings[0]))
-      
-      # Plot subobservable-dependent performance plots
-      for i, _ in enumerate(self.obs_subconfig_list):
+    print("ERROR: Implement plot_performance() in python script")
+    return
 
-        obs_setting = self.obs_settings[i]
-        grooming_setting = self.grooming_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-    
-        self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual(
-          jetR, obs_label, self.xtitle, self.pt_bins_reported, relative=True)
-        self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting,
-                                                 self.xtitle, self.pt_bins_reported)
-        
-        if grooming_setting and self.observable != 'jet_axis':
-          self.plotting_utils.plot_lund_plane(jetR, obs_label, grooming_setting)
-
-      # Plot prong matching histograms
-      if not self.is_pp:
-        self.prong_match_threshold = 0.5
-        min_pt = 80.
-        max_pt = 100.
-        prong_list = ['leading', 'subleading']
-        match_list = ['leading', 'subleading', 'groomed', 'ungroomed', 'outside']
-        for i, overlay_list in enumerate(self.plot_overlay_list):
-          for prong in prong_list:
-            for match in match_list:
-
-              hname = 'hProngMatching_{}_{}_JetPt_R{}'.format(prong, match, jetR)
-              self.plotting_utils.plot_prong_matching(
-                i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
-                self.grooming_settings, overlay_list, self.prong_match_threshold)
-
-              self.plotting_utils.plot_prong_matching_delta(
-                i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
-                self.grooming_settings, overlay_list, self.prong_match_threshold,
-                min_pt, max_pt, plot_deltaz=False)
-
-              hname = 'hProngMatching_{}_{}_JetPtDet_R{}'.format(prong, match, jetR)
-              self.plotting_utils.plot_prong_matching(
-                i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
-                self.grooming_settings, overlay_list, self.prong_match_threshold)
-
-              if 'subleading' in prong:
-                hname = 'hProngMatching_{}_{}_JetPtZ_R{}'.format(prong, match, jetR)
-                self.plotting_utils.plot_prong_matching_delta(
-                  i, jetR, hname, self.obs_subconfig_list, self.obs_settings,
-                  self.grooming_settings, overlay_list, self.prong_match_threshold,
-                  min_pt, max_pt, plot_deltaz=True)
-
-          hname = 'hProngMatching_subleading-leading_correlation_JetPtDet_R{}'.format(jetR)
-          self.plotting_utils.plot_prong_matching_correlation(
-            jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings,
-            overlay_list, self.prong_match_threshold)
-
-        # Plot subobservable-dependent plots
-        for i, _ in enumerate(self.obs_subconfig_list):
-          obs_setting = self.obs_settings[i]
-          grooming_setting = self.grooming_settings[i]
-          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-          self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'tagged')
-          self.plotting_utils.plot_prong_N_vs_z(jetR, obs_label, 'untagged')
 
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
@@ -744,7 +651,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
                                               min_pt_truth, max_pt_truth)
     if grooming_setting:
-      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+      fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
+      #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
@@ -977,7 +885,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.DrawLatex(text_xval, 0.66-delta, text)
     
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting)
+      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
       text_latex.DrawLatex(text_xval, 0.66-2*delta, text)
       
       text_latex.SetTextSize(0.04)
@@ -1469,7 +1377,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
                                               min_pt_truth, max_pt_truth)
     if grooming_setting:
-      fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
+      fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
+      #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
@@ -1556,7 +1465,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       delta = 0.07
     
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting)
+      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
       text_latex.DrawLatex(0.57, 0.59-delta, text)
       
       text_latex.SetTextSize(0.04)
@@ -1612,7 +1521,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     output_dir = getattr(self, 'output_dir_main')
 
     prev_prelim = False
-    if overlay and (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
+    if self.use_prev_prelim and overlay and (jetR == 0.2 or jetR == 0.4) \
+       and min_pt_truth == 40 and obs_label == '1':
       prev_prelim = True
       # Need to rebin response for the binning used by previous preliminary result
       filepath = os.path.join(output_dir, 'response_prev_prelim.root')
@@ -1736,9 +1646,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       name = 'hmain_{}_R{}_{}_{}-{}'.format(
         self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       if grooming_setting:
-        fraction_tagged = getattr(self, name+'_fraction_tagged')
+        fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
+        #fraction_tagged = getattr(self, name+'_fraction_tagged')
 
-      if (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
+      if self.use_prev_prelim and (jetR == 0.2 or jetR == 0.4) \
+         and min_pt_truth == 40 and obs_label == '1':
         # Use previous preliminary result
         h, h_sys = self.get_h_prelim(jetR)
         # Move error bars to different histogram
@@ -1815,7 +1727,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           c.cd()
           pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
           pad2.SetTopMargin(0)
-          pad2.SetBottomMargin(0.4)
+          pad2.SetBottomMargin(0.5)
           pad2.SetLeftMargin(0.2)
           pad2.SetRightMargin(0.04)
           pad2.SetTicks(1,1)
@@ -1931,7 +1843,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if subobs_label:
         text += '%s = %s' % (subobs_label, obs_setting)
       if grooming_setting:
-        text += self.utils.formatted_grooming_label(grooming_setting)
+        text += self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
       text_list.append(text)
       h_list.append(h)
         
