@@ -246,9 +246,9 @@ class process_ang_mc(process_base.ProcessBase):
         dim = 4;
         title = ['#it{p}_{T,det}^{ch jet}', '#it{p}_{T,truth}^{ch jet}', 
                  '#it{#lambda}_{#it{#beta},det}', '#it{#lambda}_{#it{#beta},truth}']
-        nbins = [20, 40, 200, 100]
+        nbins = [40, 40, 200, 100]
         min_li = [0.,   0.,   0.,  0.]
-        max_li = [100., 200., 1.0, 1.0]
+        max_li = [200., 200., 1.0, 1.0]
 
         name = 'hResponse_JetPt_ang_%s' % label
         nbins = (nbins)
