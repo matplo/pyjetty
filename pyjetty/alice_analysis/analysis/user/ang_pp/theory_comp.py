@@ -885,7 +885,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.DrawLatex(text_xval, 0.66-delta, text)
     
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting)
+      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
       text_latex.DrawLatex(text_xval, 0.66-2*delta, text)
       
       text_latex.SetTextSize(0.04)
@@ -1465,7 +1465,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       delta = 0.07
     
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting)
+      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
       text_latex.DrawLatex(0.57, 0.59-delta, text)
       
       text_latex.SetTextSize(0.04)
@@ -1843,7 +1843,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if subobs_label:
         text += '%s = %s' % (subobs_label, obs_setting)
       if grooming_setting:
-        text += self.utils.formatted_grooming_label(grooming_setting)
+        text += self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
       text_list.append(text)
       h_list.append(h)
         
