@@ -653,7 +653,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if grooming_setting:
       fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
-    h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+      # maxbin+1 in grooming case to account for extra tagging bin
+    if grooming_setting and maxbin:
+      h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+    else:
+      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -825,9 +829,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         #hmax.Draw('L hist same')
 
     if plot_pythia:
-    
-      hPythia, fraction_tagged_pythia = self.pythia_prediction(
-        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin)
+
+      if grooming_setting:
+        hPythia, fraction_tagged_pythia = self.pythia_prediction(
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1)
+      else:
+        hPythia, fraction_tagged_pythia = self.pythia_prediction(
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin)
 
       if hPythia:
         hPythia.SetFillStyle(0)
@@ -964,7 +972,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
                                               min_pt_truth, max_pt_truth)
-    h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+    if grooming_setting and maxbin:
+      h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+    else:
+      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
     
     n_obs_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
@@ -1658,7 +1669,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         for i in range(1, h.GetNbinsX()+1, 1):
           h.SetBinError(i, 0.)
       else:
-        h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+        if grooming_setting and maxbin:
+          h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+        else:
+          h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
         h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
           self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
 
@@ -1783,8 +1797,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           line.Draw()
       
       if plot_pythia:
-        hPythia, fraction_tagged_pythia = self.pythia_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay=True)
+        if grooming_setting and maxbin:
+          hPythia, fraction_tagged_pythia = self.pythia_prediction(
+            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1, overlay=True)
+        else:
+          hPythia, fraction_tagged_pythia = self.pythia_prediction(
+            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay=True)
 
         plot_errors = False
         if plot_errors:
