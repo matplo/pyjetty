@@ -3,7 +3,7 @@
 
 class TF1;
 class TH2F;
-class THn;
+#include <THn.h>
 #include <string>
 #include <vector>
 #include <fastjet/PseudoJet.hh>
@@ -57,6 +57,21 @@ namespace PyJettyFJTools
     // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
     TH2F* rebin_th2(TH2F* h, std::string hname, int n_x_bins, double* x_bins,
                     int n_y_bins, double* y_bins, bool move_y_underflow = false);
+
+	// Rebin N-dimensional THn to a new histogram with name name_thn_rebinned using provided axes
+	// WARNING: currently requires n_dim = 4
+	THnF* rebin_thn(THnF* thn, const std::string & name_thn_rebinned,
+					const unsigned int & n_dim, const int* axes_n_bins,
+					double** axes_bin_arrays, const double & prior_variation_parameter=0.,
+					bool move_underflow=false, bool do_roounfoldresponse=true);
+
+	// Create empty THn using provided axes
+	THnF* create_empty_thn(const char* name, const unsigned int & n_dim, const char** axes_titles,
+						   const int* axes_n_bins, double** axes_bin_arrays);
+
+	// Fill empty thn_rebinned with data from thn
+	void fill_rebinned_thn(THnF* thn, THnF* thn_rebinned, const unsigned int & n_dim,
+						   const double & prior_variation_parameter=0., bool move_underflow=false);
 
 };
 
