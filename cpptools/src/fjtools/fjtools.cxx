@@ -6,6 +6,7 @@
 #include <TMath.h>
 #include <TString.h>
 #include <TRandom.h>
+#include <TFile.h>
 #include <iostream>
 
 namespace PyJettyFJTools
@@ -122,26 +123,59 @@ namespace PyJettyFJTools
 	//---------------------------------------------------------------
 	// Rebin THn according to specified binnings; return pointer to rebinned THn
 	//---------------------------------------------------------------
-	THnF* rebin_thn(THnF* thn, const std::string & name_thn_rebinned,
-					const unsigned int & n_dim, const int* axes_n_bins,
-					double** axes_bin_arrays, const double & prior_variation_parameter/*=0.*/,
-					bool move_underflow/*=false*/, bool do_roounfoldresponse/*=true*/) {
-
+	THnF* rebin_thn(std::string response_file_name,
+                    THnF* thn,
+                    const std::string & name_thn_rebinned,
+                    const std::string & name_roounfold,
+					const unsigned int & n_dim,
+                    const int* axes_n_bins,
+					double** axes_bin_arrays,
+                    const std::string label/*=""*/,
+                    const double & prior_variation_parameter/*=0.*/,
+                    int prior_option/*=1*/,
+					bool move_underflow/*=false*/,
+                    bool do_roounfoldresponse/*=true*/) {
+        
 		// Initialize char* array of axes titles
 		const char** axes_titles = new const char*[n_dim];
 		for (unsigned int i = 0; i < n_dim; i++) {
 			axes_titles[i] = thn->GetAxis(i)->GetTitle();
 		}
 
+        // ------------------------------------------------------
+        // Create THn
+        
 	    // Create empty THn with specified binnings
 		THnF* thn_rebinned = create_empty_thn(
 			name_thn_rebinned.c_str(), n_dim, axes_titles, axes_n_bins, axes_bin_arrays);
+        
+        // ------------------------------------------------------
+        // Create RooUnfoldResponse
+        RooUnfoldResponse* roounfold_response = nullptr;
+        if (do_roounfoldresponse) {
 
-		// Loop through THn and fill rebinned THn
-		fill_rebinned_thn(thn, thn_rebinned, n_dim, prior_variation_parameter, move_underflow);
+            // Create empty RooUnfoldResponse with specified binning
+            TH2D* hist_measured = thn_rebinned->Projection(2, 0);
+            std::string name_measured = std::string("hist_measured_") + label;
+            hist_measured->SetName(name_measured.c_str());
+            TH2D* hist_truth = thn_rebinned->Projection(3, 1);
+            std::string name_truth = std::string("hist_truth_") + label;
+            hist_truth->SetName(name_truth.c_str());
+            roounfold_response = new RooUnfoldResponse(hist_measured, hist_truth,
+                                                                          name_roounfold.c_str(),
+                                                                          name_roounfold.c_str());
+            
+            // Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold -- we have to do it manually
+            //roounfold_response.UseOverflow(True)
+        }
+        
+        // Loop through THn and fill rebinned THn and RooUnfoldResponse
+        fill_rebinned_thn(response_file_name, thn, thn_rebinned, n_dim,
+                          do_roounfoldresponse, roounfold_response,
+                          prior_variation_parameter, prior_option, move_underflow);
 
-		// clean up memory
-		delete[] axes_titles;
+        // clean up memory
+        delete[] axes_titles;
 
 		return thn_rebinned;
 
@@ -181,10 +215,18 @@ namespace PyJettyFJTools
 
 	//---------------------------------------------------------------
 	// Fill thn_rebinned with data from thn
-	void fill_rebinned_thn(THnF* thn, THnF* thn_rebinned, const unsigned int & n_dim,
+    //
+    // Don't include underflow/overflow by default
+    // If move_underflow = True, then fill underflow content of the observable
+    // (from original THn) into first bin (of rebinned THn)
+	void fill_rebinned_thn(std::string response_file_name, THnF* thn, THnF* thn_rebinned,
+                           const unsigned int & n_dim,
+                           bool do_roounfoldresponse/*=true*/,
+                           RooUnfoldResponse* roounfold_response/*=nullptr*/,
 						   const double & prior_variation_parameter/*=0.*/,
+                           int prior_option/*=1*/,
 						   bool move_underflow/*=false*/) {
-
+        
 		// Only working for n_dim == 4 at the moment; generalizing to N dimensions
 		// will require some sort of recursive implementation
 		if (n_dim != 4) {
@@ -199,6 +241,7 @@ namespace PyJettyFJTools
 		const unsigned int n_bins_2 = thn->GetAxis(2)->GetNbins();
 		const unsigned int n_bins_3 = thn->GetAxis(3)->GetNbins();
 
+        // I don't find any global bin index implementation, so I manually loop through axes
 		int* global_bin = new int[n_dim];
 		double* x = new double[n_dim];
 		for (unsigned int bin_0 = 1; bin_0 < n_bins_0; bin_0++) {
@@ -224,7 +267,16 @@ namespace PyJettyFJTools
 
 						// Impose a custom prior, if desired
 						if (std::abs(prior_variation_parameter) > 1e-5 && x[1] > 0 && x[3] > 0) {
-							content *= std::pow(x[1], prior_variation_parameter);
+                            
+                            // Scale number of counts according to variation of pt prior
+                            double scale_factor = std::pow(x[1], prior_variation_parameter);
+                            
+                            // Scale number of counts according to variation of observable prior
+                            scale_factor *= prior_scale_factor_obs(x[3], content,
+                                                prior_variation_parameter, prior_option);
+                            
+                            content = content*scale_factor;
+                            
 						}  // scale prior
 
 						// If underflow bin, and if move_underflow flag is activated,
@@ -245,12 +297,29 @@ namespace PyJettyFJTools
 							} else { continue; }  // move_underflow
 						}  // underflow bins
 
+                        // THn is filled as (x[0], x[1], x[2], x[3])
+                        // corresponding e.g. to (pt_det, pt_true, obs_det, obs_true)
 						thn_rebinned->Fill(x, content);
+                        
+                        // RooUnfoldResponse should be filled as (x[0], x[2], x[1], x[3])
+                        // corresponding e.g. to (pt_det, obs_det, pt_true, obs_true)
+                        if (do_roounfoldresponse) {
+                            roounfold_response->Fill(x[0], x[2], x[1], x[3], content);
+                        }
 
 					}  // bin_3 loop
 				}  // bin_2 loop
 			}  // bin_1 loop
 		}  // bin_0 loop
+        
+        std::cout << "writing response..." << std::endl;
+        TFile f(response_file_name.c_str(), "UPDATE");
+        thn_rebinned->Write();
+        if (do_roounfoldresponse) {
+            roounfold_response->Write();
+        }
+        f.Close();
+        std::cout << "done" << std::endl;
 
 		// clean up memory
 		delete[] global_bin;
@@ -260,6 +329,30 @@ namespace PyJettyFJTools
 
 	}  // fill_rebinned_thn
 
+    //---------------------------------------------------------------
+    // Compute scale factor to vary prior of observable
+    //
+    // Note that prior_variation_parameter is the parameter used to scale both
+    // the pt prior (assumed to be a change to the power law exponent) and the observable prior,
+    // and is typically taken to be +/- 0.5.
+    //---------------------------------------------------------------
+    double prior_scale_factor_obs(double obs_true, double content,
+                                  double prior_variation_parameter, int option) {
+
+        switch(option)
+        {
+            case 0: // power law
+                return std::pow(obs_true, prior_variation_parameter);
+            case 1: // linear scaling of distributions
+                return (1 + prior_variation_parameter*(2*obs_true - 1));
+            case 2: // sharpening/smoothing the distributions
+                return std::pow(content, 1 + prior_variation_parameter);
+            case 3:
+                return (1 + obs_true);
+            default:
+                return obs_true;
+        }
+    }
 
 	double boltzmann_norm(double *x, double *par)
 	{
