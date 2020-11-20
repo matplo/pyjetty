@@ -7,7 +7,7 @@
 #SBATCH --array=1-500
 #SBATCH --output=/rstorage/generators/herwig_alice/tree_gen/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/generators/herwig_alice/hepmc/245558/files.txt'
+FILE_PATHS='/rstorage/generators/herwig_alice/hepmc/260023/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 

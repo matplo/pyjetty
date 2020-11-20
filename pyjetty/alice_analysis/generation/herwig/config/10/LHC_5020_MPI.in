@@ -52,10 +52,10 @@ set /Herwig/Decays/DecayHandler:LifeTimeOption Average
 ##################################################
 
 read snippets/HepMC.in
-set /Herwig/Analysis/HepMC:PrintEvent 1000000
+set /Herwig/Analysis/HepMC:PrintEvent 2000000
 
 ##################################################
 # Save run for later usage with 'Herwig run'
 ##################################################
-set /Herwig/Generators/EventGenerator:PrintEvent 1000000
+set /Herwig/Generators/EventGenerator:PrintEvent 2000000
 saverun LHC_5020_MPI /Herwig/Generators/EventGenerator
