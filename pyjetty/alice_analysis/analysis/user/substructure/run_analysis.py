@@ -688,9 +688,14 @@ class RunAnalysis(common_base.CommonBase):
           setattr(self, name_ratio, h_systematic_ratio)
         
         else:
-          h_systematic_ratio = self.construct_systematic_percentage(
-            hMain, systematic, jetR, obs_label, reg_param,
-            min_pt_truth, max_pt_truth, maxbin)
+          if grooming_setting and maxbin:
+            h_systematic_ratio = self.construct_systematic_percentage(
+              hMain, systematic, jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin+1)
+          else:
+            h_systematic_ratio = self.construct_systematic_percentage(
+              hMain, systematic, jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin)
 
       h_list.append(h_systematic_ratio)
 
@@ -934,11 +939,14 @@ class RunAnalysis(common_base.CommonBase):
 
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting)
+      if subobs_label and '#it{#beta}' in subobs_label:
+        text.replace('#it{#beta}', '#it{#beta}_{SD}')
       text_latex.DrawLatex(0.3, 0.64, text)
 
     output_dir = getattr(self, 'output_dir_systematics')
     outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(
-      self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format))
+      self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
+      int(max_pt_truth), self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
