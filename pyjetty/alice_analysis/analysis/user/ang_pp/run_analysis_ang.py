@@ -1574,7 +1574,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
   #----------------------------------------------------------------------
   def plot_final_result_overlay(self, i_config, jetR, overlay_list):
-    print('Plotting overlay of {}'.format(overlay_list))
+    print('Plotting overlay of', overlay_list)
 
     # Plot overlay of different subconfigs, for fixed pt bin
     for i in range(0, len(self.pt_bins_reported) - 1):
@@ -1615,6 +1615,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.SetTicks(0,1)
     if plot_ratio:
       pad1.SetBottomMargin(0.)
+    # set log y axis if all configs are SD
+    setlogy = False
+    for name in overlay_list:
+      if "SD" not in name:
+        break
+      elif name == overlay_list[-1]:
+        setlogy = True
+        pad1.SetLogy()
     pad1.Draw()
     pad1.cd()
 
@@ -1657,8 +1665,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       name = 'hmain_{}_R{}_{}_{}-{}'.format(
         self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       if grooming_setting:
-        fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
-        #fraction_tagged = getattr(self, name+'_fraction_tagged')
+        fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(
+          jetR, obs_label, min_pt_truth, max_pt_truth))
 
       if self.use_prev_prelim and (jetR == 0.2 or jetR == 0.4) \
          and min_pt_truth == 40 and obs_label == '1':
@@ -1727,9 +1735,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             myBlankHisto.SetMaximum(1.5*ymax)
         else:
           myBlankHisto.SetMaximum(1.5*ymax)
+        if setlogy:
+          myBlankHisto.SetMaximum(5*ymax)
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
+          if setlogy:  # the minimum value matters
+            myBlankHisto.SetMinimum(5e-2)
           myBlankHisto.GetYaxis().SetTitleSize(0.065)
           myBlankHisto.GetYaxis().SetTitleOffset(1.1)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
