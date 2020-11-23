@@ -62,6 +62,7 @@ namespace PyJettyFJTools
     TH2F* rebin_th2(TH2F* h, std::string hname, int n_x_bins, double* x_bins,
                     int n_y_bins, double* y_bins, bool move_y_underflow = false);
 
+#ifdef USE_ROOUNFOLD
 	// Rebin N-dimensional THn to a new histogram with name name_thn_rebinned using provided axes
 	// WARNING: currently requires n_dim = 4
 	THnF* rebin_thn(std::string response_file_name,
@@ -89,6 +90,7 @@ namespace PyJettyFJTools
 						   const double & prior_variation_parameter=0.,
                            int prior_option=1,
                            bool move_underflow=false);
+#endif
 
     // Set scaling of prior
     double prior_scale_factor_obs(double obs_true, double content,

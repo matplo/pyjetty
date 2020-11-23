@@ -119,7 +119,8 @@ namespace PyJettyFJTools
 
     }  // rebin_th2
 
-	
+
+#ifdef USE_ROOUNFOLD
 	//---------------------------------------------------------------
 	// Rebin THn according to specified binnings; return pointer to rebinned THn
 	//---------------------------------------------------------------
@@ -328,6 +329,7 @@ namespace PyJettyFJTools
 		return;
 
 	}  // fill_rebinned_thn
+#endif
 
     //---------------------------------------------------------------
     // Compute scale factor to vary prior of observable
