@@ -130,9 +130,9 @@ systematics_list:
   - binning
 
 # Paths to processing output, to be used for unfolding
-main_data: '/rstorage/alice/AnalysisResults/ang/239489/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/239591/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/239651/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/ang/246558/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/246719/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/246720/AnalysisResultsFinal.root'
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5
