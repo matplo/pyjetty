@@ -2,7 +2,7 @@
 #define __PYJETTY_FJTOOLS_HH
 
 class TF1;
-class TH2F;
+#include <TH2.h>
 #include <THn.h>
 #include <string>
 #include <vector>
@@ -59,8 +59,8 @@ namespace PyJettyFJTools
 	std::vector<int> matched_Reta(const fastjet::PseudoJet &j, const std::vector<fastjet::PseudoJet> &v, double Rmatch);
 
     // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
-    TH2F* rebin_th2(TH2F* h, std::string hname, int n_x_bins, double* x_bins,
-                    int n_y_bins, double* y_bins, bool move_y_underflow = false);
+    TH2F* rebin_th2(TH2F & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
+                    double* y_bins, int n_y_bins, bool move_y_underflow = false);
 
 #ifdef USE_ROOUNFOLD
 	// Rebin N-dimensional THn to a new histogram with name name_thn_rebinned using provided axes
