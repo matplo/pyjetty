@@ -19,6 +19,7 @@ import pandas
 import numpy as np
 from array import *
 import ROOT
+import fjtools
 
 # Base class
 from pyjetty.alice_analysis.analysis.base import common_utils
@@ -40,24 +41,28 @@ class AnalysisUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def rebin_data(self, hData, name_data, n_pt_bins, pt_bin_array, n_obs_bins,
                  obs_bin_array, use_underflow=False):
-    
+
+    # Use rebinning function implemented in C++ side
+    #return fjtools.rebin_th2(hData, name_data, pt_bin_array, n_pt_bins, 
+    #                         obs_bin_array, n_obs_bins, use_underflow)
+
     # Create empty TH2 with appropriate binning
     name = "%s_rebinned" % name_data
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
-    
+
     #  Check whether sumw2 has been previously set, just for our info
     if h.GetSumw2() == 0:
       print('analysis_utils::rebin_data() -- sumw2 has not been set')
     else:
       print('analysis_utils::rebin_data() -- sumw2 has been set')
-    
+
     # Loop over all bins and fill rebinned histogram
     for bin_x in range(1, hData.GetNbinsX() + 1):
       for bin_y in range(0, hData.GetNbinsY() + 1):
         x = hData.GetXaxis().GetBinCenter(bin_x)
         y = hData.GetYaxis().GetBinCenter(bin_y)
         content = hData.GetBinContent(bin_x, bin_y)
-        
+
         # If underflow bin of observable, and if use_underflow is activated,
         #   put the contents of the underflow bin into the first bin of the rebinned TH2
         if bin_y == 0:
@@ -65,9 +70,9 @@ class AnalysisUtils(common_utils.CommonUtils):
             y = h.GetYaxis().GetBinCenter(1)
           else:
             continue
-        
+
         h.Fill(x, y, content)
-          
+
     # We need to manually set the uncertainties, since sumw2 does the wrong thing in this case
     # Specifically: We fill the rebinned histo from several separate weighted fills, so sumw2
     # gives sqrt(a^2+b^2) where we simply want counting uncertainties of sqrt(a+b).
@@ -76,7 +81,7 @@ class AnalysisUtils(common_utils.CommonUtils):
       old_uncertainty = h.GetBinError(i)
       new_uncertainty = math.sqrt(content)
       h.SetBinError(i, new_uncertainty)
-    
+
     # We want to make sure sumw2 is set after rebinning, since we will scale etc. this histogram
     if h.GetSumw2() == 0:
       h.Sumw2()
