@@ -11,6 +11,7 @@ import argparse
 from array import *
 import numpy as np
 import ROOT
+ROOT.gSystem.Load("$HEPPY_DIR/external/roounfold/roounfold-2.0.0/lib/libRooUnfold.so")
 import yaml
 
 from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
@@ -70,7 +71,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
       self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
       # Load the RooUnfold library
-      ROOT.gSystem.Load(config['roounfold_path'])
+      #ROOT.gSystem.Load(config['roounfold_path'])   # done globally above
       self.do_theory = config['do_theory_comp']
     else:
       self.do_theory = False
