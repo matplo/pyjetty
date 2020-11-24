@@ -15,13 +15,14 @@ add_library(${NAME_LIB} SHARED ${SOURCES_LIB})
 # Define preprocessor command for .hh include statement
 # And set include/link directories appropriately
 if(${RooUnfold_FOUND})
-  add_compile_definitions(USE_ROOUNFOLD=ON)
+  add_compile_definitions(USE_ROOUNFOLD=1)
   target_include_directories(${NAME_LIB} PUBLIC ${FASTJET_DIR}/include ${ROOT_INCLUDE_DIRS} ${ROOUNFOLD_INCLUDE_DIR})
   target_link_libraries(${NAME_LIB} PUBLIC ${FASTJET_LIBS} ${ROOT_LIBRARIES} ${ROOUNFOLD_LIBRARIES})
-else(${RooUnfold_FOUND})
+else()
+  add_compile_definitions(USE_ROOUNFOLD=0)
   target_include_directories(${NAME_LIB} PUBLIC ${FASTJET_DIR}/include ${ROOT_INCLUDE_DIRS})
   target_link_libraries(${NAME_LIB} PUBLIC ${FASTJET_LIBS} ${ROOT_LIBRARIES} )
-endif(${RooUnfold_FOUND})
+endif()
 
 set(SWIG_TARGET_LINK_LIBRARIES "${FASTJET_LIBS} ${ROOT_LIBRARIES}")
 
