@@ -43,10 +43,9 @@ class AnalysisUtils(common_utils.CommonUtils):
                  obs_bin_array, use_underflow=False):
 
     # Use rebinning function implemented in C++ side
-    return fjtools.rebin_th2(hData, name_data, n_pt_bins, pt_bin_array,
-                             n_obs_bins, obs_bin_array, use_underflow)
+    #return fjtools.rebin_th2(hData, name_data, pt_bin_array, n_pt_bins, 
+    #                         obs_bin_array, n_obs_bins, use_underflow)
 
-    '''
     # Create empty TH2 with appropriate binning
     name = "%s_rebinned" % name_data
     h = ROOT.TH2F(name, name, n_pt_bins, pt_bin_array, n_obs_bins, obs_bin_array)
@@ -87,7 +86,6 @@ class AnalysisUtils(common_utils.CommonUtils):
     if h.GetSumw2() == 0:
       h.Sumw2()
     return h
-    '''
 
   #---------------------------------------------------------------
   # Rebin 4D THn response according to specified binnings, saving both a rebinned
