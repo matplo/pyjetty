@@ -1,0 +1,26 @@
+# Processing parameters
+jetR: [0.2, 0.4, 0.6]
+betas: [1, 1.5, 2, 3]
+
+# Initial detector-level binnings. Distributions are rebinned via configs before unfolding
+n_pt_bins: 195
+pt_limits: [5, 200]
+n_lambda_bins: 200
+lambda_limits: [0, 1]
+n_rap_bins: 50            # just for fun, look at lambda distribution vs rapidity
+rap_limits: [-1, 1]
+
+# Mass assumption for track/jet reconstruction
+track_mass: 0.13957         # Pion mass in GeV/c^2
+track_random_mass: True     # Whether to randomly assign K and p mass to some tracks
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0
+
+# SoftDrop setting (current same for all SD plots)
+sd_zcut: 0.2    # multiplier
+sd_beta: 0      # exponent on (deltaR / R)
