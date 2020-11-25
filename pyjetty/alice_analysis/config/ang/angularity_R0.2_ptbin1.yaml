@@ -18,7 +18,7 @@ jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distan
 reject_tracks_fraction: 0
 
 # SoftDrop setting (current same for all SD plots)
-sd_zcut: 0.1    # multiplier
+sd_zcut: 0.2    # multiplier
 sd_beta: 0      # exponent on (deltaR / R)
 
 
@@ -186,8 +186,8 @@ output_dir: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin1"
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-2.0.0/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: False
-force_rebin: False
+do_unfolding: True
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
@@ -197,7 +197,8 @@ figure_approval_status: 'Preliminary'
 use_prev_prelim: False
 
 # List of which systematics to perform
-# Options: [main, trkeff, prior1, prior2, truncation, binning]
+# Options: [main, trkeff, prior1, prior2, truncation, binning, \
+#           random_mass, fastsim_generator0, fastsim_generator1]
 systematics_list:
   - main
   - trkeff
@@ -205,11 +206,18 @@ systematics_list:
   - prior2
   - truncation
   - binning
+  - random_mass
+  - fastsim_generator0
+  - fastsim_generator1
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/246558/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/246719/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/246720/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/267934/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/269395/AnalysisResultsFinal.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/274595/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/269397/AnalysisResultsFinal.root'
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/273928/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/274089/AnalysisResultsFinal.root']
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5

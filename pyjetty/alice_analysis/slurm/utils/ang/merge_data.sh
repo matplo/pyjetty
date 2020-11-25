@@ -2,7 +2,7 @@
 #
 # Script to merge output ROOT files
 
-JOB_ID=246558
+JOB_ID=274595
 
 FILE_DIR="/rstorage/alice/AnalysisResults/ang/$JOB_ID"
 FILES=$( find "$FILE_DIR" -name "*.root" )

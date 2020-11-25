@@ -120,7 +120,8 @@ figure_approval_status: 'Preliminary'
 use_prev_prelim: False
 
 # List of which systematics to perform
-# Options: [main, trkeff, prior1, prior2, truncation, binning]
+# Options: [main, trkeff, prior1, prior2, truncation, binning, \
+#           random_mass, fastsim_generator0, fastsim_generator1]
 systematics_list:
   - main
   - trkeff
@@ -128,11 +129,18 @@ systematics_list:
   - prior2
   - truncation
   - binning
+#  - random_mass
+#  - fastsim_generator0
+#  - fastsim_generator1
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/246558/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/246719/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/246720/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/267934/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/269395/AnalysisResultsFinal.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/274595/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/269397/AnalysisResultsFinal.root'
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/273928/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/274089/AnalysisResultsFinal.root']
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5
