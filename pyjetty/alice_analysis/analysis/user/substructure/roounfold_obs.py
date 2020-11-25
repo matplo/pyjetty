@@ -13,6 +13,9 @@ import yaml
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
 from pyjetty.alice_analysis.analysis.base import analysis_base
 
+# Load pyjetty ROOT utils
+ROOT.gSystem.Load('libpyjetty_rutil')
+
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
@@ -46,6 +49,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.suffix = suffix
 
     self.initialize_config()
+    
+    self.histutils = ROOT.RUtil.HistUtils()
 
     self.get_responses(rebin_response)
 
@@ -182,6 +187,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       self.errorType = ROOT.RooUnfold.kCovToy
       
       # Get shape variation parameter for closure test
+      self.prior_variation_option = config['prior_variation_option']
       self.shape_variation_parameter1 = config['prior1_variation_parameter']
       self.shape_variation_parameter2 = config['prior2_variation_parameter']
 
@@ -234,18 +240,36 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         thn.SetName(name_thn)
         setattr(self, name_thn, thn)
         if rebin_response:
+        
+          use_histutils = False
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
           label = 'R{}_{}'.format(jetR, obs_label)
-          self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold,
-                                    label, n_pt_bins_det, det_pt_bin_array, n_bins_det,
-                                    det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
-                                    n_bins_truth, truth_bin_array, self.observable,
-                                    self.prior_variation_parameter, use_underflow=use_underflow)
+          if use_histutils:
+            axes_n_bins = array('i',([n_pt_bins_det, n_bins_det, n_pt_bins_truth, n_bins_truth]))
+            axes_bin_arrays = np.array([det_pt_bin_array, det_bin_array, truth_pt_bin_array, truth_bin_array])
+            n_dim = 4
+            self.histutils.rebin_thn(response_file_name, thn, name_thn_rebinned, name_roounfold,
+                                     n_dim, axes_n_bins,
+                                     det_pt_bin_array, det_bin_array, truth_pt_bin_array, truth_bin_array,
+                                     label, self.prior_variation_parameter,
+                                     self.prior_variation_option, use_underflow)
+          else:
+            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold,
+                                      label, n_pt_bins_det, det_pt_bin_array, n_bins_det,
+                                      det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
+                                      n_bins_truth, truth_bin_array, self.observable,
+                                      self.prior_variation_parameter, use_underflow=use_underflow)
 
         # Also re-bin the data histogram
         hData = self.fData.Get(name_data)
-        h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array,
-                                  n_bins_det, det_bin_array, use_underflow=use_underflow)
+        
+        if use_histutils:
+          h = self.histutils.rebin_th2(hData, name_data, det_pt_bin_array, n_pt_bins_det,
+                                       det_bin_array, n_bins_det, use_underflow)
+        else:
+          h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array,
+                                    n_bins_det, det_bin_array, use_underflow=use_underflow)
+                              
         h.SetDirectory(0)
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
         setattr(self, name, h)
