@@ -220,5 +220,6 @@ fastsim_response: ['/rstorage/alice/AnalysisResults/ang/273928/AnalysisResultsFi
                    '/rstorage/alice/AnalysisResults/ang/274089/AnalysisResultsFinal.root']
 
 # Prior variation parameters
+prior_variation_option: 1
 prior1_variation_parameter: 0.5
 prior2_variation_parameter: -0.5
