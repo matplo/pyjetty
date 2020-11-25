@@ -236,21 +236,22 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           use_underflow = False
 
         # Rebin if requested, and write to file
+        use_histutils = True
         thn = self.fResponse.Get(name_thn)
         thn.SetName(name_thn)
         setattr(self, name_thn, thn)
         if rebin_response:
         
-          use_histutils = False
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
           label = 'R{}_{}'.format(jetR, obs_label)
           if use_histutils:
-            axes_n_bins = array('i',([n_pt_bins_det, n_bins_det, n_pt_bins_truth, n_bins_truth]))
-            axes_bin_arrays = np.array([det_pt_bin_array, det_bin_array, truth_pt_bin_array, truth_bin_array])
             n_dim = 4
-            self.histutils.rebin_thn(response_file_name, thn, name_thn_rebinned, name_roounfold,
-                                     n_dim, axes_n_bins,
-                                     det_pt_bin_array, det_bin_array, truth_pt_bin_array, truth_bin_array,
+            self.histutils.rebin_thn(response_file_name, thn,
+                                     name_thn_rebinned, name_roounfold, n_dim,
+                                     n_pt_bins_det, det_pt_bin_array,
+                                     n_bins_det, det_bin_array,
+                                     n_pt_bins_truth, truth_pt_bin_array,
+                                     n_bins_truth, truth_bin_array,
                                      label, self.prior_variation_parameter,
                                      self.prior_variation_option, use_underflow)
           else:

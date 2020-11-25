@@ -45,21 +45,27 @@ namespace RUtil
                         THnF* thn,
                         const std::string & name_thn_rebinned,
                         const std::string & name_roounfold,
-                        const unsigned int & n_dim,
-                        const int* axes_n_bins,
-                        double* axes_bin_array0,
-                        double* axes_bin_array1,
-                        double* axes_bin_array2,
-                        double* axes_bin_array3,
+                        int n_dim,
+                        double n_pt_bins_det,
+                        double* det_pt_bin_array,
+                        double n_obs_bins_det,
+                        double* det_bin_array,
+                        double n_pt_bins_truth,
+                        double* truth_pt_bin_array,
+                        double n_obs_bins_truth,
+                        double* truth_bin_array,
                         const std::string label="",
-                        const double & prior_variation_parameter=0.,
+                        double prior_variation_parameter=0.,
                         int prior_option=1,
                         bool move_underflow=false,
                         bool do_roounfoldresponse=true);
-
+        
         // Create empty THn using provided axes
-        THnF* create_empty_thn(const char* name, const unsigned int & n_dim, const char** axes_titles,
-                               const int* axes_n_bins, std::vector<double*> axes_bin_arrays);
+        THnF* create_empty_thn(const char* name, int n_dim,
+                               double n_pt_bins_det, double* det_pt_bin_array,
+                               double n_obs_bins_det, double* det_bin_array,
+                               double n_pt_bins_truth, double* truth_pt_bin_array,
+                               double n_obs_bins_truth, double* truth_bin_array);
 
         // Fill empty thn_rebinned with data from thn
         void fill_rebinned_thn(std::string response_file_name, THnF* thn,

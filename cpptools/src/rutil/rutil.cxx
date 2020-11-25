@@ -10,10 +10,12 @@ ClassImp(RUtil::HistUtils);
 namespace RUtil
 {
 
+    //---------------------------------------------------------------
     // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
     // If move_y_underflow is set, y-underflow bins in h_to_rebin are added to (x, 1) bin
     //     [WARNING: it is NOT preserved in y-underflow bin: it is really added to (x, 1)]
     // RETURNS: pointer to a new rebinned TH2F on the heap
+    //---------------------------------------------------------------
     TH2F* HistUtils::rebin_th2(TH2F & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
                     double* y_bins, int n_y_bins, bool move_y_underflow /*= false*/) {
 
@@ -71,40 +73,35 @@ namespace RUtil
     // Rebin THn according to specified binnings; return pointer to rebinned THn
     //---------------------------------------------------------------
     THnF* HistUtils::rebin_thn(std::string response_file_name,
-                    THnF* thn,
-                    const std::string & name_thn_rebinned,
-                    const std::string & name_roounfold,
-                    const unsigned int & n_dim,
-                    const int* axes_n_bins,
-                    double* axes_bin_array0,
-                    double* axes_bin_array1,
-                    double* axes_bin_array2,
-                    double* axes_bin_array3,
-                    const std::string label/*=""*/,
-                    const double & prior_variation_parameter/*=0.*/,
-                    int prior_option/*=1*/,
-                    bool move_underflow/*=false*/,
-                    bool do_roounfoldresponse/*=true*/) {
-        
-        // Put axis binnings into a vector
-        std::vector<double*> axes_bin_arrays;
-        axes_bin_arrays.push_back(axes_bin_array0);
-        axes_bin_arrays.push_back(axes_bin_array1);
-        axes_bin_arrays.push_back(axes_bin_array2);
-        axes_bin_arrays.push_back(axes_bin_array3);
+                               THnF* thn,
+                               const std::string & name_thn_rebinned,
+                               const std::string & name_roounfold,
+                               int n_dim,
+                               double n_pt_bins_det,
+                               double* det_pt_bin_array,
+                               double n_obs_bins_det,
+                               double* det_bin_array,
+                               double n_pt_bins_truth,
+                               double* truth_pt_bin_array,
+                               double n_obs_bins_truth,
+                               double* truth_bin_array,
+                               const std::string label/*=""*/,
+                               double prior_variation_parameter/*=0.*/,
+                               int prior_option/*=1*/,
+                               bool move_underflow/*=false*/,
+                               bool do_roounfoldresponse/*=true*/) {
  
-        // Initialize char* array of axes titles
-        const char** axes_titles = new const char*[n_dim];
-        for (unsigned int i = 0; i < n_dim; i++) {
-            axes_titles[i] = thn->GetAxis(i)->GetTitle();
-        }
-
         // ------------------------------------------------------
-        // Create THn
-        
         // Create empty THn with specified binnings
-        THnF* thn_rebinned = create_empty_thn(
-            name_thn_rebinned.c_str(), n_dim, axes_titles, axes_n_bins, axes_bin_arrays);
+        THnF* thn_rebinned = create_empty_thn(name_thn_rebinned.c_str(), n_dim,
+                                              n_pt_bins_det, det_pt_bin_array,
+                                              n_obs_bins_det, det_bin_array,
+                                              n_pt_bins_truth, truth_pt_bin_array,
+                                              n_obs_bins_truth, truth_bin_array);
+        
+        for (unsigned int i = 0; i < n_dim; i++) {
+            thn_rebinned->GetAxis(i)->SetTitle(thn->GetAxis(i)->GetTitle());
+        }
         
         // ------------------------------------------------------
         // Create RooUnfoldResponse
@@ -131,9 +128,6 @@ namespace RUtil
                           do_roounfoldresponse, roounfold_response,
                           prior_variation_parameter, prior_option, move_underflow);
 
-        // clean up memory
-        delete[] axes_titles;
-
         return thn_rebinned;
 
     }  // rebin_thn
@@ -142,28 +136,43 @@ namespace RUtil
     //---------------------------------------------------------------
     // Create an empty THn according to specified binnings
     //---------------------------------------------------------------
-    THnF* HistUtils::create_empty_thn(const char* name, const unsigned int & n_dim, const char** axes_titles,
-                           const int* axes_n_bins, std::vector<double*> axes_bin_arrays) {
-
+    THnF* HistUtils::create_empty_thn(const char* name, int n_dim,
+                                      double n_pt_bins_det, double* det_pt_bin_array,
+                                      double n_obs_bins_det, double* det_bin_array,
+                                      double n_pt_bins_truth, double* truth_pt_bin_array,
+                                      double n_obs_bins_truth, double* truth_bin_array) {
+ 
         // Initialize array of min & max values
-        double* min = new double[n_dim];
-        double* max = new double[n_dim];
+        std::vector<int> nbins;
+        std::vector<double> min;
+        std::vector<double> max;
+        std::vector<double*> bin_edges;
+        
+        nbins.push_back(n_pt_bins_det);
+        bin_edges.push_back(det_pt_bin_array);
+        min.push_back(det_pt_bin_array[0]);
+        min.push_back(det_pt_bin_array[-1]);
+        
+        nbins.push_back(n_pt_bins_truth);
+        bin_edges.push_back(truth_pt_bin_array);
+        min.push_back(truth_pt_bin_array[0]);
+        min.push_back(truth_pt_bin_array[-1]);
 
-        for (unsigned int i = 0; i < n_dim; i++) {
-            min[i] = axes_bin_arrays[i][0];
-            max[i] = axes_bin_arrays[i][axes_n_bins[i]];
-        }
+        nbins.push_back(n_obs_bins_det);
+        bin_edges.push_back(det_bin_array);
+        min.push_back(det_bin_array[0]);
+        min.push_back(det_bin_array[-1]);
+        
+        nbins.push_back(n_obs_bins_truth);
+        bin_edges.push_back(truth_bin_array);
+        min.push_back(truth_bin_array[0]);
+        min.push_back(truth_bin_array[-1]);
 
         // Create the new THn and set correct axes titles / bin edges
-        THnF* h = new THnF(name, name, n_dim, axes_n_bins, min, max);
+        THnF* h = new THnF(name, name, n_dim, nbins.data(), min.data(), max.data());
         for (unsigned int i = 0; i < n_dim; i++) {
-            h->GetAxis(i)->SetTitle(axes_titles[i]);
-            h->SetBinEdges(i, axes_bin_arrays[i]);
+            h->SetBinEdges(i, bin_edges[i]);
         }
-
-        // clean up memory
-        delete[] min;
-        delete[] max;
 
         return h;
 
