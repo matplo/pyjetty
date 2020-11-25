@@ -215,7 +215,7 @@ namespace RUtil
             x[0] = thn->GetAxis(0)->GetBinCenter(bin_0);
 
             // print helpful message while waiting
-            std::cout << x[0] << " / " << n_bins_0 << '\r' << std::flush;
+            std::cout << bin_0 << " / " << n_bins_0 << '\r' << std::flush;
 
             for (unsigned int bin_1 = 1; bin_1 < n_bins_1; bin_1++) {
                 global_bin[1] = bin_1;
