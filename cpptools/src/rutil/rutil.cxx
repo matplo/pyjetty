@@ -110,7 +110,7 @@ namespace RUtil
         // Create RooUnfoldResponse
         RooUnfoldResponse* roounfold_response = (
 			do_roounfoldresponse ? 
-			create_empty_roounfoldresponse(thn_rebinned, name_roounfold, label)	: nullptr);
+			this->create_empty_roounfoldresponse(thn_rebinned, name_roounfold, label) : nullptr);
 
         const prior_scale_func f = this->prior_scale_factor_obs(prior_option);
         
@@ -247,16 +247,19 @@ namespace RUtil
                         global_bin[3] = bin_3;
                         x[3] = thn->GetAxis(3)->GetBinCenter(bin_3);
 
-                        double content = thn->GetBinContent(global_bin);
+						int bin = thn->GetBin(global_bin);
+                        double content = thn->GetBinContent(bin);
+						double error = thn->GetBinError(bin);
 
                         // Impose a custom prior, if desired
                         if (std::abs(prior_variation_parameter) > 1e-5 && x[1] > 0 && x[3] > 0) {
 
-                            // Scale number of counts according to variation of pt prior
-                            content *= std::pow(x[1], prior_variation_parameter);
+                            // Scale number of counts according to variation of pt & observable prior
+							double scale_factor = std::pow(x[1], prior_variation_parameter) *
+								(*prior_scale_f)(x[3], content, prior_variation_parameter);
 
-                            // Scale number of counts according to variation of observable prior
-                            content *= (*prior_scale_f)(x[3], content, prior_variation_parameter);
+                            content *= scale_factor;
+                            error *= scale_factor;
 
                         }  // scale prior
 
@@ -280,7 +283,11 @@ namespace RUtil
 
                         // THn is filled as (x[0], x[1], x[2], x[3])
                         // corresponding e.g. to (pt_det, pt_true, obs_det, obs_true)
-                        thn_rebinned->Fill(x, content);
+						bin = thn_rebinned->GetBin(x);
+						double prev_content = thn_rebinned->GetBinContent(bin);
+						double prev_error2 = thn_rebinned->GetBinError2(bin);
+                        thn_rebinned->SetBinContent(bin, prev_content + content);
+						thn_rebinned->SetBinError(bin, std::sqrt(prev_error2 + std::pow(error, 2)));
 
                         // RooUnfoldResponse should be filled as (x[0], x[2], x[1], x[3])
                         // corresponding e.g. to (pt_det, obs_det, pt_true, obs_true)
@@ -344,7 +351,7 @@ namespace RUtil
     double prior_scale_func_1(const double & obs_true, const double & content,
 							  const double & prior_variation_parameter) {
         // linear scaling of distributions
-        return (1 + prior_variation_parameter * (2 * obs_true - 1));
+        return std::abs(1 + prior_variation_parameter * (2 * obs_true - 1));
     }
 
     double prior_scale_func_2(const double & obs_true, const double & content,
