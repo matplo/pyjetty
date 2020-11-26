@@ -27,20 +27,20 @@ namespace RUtil
     };
 
 
-	typedef double (*prior_scale_func)(const double & obs_true,
-									   const double & content,
-									   const double & prior_variation_parameter);
+    typedef double (*prior_scale_func)(const double & obs_true,
+                                       const double & content,
+                                       const double & prior_variation_parameter);
 
-	double prior_scale_func_0(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter);
-	double prior_scale_func_1(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter);
-	double prior_scale_func_2(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter);
-	double prior_scale_func_3(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter);
-	double prior_scale_func_def(const double & obs_true, const double & content,
-								const double & prior_variation_parameter);
+    double prior_scale_func_0(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter);
+    double prior_scale_func_1(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter);
+    double prior_scale_func_2(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter);
+    double prior_scale_func_3(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter);
+    double prior_scale_func_def(const double & obs_true, const double & content,
+                                const double & prior_variation_parameter);
 
     //------------------------------------------------------
     // Rebinning utilities
@@ -84,8 +84,8 @@ namespace RUtil
                                const int & n_pt_bins_truth, const double* truth_pt_bin_array,
                                const int & n_obs_bins_truth, const double* truth_bin_array);
 
-		RooUnfoldResponse* create_empty_roounfoldresponse(
-			THnF* thn_rebinned, const std::string & name_roounfold, const std::string & label);
+        RooUnfoldResponse* create_empty_roounfoldresponse(
+            THnF* thn_rebinned, const std::string & name_roounfold, const std::string & label);
 
         // Fill empty thn_rebinned with data from thn
         void fill_rebinned_thn(const std::string & response_file_name, const THnF* thn,

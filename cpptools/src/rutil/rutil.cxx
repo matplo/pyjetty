@@ -9,9 +9,9 @@ ClassImp(RUtil::HistUtils);
 
 namespace RUtil
 {
-	typedef double (*prior_scale_func)(const double & obs_true,
-									   const double & content,
-									   const double & prior_variation_parameter);
+    typedef double (*prior_scale_func)(const double & obs_true,
+                                       const double & content,
+                                       const double & prior_variation_parameter);
 
     //---------------------------------------------------------------
     // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
@@ -97,10 +97,10 @@ namespace RUtil
         // ------------------------------------------------------
         // Create empty THn with specified binnings
         THnF* thn_rebinned = this->create_empty_thn(name_thn_rebinned.c_str(), n_dim,
-													n_pt_bins_det, det_pt_bin_array,
-													n_obs_bins_det, det_bin_array,
-													n_pt_bins_truth, truth_pt_bin_array,
-													n_obs_bins_truth, truth_bin_array);
+                                                    n_pt_bins_det, det_pt_bin_array,
+                                                    n_obs_bins_det, det_bin_array,
+                                                    n_pt_bins_truth, truth_pt_bin_array,
+                                                    n_obs_bins_truth, truth_bin_array);
         
         for (unsigned int i = 0; i < n_dim; i++) {
             thn_rebinned->GetAxis(i)->SetTitle(thn->GetAxis(i)->GetTitle());
@@ -109,15 +109,15 @@ namespace RUtil
         // ------------------------------------------------------
         // Create RooUnfoldResponse
         RooUnfoldResponse* roounfold_response = (
-			do_roounfoldresponse ? 
-			this->create_empty_roounfoldresponse(thn_rebinned, name_roounfold, label) : nullptr);
+            do_roounfoldresponse ? 
+            this->create_empty_roounfoldresponse(thn_rebinned, name_roounfold, label) : nullptr);
 
         const prior_scale_func f = this->prior_scale_factor_obs(prior_option);
         
         // Loop through THn and fill rebinned THn and RooUnfoldResponse
         this->fill_rebinned_thn(response_file_name, thn, thn_rebinned, n_dim, f,
-								do_roounfoldresponse, roounfold_response,
-								prior_variation_parameter, move_underflow);
+                                do_roounfoldresponse, roounfold_response,
+                                prior_variation_parameter, move_underflow);
 
         return thn_rebinned;
 
@@ -176,27 +176,27 @@ namespace RUtil
 
 
     //---------------------------------------------------------------
-	// Create empty RooUnfoldResponse object and return pointer
-	RooUnfoldResponse* HistUtils::create_empty_roounfoldresponse(
-		THnF* thn_rebinned, const std::string & name_roounfold, const std::string & label) {
+    // Create empty RooUnfoldResponse object and return pointer
+    RooUnfoldResponse* HistUtils::create_empty_roounfoldresponse(
+        THnF* thn_rebinned, const std::string & name_roounfold, const std::string & label) {
 
-		// Create empty RooUnfoldResponse with specified binning
-		TH2D* hist_measured = thn_rebinned->Projection(2, 0);
-		std::string name_measured = std::string("hist_measured_") + label;
-		hist_measured->SetName(name_measured.c_str());
-		TH2D* hist_truth = thn_rebinned->Projection(3, 1);
-		std::string name_truth = std::string("hist_truth_") + label;
-		hist_truth->SetName(name_truth.c_str());
-		RooUnfoldResponse* roounfold_response = new RooUnfoldResponse(
-			hist_measured, hist_truth, name_roounfold.c_str(), name_roounfold.c_str());
+        // Create empty RooUnfoldResponse with specified binning
+        TH2D* hist_measured = thn_rebinned->Projection(2, 0);
+        std::string name_measured = std::string("hist_measured_") + label;
+        hist_measured->SetName(name_measured.c_str());
+        TH2D* hist_truth = thn_rebinned->Projection(3, 1);
+        std::string name_truth = std::string("hist_truth_") + label;
+        hist_truth->SetName(name_truth.c_str());
+        RooUnfoldResponse* roounfold_response = new RooUnfoldResponse(
+            hist_measured, hist_truth, name_roounfold.c_str(), name_roounfold.c_str());
 
-		// Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold
-		//       -- we have to do it manually
-		//roounfold_response.UseOverflow(True)
+        // Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold
+        //       -- we have to do it manually
+        //roounfold_response.UseOverflow(True)
 
-		return roounfold_response;
+        return roounfold_response;
 
-	}  // create_empty_roounfold_response
+    }  // create_empty_roounfold_response
 
 
     //---------------------------------------------------------------
@@ -247,16 +247,16 @@ namespace RUtil
                         global_bin[3] = bin_3;
                         x[3] = thn->GetAxis(3)->GetBinCenter(bin_3);
 
-						int bin = thn->GetBin(global_bin);
+                        int bin = thn->GetBin(global_bin);
                         double content = thn->GetBinContent(bin);
-						double error = thn->GetBinError(bin);
+                        double error = thn->GetBinError(bin);
 
                         // Impose a custom prior, if desired
                         if (std::abs(prior_variation_parameter) > 1e-5 && x[1] > 0 && x[3] > 0) {
 
                             // Scale number of counts according to variation of pt & observable prior
-							double scale_factor = std::pow(x[1], prior_variation_parameter) *
-								(*prior_scale_f)(x[3], content, prior_variation_parameter);
+                            double scale_factor = std::pow(x[1], prior_variation_parameter) *
+                                (*prior_scale_f)(x[3], content, prior_variation_parameter);
 
                             content *= scale_factor;
                             error *= scale_factor;
@@ -283,11 +283,11 @@ namespace RUtil
 
                         // THn is filled as (x[0], x[1], x[2], x[3])
                         // corresponding e.g. to (pt_det, pt_true, obs_det, obs_true)
-						bin = thn_rebinned->GetBin(x);
-						double prev_content = thn_rebinned->GetBinContent(bin);
-						double prev_error2 = thn_rebinned->GetBinError2(bin);
+                        bin = thn_rebinned->GetBin(x);
+                        double prev_content = thn_rebinned->GetBinContent(bin);
+                        double prev_error2 = thn_rebinned->GetBinError2(bin);
                         thn_rebinned->SetBinContent(bin, prev_content + content);
-						thn_rebinned->SetBinError(bin, std::sqrt(prev_error2 + std::pow(error, 2)));
+                        thn_rebinned->SetBinError(bin, std::sqrt(prev_error2 + std::pow(error, 2)));
 
                         // RooUnfoldResponse should be filled as (x[0], x[2], x[1], x[3])
                         // corresponding e.g. to (pt_det, obs_det, pt_true, obs_true)
@@ -343,30 +343,30 @@ namespace RUtil
     // Prior scaling functions
     //---------------------------------------------------------------
     double prior_scale_func_0(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter) {
         // power law
         return std::pow(obs_true, prior_variation_parameter);
     }
 
     double prior_scale_func_1(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter) {
         // linear scaling of distributions
         return std::abs(1 + prior_variation_parameter * (2 * obs_true - 1));
     }
 
     double prior_scale_func_2(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter) {
         // sharpening/smoothing the distributions
         return std::pow(content, 1 + prior_variation_parameter);
     }
 
     double prior_scale_func_3(const double & obs_true, const double & content,
-							  const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter) {
         return (1 + obs_true);
     }
 
     double prior_scale_func_def(const double & obs_true, const double & content,
-								const double & prior_variation_parameter) {
+                                const double & prior_variation_parameter) {
         return obs_true;
     }
 
