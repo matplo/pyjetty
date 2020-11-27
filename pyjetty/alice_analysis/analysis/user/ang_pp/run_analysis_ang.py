@@ -588,7 +588,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    if self.do_theory and float(obs_label) in self.theory_beta:
+    if self.do_theory and float(obs_label[0]) in self.theory_beta:
       # Compare parton-level theory to parton-level event generators
       self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
 
@@ -693,7 +693,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myBlankHisto.SetMaximum(maxval)
       myBlankHisto.Draw("E")
     elif not plot_theory or not show_parton_theory:
-      maxval = 2.3*h.GetBinContent(int(0.4*h.GetNbinsX()))
+      maxval = max(2.3*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
       myBlankHisto.SetMaximum(maxval)
       myBlankHisto.Draw("E")
 
@@ -869,7 +869,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text_xval = 0.63
+    text_xval = 0.6 if grooming_setting else 0.63
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(text_xval, 0.87, text)
     
@@ -910,7 +910,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if plot_theory and show_parton_theory and not show_everything_else:
       myLegend = ROOT.TLegend(0.21, 0.79, 0.45, 0.91)
     else:
-      myLegend = ROOT.TLegend(0.23, 0.57, text_xval-0.02, 0.92)
+      miny = 0.72 if plot_pythia else 0.57
+      myLegend = ROOT.TLegend(0.23, miny, text_xval-0.02, 0.92)
     self.utils.setup_legend(myLegend, 0.035)
     if show_everything_else:
       myLegend.AddEntry(h, 'ALICE pp', 'pe')
@@ -1627,11 +1628,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.56, 0.62, 0.84, 0.89)
+    myLegend = ROOT.TLegend(0.22, 0.66, 0.55, 0.91)
     self.utils.setup_legend(myLegend, 0.045)
+    myLegend2 = ROOT.TLegend(0.43, 0.786, 0.65, 0.91)
+    self.utils.setup_legend(myLegend2, 0.045)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
-    ymax = self.get_maximum(name, overlay_list)
+    ymax, ymin = self.get_max_min(name, overlay_list, maxbins)
 
     h_list = []
     text_list = []
@@ -1742,7 +1745,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
           if setlogy:  # the minimum value matters
-            myBlankHisto.SetMinimum(5e-2)
+            myBlankHisto.SetMinimum(2*ymin/3)
           myBlankHisto.GetYaxis().SetTitleSize(0.065)
           myBlankHisto.GetYaxis().SetTitleOffset(1.1)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
@@ -1873,39 +1876,47 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       text = ''
       if subobs_label:
         text += '%s = %s' % (subobs_label, obs_setting)
-      if grooming_setting:
-        text += self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
       text_list.append(text)
       h_list.append(h)
         
     pad1.cd()
-    for h, text in zip(h_list, text_list):
-      myLegend.AddEntry(h, text, 'pe')
+    for i, h, text in zip(range(len(h_list)), h_list, text_list):
+      if i < 2:
+        myLegend.AddEntry(h, text, 'pe')
+      else:
+        myLegend2.AddEntry(h, text, 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
 
+    text_xval = 0.63
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.25, 0.87, text)
+    text_latex.DrawLatex(text_xval, 0.87, text)
     
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.81, text)
+    text_latex.DrawLatex(text_xval, 0.81, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.75, text)
+    text_latex.DrawLatex(text_xval, 0.75, text)
     
     text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
-    text_latex.DrawLatex(0.25, 0.69, text)
+    text_latex.DrawLatex(text_xval, 0.69, text)
     
     text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.63, text)
+    text_latex.DrawLatex(text_xval, 0.63, text)
+
+    if grooming_setting:
+      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
+      text_latex.DrawLatex(text_xval, 0.57, text)
 
     myLegend.Draw()
+    if len(h_list) > 2:
+      myLegend2.Draw()
 
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, 
                                         self.utils.remove_periods(jetR), int(min_pt_truth), 
@@ -1930,10 +1941,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     c.Close()
 
   #----------------------------------------------------------------------
-  # Return maximum y-value of unfolded results in a subconfig list
-  def get_maximum(self, name, overlay_list):
-  
-    max = 0.
+  # Return maximum & minimum y-values of unfolded results in a subconfig list
+  def get_max_min(self, name, overlay_list, maxbins):
+
+    total_min = 1e10
+    total_max = -1e10
+
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
@@ -1942,12 +1955,24 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
       obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      maxbin = maxbins[i]
       
       h = getattr(self, name.format(obs_label))
-      if h.GetMaximum() > max:
-        max = h.GetMaximum()
+      if 'SD' in obs_label:
+        content = [ h.GetBinContent(j) for j in range(2, maxbin+2) ]
+      else:
+        content = [ h.GetBinContent(j) for j in range(1, maxbin+1) ]
+
+      min_val = min(content)
+      if min_val < total_min:
+        total_min = min_val
+      max_val = max(content)
+      if max_val > total_max:
+        total_max = max_val
+
         
-    return max
+    return (total_max, total_min)
+
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
