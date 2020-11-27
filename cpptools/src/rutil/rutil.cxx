@@ -136,7 +136,7 @@ namespace RUtil
         // Obviously only working for n_dim == 4 at the moment
         if (n_dim != 4) {
             std::cerr << "ERROR: Not Implemented: Assertion n_dim == 4 failed in "
-                      << "fjtools.cxx::fill_rebinned_thn()" << std::endl;
+                      << "fjtools.cxx::create_empty_thn()" << std::endl;
             std::terminate();
         }
 
