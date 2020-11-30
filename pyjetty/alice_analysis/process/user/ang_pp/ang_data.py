@@ -99,6 +99,9 @@ class process_ang_data(process_base.ProcessBase):
                             (self.pt_limits[1] - self.pt_limits[0]) / self.n_pt_bins)
     self.n_lambda_bins = config["n_lambda_bins"]
     self.lambda_limits = config["lambda_limits"]
+    self.pt_bins_response = array('d', list(range(5, 100, 5)) + list(range(100, 210, 10)))
+    self.obs_bins_response = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
+                                             np.linspace(0.11, 0.8, 70)))
     self.n_rap_bins = config["n_rap_bins"]
     self.rap_limits = config["rap_limits"]
 
@@ -132,6 +135,7 @@ class process_ang_data(process_base.ProcessBase):
       h = ROOT.TH1F(name, name, 300, 0, 300)
       h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
       h.GetYaxis().SetTitle('d#it{N}/d#it{p}_{T}')
+      h.Sumw2()  # enables calculation of errors
       setattr(self, name, h)
 
       '''
@@ -139,6 +143,7 @@ class process_ang_data(process_base.ProcessBase):
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 50.)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('m_{ch jet}')
+      h.Sumw2()
       setattr(self, name, h)
       '''
       
@@ -153,6 +158,7 @@ class process_ang_data(process_base.ProcessBase):
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          h.Sumw2()
           setattr(self, name, h)
 
           # Angularities with soft drop
@@ -160,15 +166,17 @@ class process_ang_data(process_base.ProcessBase):
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
           h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
           h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          h.Sumw2()
           setattr(self, name, h)
         '''
 
         # Lambda vs pT plots with fine binning
         name = "h_ang_JetPt_R%s_%s" % (jetR, beta)
-        h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
-                      self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+        h = ROOT.TH2F(name, name, len(self.pt_bins_response)-1, self.pt_bins_response,
+                      len(self.obs_bins_response)-1, self.obs_bins_response)
         h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
         h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+        h.Sumw2()
         setattr(self, name, h)
 
         # Lambda vs rapidity plots with fine binning
@@ -177,15 +185,17 @@ class process_ang_data(process_base.ProcessBase):
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('#it{#eta}_{ch jet}')
         h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+        h.Sumw2()
         setattr(self, name, h)
 
         for gl in self.grooming_labels:
           # Lambda vs pT plots with fine binning -- with soft drop
           name = "h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl)
-          h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1], 
-                        self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
+          h = ROOT.TH2F(name, name, len(self.pt_bins_response)-1, self.pt_bins_response,
+                        len(self.obs_bins_response)-1, self.obs_bins_response)
           h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
           h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+          h.Sumw2()
           setattr(self, name, h)
 
           # Lambda vs pT plots with fine binning -- with soft drop
@@ -194,6 +204,7 @@ class process_ang_data(process_base.ProcessBase):
                         self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
           h.GetXaxis().SetTitle('#it{#eta}_{ch jet}')
           h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+          h.Sumw2()
           setattr(self, name, h)
 
   #---------------------------------------------------------------

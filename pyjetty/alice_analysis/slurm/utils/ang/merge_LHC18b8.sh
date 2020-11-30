@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Script to merge output ROOT files
-JOB_ID=274089
+JOB_ID=281794
 OUTPUT_DIR="/rstorage/alice/AnalysisResults/ang/$JOB_ID"
 
 # command line arguments
@@ -28,8 +28,8 @@ module list
 
 # Merge all output files from each pt-hat bin
 FILE_DIR_BASE=/rstorage/alice/AnalysisResults/ang/$JOB_ID
-FILES=$( find ${FILE_DIR_BASE}/520/child_*/TrainOutput/${BIN}/ -name "*.root" )
-#FILES=$( find ${FILE_DIR_BASE}/260023/${BIN}/ -name "*.root" )
+#FILES=$( find ${FILE_DIR_BASE}/520/child_*/TrainOutput/${BIN}/ -name "*.root" )
+FILES=$( find ${FILE_DIR_BASE}/260023/${BIN}/ -name "*.root" )
 
 OUT_DIR_BASE=/rstorage/alice/AnalysisResults/ang/$JOB_ID
 mkdir -p ${OUT_DIR_BASE}/Stage0/${BIN}

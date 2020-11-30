@@ -130,22 +130,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             tru_pt_bin_array = array('d', range(10, 160, 15))
             det_obs_bin_array = array('d', np.linspace(0, 1, 101, endpoint=True))
             tru_obs_bin_array = array('d', np.linspace(-0.005, 1.005, 102, endpoint=True))
-            self.utils.rebin_response(
-              roounfold_filename, thn_ch, '%s_Rebinned_%i' % (name_ch, ri), name_roounfold_ch, label,
+            n_dim = 4
+            self.histutils.rebin_thn(
+              roounfold_filename, thn_ch, '%s_Rebinned_%i' % (name_ch, ri), name_roounfold_ch, n_dim,
               len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
-              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
-              self.observable)
-            self.utils.rebin_response(
-              roounfold_filename, thn_h, '%s_Rebinned_%i' % (name_h, ri), name_roounfold_h, label, 
+              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array, label)
+            self.histutils.rebin_thn(
+              roounfold_filename, thn_h, '%s_Rebinned_%i' % (name_h, ri), name_roounfold_h, n_dim,
               len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
-              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
-              self.observable)
-
+              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array, label)
             f_resp = ROOT.TFile(self.theory_rebinned_response_file, 'READ')
             roounfold_response_ch = f_resp.Get(name_roounfold_ch)
             roounfold_response_h = f_resp.Get(name_roounfold_h)
             f_resp.Close()
-          
 
           else:   # Theory folding matrix already has correct binning
             hist_p_jet = thn_ch.Projection(3, 1)
@@ -588,7 +585,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    if self.do_theory and float(obs_label[0]) in self.theory_beta:
+    if self.do_theory and not grooming_setting and float(obs_label) in self.theory_beta:
       # Compare parton-level theory to parton-level event generators
       self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
 
@@ -601,7 +598,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
 
-      if self.do_theory and float(obs_label) in self.theory_beta:
+      if self.do_theory and not grooming_setting and float(obs_label) in self.theory_beta:
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
@@ -622,7 +619,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = False
     show_everything_else = True  # set 'False' to show *only* parton-level theory
-    rebin_folded = True  # combine every 2 bins to reduce statistical fluctuations
+    rebin_folded = False  # combine every 2 bins to reduce statistical fluctuations
 
     # For theory plots, whether or not to show the NP / P region
     show_np_region = True

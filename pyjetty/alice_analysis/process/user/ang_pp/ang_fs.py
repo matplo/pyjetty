@@ -170,28 +170,33 @@ class process_ang_mc(process_base.ProcessBase):
 
       name = 'hJetPt_Truth_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH1F(name, name+';#it{p}_{T,tru}^{ch jet};#frac{d#it{N}}{d#it{p}_{T,tru}^{ch jet}};', 300, 0, 300)
+      h.Sumw2()  # enables calculation of errors
       setattr(self, name, h)
 
       name = 'hJES_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
       h.GetXaxis().SetTitle('#it{p}_{T,truth}')
       h.GetYaxis().SetTitle('#frac{#it{p}_{T,det}^{ch jet}-#it{p}_{T,tru}^{ch jet}}{#it{p}_{T,tru}^{ch jet}}')
+      h.Sumw2()
       setattr(self, name, h)
 
       name = 'hDeltaR_All_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 100, 0, 100, 100, 0., 2.)
+      h.Sumw2()
       setattr(self, name, h)
 
       name = 'hResponse_JetPt_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 200, 0, 200, 200, 0, 200)
       h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
       h.GetYaxis().SetTitle('#it{p}_{T,tru}^{ch jet}')
+      h.Sumw2()
       setattr(self, name, h)
 
       name = 'hJetPt_N_R%s' % str(jetR).replace('.', '')
       h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 100)
       h.GetXaxis().SetTitle('#it{p}_{T,tru}^{ch jet}')
       h.GetYaxis().SetTitle('#it{N}_{constit}')
+      h.Sumw2()
       setattr(self, name, h)
 
       for beta in self.beta_list:
@@ -202,6 +207,7 @@ class process_ang_mc(process_base.ProcessBase):
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
         h.GetXaxis().SetTitle('#it{#lambda}_{%s,det}' % beta)
         h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru}' % beta)
+        h.Sumw2()
         setattr(self, name, h)
 
         name = 'hAng_JetPt_det_%s' % label
@@ -209,6 +215,7 @@ class process_ang_mc(process_base.ProcessBase):
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
         h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s}}' % str(beta))
+        h.Sumw2()
         setattr(self, name, h)
 
         name = 'hAng_JetPt_tru_%s' % label
@@ -216,6 +223,7 @@ class process_ang_mc(process_base.ProcessBase):
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('#it{p}_{T,tru}^{ch jet}')
         h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s}}' % str(beta))
+        h.Sumw2()
         setattr(self, name, h)
 
         '''
@@ -240,16 +248,21 @@ class process_ang_mc(process_base.ProcessBase):
         name = "hAngResidual_JetPt_%s" % label
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 2.)
         h.GetXaxis().SetTitle('#it{p}_{T,truth}^{ch jet}')
-        h.GetYaxis().SetTitle('#frac{#it{#lambda}_{#it{#beta},det}-#it{#lambda}_{#it{#beta},truth}}{#it{#lambda}_{#it{#beta},truth}}')
+        h.GetYaxis().SetTitle(
+          '#frac{#it{#lambda}_{#it{#beta},det}-#it{#lambda}_{#it{#beta},truth}}{#it{#lambda}_{#it{#beta},truth}}')
+        h.Sumw2()
         setattr(self, name, h)
 
         # Create THn of response
-        dim = 4;
+        dim = 4
         title = ['#it{p}_{T,det}^{ch jet}', '#it{p}_{T,truth}^{ch jet}', 
                  '#it{#lambda}_{#it{#beta},det}', '#it{#lambda}_{#it{#beta},truth}']
-        nbins = [40, 40, 200, 100]
-        min_li = [0.,   0.,   0.,  0.]
-        max_li = [200., 200., 1.0, 1.0]
+        pt_bins = array('d', list(range(5, 100, 5)) + list(range(100, 210, 10)))
+        obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
+                                   np.linspace(0.11, 0.8, 70)))
+        nbins  = [len(pt_bins)-1, len(pt_bins)-1, len(obs_bins)-1, len(obs_bins)-1]
+        min_li = [pt_bins[0],     pt_bins[0],     obs_bins[0],     obs_bins[0]    ]
+        max_li = [pt_bins[-1],    pt_bins[-1],    obs_bins[-1],    obs_bins[-1]   ]
 
         name = 'hResponse_JetPt_ang_%s' % label
         nbins = (nbins)
@@ -261,6 +274,11 @@ class process_ang_mc(process_base.ProcessBase):
         h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
         for i in range(0, dim):
           h.GetAxis(i).SetTitle(title[i])
+          if i == 0 or i == 1:
+            h.SetBinEdges(i, pt_bins)
+          else:  # i == 2 or i == 3
+            h.SetBinEdges(i, obs_bins)
+        h.Sumw2()  # enables calculation of errors
         setattr(self, name, h)
 
         # SoftDrop groomed jet response matrices
@@ -269,6 +287,7 @@ class process_ang_mc(process_base.ProcessBase):
           h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
           h.GetXaxis().SetTitle('#it{#lambda}_{%s,det,SD}' % beta)
           h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru,SD}' % beta)
+          h.Sumw2()
           setattr(self, name, h)
 
           name = 'hAng_JetPt_det_%s_%s' % (label, gl)
@@ -276,6 +295,7 @@ class process_ang_mc(process_base.ProcessBase):
                         self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
           h.GetXaxis().SetTitle('#it{p}_{T,det,SD}^{ch jet}')
           h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s,SD}}' % str(beta))
+          h.Sumw2()
           setattr(self, name, h)
 
           name = 'hAng_JetPt_tru_%s_%s' % (label, gl)
@@ -283,12 +303,14 @@ class process_ang_mc(process_base.ProcessBase):
                         self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
           h.GetXaxis().SetTitle('#it{p}_{T,tru,SD}^{ch jet}')
           h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s,SD}}' % str(beta))
+          h.Sumw2()
           setattr(self, name, h)
 
           name = 'hResponse_JetPt_ang_%s_%s' % (label, gl)
           h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
           for i in range(0, dim):
             h.GetAxis(i).SetTitle(title[i])
+          h.Sumw2()
           setattr(self, name, h)
 
   #---------------------------------------------------------------

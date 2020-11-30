@@ -51,9 +51,12 @@ SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang_pp/pythia_par
 CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/gen_angularity.yaml"
 
 if $USE_PTHAT_MAX; then
-	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX "
-	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX 
+	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2,PhaseSpace:pTHatMax=$PTHAT_MAX "
+	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED \
+		--py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB \
+		--pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2,PhaseSpace:pTHatMax=$PTHAT_MAX 
 else
-	pipenv run python "$SCRIPT" -c "$CONFIG" --output-dir "$OUTDIR" \
-		--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB
+	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR \
+		--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB \
+		--pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2
 fi
