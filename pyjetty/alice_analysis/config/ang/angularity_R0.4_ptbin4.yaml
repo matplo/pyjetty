@@ -46,7 +46,7 @@ ang:
     obs_bins_truth: [0, 0.05, 0.1, 0.2, 0.3, 0.55, 0.8]
     obs_max_reported: [0.55]
     obs_bins_det: [0, 0.06, 0.09, 0.12, 0.2, 0.3, 0.4, 0.55, 0.8]
-    obs_bins_det_sys_binning: [0, 0.05, 0.1, 0.13, 0.17, 0.21, 0.3, 0.41, 0.6, 0.75]
+    obs_bins_det_sys_binning: [0, 0.05, 0.1, 0.13, 0.21, 0.3, 0.41, 0.6, 0.75]
     reg_param:
       0.4: 3
 
@@ -59,7 +59,7 @@ ang:
     obs_bins_truth: [0, 0.03, 0.06, 0.1, 0.2, 0.45, 0.7]
     obs_max_reported: [0.45]
     obs_bins_det: [0, 0.03, 0.06, 0.1, 0.2, 0.45, 0.7]
-    obs_bins_det_sys_binning: [0, 0.03, 0.045, 0.075, 0.09, 0.125, 0.155, 0.21, 0.26, 0.32, 0.48, 0.6]
+    obs_bins_det_sys_binning: [0, 0.035, 0.065, 0.09, 0.21, 0.48, 0.6]
     reg_param:
       0.4: 3
 
@@ -72,7 +72,7 @@ ang:
     obs_bins_truth: [0, 0.02, 0.05, 0.12, 0.4, 0.65]
     obs_max_reported: [0.4]
     obs_bins_det: [0, 0.02, 0.05, 0.12, 0.4, 0.65]
-    obs_bins_det_sys_binning: [0, 0.02, 0.055, 0.085, 0.13, 0.16, 0.22, 0.37, 0.45]
+    obs_bins_det_sys_binning: [0, 0.02, 0.055, 0.085, 0.13, 0.37, 0.45]
     reg_param:
       0.4: 3
 
@@ -85,7 +85,7 @@ ang:
     obs_bins_truth: [0, 0.01, 0.02, 0.04, 0.08, 0.3, 0.5]
     obs_max_reported: [0.3]
     obs_bins_det: [0, 0.01, 0.02, 0.04, 0.08, 0.3, 0.5]
-    obs_bins_det_sys_binning: [0, 0.01, 0.025, 0.045, 0.065, 0.105, 0.23, 0.35]
+    obs_bins_det_sys_binning: [0, 0.005, 0.025, 0.045, 0.1, 0.33, 0.35]
     reg_param:
       0.4: 3
 
@@ -103,7 +103,7 @@ ang:
     obs_bins_truth: [0, 0.02, 0.05, 0.12, 0.25, 0.55, 0.8]
     obs_max_reported: [0.55]
     obs_bins_det: [0, 0.02, 0.05, 0.12, 0.25, 0.55, 0.8]
-    obs_bins_det_sys_binning: [0, 0.015, 0.03, 0.05, 0.1, 0.15, 0.25, 0.41, 0.58, 0.8]
+    obs_bins_det_sys_binning: [0, 0.015, 0.045, 0.13, 0.27, 0.58, 0.8]
     reg_param:
       0.4: 3
 
@@ -116,10 +116,10 @@ ang:
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100]
-    obs_bins_truth: [0, 0.01, 0.05, 0.17, 0.45, 0.7]
+    obs_bins_truth: [0, 0.005, 0.015, 0.05, 0.17, 0.45, 0.7]
     obs_max_reported: [0.45]
-    obs_bins_det: [0, 0.01, 0.05, 0.17, 0.45, 0.7]
-    obs_bins_det_sys_binning: [0, 0.015, 0.03, 0.045, 0.06, 0.1, 0.12, 0.155, 0.26, 0.58, 0.7]
+    obs_bins_det: [0, 0.005, 0.015, 0.05, 0.17, 0.45, 0.7]
+    obs_bins_det_sys_binning: [0, 0.005, 0.015, 0.045, 0.06, 0.155, 0.47, 0.7]
     reg_param:
       0.4: 3
 
@@ -132,10 +132,10 @@ ang:
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100]
-    obs_bins_truth: [0, 0.01, 0.05, 0.14, 0.35, 0.6]
+    obs_bins_truth: [0, 0.002, 0.008, 0.05, 0.14, 0.35, 0.6]
     obs_max_reported: [0.35]
-    obs_bins_det: [0, 0.005, 0.05, 0.14, 0.35, 0.6]
-    obs_bins_det_sys_binning: [0, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.155, 0.21, 0.33, 0.6]
+    obs_bins_det: [0, 0.002, 0.008, 0.05, 0.14, 0.35, 0.6]
+    obs_bins_det_sys_binning: [0, 0.001, 0.007, 0.06, 0.15, 0.33, 0.6]
     reg_param:
       0.4: 3
 
@@ -148,10 +148,10 @@ ang:
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100]
-    obs_bins_truth: [0, 0.01, 0.03, 0.07, 0.2, 0.5]
+    obs_bins_truth: [0, 0.002, 0.007, 0.03, 0.07, 0.2, 0.5]
     obs_max_reported: [0.2]
-    obs_bins_det: [0, 0.005, 0.03, 0.07, 0.2, 0.5]
-    obs_bins_det_sys_binning: [0, 0.005, 0.015, 0.035, 0.07, 0.11, 0.24, 0.5]
+    obs_bins_det: [0, 0.002, 0.007, 0.03, 0.07, 0.2, 0.5]
+    obs_bins_det_sys_binning: [0, 0.001, 0.008, 0.035, 0.07, 0.11, 0.24, 0.5]
     reg_param:
       0.4: 3
 
@@ -201,12 +201,12 @@ systematics_list:
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/277053/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/277214/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/277215/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/283114/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/283275/AnalysisResultsFinal.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/277216/AnalysisResultsFinal.root'
-randmass_response: '/rstorage/alice/AnalysisResults/ang/277217/AnalysisResultsFinal.root'
-fastsim_response: ['/rstorage/alice/AnalysisResults/ang/281633/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/281794/AnalysisResultsFinal.root']
+randmass_response: '/rstorage/alice/AnalysisResults/ang/283276/AnalysisResultsFinal.root'
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/283332/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/283359/AnalysisResultsFinal.root']
 
 # Prior variation parameters
 prior_variation_option: 1
