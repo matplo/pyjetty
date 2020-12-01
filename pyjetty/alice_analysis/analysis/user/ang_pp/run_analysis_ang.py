@@ -619,7 +619,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = False
     show_everything_else = True  # set 'False' to show *only* parton-level theory
-    rebin_folded = False  # combine every 2 bins to reduce statistical fluctuations
+    rebin_folded = True  # combine every 2 bins to reduce statistical fluctuations
 
     # For theory plots, whether or not to show the NP / P region
     show_np_region = True
@@ -1707,7 +1707,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         if maxbin:
-          if (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
+          if self.use_prev_prelim and (jetR == 0.2 or jetR == 0.4) \
+             and min_pt_truth == 40 and obs_label == '1':
             xmax = getattr(self, "xedges_prev_prelim_%s" % jetR)[-1]
           else:
             xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]

@@ -309,6 +309,10 @@ class process_ang_mc(process_base.ProcessBase):
           h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
           for i in range(0, dim):
             h.GetAxis(i).SetTitle(title[i])
+            if i == 0 or i == 1:
+              h.SetBinEdges(i, pt_bins)
+            else:  # i == 2 or i == 3
+              h.SetBinEdges(i, obs_bins)
           h.Sumw2()
           setattr(self, name, h)
 
