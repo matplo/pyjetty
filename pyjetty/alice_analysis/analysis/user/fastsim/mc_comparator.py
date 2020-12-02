@@ -18,6 +18,8 @@ import ROOT
 
 from pyjetty.alice_analysis.analysis.base import analysis_base, analysis_utils
 
+# Load pyjetty ROOT utils
+ROOT.gSystem.Load('libpyjetty_rutil')
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -64,6 +66,9 @@ class mc_comparator(analysis_base.AnalysisBase):
 
         self.outdir = args.outputDir
         self.image_format = args.imageFormat
+    
+        # C++ histogram rebinning functions
+        self.histutils = ROOT.RUtil.HistUtils()
 
     ################################################################
     # Create comparison plots
@@ -75,7 +80,17 @@ class mc_comparator(analysis_base.AnalysisBase):
                 beta = subconfig["beta"]
                 label = "R%s_%s" % (str(jetR), str(beta))
 
+                # Load grooming setting if required
+                use_grooming = False
+                if 'sd' in subconfig_name.lower():
+                    use_grooming = True
+                    sd_zcut = subconfig["SoftDrop"]["zcut"]
+                    sd_beta = subconfig["SoftDrop"]["beta"]
+                    grooming_setting = {'sd': [sd_zcut, sd_beta]}
+                    grooming_label = self.utils.grooming_label(grooming_setting)
+
                 # Get histograms from file for this configuration
+                label = label if not use_grooming else label + '_' + grooming_label
                 name = "hAng_JetPt_det_%sScaled" % label
                 h_mc = self.f_mc.Get(name)
                 if self.do_fs:
@@ -92,22 +107,23 @@ class mc_comparator(analysis_base.AnalysisBase):
                     ang_bins = np.arange(0, max_edge, step)
 
                     # Rebin histograms for comparions
-                    h_mc_rebinned = self.utils.rebin_data(
-                        h_mc, h_mc.GetName()+'_mc', len(self.pt_bins)-1,
-                        array('d', self.pt_bins), len(ang_bins)-1, array('d', ang_bins))
-                    h_tru_rebinned = self.utils.rebin_data(
-                        h_tru, h_tru.GetName()+'_fs', len(self.pt_bins)-1,
-                        array('d', self.pt_bins), len(ang_bins)-1, array('d', ang_bins))
+                    h_mc_rebinned = self.histutils.rebin_th2(
+                        h_mc, h_mc.GetName()+'_mc', array('d', self.pt_bins),
+                        len(self.pt_bins)-1, array('d', ang_bins), len(ang_bins)-1)
+
+                    h_tru_rebinned = self.histutils.rebin_th2(
+                        h_tru, h_tru.GetName()+'_mctru', array('d', self.pt_bins),
+                        len(self.pt_bins)-1, array('d', ang_bins), len(ang_bins)-1)
 
                     if self.do_fs:
-                        h_fs_rebinned = self.utils.rebin_data(
-                            h_fs, h_fs.GetName()+'_fs', len(self.pt_bins)-1,
-                            array('d', self.pt_bins), len(ang_bins)-1, array('d', ang_bins))
+                        h_fs_rebinned = self.histutils.rebin_th2(
+                            h_fs, h_fs.GetName()+'_fs', array('d', self.pt_bins),
+                            len(self.pt_bins)-1, array('d', ang_bins), len(ang_bins)-1)
 
                     if self.do_data:
-                        h_data_rebinned = self.utils.rebin_data(
-                            h_data, h_data.GetName()+'_fs', len(self.pt_bins)-1,
-                            array('d', self.pt_bins), len(ang_bins)-1, array('d', ang_bins))
+                        h_data_rebinned = self.histutils.rebin_th2(
+                            h_data, h_data.GetName()+'_data', array('d', self.pt_bins),
+                            len(self.pt_bins)-1, array('d', ang_bins), len(ang_bins)-1)
 
                     title = "MCcomp_%s_pT_%i-%i" % (label, self.pt_bins[i], self.pt_bins[i+1])
 
@@ -116,7 +132,7 @@ class mc_comparator(analysis_base.AnalysisBase):
                     c.cd()
 
                     # "Pad" to contain the top histograms
-                    topPad = ROOT.TPad('topPad', 'topPad', 0, 0.3, 1, 1.0)
+                    topPad = ROOT.TPad('topPad'+label, 'topPad'+label, 0, 0.3, 1, 1.0)
                     topPad.SetLeftMargin(0.15)
                     topPad.SetTopMargin(0.1)
                     topPad.SetRightMargin(0.05)
@@ -128,16 +144,18 @@ class mc_comparator(analysis_base.AnalysisBase):
                     h_tru_projy = h_tru_rebinned.ProjectionY(title+'_tru', i, i+1)
                     h_tru_projy.SetMarkerSize(1.5)
                     h_tru_projy.SetMarkerStyle(21)
-                    h_tru_projy.SetMarkerColor(1)
+                    h_tru_projy.SetMarkerColor(4)
                     h_tru_projy.SetStats(0)
                     h_tru_projy.Scale(1. / h_tru_projy.GetEntries(), "width")
                     if self.do_fs:
                         h_tru_projy.SetTitle("Angularity distribution for full and fast MC")
                     else:
                         h_tru_projy.SetTitle("Angularity distribution: true vs. det level")
-                    h_tru_projy.SetYTitle('#frac{1}{#it{N}_{jet}} #frac{d#it{N}}{d#it{#lambda}}')
+                    h_tru_projy.SetYTitle(
+                        '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}}')
+                    #h_tru_projy.GetYaxis().SetTitleSize(5)
                     h_tru_projy.SetMinimum(1e-4)
-                    h_tru_projy.SetMaximum(1.5*h_tru_projy.GetMaximum())
+                    h_tru_projy.SetMaximum(1.7*h_tru_projy.GetMaximum())
                     h_tru_projy.Draw("C same E")
                     h_mc_projy = h_mc_rebinned.ProjectionY(title+'_mc', i, i+1)
                     h_mc_projy.SetMarkerSize(1.5)
@@ -148,29 +166,29 @@ class mc_comparator(analysis_base.AnalysisBase):
                     h_mc_projy.SetMinimum(1e-4)
                     h_mc_projy.SetMaximum(1.5*h_mc_projy.GetMaximum())
                     h_mc_projy.Draw("C same E")
-                    if self.do_data:
-                        h_data_projy = h_data_rebinned.ProjectionY(title+'_data', i, i+1)
-                        h_data_projy.SetMarkerSize(1.5)
-                        h_data_projy.SetMarkerStyle(22)
-                        h_data_projy.SetMarkerColor(4)
-                        h_data_projy.SetStats(0)
-                        h_data_projy.Scale(1. / h_data_projy.GetEntries(), "width")
-                        h_data_projy.SetMinimum(1e-4)
-                        h_data_projy.SetMaximum(1.5*h_data_projy.GetMaximum())
-                        h_data_projy.Draw("C same E")
                     if self.do_fs:
                         h_fs_projy = h_fs_rebinned.ProjectionY(title+'_fs', i, i+1)
-                        h_fs_projy.SetMarkerSize(1.5)
-                        h_fs_projy.SetMarkerStyle(21)
-                        h_fs_projy.SetMarkerColor(4)
+                        h_fs_projy.SetMarkerSize(2)
+                        h_fs_projy.SetMarkerStyle(33)
+                        h_fs_projy.SetMarkerColor(3)
                         h_fs_projy.SetStats(0)
                         h_fs_projy.Scale(1. / h_fs_projy.GetEntries(), "width")
                         h_fs_projy.SetMinimum(1e-4)
                         h_fs_projy.SetMaximum(1.5*h_fs_projy.GetMaximum())
                         h_fs_projy.Draw("C same E")
+                    if self.do_data:
+                        h_data_projy = h_data_rebinned.ProjectionY(title+'_data', i, i+1)
+                        h_data_projy.SetMarkerSize(1.5)
+                        h_data_projy.SetMarkerStyle(34)
+                        h_data_projy.SetMarkerColor(1)
+                        h_data_projy.SetStats(0)
+                        h_data_projy.Scale(1. / h_data_projy.GetEntries(), "width")
+                        h_data_projy.SetMinimum(1e-4)
+                        h_data_projy.SetMaximum(1.5*h_data_projy.GetMaximum())
+                        h_data_projy.Draw("C same E")
 
                     # Create and format the legend
-                    leg = ROOT.TLegend(0.69, 0.69, 0.88, 0.88)
+                    leg = ROOT.TLegend(0.65, 0.69, 0.88, 0.88)
                     #leg.SetHeader(title, 'C')
                     self.utils.setup_legend(leg, 0.035)
                     if self.do_fs:
@@ -187,50 +205,85 @@ class mc_comparator(analysis_base.AnalysisBase):
                     # Text overlaid on the plot
                     text_latex = ROOT.TLatex()
                     text_latex.SetNDC()
-                    text = "%i < #it{p}_{T}^{jet, ch} < %s GeV/#it{c}" % \
+                    #text_latex.SetTextSize(0.045)  # doesn't do anything...?
+                    text = "%i < #it{p}_{T, jet}^{ch} < %s GeV/#it{c}" % \
                            (self.pt_bins[i], self.pt_bins[i+1])
-                    text_latex.DrawLatex(0.22, 0.82, text)
-                    text = "#it{R} = " + str(jetR) + "  #it{#beta} = " + str(beta)
-                    text_latex.DrawLatex(0.22, 0.72, text)
+                    text_latex.DrawLatex(0.19, 0.82, text)
+                    text = "#it{R} = " + str(jetR) + ",  #it{#beta} = " + str(beta)
+                    text_latex.DrawLatex(0.19, 0.75, text)
+                    if use_grooming:
+                        text = "SD: #it{z}_{cut} = %s,  #it{#beta}_{SD} = %s" % \
+                               (str(sd_zcut), str(sd_beta))
+                        text_latex.DrawLatex(0.19, 0.68, text)
 
                     # Create bottom pad for ratio plot
                     c.cd()
                     botPad = ROOT.TPad("botPad", "botPad", 0, 0.05, 1, 0.3)
                     botPad.SetTopMargin(0)
-                    botPad.SetBottomMargin(0.25)
+                    botPad.SetBottomMargin(0.4)
                     botPad.SetLeftMargin(0.15)
                     botPad.SetRightMargin(0.05)
                     botPad.Draw()
                     botPad.cd()
 
                     # Create and format the ratio plot
+                    legend2 = ROOT.TLegend(0.66, 0.55, 0.93, 0.68)
                     h_ratio = h_mc_projy.Clone()
-                    if self.do_fs:
-                        h_ratio.Divide(h_fs_projy)
-                    else:
-                        h_ratio.Divide(h_tru_projy)
+                    h_ratio.SetDirectory(0)
+                    h_ratio.Divide(h_tru_projy)
                     h_ratio.SetTitle("")#'h'+title)
                     h_ratio.GetXaxis().SetTitleSize(30)
                     h_ratio.GetXaxis().SetTitleFont(43)
                     h_ratio.GetXaxis().SetTitleOffset(4.)
                     h_ratio.GetXaxis().SetLabelFont(43)
                     h_ratio.GetXaxis().SetLabelSize(20)
-                    h_ratio.SetXTitle('#lambda_{#beta=%s}' % beta)
+                    h_ratio.SetXTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
                     h_ratio.GetYaxis().SetTitleSize(20)
                     h_ratio.GetYaxis().SetTitleFont(43)
                     h_ratio.GetYaxis().SetTitleOffset(2.2)
                     h_ratio.GetYaxis().SetLabelFont(43)
                     h_ratio.GetYaxis().SetLabelSize(20)
-                    if self.do_fs:
-                        h_ratio.SetYTitle("full MC det / fast sim")
-                    else:
-                        h_ratio.SetYTitle("MC det / truth") 
                     h_ratio.SetMarkerColor(51)
                     h_ratio.SetStats(0)
-                    h_ratio.SetMinimum(0.75)
-                    h_ratio.SetMaximum(1.199)
+                    bincontent = [h_ratio.GetBinContent(i) for i in range(1, len(ang_bins))]
+                    mins = [min(bincontent)]
+                    maxs = [max(bincontent)]
                     h_ratio.LabelsDeflate("Y")
+                    legend2.AddEntry(h_ratio, "full MC det / truth", "lep")
+                    if self.do_fs:
+                        h_ratio2 = h_mc_projy.Clone()
+                        h_ratio2.SetDirectory(0)
+                        h_ratio2.Divide(h_fs_projy) 
+                        h_ratio2.SetMarkerColor(7)
+                        h_ratio2.SetMarkerStyle(33)
+                        h_ratio2.SetMarkerSize(2)
+                        h_ratio2.SetStats(0)
+                        bincontent = [h_ratio2.GetBinContent(i) for i in range(1, len(ang_bins))]
+                        mins.append(min(bincontent))
+                        maxs.append(max(bincontent))
+                        legend2.AddEntry(h_ratio2, "full MC det / fast sim", "lep")
+                    if self.do_data:
+                        h_ratio3 = h_mc_projy.Clone()
+                        h_ratio3.SetDirectory(0)
+                        h_ratio3.Divide(h_data_projy) 
+                        h_ratio3.SetMarkerColor(9)
+                        h_ratio3.SetMarkerStyle(21)
+                        h_ratio3.SetStats(0)
+                        mins.append(min(bincontent))
+                        maxs.append(max(bincontent))
+                        legend2.AddEntry(h_ratio3, "full MC det / data", "lep")
+                    h_ratio.SetMinimum(0.8*min(mins))
+                    h_ratio.SetMaximum(1.1*max(maxs))
                     h_ratio.Draw('E')
+                    if self.do_fs:
+                        h_ratio2.Draw('E same')
+                    if self.do_data:
+                        h_ratio3.Draw('E same')
+
+                    # draw bottom legend on top pad where there is more space
+                    topPad.cd()
+                    legend2.Draw()
+                    botPad.cd()
 
                     # Line at 1 for visual reference
                     line = ROOT.TLine(0, 1, ang_bins[-1], 1)
@@ -239,6 +292,14 @@ class mc_comparator(analysis_base.AnalysisBase):
                     outf_name = os.path.join(self.outdir, title + self.image_format)
                     c.SaveAs(outf_name)
                     #input("Press Enter to continue...")
+
+                    # Clean up dynamic memory on C++ side
+                    ROOT.RUtil.delete_h(h_mc_rebinned)
+                    ROOT.RUtil.delete_h(h_tru_rebinned)
+                    if self.do_fs:
+                        ROOT.RUtil.delete_h(h_fs_rebinned)
+                    if self.do_data:
+                        ROOT.RUtil.delete_h(h_data_rebinned)
 
         # Close files after reading / writing
         self.close_files()
