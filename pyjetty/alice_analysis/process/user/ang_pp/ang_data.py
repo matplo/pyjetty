@@ -275,7 +275,7 @@ class process_ang_data(process_base.ProcessBase):
       gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
       jet_sd = self.utils.groom(gshop, gs, jetR).pair()
 
-      l_sd = fjext.lambda_beta_kappa(jet_sd, jet.pt(), beta, kappa, jetR)
+      l_sd = fjext.lambda_beta_kappa(jet, jet_sd, beta, kappa, jetR)
       # Should fill histograms using the ungroomed jet pT & rapidity
       getattr(self, ("h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet.pt(), l_sd)
       getattr(self, ("h_ang_JetRap_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet.rap(), l_sd)

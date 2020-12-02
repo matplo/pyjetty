@@ -869,11 +869,11 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     jet_sd_p = self.utils.groom(gshop_p, gs, jetR).pair()
 
                     tw.fill_branch("l_ch_%s_%s" % (label, gl), fjext.lambda_beta_kappa(
-                        jet_sd_chh, jchh.pt(), beta, kappa, jetR))
+                        jchh, jet_sd_chh, beta, kappa, jetR))
                     tw.fill_branch("l_h_%s_%s" % (label, gl), fjext.lambda_beta_kappa(
-                        jet_sd_h, jh.pt(), beta, kappa, jetR))
+                        jh, jet_sd_h, beta, kappa, jetR))
                     tw.fill_branch("l_p_%s_%s" % (label, gl), fjext.lambda_beta_kappa(
-                        jet_sd_p, jp.pt(), beta, kappa, jetR))
+                        jp, jet_sd_p, beta, kappa, jetR))
 
 
     #---------------------------------------------------------------
@@ -915,7 +915,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     jet_sd = self.utils.groom(gshop, gs, jetR).pair()
 
                     h.Fill("l_ch_%s_%s" % (label, gl), fjext.lambda_beta_kappa(
-                        jet_sd, jet.pt(), beta, kappa, jetR))
+                        jet, jet_sd, beta, kappa, jetR))
             '''
 
 
@@ -1066,13 +1066,13 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     # SoftDrop jet angularities
                     gshop_ch = fjcontrib.GroomerShop(jch, jetR, self.reclustering_algorithm)
                     jet_sd_ch = self.utils.groom(gshop_ch, gs, jetR).pair()
-                    lch_sd = fjext.lambda_beta_kappa(jet_sd_ch, jch.pt(), beta, kappa, jetR)
+                    lch_sd = fjext.lambda_beta_kappa(jch, jet_sd_ch, beta, kappa, jetR)
                     gshop_h = fjcontrib.GroomerShop(jh, jetR, self.reclustering_algorithm)
                     jet_sd_h = self.utils.groom(gshop_h, gs, jetR).pair()
-                    lh_sd = fjext.lambda_beta_kappa(jet_sd_h, jh.pt(), beta, kappa, jetR)
+                    lh_sd = fjext.lambda_beta_kappa(jh, jet_sd_h, beta, kappa, jetR)
                     gshop_p = fjcontrib.GroomerShop(jp, jetR, self.reclustering_algorithm)
                     jet_sd_p = self.utils.groom(gshop_p, gs, jetR).pair()
-                    lp_sd = fjext.lambda_beta_kappa(jet_sd_p, jp.pt(), beta, kappa, jetR)
+                    lp_sd = fjext.lambda_beta_kappa(jp, jet_sd_p, beta, kappa, jetR)
 
                     x = ([jch.pt(), jp.pt(), lch_sd, lp_sd])
                     x_array = array.array('d', x)

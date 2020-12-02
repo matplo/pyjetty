@@ -533,8 +533,8 @@ class process_ang_mc(process_base.ProcessBase):
       jet_sd_tru = self.utils.groom(gshop_tru, gs, jetR).pair()
 
       # lambda for soft drop jet
-      l_sd_det = fjext.lambda_beta_kappa(jet_sd_det, jet_pt_det, beta, kappa, jetR)
-      l_sd_tru = fjext.lambda_beta_kappa(jet_sd_tru, jet_pt_tru, beta, kappa, jetR)
+      l_sd_det = fjext.lambda_beta_kappa(jet_det, jet_sd_det, beta, kappa, jetR)
+      l_sd_tru = fjext.lambda_beta_kappa(jet_tru, jet_sd_tru, beta, kappa, jetR)
 
       # Should fill histograms using the ungroomed jet pT
       getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_pt_det, l_sd_det)
