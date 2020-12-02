@@ -42,6 +42,9 @@ namespace RUtil
     double prior_scale_func_def(const double & obs_true, const double & content,
                                 const double & prior_variation_parameter);
 
+	void delete_h(TH2* h);
+	void delete_h(THn* h);
+
     //------------------------------------------------------
     // Rebinning utilities
     class HistUtils : public TObject
