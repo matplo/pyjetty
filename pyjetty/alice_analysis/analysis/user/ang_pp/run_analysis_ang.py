@@ -16,6 +16,9 @@ import yaml
 
 from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
 
+# Load pyjetty ROOT utils
+ROOT.gSystem.Load('libpyjetty_rutil')
+
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
@@ -57,6 +60,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     # Whether or not to use the previous preliminary result in final plots
     self.use_prev_prelim = config['use_prev_prelim']
+
+    self.histutils = ROOT.RUtil.HistUtils()
 
     # Theory comparisons
     if 'fPythia' in config:
@@ -121,31 +126,40 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             roounfold_response_h = fRoo.Get(name_roounfold_h)
             fRoo.Close()
 
+            ''' This isn't working right now and I don't know why. So you have to manually delete
+              the response file that was created before and use the (slow) manual filling. 
           elif self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
             # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
             #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
             # as compared to the usual
             #      ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-            det_pt_bin_array = array('d', range(10, 110, 10))
-            tru_pt_bin_array = array('d', range(10, 160, 15))
+            det_pt_bin_array = array('d', range(10, 160, 10))
+            tru_pt_bin_array = array('d', range(10, 160, 10))
             det_obs_bin_array = array('d', np.linspace(0, 1, 101, endpoint=True))
             tru_obs_bin_array = array('d', np.linspace(-0.005, 1.005, 102, endpoint=True))
-            self.utils.rebin_response(
-              roounfold_filename, thn_ch, '%s_Rebinned_%i' % (name_ch, ri), name_roounfold_ch, label,
-              len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
-              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
-              self.observable)
-            self.utils.rebin_response(
-              roounfold_filename, thn_h, '%s_Rebinned_%i' % (name_h, ri), name_roounfold_h, label, 
-              len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
-              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
-              self.observable)
 
-            f_resp = ROOT.TFile(self.theory_rebinned_response_file, 'READ')
+            #for i in range(4):
+            #  axis = [thn_ch.GetAxis(i).GetBinLowEdge(j) for \
+            #          j in range(1, thn_ch.GetAxis(i).GetNbins()+2)]
+            #  print(axis, '\n')
+            #exit()
+
+            n_dim = 4
+            self.histutils.rebin_thn(
+              roounfold_filename, thn_ch, '%s_Rebinned_%i' % (name_ch, ri), name_roounfold_ch, n_dim,
+              len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
+              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
+              label)
+            self.histutils.rebin_thn(
+              roounfold_filename, thn_h, '%s_Rebinned_%i' % (name_h, ri), name_roounfold_h, n_dim,
+              len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
+              len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
+              label)
+            f_resp = ROOT.TFile(roounfold_filename, 'READ')
             roounfold_response_ch = f_resp.Get(name_roounfold_ch)
             roounfold_response_h = f_resp.Get(name_roounfold_h)
             f_resp.Close()
-          
+            '''
 
           else:   # Theory folding matrix already has correct binning
             hist_p_jet = thn_ch.Projection(3, 1)
@@ -344,11 +358,25 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_mpi_off = response.Get(name_mpi_off)
     h_mpi_on = response.Get(name_mpi_on)
 
+    # Add the extra (empty) lambda bins if necessary
+    if h_mpi_off.GetYaxis().GetBinUpEdge(h_mpi_off.GetNbinsY())-1 < -1e-8:
+      n_x_bins = h_mpi_off.GetXaxis().GetNbins()
+      x_bins = array('d', [h_mpi_off.GetXaxis().GetBinLowEdge(i) for i in range(1, n_x_bins+2)])
+      y_bins = array('d', np.linspace(0, 1, 101, endpoint=True))
+      h_mpi_off = self.histutils.rebin_th2(h_mpi_off, name_mpi_off+'Rebinned', 
+                                           x_bins, n_x_bins, y_bins, len(y_bins)-1)
+    if h_mpi_on.GetYaxis().GetBinUpEdge(h_mpi_on.GetNbinsY())-1 < -1e-8:
+      n_x_bins = h_mpi_on.GetXaxis().GetNbins()
+      x_bins = array('d', [h_mpi_on.GetXaxis().GetBinLowEdge(i) for i in range(1, n_x_bins+2)])
+      y_bins = array('d', np.linspace(0, 1, 101, endpoint=True))
+      h_mpi_on = self.histutils.rebin_th2(h_mpi_on, name_mpi_on+'Rebinned', 
+                                           x_bins, n_x_bins, y_bins, len(y_bins)-1)
+
     # Ensure that the scaling and theory histograms have the same binning
     y_rebin_num = h_mpi_off.GetNbinsY() / folded_ch_hists[1][1][1].GetNbinsY()
     if y_rebin_num < 1 or abs(y_rebin_num - int(y_rebin_num)) > 1e-5:
-      print("ERROR: histograms for MPI scaling from response file have insufficienctly binning.")
-      print("       %i versus even multiple of  %i bins required" % \
+      print("ERROR: histograms for MPI scaling from response file have insufficienct binning.")
+      print("       %i versus even multiple of %i bins required" % \
             (h_mpi_off.GetNbinsY(), folded_ch_hists[1][1][1].GetNbinsY()))
       exit(1)
     h_mpi_off.RebinY(int(y_rebin_num))
@@ -588,7 +616,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    if self.do_theory and float(obs_label[0]) in self.theory_beta:
+    if self.do_theory and not grooming_setting and float(obs_label) in self.theory_beta:
       # Compare parton-level theory to parton-level event generators
       self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
 
@@ -601,7 +629,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
 
-      if self.do_theory and float(obs_label) in self.theory_beta:
+      if self.do_theory and not grooming_setting and float(obs_label) in self.theory_beta:
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
@@ -1710,7 +1738,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         if maxbin:
-          if (jetR == 0.2 or jetR == 0.4) and min_pt_truth == 40 and obs_label == '1':
+          if self.use_prev_prelim and (jetR == 0.2 or jetR == 0.4) \
+             and min_pt_truth == 40 and obs_label == '1':
             xmax = getattr(self, "xedges_prev_prelim_%s" % jetR)[-1]
           else:
             xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]

@@ -5,8 +5,8 @@ betas: [1, 1.5, 2, 3]
 # Initial detector-level binnings. Distributions are rebinned via configs before unfolding
 n_pt_bins: 195
 pt_limits: [5, 200]
-n_lambda_bins: 200
-lambda_limits: [0, 1]
+n_lambda_bins: 160
+lambda_limits: [0, 0.8]
 n_rap_bins: 50            # just for fun, look at lambda distribution vs rapidity
 rap_limits: [-1, 1]
 

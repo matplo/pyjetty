@@ -370,4 +370,17 @@ namespace RUtil
         return obs_true;
     }
 
+
+    //---------------------------------------------------------------
+    // Clean up dynamic memory from a histogram on the heap
+    void delete_h(TH2* h) {
+        delete h;
+        return;
+    }
+
+    void delete_h(THn* h) {
+        delete h;
+        return;
+    }
+
 }  // namespace RUtil
