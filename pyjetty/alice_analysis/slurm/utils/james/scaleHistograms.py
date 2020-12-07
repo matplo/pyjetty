@@ -33,9 +33,17 @@ def scaleHistograms(configFile, remove_unscaled):
   verbose = False
   
   # Read the cross-section, and scale histograms
-  EndPtHardBin = 20
   with open(configFile, 'r') as stream:
     config = yaml.safe_load(stream)
+
+  # Find EndPtHardBin
+  EndPtHardBin = 0
+  for i in range(1,100):
+    if i in config:
+      EndPtHardBin = i
+    else:
+      break
+  print("EndPtHardBin: {}".format(EndPtHardBin))
 
   # Compute average number of events per bin
   nEventsSum = 0
