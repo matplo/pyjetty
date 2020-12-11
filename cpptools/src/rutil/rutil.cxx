@@ -294,7 +294,7 @@ namespace RUtil
                         // corresponding e.g. to (pt_det, obs_det, pt_true, obs_true)
                         if (do_roounfoldresponse) {
                             roounfold_response->FillContentError(
-								x[0], x[2], x[1], x[3], content, error);
+                                x[0], x[2], x[1], x[3], content, error);
                         }
 
                     }  // bin_3 loop
