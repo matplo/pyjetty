@@ -249,6 +249,7 @@ namespace RUtil
 
                         int bin = thn->GetBin(global_bin);
                         double content = thn->GetBinContent(bin);
+                        if (content == 0) { continue; }
                         double error = thn->GetBinError(bin);
 
                         // Impose a custom prior, if desired
@@ -292,7 +293,8 @@ namespace RUtil
                         // RooUnfoldResponse should be filled as (x[0], x[2], x[1], x[3])
                         // corresponding e.g. to (pt_det, obs_det, pt_true, obs_true)
                         if (do_roounfoldresponse) {
-                            roounfold_response->Fill(x[0], x[2], x[1], x[3], content);
+                            roounfold_response->FillContentError(
+								x[0], x[2], x[1], x[3], content, error);
                         }
 
                     }  // bin_3 loop
