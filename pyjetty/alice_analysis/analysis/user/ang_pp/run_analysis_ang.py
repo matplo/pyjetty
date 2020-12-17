@@ -11,7 +11,7 @@ import argparse
 from array import *
 import numpy as np
 import ROOT
-ROOT.gSystem.Load("$HEPPY_DIR/external/roounfold/roounfold-2.0.0/lib/libRooUnfold.so")
+ROOT.gSystem.Load("$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so")
 import yaml
 
 from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
@@ -23,6 +23,105 @@ ROOT.gSystem.Load('libpyjetty_rutil')
 ROOT.gROOT.SetBatch(True)
 
 
+################################################################
+# Helper functions
+################################################################
+
+#----------------------------------------------------------------------
+# Extrapolate y-values for values in xlist_new given points (x,y) in xlist and ylist
+# Use power=1 for linear, or power=2 for quadratic extrapolation
+#----------------------------------------------------------------------
+def list_extrapolate(self, xlist, ylist, xlist_new, power=1, require_positive=False):
+
+  if len(xlist) < (power + 1):
+    print("ERROR: list_extrapolate() requires at least %i points!" % (power + 1))
+    exit(1)
+
+  ylist_new = []
+  ix = 0
+  for xval in xlist_new:
+
+    while (ix + power) < len(xlist) and xlist[ix+power] <= xval:
+      ix += 1
+
+    # Set value to 0 if out-of-range for extrapolation
+    x1 = xlist[ix]
+    if xlist[ix] > xval or (ix + power) >= len(xlist):
+      ylist_new.append(0)
+      continue
+
+    y1 = ylist[ix]
+    # Check if data point is identical
+    if xval == x1:
+      ylist_new.append(y1)
+      continue
+    x2 = xlist[ix+1]; y2 = ylist[ix+1]
+
+    yval = None
+    if power == 1:  # linear
+      yval = linear_extrapolate(x1, y1, x2, y2, xval)
+    elif power == 2:  # quadratic
+      x3 = xlist[ix+2]; y3 = ylist[ix+2]
+      yval = quadratic_extrapolate(x1, y1, x2, y2, x3, y3, xval)
+    else:
+      print("ERROR: Unrecognized power", power, "/ please use either 1 or 2")
+      exit(1)
+
+    # Require positive values
+    if require_positive and yval < 0:
+      ylist_new.append(0)
+      continue
+
+    ylist_new.append(yval)
+
+  return ylist_new
+
+
+#---------------------------------------------------------------
+# Given two data points, find linear fit and y-value for x
+#---------------------------------------------------------------
+def linear_extrapolate(x1, y1, x2, y2, x):
+
+  return (y2 - y1) / (x2 - x1) * xval + (y1 - (y2 - y1) / (x2 - x1) * x1)
+
+
+#---------------------------------------------------------------
+# Given three data points, find quadratic fit and y-value for x
+#---------------------------------------------------------------
+def quadratic_extrapolate(x1, y1, x2, y2, x3, y3, x):
+
+  a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2))
+  b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3))
+  c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3)
+
+  return (a * x * x + b * x + c) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+
+
+#---------------------------------------------------------------
+# Set LHS of distributions to 0 if crosses to 0 at some point (prevents multiple peaks)
+#---------------------------------------------------------------
+def set_zero_range(yvals):
+
+  found_nonzero_val = False
+
+  # Step through list backwards
+  for i in range(len(yvals)-1, -1, -1):
+    if yvals[i] <= 0:
+      if found_nonzero_val:
+        for j in range(0, i):
+          yvals[j] = 0
+        break
+      else:
+        continue
+    else:
+      found_nonzero_val = True
+      continue
+
+  return yvals
+
+
+################################################################
+################################################################
 ################################################################
 class RunAnalysisAng(run_analysis.RunAnalysis):
 
@@ -62,6 +161,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.use_prev_prelim = config['use_prev_prelim']
 
     self.histutils = ROOT.RUtil.HistUtils()
+
+    # Grooming settings
+    self.sd_zcut = config["sd_zcut"]
+    self.sd_beta = config["sd_beta"]
+    self.grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
+    self.grooming_labels = [self.utils.grooming_label(gs) for gs in self.grooming_settings]
 
     # Theory comparisons
     if 'fPythia' in config:
@@ -220,76 +325,121 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # Require that hard scale and jet scale are varied together
     scale_req = False
 
+    obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
+                               np.linspace(0.11, 0.8, 70)))
+    obs_bins_center = np.concatenate((np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18),
+                                      np.linspace(0.105, 0.795, 70)))
+    obs_bins_width = 10 * [0.001] + 18 * [0.005] + 70 * [0.01]
+
     # Create histogram for each value of R and beta
     for jetR in self.jetR_list:
       for beta in self.theory_beta:   # beta value
-        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+        for gsi, gs in enumerate([None].append(self.grooming_settings)):
 
-        name_cent = "theory_cent_%s_%s_parton" % (self.observable, label)
-        name_min = "theory_min_%s_%s_parton" % (self.observable, label)
-        hist_min = ROOT.TH2D(name_min, name_min, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
-        name_max = "theory_max_%s_%s_parton" % (self.observable, label)
-        hist_max = ROOT.TH2D(name_max, name_max, len(self.theory_pt_bins) - 1, 
-            self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
+          label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+          gl = None
+          if gs:  # != None:
+            gl = self.grooming_labels[gsi-1]
+            label += '_' + gl
 
-        parton_hists = ( ([], [], []), ([], [], []), ([], [], []) )
-
-        for l in range(0, 3):
-          for m in range(0, 3):
-            for n in range(0, 3):
-
-              name_hist = "theory_%i%i%i_%s_%s_parton" % (l, m, n, self.observable, label)
-              hist = ROOT.TH2D(name_hist, name_hist, len(self.theory_pt_bins) - 1, 
+          name_cent = "theory_cent_%s_%s_parton" % (self.observable, label)
+          name_min = "theory_min_%s_%s_parton" % (self.observable, label)
+          hist_min = ROOT.TH2D(name_min, name_min, len(self.theory_pt_bins) - 1, 
+                               self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
+          name_max = "theory_max_%s_%s_parton" % (self.observable, label)
+          hist_max = ROOT.TH2D(name_max, name_max, len(self.theory_pt_bins) - 1, 
                                self.theory_pt_bins[0], self.theory_pt_bins[-1], 101, -0.005, 1.005)
 
-              if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
-                parton_hists[l][m].append(None)
-                continue
+          parton_hists = ( ([], [], []), ([], [], []), ([], [], []) )
 
-              # Loop through each pT-bin
-              for i, pt_min in enumerate(self.theory_pt_bins[0:-1]):
-                pt_max = self.theory_pt_bins[i+1]
+          for l in range(0, 3):
+            for m in range(0, 3):
+              for n in range(0, 3):
 
-                # Get scale factor for this pT bin.
-                # This reverses the self-normalization of 1/sigma for correct pT scaling
-                #     when doing doing projections onto the y-axis.
-                scale_f = self.pt_scale_factor(pt_min, pt_max, -5.5)
+                name_hist = "theory_%i%i%i_%s_%s_parton" % (l, m, n, self.observable, label)
+                hist = ROOT.TH2D(name_hist, name_hist, len(self.theory_pt_bins)-1, self.theory_pt_bins,
+                                 len(obs_bins)-1, obs_bins)
 
-                th_dir = os.path.join(
-                  self.theory_dir, "R%s" % str(jetR).replace('.', ''), 
-                  "pT%s_%s" % (pt_min, pt_max), "beta%s" % str(beta).replace('.', 'p'))
+                if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
+                  parton_hists[l][m].append(None)
+                  continue
 
-                # Load theory predictions for lambda values
-                with open(os.path.join(th_dir, "%i%i%i.txt" % (l, m, n))) as f:
-                  lines = f.read().split('\n')
-                  val_li = [float(line.split()[1])*scale_f for line in lines]
+                # Loop through each pT-bin
+                for i, pt_min in enumerate(self.theory_pt_bins[0:-1]):
+                  pt_max = self.theory_pt_bins[i+1]
 
-                if exp_test:
-                  val_li = [1/(x+0.4+l) for x in np.linspace(0, 0.5, 51, True)] + \
-                            [0 for x in np.linspace(0.51, 1, 50, True)] 
-                  #np.exp(np.linspace(0, 1, 101, True))
-                  #val = np.concatenate((np.full(51, 1), np.full(50, 0)))
-                  #val = [0.6 - x for x in np.linspace(0, 1, 101, True)]
+                  # Get scale factor for this pT bin.
+                  # This reverses the self-normalization of 1/sigma for correct pT scaling
+                  #     when doing projections onto the y-axis.
+                  scale_f = self.pt_scale_factor(pt_min, pt_max, -5.5)
 
-                for j, val in enumerate(val_li):
-                  hist.SetBinContent(i+1, j+1, val)
-                  if l == m == n == 0:
-                    hist_min.SetBinContent(i+1, j+1, val)
-                    hist_max.SetBinContent(i+1, j+1, val)
-                  elif float(val) < hist_min.GetBinContent(i+1, j+1):
-                    hist_min.SetBinContent(i+1, j+1, val)
-                  elif float(val) > hist_max.GetBinContent(i+1, j+1):
-                    hist_max.SetBinContent(i+1, j+1, val)
+                  th_dir = self.theory_dir
+                  if gs:  # != None:
+                    th_dir = os.path.join(
+                      th_dir, "gr_ALICE_R%s" % str(jetR).replace('.', ''), 
+                      "beta%s" % str(beta).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
+                  else:  # no grooming
+                    th_dir = os.path.join(
+                      th_dir, "ungr_ALICE_R%s" % str(jetR).replace('.', ''), 
+                      "beta%s" % str(beta).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
 
-              parton_hists[l][m].append(hist)
+                  val_li = None
+                  if exp_test:
+                    val_li = [1/(x+0.4+l) for x in obs_bins_center]
+                    #np.exp(np.linspace(0, 1, 101, True))
+                    #val = np.concatenate((np.full(51, 1), np.full(50, 0)))
+                    #val = [0.6 - x for x in np.linspace(0, 1, 101, True)]
 
-        setattr(self, name_cent, parton_hists[1][1][1])
-        setattr(self, name_min, hist_min)
-        setattr(self, name_max, hist_max)
+                  else:
+                    x_val_li = None; y_val_li = None
+                    # Load theory predictions for lambda values
+                    with open(os.path.join(th_dir, "%i%i%i.txt" % (l, m, n))) as f:
 
-        print("Folding theory predictions...")
-        self.fold_theory(jetR, beta, parton_hists, scale_req)
+                    # Copy tail of ungroomed distribution onto groomed one for lambda > z_cut
+                    if gs:
+                      # NOTE: assumes x_val_li is identical in groomed & ungroomed cases
+                      i = 0
+                      while i < len(x_val_li) and x_val_li[i] < gs["sd"][0]:
+                        i += 1
+                      y_val_li_ungr = None
+                      with open(os.path.join(
+                          th_dir.replace("gr_ALICE", "ungr_ALICE"), "%i%i%i.txt" % (l, m, n))) as f:
+                        lines = f.read().split('\n')
+                        y_val_li_ungr = [float(line.split()[1]) for line in lines]
+                        y_val_li[i:] = y_val_li_ungr[i:]
+
+                    # Extrapolate parton curve to all bins and set 0 range on LHS tail
+                    val_li = set_zero_range(list_extrapolate(
+                      x_val_li, y_val_li, obs_bins_center, power=2, require_positive=True))
+                    # Scale by scale_f and bin width (to match RM)
+                    val_li = [val * obs_bin_width[i] * scale_f for i, val in enumerate(val_li)]
+
+                    # Get SD tagging fraction to save as underflow value
+                    tagging_fraction = None
+                    if gs:
+                      val_li_ungr = set_zero_range(list_extrapolate(
+                        x_val_li, y_val_li_ungr, obs_bins_center, power=2, require_positive=True))
+                      val_li_ungr = [val * obs_bin_width[i] * scale_f for i, val in enumerate(val_li_ungr)]
+                      tagging_fraction = sum(val_li) / sum(val_li_ungr)
+
+                  for j, val in enumerate(val_li):
+                    hist.SetBinContent(i+1, j+1, val)
+                    if l == m == n == 0:
+                      hist_min.SetBinContent(i+1, j+1, val)
+                      hist_max.SetBinContent(i+1, j+1, val)
+                    elif float(val) < hist_min.GetBinContent(i+1, j+1):
+                      hist_min.SetBinContent(i+1, j+1, val)
+                    elif float(val) > hist_max.GetBinContent(i+1, j+1):
+                      hist_max.SetBinContent(i+1, j+1, val)
+
+                parton_hists[l][m].append(hist)
+
+          setattr(self, name_cent, parton_hists[1][1][1])
+          setattr(self, name_min, hist_min)
+          setattr(self, name_max, hist_max)
+
+          print("Folding theory predictions...")
+          self.fold_theory(jetR, beta, parton_hists, scale_req)
 
 
   #----------------------------------------------------------------------
