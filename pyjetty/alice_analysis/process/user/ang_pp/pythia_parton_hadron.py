@@ -13,8 +13,6 @@ import yaml
 import copy
 import argparse
 import os
-import array
-import numpy as np
 
 from pyjetty.mputils import *
 
@@ -25,6 +23,9 @@ import pythiaext
 
 from pyjetty.alice_analysis.process.base import process_base
 from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa_i
+
+from array import array
+import numpy as np
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -498,20 +499,27 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     dim = 4
                     title = ['p_{T}^{ch jet}', 'p_{T}^{parton jet}', 
                              '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
-                    nbins = [14, 14, 100, 101]
-                    min_li = [ 10.,  10., 0.,  -0.005]
-                    max_li = [150., 150., 1.0,  1.005]
+                    pt_bins = array('d', list(range(10, 50, 5)) + list(range(50, 160, 10)))
+                    obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
+                                               np.linspace(0.11, 1., 90)))
+                    nbins  = [len(pt_bins)-1, len(pt_bins)-1, len(obs_bins)-1, len(obs_bins)-1]
+                    min_li = [pt_bins[0],     pt_bins[0],     obs_bins[0],     obs_bins[0]    ]
+                    max_li = [pt_bins[-1],    pt_bins[-1],    obs_bins[-1],    obs_bins[-1]   ]
 
                     name = 'hResponse_JetPt_ang_ch_%s' % label
                     nbins = (nbins)
                     xmin = (min_li)
                     xmax = (max_li)
-                    nbins_array = array.array('i', nbins)
-                    xmin_array = array.array('d', xmin)
-                    xmax_array = array.array('d', xmax)
+                    nbins_array = array('i', nbins)
+                    xmin_array = array('d', xmin)
+                    xmax_array = array('d', xmax)
                     h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                     for i in range(0, dim):
                         h.GetAxis(i).SetTitle(title[i])
+                        if i == 0 or i == 1:
+                            h.SetBinEdges(i, pt_bins)
+                        else:  # i == 2 or i == 3
+                            h.SetBinEdges(i, obs_bins)
                     h.Sumw2()
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
@@ -525,6 +533,10 @@ class pythia_parton_hadron(process_base.ProcessBase):
                             h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                             for i in range(0, dim):
                                 h.GetAxis(i).SetTitle(title[i])
+                                if i == 0 or i == 1:
+                                    h.SetBinEdges(i, pt_bins)
+                                else:  # i == 2 or i == 3
+                                    h.SetBinEdges(i, obs_bins)
                             h.Sumw2()
                             setattr(self, name, h)
                             getattr(self, hist_list_name).append(h)
@@ -537,6 +549,10 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                     for i in range(0, dim):
                         h.GetAxis(i).SetTitle(title[i])
+                        if i == 0 or i == 1:
+                            h.SetBinEdges(i, pt_bins)
+                        else:  # i == 2 or i == 3
+                            h.SetBinEdges(i, obs_bins)
                     h.Sumw2()
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
@@ -550,6 +566,10 @@ class pythia_parton_hadron(process_base.ProcessBase):
                             h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                             for i in range(0, dim):
                                 h.GetAxis(i).SetTitle(title[i])
+                                if i == 0 or i == 1:
+                                    h.SetBinEdges(i, pt_bins)
+                                else:  # i == 2 or i == 3
+                                    h.SetBinEdges(i, obs_bins)
                             h.Sumw2()
                             setattr(self, name, h)
                             getattr(self, hist_list_name).append(h)
@@ -950,11 +970,11 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
             # 4D response matrices for "forward folding" to ch level
             x = ([jch.pt(), jp.pt(), lch, lp])
-            x_array = array.array('d', x)
+            x_array = array('d', x)
             getattr(self, 'hResponse_JetPt_ang_ch_%s' % label).Fill(x_array)
 
             x = ([jh.pt(), jp.pt(), lh, lp])
-            x_array = array.array('d', x)
+            x_array = array('d', x)
             getattr(self, 'hResponse_JetPt_ang_h_%s' % label).Fill(x_array)
 
             if self.use_SD:
@@ -973,11 +993,11 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     lp_sd = fjext.lambda_beta_kappa(jp, jet_sd_p, beta, kappa, jetR)
 
                     x = ([jch.pt(), jp.pt(), lch_sd, lp_sd])
-                    x_array = array.array('d', x)
+                    x_array = array('d', x)
                     getattr(self, 'hResponse_JetPt_ang_ch_%s_%s' % (label, gl)).Fill(x_array)
 
                     x = ([jh.pt(), jp.pt(), lh, lp])
-                    x_array = array.array('d', x)
+                    x_array = array('d', x)
                     getattr(self, 'hResponse_JetPt_ang_h_%s_%s' % (label, gl)).Fill(x_array)
 
 

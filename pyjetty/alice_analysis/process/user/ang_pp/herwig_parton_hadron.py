@@ -13,14 +13,14 @@ import yaml
 import copy
 import argparse
 import os
-import array
-import numpy as np
 
 from pyjetty.mputils import *
 
 from pyjetty.alice_analysis.process.base import process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers \
-    import lambda_beta_kappa, lambda_beta_kappa_i
+from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_beta_kappa_i
+
+from array import array
+import numpy as np
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -487,20 +487,27 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     dim = 4
                     title = ['p_{T}^{ch jet}', 'p_{T}^{parton jet}', 
                              '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
-                    nbins = [14, 14, 100, 101]
-                    min_li = [ 10.,  10., 0.,  -0.005]
-                    max_li = [150., 150., 1.0,  1.005]
+                    pt_bins = array('d', list(range(10, 50, 5)) + list(range(50, 160, 10)))
+                    obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
+                                               np.linspace(0.11, 1., 90)))
+                    nbins  = [len(pt_bins)-1, len(pt_bins)-1, len(obs_bins)-1, len(obs_bins)-1]
+                    min_li = [pt_bins[0],     pt_bins[0],     obs_bins[0],     obs_bins[0]    ]
+                    max_li = [pt_bins[-1],    pt_bins[-1],    obs_bins[-1],    obs_bins[-1]   ]
 
                     name = 'hResponse_JetPt_ang_ch_%s' % label
                     nbins = (nbins)
                     xmin = (min_li)
                     xmax = (max_li)
-                    nbins_array = array.array('i', nbins)
-                    xmin_array = array.array('d', xmin)
-                    xmax_array = array.array('d', xmax)
+                    nbins_array = array('i', nbins)
+                    xmin_array = array('d', xmin)
+                    xmax_array = array('d', xmax)
                     h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                     for i in range(0, dim):
                         h.GetAxis(i).SetTitle(title[i])
+                        if i == 0 or i == 1:
+                            h.SetBinEdges(i, pt_bins)
+                        else:  # i == 2 or i == 3
+                            h.SetBinEdges(i, obs_bins)
                     h.Sumw2()
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
@@ -513,6 +520,10 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                     for i in range(0, dim):
                         h.GetAxis(i).SetTitle(title[i])
+                        if i == 0 or i == 1:
+                            h.SetBinEdges(i, pt_bins)
+                        else:  # i == 2 or i == 3
+                            h.SetBinEdges(i, obs_bins)
                     h.Sumw2()
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
@@ -526,6 +537,10 @@ class herwig_parton_hadron(process_base.ProcessBase):
                             h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                             for i in range(0, dim):
                                 h.GetAxis(i).SetTitle(title[i])
+                                if i == 0 or i == 1:
+                                    h.SetBinEdges(i, pt_bins)
+                                else:  # i == 2 or i == 3
+                                    h.SetBinEdges(i, obs_bins)
                             h.Sumw2()
                             setattr(self, name, h)
                             getattr(self, hist_list_name).append(h)
@@ -538,6 +553,10 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                     for i in range(0, dim):
                         h.GetAxis(i).SetTitle(title[i])
+                        if i == 0 or i == 1:
+                            h.SetBinEdges(i, pt_bins)
+                        else:  # i == 2 or i == 3
+                            h.SetBinEdges(i, obs_bins)
                     h.Sumw2()
                     setattr(self, name, h)
                     getattr(self, hist_list_name).append(h)
@@ -551,6 +570,10 @@ class herwig_parton_hadron(process_base.ProcessBase):
                             h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                             for i in range(0, dim):
                                 h.GetAxis(i).SetTitle(title[i])
+                                if i == 0 or i == 1:
+                                    h.SetBinEdges(i, pt_bins)
+                                else:  # i == 2 or i == 3
+                                    h.SetBinEdges(i, obs_bins)
                             h.Sumw2()
                             setattr(self, name, h)
                             getattr(self, hist_list_name).append(h)
@@ -849,11 +872,11 @@ class herwig_parton_hadron(process_base.ProcessBase):
         for beta in self.beta_list:
             label = str(beta).replace('.', '')
             tw.fill_branch("l_ch_%s" % label,
-                           lambda_beta_kappa(jchh, jetR, beta, kappa))
+                           fjext.lambda_beta_kappa(jchh, beta, kappa, jetR))
             tw.fill_branch("l_h_%s" % label,
-                           lambda_beta_kappa(jh, jetR, beta, kappa))
+                           fjext.lambda_beta_kappa(jh, beta, kappa, jetR))
             tw.fill_branch("l_p_%s" % label,
-                           lambda_beta_kappa(jp, jetR, beta, kappa))
+                           fjext.lambda_beta_kappa(jp, beta, kappa, jetR))
 
             # Save SoftDrop variables as well if desired
             if self.use_SD:
@@ -888,7 +911,18 @@ class herwig_parton_hadron(process_base.ProcessBase):
         for beta in self.beta_list:
             label = str(beta).replace('.', '')
             tw.fill_branch('l_%s_%s' % (self.level, label),
-                           lambda_beta_kappa(jet, jetR, beta, kappa))
+                           fjext.lambda_beta_kappa(jet, beta, kappa, jetR))
+
+            if self.use_SD:
+                for i, gs in enumerate(self.grooming_settings):
+                    gl = self.grooming_labels[i]
+
+                    # SoftDrop jets
+                    gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
+                    jet_sd = self.utils.groom(gshop, gs, jetR).pair()
+
+                    tw.fill_branch("l_ch_%s_%s" % (label, gl), fjext.lambda_beta_kappa(
+                        jet, jet_sd, beta, kappa, jetR))
 
     
     #---------------------------------------------------------------
@@ -901,7 +935,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
             h = getattr(self, 'hAng_JetPt_ch_MPIon_%s' % label)
 
             kappa = 1
-            h.Fill(jet.pt(), lambda_beta_kappa(jet, jetR, beta, kappa))
+            h.Fill(jet.pt(), fjext.lambda_beta_kappa(jet, beta, kappa, jetR))
 
             ''' Need to implement these histograms in init_hist function
             if self.use_SD:
@@ -962,9 +996,9 @@ class herwig_parton_hadron(process_base.ProcessBase):
 
         # Calculate angularities
         kappa = 1
-        lp = lambda_beta_kappa(jp, jetR, beta, kappa)
-        lh = lambda_beta_kappa(jh, jetR, beta, kappa)
-        lch = lambda_beta_kappa(jch, jetR, beta, kappa)
+        lp = fjext.lambda_beta_kappa(jp, beta, kappa, jetR)
+        lh = fjext.lambda_beta_kappa(jh, beta, kappa, jetR)
+        lch = fjext.lambda_beta_kappa(jch, beta, kappa, jetR)
 
         label = ("R%s_%sScaled" % (str(jetR), str(beta))).replace('.', '')
 
@@ -1052,11 +1086,11 @@ class herwig_parton_hadron(process_base.ProcessBase):
 
             # 4D response matrices for "forward folding" to ch level
             x = ([jch.pt(), jp.pt(), lch, lp])
-            x_array = array.array('d', x)
+            x_array = array('d', x)
             getattr(self, 'hResponse_JetPt_ang_ch_%s' % label).Fill(x_array)
 
             x = ([jh.pt(), jp.pt(), lh, lp])
-            x_array = array.array('d', x)
+            x_array = array('d', x)
             getattr(self, 'hResponse_JetPt_ang_h_%s' % label).Fill(x_array)
 
             if self.use_SD:
@@ -1075,11 +1109,11 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     lp_sd = fjext.lambda_beta_kappa(jp, jet_sd_p, beta, kappa, jetR)
 
                     x = ([jch.pt(), jp.pt(), lch_sd, lp_sd])
-                    x_array = array.array('d', x)
+                    x_array = array('d', x)
                     getattr(self, 'hResponse_JetPt_ang_ch_%s_%s' % (label, gl)).Fill(x_array)
 
                     x = ([jh.pt(), jp.pt(), lh, lp])
-                    x_array = array.array('d', x)
+                    x_array = array('d', x)
                     getattr(self, 'hResponse_JetPt_ang_h_%s_%s' % (label, gl)).Fill(x_array)
 
 
