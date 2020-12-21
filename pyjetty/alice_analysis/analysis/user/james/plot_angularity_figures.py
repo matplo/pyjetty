@@ -36,10 +36,12 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.file = 'ang/final_results/fFinalResults.root'
         self.beta_list = [1, 1.5, 2, 3]
 
-        self.xmin = 0.
+        self.xmin = -0.01
         self.xmax = 0.65
         self.xtitle =  '#it{#lambda}_{#it{#beta}}'
         self.ytitle = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}}'
+
+        self.left_offset = 0.2
 
         #------------------------------------------------------
 
@@ -80,7 +82,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         cname = 'c'
         c = ROOT.TCanvas(cname,cname,1800,1600)
         c.SetRightMargin(0.05);
-        c.SetLeftMargin(0.1);
+        c.SetLeftMargin(self.left_offset);
         c.SetTopMargin(0.05);
         c.SetBottomMargin(0.);
         c.cd()
@@ -134,9 +136,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
             # Plot the ratio
             output_filename = os.path.join(self.output_dir, 'hRatio_R{}_pt{}_{}{}'.format(R, ptbin, beta, self.file_format))
-            xtitle = '#it{p}_{T} (GeV/#it{c})'
-            ytitle = '#frac{d^{2}N}{d#it{p}_{T}d#it{#eta}} #left[(GeV/c)^{-1}#right]'
-            h_ratio = self.plot_ratio(h_pythia, h, output_filename, xtitle, ytitle, R, pt_label, beta)
+            h_ratio = self.plot_ratio(h_pythia, h, output_filename, self.xtitle, self.ytitle, R, pt_label, beta)
             h_ratio.SetName('{}_{}_{}_{}_{}'.format(h_ratio.GetName(), R, ptbin, beta, pad))
             self.plot_list.append(h_ratio)
             self.h_ratio_list.append(h_ratio)
@@ -146,6 +146,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         # Plot overlay of beta values
         self.plot_beta_overlay(c, pad, R)
 
+        # Keep histograms in memory
         self.plot_list.append(self.h_list)
         self.plot_list.append(self.h_sys_list)
         self.plot_list.append(self.h_pythia_list)
@@ -164,7 +165,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         myPad = ROOT.TPad("myPad_{}".format(R), "The pad{}".format(R),0,0,1,1)
         self.plot_list.append(myPad)
         if pad in [1,3]:
-            myPad.SetLeftMargin(0.1)
+            myPad.SetLeftMargin(self.left_offset)
         else:
             myPad.SetLeftMargin(0.)
         myPad.SetRightMargin(0.)
@@ -180,13 +181,16 @@ class PlotAngularityFigures(common_base.CommonBase):
         myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(self.xtitle)
-        myBlankHisto.GetYaxis().SetTitleOffset(1.3)
+        myBlankHisto.GetXaxis().SetTitleSize(0.06)
+        myBlankHisto.GetXaxis().SetTitleOffset(1.1)
         myBlankHisto.SetYTitle(self.ytitle)
-        myBlankHisto.SetMinimum(0.01)
-        if pad in [0,1]:
-            myBlankHisto.SetMaximum(20)
+        myBlankHisto.GetYaxis().SetTitleSize(0.06)
+        myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+        myBlankHisto.SetMinimum(0.)
+        if pad in [1,2]:
+            myBlankHisto.SetMaximum(19.99)
         else:
-            myBlankHisto.SetMaximum(35)
+            myBlankHisto.SetMaximum(34.99)
         myBlankHisto.Draw()
         self.blank_histo_list.append(myBlankHisto)
 
@@ -197,19 +201,13 @@ class PlotAngularityFigures(common_base.CommonBase):
         else:
             shift = -0.08
             shift2 = -0.08 - shift
-        leg = ROOT.TLegend(0.53+shift,0.93-0.042*scale_factor*4,0.73,0.96)
+        
+        leg = ROOT.TLegend(0.7+shift,0.93-0.042*scale_factor*4,0.85,0.96)
         self.setupLegend(leg,0.03)
         self.plot_list.append(leg)
 
         # Draw data
         for i,beta in enumerate(self.beta_list):
-
-            if i == 0:
-
-                self.h_list[i].GetXaxis().SetTitleSize(24)
-                self.h_list[i].GetXaxis().SetTitleOffset(2.6)
-                self.h_list[i].GetYaxis().SetTitleSize(24)
-                self.h_list[i].GetYaxis().SetTitleOffset(1.8)
 
             self.h_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
             self.h_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
@@ -223,6 +221,11 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_sys_list[i].SetFillStyle(1001)
             self.h_sys_list[i].SetLineWidth(0)
             self.h_sys_list[i].Draw('E2 same')
+
+            self.h_pythia_list[i].SetLineColor(self.colors[i])
+            self.h_pythia_list[i].SetLineColorAlpha(self.colors[i], 0.5)
+            self.h_pythia_list[i].SetLineWidth(4)
+            self.h_pythia_list[i].Draw('L hist same')
 
             leg.AddEntry(self.h_list[i],'#beta = {}'.format(beta),'P')
 
@@ -240,33 +243,34 @@ class PlotAngularityFigures(common_base.CommonBase):
         # # # # # # # # # # # # # # # # # # # # # # # #
         # text
         # # # # # # # # # # # # # # # # # # # # # # # #
-        ymax = 0.93
-        dy = 0.05
-        x = 0.15 + shift + shift2
-        system0 = ROOT.TLatex(x,ymax,'#bf{ALICE}')
-        system0.SetNDC()
-        system0.SetTextSize(0.04*scale_factor)
-        system0.Draw()
+        if pad == 1:
+            ymax = 0.93
+            dy = 0.05
+            x = 0.35 + shift + shift2
+            system0 = ROOT.TLatex(x,ymax,'#bf{ALICE}')
+            system0.SetNDC()
+            system0.SetTextSize(0.04*scale_factor)
+            system0.Draw()
 
-        system1 = ROOT.TLatex(x,ymax-dy,'pp  #sqrt{#it{s}} = 5.02 TeV')
-        system1.SetNDC()
-        system1.SetTextSize(0.04*scale_factor)
-        system1.Draw()
+            system1 = ROOT.TLatex(x,ymax-dy,'pp  #sqrt{#it{s}} = 5.02 TeV')
+            system1.SetNDC()
+            system1.SetTextSize(0.04*scale_factor)
+            system1.Draw()
 
-        system2 = ROOT.TLatex(x,ymax-2*dy,'Charged jets   anti-#it{k}_{T}')
-        system2.SetNDC()
-        system2.SetTextSize(0.04*scale_factor)
-        system2.Draw()
+            system2 = ROOT.TLatex(x,ymax-2*dy,'Charged jets   anti-#it{k}_{T}')
+            system2.SetNDC()
+            system2.SetTextSize(0.04*scale_factor)
+            system2.Draw()
 
-        system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    | #it{{#eta}}_{{jet}}| = {}'.format(R, 0.9-R))
-        system3.SetNDC()
-        system3.SetTextSize(0.04*scale_factor)
-        system3.Draw()
+            system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    | #it{{#eta}}_{{jet}}| = {}'.format(R, 0.9-R))
+            system3.SetNDC()
+            system3.SetTextSize(0.04*scale_factor)
+            system3.Draw()
 
-        self.plot_list.append(system0)
-        self.plot_list.append(system1)
-        self.plot_list.append(system2)
-        self.plot_list.append(system3)
+            self.plot_list.append(system0)
+            self.plot_list.append(system1)
+            self.plot_list.append(system2)
+            self.plot_list.append(system3)
 
     #-------------------------------------------------------------------------------------------
     # Plot ratio h1/h2
