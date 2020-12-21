@@ -5,6 +5,7 @@
 # General
 import os
 import sys
+import math
 import yaml
 import argparse
 
@@ -36,13 +37,22 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.file = 'ang/final_results/fFinalResults.root'
         self.beta_list = [1, 1.5, 2, 3]
 
+        self.logx = False # Note: logx doesn't work well, since lowest bins are different, and dominate some plots
+        self.logy = False # Note: logy is also not great, since the right-hand tails drop to different values
+
         self.xmin = -0.01
         self.xmax = 0.65
+        if self.logx:
+            self.xmin = 0.001
+        self.scale_factor_groomed_beta3 = 0.04
+        self.scale_factor_groomed_beta2 = 0.2
+        self.scale_factor_groomed_beta15 = 0.5
+        self.scale_factor_ungroomed_beta3 = 0.5
+
         self.xtitle =  '#it{#lambda}_{#it{#beta}}'
         self.ytitle = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}}'
         self.xtitle_groomed =  '#it{#lambda}_{#it{#beta},g}'
         self.ytitle_groomed = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta},g}}'
-        self.logy = False
 
         self.left_offset = 0.2
         self.bottom_offset = 0.15
@@ -208,7 +218,8 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad1.SetTicks(0,1)
         if self.logy:
             pad1.SetLogy()
-            #pad1.SetLogx()
+        if self.logx:
+            pad1.SetLogx()
         pad1.Draw()
         pad1.cd()
 
@@ -229,14 +240,14 @@ class PlotAngularityFigures(common_base.CommonBase):
             myBlankHisto.GetYaxis().SetTitleOffset(0.6)
             myBlankHisto.GetYaxis().SetLabelSize(0.07)
         if self.logy:
-            myBlankHisto.SetMinimum(0.01)
+            myBlankHisto.SetMinimum(0.02)
             myBlankHisto.SetMaximum(1000)
         else:
             myBlankHisto.SetMinimum(0.001)
             if pad in [1,2]:
-                myBlankHisto.SetMaximum(19.99)
+                myBlankHisto.SetMaximum(16.99)
             else:
-                myBlankHisto.SetMaximum(34.99)
+                myBlankHisto.SetMaximum(16.99)
         myBlankHisto.Draw()
         self.blank_histo_list.append(myBlankHisto)
 
@@ -248,14 +259,14 @@ class PlotAngularityFigures(common_base.CommonBase):
             shift = -0.08
             shift2 = -0.08 - shift
         
-        leg = ROOT.TLegend(0.75+shift,0.9-0.072*scale_factor*4,0.9,0.96)
+        leg = ROOT.TLegend(0.7+shift,0.9-0.072*scale_factor*4,0.85,0.96)
         if pad in [1,2]:
             self.setupLegend(leg,0.07)
         else:
             self.setupLegend(leg,0.08)
         self.plot_list.append(leg)
 
-        leg2 = ROOT.TLegend(0.18+shift,0.9-0.072*scale_factor*2,0.35,0.9)
+        leg2 = ROOT.TLegend(0.13+shift,0.9-0.072*scale_factor*2,0.3,0.9)
         if pad == 2:
             self.setupLegend(leg2,0.07)
             self.plot_list.append(leg2)
@@ -268,6 +279,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_list[i].SetLineWidth(2)
             self.h_list[i].SetMarkerStyle(self.markers[i])
             self.h_list[i].SetMarkerSize(self.marker_size)
+            scale_label = self.scale_histogram_for_visualization(self.h_list[i], i, groomed)
             self.h_list[i].Draw('PE same')
 
             self.h_sys_list[i].SetLineColor(0)
@@ -277,14 +289,16 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_sys_list[i].SetFillColorAlpha(self.colors[i], 0.3)
             self.h_sys_list[i].SetFillStyle(1001)
             self.h_sys_list[i].SetLineWidth(0)
+            scale_label = self.scale_histogram_for_visualization(self.h_sys_list[i], i, groomed)
             self.h_sys_list[i].Draw('E2 same')
 
             self.h_pythia_list[i].SetLineColor(self.colors[i])
             self.h_pythia_list[i].SetLineColorAlpha(self.colors[i], 0.5)
             self.h_pythia_list[i].SetLineWidth(3)
+            scale_label = self.scale_histogram_for_visualization(self.h_pythia_list[i], i, groomed)
             self.h_pythia_list[i].Draw('L hist same')
 
-            leg.AddEntry(self.h_list[i],'#beta = {}'.format(beta),'P')
+            leg.AddEntry(self.h_list[i],'#beta = {}{}'.format(beta, scale_label),'P')
             
             if i == 2:
                 leg2.AddEntry(self.h_sys_list[i], 'Sys. uncertainty', 'f')
@@ -302,7 +316,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         # # # # # # # # # # # # # # # # # # # # # # # #
         ymax = 0.9
         dy = 0.09
-        x = 0.3 + shift + shift2
+        x = 0.25 + shift + shift2
         if pad in [1,2]:
             size = 0.08
         else:
@@ -364,6 +378,8 @@ class PlotAngularityFigures(common_base.CommonBase):
             pad2.SetBottomMargin(self.bottom_offset/(self.bottom_offset+self.ratio_height))
         else:
             pad2.SetBottomMargin(0.)
+        if self.logx:
+            pad2.SetLogx()
         pad2.SetTicks(1,1)
         pad2.Draw()
         pad2.cd()
@@ -416,6 +432,31 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_ratio_list[i].SetMarkerStyle(self.markers[i])
             self.h_ratio_list[i].SetMarkerSize(self.marker_size)
             self.h_ratio_list[i].Draw('PE same')
+
+    # Scale vertical amplitude of histogram, for visualization
+    #-------------------------------------------------------------------------------------------
+    def scale_histogram_for_visualization(self, h, i, groomed):
+
+        scale_factor = 1.
+        if groomed:
+            if i == 1:
+                scale_factor = self.scale_factor_groomed_beta15
+            if i == 2:
+                scale_factor = self.scale_factor_groomed_beta2
+            if i == 3:
+                scale_factor = self.scale_factor_groomed_beta3       
+        else:
+            if i == 3:
+                scale_factor = self.scale_factor_ungroomed_beta3
+
+        h.Scale(scale_factor)
+
+        if math.isclose(scale_factor, 1.):
+            plot_label = ''
+        else:
+            plot_label = ' (#times{})'.format(scale_factor)
+        
+        return plot_label
 
     # Set legend parameters
     #-------------------------------------------------------------------------------------------
