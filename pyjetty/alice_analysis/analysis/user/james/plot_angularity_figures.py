@@ -42,12 +42,18 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.ytitle = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}}'
 
         self.left_offset = 0.2
+        self.bottom_offset = 0.15
+        self.ratio_height = 0.25
+        self.top_bottom_scale_factor = (1 - self.ratio_height) / (1 - self.bottom_offset - self.ratio_height)
 
         #------------------------------------------------------
 
         self.markers = [21, 20, 34, 33, 22, 23]
-        self.alpha = 1.
-        self.colors = [ROOT.kViolet-8, ROOT.kBlue-7, ROOT.kRed-7, ROOT.kTeal-8]
+        self.marker_size = 2.5
+        self.marker_size_ratio = 2
+        self.alpha = 0.7
+        self.colors = [ROOT.kBlue+3, ROOT.kBlue-2, ROOT.kBlue-6, ROOT.kBlue-9]
+        #ROOT.kViolet-8, ROOT.kBlue-4, ROOT.kRed-7, ROOT.kTeal-8]
 
         #------------------------------------------------------
         # Store paths to all final results in a dictionary
@@ -84,7 +90,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         c.SetRightMargin(0.05);
         c.SetLeftMargin(self.left_offset);
         c.SetTopMargin(0.05);
-        c.SetBottomMargin(0.);
+        c.SetBottomMargin(self.bottom_offset/2);
         c.cd()
         c.Divide(2, 2, 0.01, 0.)
 
@@ -92,10 +98,10 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.plot_list = []
 
         # Plot each pt bin in its own pad
-        self.plot_angularity(c, pad=1, R=R, ptbin=1, pt_label='20-40', groomed=groomed)
-        self.plot_angularity(c, pad=2, R=R, ptbin=2, pt_label='40-60', groomed=groomed)
-        self.plot_angularity(c, pad=3, R=R, ptbin=3, pt_label='60-80', groomed=groomed)
-        self.plot_angularity(c, pad=4, R=R, ptbin=4, pt_label='80-100', groomed=groomed)
+        self.plot_angularity(c, pad=1, R=R, ptbin=1, minpt=20, maxpt=40, groomed=groomed)
+        self.plot_angularity(c, pad=2, R=R, ptbin=2, minpt=40, maxpt=60, groomed=groomed)
+        self.plot_angularity(c, pad=3, R=R, ptbin=3, minpt=60, maxpt=80, groomed=groomed)
+        self.plot_angularity(c, pad=4, R=R, ptbin=4, minpt=80, maxpt=100, groomed=groomed)
 
         output_filename = os.path.join(self.output_dir, 'hJetAngularity_{}{}'.format(R, self.file_format))
         c.SaveAs(output_filename)
@@ -103,7 +109,7 @@ class PlotAngularityFigures(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     # Get beta histograms from file, and call plot_beta_overlay to draw them
     #-------------------------------------------------------------------------------------------
-    def plot_angularity(self, c, pad=0, R=1, ptbin=0, pt_label='', groomed=False):
+    def plot_angularity(self, c, pad=0, R=1, ptbin=0, minpt=0, maxpt=0, groomed=False):
         
         filename = self.predictions[str(R)][ptbin-1]
         f = ROOT.TFile(filename, 'READ')
@@ -115,13 +121,14 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.h_sys_list = []
         self.h_pythia_list = []
         self.h_ratio_list = []
+        self.h_ratio_sys_list = []
         self.blank_histo_list = []
 
         for i,beta in enumerate(self.beta_list):
 
-            h_name ='hmain_ang_R{}_{}_{}_trunc'.format(R, beta, pt_label)
-            h_sys_name =  'hResult_ang_systotal_R{}_{}_n3_{}'.format(R, beta, pt_label)
-            h_pythia_name = 'hPythia_ang_R{}_{}_{}'.format(R, beta, pt_label)
+            h_name ='hmain_ang_R{}_{}_{}-{}_trunc'.format(R, beta, minpt, maxpt)
+            h_sys_name =  'hResult_ang_systotal_R{}_{}_n3_{}-{}'.format(R, beta, minpt, maxpt)
+            h_pythia_name = 'hPythia_ang_R{}_{}_{}-{}'.format(R, beta, minpt, maxpt)
 
             h = f.Get(h_name)
             h_sys = f.Get(h_sys_name)
@@ -135,58 +142,73 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_pythia_list.append(h_pythia)
 
             # Plot the ratio
-            output_filename = os.path.join(self.output_dir, 'hRatio_R{}_pt{}_{}{}'.format(R, ptbin, beta, self.file_format))
-            h_ratio = self.plot_ratio(h_pythia, h, output_filename, self.xtitle, self.ytitle, R, pt_label, beta)
+            h_ratio = h.Clone()
             h_ratio.SetName('{}_{}_{}_{}_{}'.format(h_ratio.GetName(), R, ptbin, beta, pad))
+            h_ratio.SetDirectory(0)
+            h_ratio.Divide(h_pythia)
             self.plot_list.append(h_ratio)
             self.h_ratio_list.append(h_ratio)
-            
+
+            h_ratio_sys = h_sys.Clone()
+            h_ratio_sys.SetName('sys{}_{}_{}_{}_{}'.format(h_ratio.GetName(), R, ptbin, beta, pad))
+            h_ratio_sys.SetDirectory(0)
+            h_ratio_sys.Divide(h_pythia)
+            self.plot_list.append(h_ratio_sys)
+            self.h_ratio_sys_list.append(h_ratio_sys)
+
         f.Close()
 
         # Plot overlay of beta values
-        self.plot_beta_overlay(c, pad, R)
+        self.plot_beta_overlay(c, pad, R, minpt, maxpt)
 
         # Keep histograms in memory
         self.plot_list.append(self.h_list)
         self.plot_list.append(self.h_sys_list)
         self.plot_list.append(self.h_pythia_list)
         self.plot_list.append(self.h_ratio_list)
+        self.plot_list.append(self.h_ratio_sys_list)
         self.plot_list.append(self.blank_histo_list)
 
     #-------------------------------------------------------------------------------------------
     # Draw beta histograms in given pad
     #-------------------------------------------------------------------------------------------
-    def plot_beta_overlay(self, c, pad, R):
+    def plot_beta_overlay(self, c, pad, R, minpt, maxpt):
 
         # Create canvas
         c.cd(pad)
 
-        # Set pad and histo arrangement
-        myPad = ROOT.TPad("myPad_{}".format(R), "The pad{}".format(R),0,0,1,1)
-        self.plot_list.append(myPad)
-        if pad in [1,3]:
-            myPad.SetLeftMargin(self.left_offset)
+        # Set pad to plot distributions
+        if pad in [3,4]:
+            pad1 = ROOT.TPad("pad1_{}".format(R), "pad1{}".format(R),0, self.bottom_offset + self.ratio_height,1,1)
         else:
-            myPad.SetLeftMargin(0.)
-        myPad.SetRightMargin(0.)
-        myPad.SetTopMargin(0.01)
-        myPad.SetBottomMargin(0.15)
-        myPad.SetTicks(0,1)
-        #myPad.SetLogy()
-        myPad.Draw()
-        myPad.cd()
+            pad1 = ROOT.TPad("pad1_{}".format(R), "pad1{}".format(R),0, self.ratio_height,1,1)
+        self.plot_list.append(pad1)
+        if pad in [1,3]:
+            pad1.SetLeftMargin(self.left_offset)
+        else:
+            pad1.SetLeftMargin(0.)
+        pad1.SetRightMargin(0.)
+        pad1.SetTopMargin(0.0)
+        pad1.SetBottomMargin(0.)
+        pad1.SetTicks(0,1)
+        #pad1.SetLogy()
+        pad1.Draw()
+        pad1.cd()
 
         # Draw blank histos
         blankname = 'myBlankHisto_{}_{}'.format(pad, R)
         myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto.SetNdivisions(505)
-        myBlankHisto.SetXTitle(self.xtitle)
-        myBlankHisto.GetXaxis().SetTitleSize(0.06)
-        myBlankHisto.GetXaxis().SetTitleOffset(1.1)
         myBlankHisto.SetYTitle(self.ytitle)
-        myBlankHisto.GetYaxis().SetTitleSize(0.06)
-        myBlankHisto.GetYaxis().SetTitleOffset(1.4)
-        myBlankHisto.SetMinimum(0.)
+        if pad in [1,2]:
+            myBlankHisto.GetYaxis().SetTitleSize(0.1)
+            myBlankHisto.GetYaxis().SetTitleOffset(0.7)
+            myBlankHisto.GetYaxis().SetLabelSize(0.06)
+        else:
+            myBlankHisto.GetYaxis().SetTitleSize(0.115)
+            myBlankHisto.GetYaxis().SetTitleOffset(0.6)
+            myBlankHisto.GetYaxis().SetLabelSize(0.07)
+        myBlankHisto.SetMinimum(0.001)
         if pad in [1,2]:
             myBlankHisto.SetMaximum(19.99)
         else:
@@ -202,8 +224,11 @@ class PlotAngularityFigures(common_base.CommonBase):
             shift = -0.08
             shift2 = -0.08 - shift
         
-        leg = ROOT.TLegend(0.7+shift,0.93-0.042*scale_factor*4,0.85,0.96)
-        self.setupLegend(leg,0.03)
+        leg = ROOT.TLegend(0.75+shift,0.9-0.072*scale_factor*4,0.9,0.96)
+        if pad in [1,2]:
+            self.setupLegend(leg,0.07)
+        else:
+            self.setupLegend(leg,0.08)
         self.plot_list.append(leg)
 
         # Draw data
@@ -213,9 +238,12 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
             self.h_list[i].SetLineWidth(2)
             self.h_list[i].SetMarkerStyle(self.markers[i])
+            self.h_list[i].SetMarkerSize(self.marker_size)
             self.h_list[i].Draw('PE same')
 
             self.h_sys_list[i].SetLineColor(0)
+            self.h_sys_list[i].SetMarkerSize(0)
+            self.h_sys_list[i].SetMarkerColor(0)
             self.h_sys_list[i].SetFillColor(self.colors[i])
             self.h_sys_list[i].SetFillColorAlpha(self.colors[i], 0.3)
             self.h_sys_list[i].SetFillStyle(1001)
@@ -224,7 +252,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
             self.h_pythia_list[i].SetLineColor(self.colors[i])
             self.h_pythia_list[i].SetLineColorAlpha(self.colors[i], 0.5)
-            self.h_pythia_list[i].SetLineWidth(4)
+            self.h_pythia_list[i].SetLineWidth(3)
             self.h_pythia_list[i].Draw('L hist same')
 
             leg.AddEntry(self.h_list[i],'#beta = {}'.format(beta),'P')
@@ -234,37 +262,36 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         leg.Draw('same')
 
-        #line = ROOT.TLine(self.h_list[i].GetXaxis().GetXmin(),1,self.h_list[i].GetXaxis().GetXmax(),1)
-        #line.SetLineColor(1)
-        #line.SetLineStyle(2)
-        #line.Draw('same')
-        #self.plot_list.append(line)
-
         # # # # # # # # # # # # # # # # # # # # # # # #
         # text
         # # # # # # # # # # # # # # # # # # # # # # # #
+        ymax = 0.9
+        dy = 0.09
+        x = 0.3 + shift + shift2
+        if pad in [1,2]:
+            size = 0.08
+        else:
+            size = 0.09
+    
         if pad == 1:
-            ymax = 0.93
-            dy = 0.05
-            x = 0.35 + shift + shift2
-            system0 = ROOT.TLatex(x,ymax,'#bf{ALICE}')
+            system0 = ROOT.TLatex(x,ymax,'ALICE')
             system0.SetNDC()
-            system0.SetTextSize(0.04*scale_factor)
+            system0.SetTextSize(size*scale_factor)
             system0.Draw()
 
             system1 = ROOT.TLatex(x,ymax-dy,'pp  #sqrt{#it{s}} = 5.02 TeV')
             system1.SetNDC()
-            system1.SetTextSize(0.04*scale_factor)
+            system1.SetTextSize(size*scale_factor)
             system1.Draw()
 
-            system2 = ROOT.TLatex(x,ymax-2*dy,'Charged jets   anti-#it{k}_{T}')
+            system2 = ROOT.TLatex(x,ymax-2*dy,'charged jets   anti-#it{k}_{T}')
             system2.SetNDC()
-            system2.SetTextSize(0.04*scale_factor)
+            system2.SetTextSize(size*scale_factor)
             system2.Draw()
 
             system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    | #it{{#eta}}_{{jet}}| = {}'.format(R, 0.9-R))
             system3.SetNDC()
-            system3.SetTextSize(0.04*scale_factor)
+            system3.SetTextSize(size*scale_factor)
             system3.Draw()
 
             self.plot_list.append(system0)
@@ -272,104 +299,79 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.plot_list.append(system2)
             self.plot_list.append(system3)
 
-    #-------------------------------------------------------------------------------------------
-    # Plot ratio h1/h2
-    def plot_ratio(self, h_pp, h_AA, outputFilename, xtitle, ytitle, R, pt_label, beta):
+        system4 = ROOT.TLatex(x+0.2,ymax-5.*dy, str(minpt) + ' < #it{p}_{T,jet}^{ch} < ' + str(maxpt) + ' GeV/#it{c}')
+        system4.SetNDC()
+        system4.SetTextSize(size*scale_factor)
+        system4.Draw()
 
-        # Create canvas
-        cname = 'cratio_{}_{}_{}'.format(R, pt_label, beta)
-        c = ROOT.TCanvas(cname,cname,800,850)
-        ROOT.SetOwnership(c, False) # For some reason this is necessary to avoid a segfault...some bug in ROOT or pyroot
-                                    # Supposedly fixed in https://github.com/root-project/root/pull/3787
-        c.cd()
-        pad1 = ROOT.TPad('pad1', 'pad1', 0, 0.3, 1, 1.0)
-        pad1.SetBottomMargin(0)
-        pad1.SetLeftMargin(0.2)
-        pad1.SetRightMargin(0.05)
-        pad1.SetTopMargin(0.05)
-        pad1.SetLogy()
-        pad1.Draw()
-        pad1.cd()
+        self.plot_list.append(system4)
 
-        # Set pad and histo arrangement
-        myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-        myPad.SetLeftMargin(0.22)
-        myPad.SetTopMargin(0.04)
-        myPad.SetRightMargin(0.04)
-        myPad.SetBottomMargin(0.15)
-
-        # Set spectra styles
-        h_AA.SetMarkerSize(3)
-        h_AA.SetMarkerStyle(33)
-        h_AA.SetMarkerColor(600-6)
-        h_AA.SetLineStyle(1)
-        h_AA.SetLineWidth(2)
-        h_AA.SetLineColor(600-6)
-
-        h_pp.SetMarkerSize(2)
-        h_pp.SetMarkerStyle(21)
-        h_pp.SetMarkerColor(1)
-        h_pp.SetLineStyle(1)
-        h_pp.SetLineWidth(2)
-        h_pp.SetLineColor(1)
-
-        # Draw spectra
-        h_pp.SetXTitle(xtitle)
-        h_pp.GetYaxis().SetTitleOffset(2.2)
-        h_pp.SetYTitle(ytitle)
-        h_pp.SetMaximum(h_pp.GetMaximum()*10.)
-        h_pp.SetMinimum(h_pp.GetMinimum()/10.)
-
-        h_pp.Draw('PE X0 same')
-        h_AA.Draw('PE X0 same')
-
-        # # # # # # # # # # # # # # # # # # # # # # # #
-        # Add legends and text
-        # # # # # # # # # # # # # # # # # # # # # # # #
-        c.cd()
-        pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.05, 1, 0.3)
-        pad2.SetTopMargin(0)
-        pad2.SetBottomMargin(0.35)
-        pad2.SetLeftMargin(0.2)
-        pad2.SetRightMargin(0.05)
+        # Set pad for ratio
+        c.cd(pad)
+        if pad in [3,4]:
+            pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),0,0,1,self.bottom_offset+self.ratio_height)
+        else:
+            pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),0,0,1,self.ratio_height)
+        self.plot_list.append(pad2)
+        if pad in [1,3]:
+            pad2.SetLeftMargin(self.left_offset)
+        else:
+            pad2.SetLeftMargin(0.)
+        pad2.SetRightMargin(0.)
+        pad2.SetTopMargin(0.)
+        if pad in [3,4]:
+            pad2.SetBottomMargin(self.bottom_offset/(self.bottom_offset+self.ratio_height))
+        else:
+            pad2.SetBottomMargin(0.)
+        pad2.SetTicks(1,1)
         pad2.Draw()
         pad2.cd()
 
-        # plot ratio
-        hRatio = h_AA.Clone()
-        hRatio.SetName('hRatio_{}'.format(cname))
-        hRatio.Divide(h_pp)
-        hRatio.SetMarkerStyle(21)
-        hRatio.SetMarkerSize(2)
+        # Draw blank histos
+        blankname = 'myBlankHisto2_{}_{}'.format(pad, R)
+        myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
+        myBlankHisto2.SetNdivisions(505, "y")
+        myBlankHisto2.SetXTitle(self.xtitle)
+        myBlankHisto2.SetYTitle('#frac{Data}{MC}')        
+        if pad in [1,2]:
+            myBlankHisto2.GetYaxis().SetTitleSize(0.2)
+            myBlankHisto2.GetYaxis().SetTitleOffset(0.3)
+            myBlankHisto2.GetYaxis().SetLabelSize(0.2)
+            myBlankHisto2.SetMinimum(0.01)
+        else:
+            myBlankHisto2.GetXaxis().SetTitleSize(0.2)
+            myBlankHisto2.GetXaxis().SetTitleOffset(0.8)
+            myBlankHisto2.GetXaxis().SetLabelSize(0.12)      
+            myBlankHisto2.GetYaxis().SetTitleSize(0.12)
+            myBlankHisto2.GetYaxis().SetTitleOffset(0.5)
+            myBlankHisto2.GetYaxis().SetLabelSize(0.12)
+            myBlankHisto2.SetMinimum(0.)
+        myBlankHisto2.SetMaximum(1.99)
+        myBlankHisto2.Draw()
+        self.blank_histo_list.append(myBlankHisto2)
 
-        hRatio.GetXaxis().SetTitleSize(30)
-        hRatio.GetXaxis().SetTitleFont(43)
-        hRatio.GetXaxis().SetTitleOffset(4.)
-        hRatio.GetXaxis().SetLabelFont(43)
-        hRatio.GetXaxis().SetLabelSize(20)
-        hRatio.GetXaxis().SetTitle(xtitle)
-
-        hRatio.GetYaxis().SetTitle('#it{R}_{AA}')
-        hRatio.GetYaxis().SetTitleSize(20)
-        hRatio.GetYaxis().SetTitleFont(43)
-        hRatio.GetYaxis().SetTitleOffset(2.2)
-        hRatio.GetYaxis().SetLabelFont(43)
-        hRatio.GetYaxis().SetLabelSize(20)
-        hRatio.GetYaxis().SetNdivisions(505)
-
-        hRatio.SetMinimum(0.)
-        hRatio.SetMaximum(1.49)
-        hRatio.Draw('P E')
-
-        line = ROOT.TLine(hRatio.GetXaxis().GetXmin(), 1, hRatio.GetXaxis().GetXmax(), 1)
-        line.SetLineColor(920+2)
+        line = ROOT.TLine(self.xmin,1,self.xmax,1)
+        line.SetLineColor(1)
         line.SetLineStyle(2)
-        line.SetLineWidth(4)
-        line.Draw()
+        line.Draw('same')
+        self.plot_list.append(line)
 
-        #c.SaveAs(outputFilename)
+        # Draw ratio
+        for i,beta in enumerate(self.beta_list):
 
-        return hRatio.Clone('{}_{}'.format(hRatio.GetName(), 'new'))
+            self.h_ratio_sys_list[i].SetLineColor(0)
+            self.h_ratio_sys_list[i].SetFillColor(self.colors[i])
+            self.h_ratio_sys_list[i].SetFillColorAlpha(self.colors[i], 0.3)
+            self.h_ratio_sys_list[i].SetFillStyle(1001)
+            self.h_ratio_sys_list[i].SetLineWidth(0)
+            self.h_ratio_sys_list[i].Draw('E2 same')
+
+            self.h_ratio_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
+            self.h_ratio_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
+            self.h_ratio_list[i].SetLineWidth(2)
+            self.h_ratio_list[i].SetMarkerStyle(self.markers[i])
+            self.h_ratio_list[i].SetMarkerSize(self.marker_size)
+            self.h_ratio_list[i].Draw('PE same')
 
     # Set legend parameters
     #-------------------------------------------------------------------------------------------
