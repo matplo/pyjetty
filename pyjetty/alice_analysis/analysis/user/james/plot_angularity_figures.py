@@ -40,6 +40,9 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.xmax = 0.65
         self.xtitle =  '#it{#lambda}_{#it{#beta}}'
         self.ytitle = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}}'
+        self.xtitle_groomed =  '#it{#lambda}_{#it{#beta},g}'
+        self.ytitle_groomed = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta},g}}'
+        self.logy = False
 
         self.left_offset = 0.2
         self.bottom_offset = 0.15
@@ -79,13 +82,15 @@ class PlotAngularityFigures(common_base.CommonBase):
         ROOT.gROOT.ForceStyle()
 
         self.plot_multipanel(R=0.2, groomed=False)
-        #self.plot_multipanel(R=0.2, groomed=True)
+        self.plot_multipanel(R=0.4, groomed=False)
+        self.plot_multipanel(R=0.2, groomed=True)
+        self.plot_multipanel(R=0.4, groomed=True)
 
     #-------------------------------------------------------------------------------------------
     def plot_multipanel(self, R=1, groomed=False):
 
         # Create multi-panel canvas
-        cname = 'c'
+        cname = 'c{}{}'.format(R,groomed)
         c = ROOT.TCanvas(cname,cname,1800,1600)
         c.SetRightMargin(0.05);
         c.SetLeftMargin(self.left_offset);
@@ -103,7 +108,11 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.plot_angularity(c, pad=3, R=R, ptbin=3, minpt=60, maxpt=80, groomed=groomed)
         self.plot_angularity(c, pad=4, R=R, ptbin=4, minpt=80, maxpt=100, groomed=groomed)
 
-        output_filename = os.path.join(self.output_dir, 'hJetAngularity_{}{}'.format(R, self.file_format))
+        if groomed:
+            outfilename = 'hJetAngularity_{}_SD{}'.format(R, self.file_format)
+        else:
+            outfilename = 'hJetAngularity_{}{}'.format(R, self.file_format)
+        output_filename = os.path.join(self.output_dir, outfilename)
         c.SaveAs(output_filename)
 
     #-------------------------------------------------------------------------------------------
@@ -124,11 +133,17 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.h_ratio_sys_list = []
         self.blank_histo_list = []
 
+        grooming_label = ''
+        if groomed:
+            grooming_label = '_SD_zcut02_B0'
+
         for i,beta in enumerate(self.beta_list):
 
-            h_name ='hmain_ang_R{}_{}_{}-{}_trunc'.format(R, beta, minpt, maxpt)
-            h_sys_name =  'hResult_ang_systotal_R{}_{}_n3_{}-{}'.format(R, beta, minpt, maxpt)
-            h_pythia_name = 'hPythia_ang_R{}_{}_{}-{}'.format(R, beta, minpt, maxpt)
+
+
+            h_name ='hmain_ang_R{}_{}{}_{}-{}_trunc'.format(R, beta, grooming_label, minpt, maxpt)
+            h_sys_name =  'hResult_ang_systotal_R{}_{}{}_n3_{}-{}'.format(R, beta, grooming_label, minpt, maxpt)
+            h_pythia_name = 'hPythia_ang_R{}_{}{}_{}-{}'.format(R, beta, grooming_label, minpt, maxpt)
 
             h = f.Get(h_name)
             h_sys = f.Get(h_sys_name)
@@ -159,7 +174,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         f.Close()
 
         # Plot overlay of beta values
-        self.plot_beta_overlay(c, pad, R, minpt, maxpt)
+        self.plot_beta_overlay(c, pad, R, minpt, maxpt, groomed)
 
         # Keep histograms in memory
         self.plot_list.append(self.h_list)
@@ -172,7 +187,7 @@ class PlotAngularityFigures(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     # Draw beta histograms in given pad
     #-------------------------------------------------------------------------------------------
-    def plot_beta_overlay(self, c, pad, R, minpt, maxpt):
+    def plot_beta_overlay(self, c, pad, R, minpt, maxpt, groomed):
 
         # Create canvas
         c.cd(pad)
@@ -191,7 +206,9 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad1.SetTopMargin(0.0)
         pad1.SetBottomMargin(0.)
         pad1.SetTicks(0,1)
-        #pad1.SetLogy()
+        if self.logy:
+            pad1.SetLogy()
+            #pad1.SetLogx()
         pad1.Draw()
         pad1.cd()
 
@@ -199,7 +216,10 @@ class PlotAngularityFigures(common_base.CommonBase):
         blankname = 'myBlankHisto_{}_{}'.format(pad, R)
         myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto.SetNdivisions(505)
-        myBlankHisto.SetYTitle(self.ytitle)
+        if groomed:
+            myBlankHisto.SetYTitle(self.ytitle_groomed)
+        else:
+            myBlankHisto.SetYTitle(self.ytitle)    
         if pad in [1,2]:
             myBlankHisto.GetYaxis().SetTitleSize(0.1)
             myBlankHisto.GetYaxis().SetTitleOffset(0.7)
@@ -208,11 +228,15 @@ class PlotAngularityFigures(common_base.CommonBase):
             myBlankHisto.GetYaxis().SetTitleSize(0.115)
             myBlankHisto.GetYaxis().SetTitleOffset(0.6)
             myBlankHisto.GetYaxis().SetLabelSize(0.07)
-        myBlankHisto.SetMinimum(0.001)
-        if pad in [1,2]:
-            myBlankHisto.SetMaximum(19.99)
+        if self.logy:
+            myBlankHisto.SetMinimum(0.01)
+            myBlankHisto.SetMaximum(1000)
         else:
-            myBlankHisto.SetMaximum(34.99)
+            myBlankHisto.SetMinimum(0.001)
+            if pad in [1,2]:
+                myBlankHisto.SetMaximum(19.99)
+            else:
+                myBlankHisto.SetMaximum(34.99)
         myBlankHisto.Draw()
         self.blank_histo_list.append(myBlankHisto)
 
@@ -299,12 +323,18 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.plot_list.append(system2)
             self.plot_list.append(system3)
 
-        system4 = ROOT.TLatex(x+0.2,ymax-5.*dy, str(minpt) + ' < #it{p}_{T,jet}^{ch} < ' + str(maxpt) + ' GeV/#it{c}')
+        system4 = ROOT.TLatex(x+0.2,ymax-6.*dy, str(minpt) + ' < #it{p}_{T,jet}^{ch} < ' + str(maxpt) + ' GeV/#it{c}')
         system4.SetNDC()
         system4.SetTextSize(size*scale_factor)
         system4.Draw()
-
         self.plot_list.append(system4)
+
+        if groomed and pad == 1:
+            system5 = ROOT.TLatex(x, ymax-4.2*dy, 'Soft Drop #it{z}_{cut} = 0.2 #beta_{SD} = 0')
+            system5.SetNDC()
+            system5.SetTextSize(size*scale_factor)
+            system5.Draw()
+            self.plot_list.append(system5)
 
         # Set pad for ratio
         c.cd(pad)
@@ -331,7 +361,10 @@ class PlotAngularityFigures(common_base.CommonBase):
         blankname = 'myBlankHisto2_{}_{}'.format(pad, R)
         myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto2.SetNdivisions(505, "y")
-        myBlankHisto2.SetXTitle(self.xtitle)
+        if groomed:
+            myBlankHisto2.SetXTitle(self.xtitle_groomed)
+        else:
+            myBlankHisto2.SetXTitle(self.xtitle)
         myBlankHisto2.SetYTitle('#frac{Data}{MC}')        
         if pad in [1,2]:
             myBlankHisto2.GetYaxis().SetTitleSize(0.2)
