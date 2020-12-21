@@ -255,6 +255,11 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.setupLegend(leg,0.08)
         self.plot_list.append(leg)
 
+        leg2 = ROOT.TLegend(0.18+shift,0.9-0.072*scale_factor*2,0.35,0.9)
+        if pad == 2:
+            self.setupLegend(leg2,0.07)
+            self.plot_list.append(leg2)
+
         # Draw data
         for i,beta in enumerate(self.beta_list):
 
@@ -280,11 +285,17 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_pythia_list[i].Draw('L hist same')
 
             leg.AddEntry(self.h_list[i],'#beta = {}'.format(beta),'P')
+            
+            if i == 2:
+                leg2.AddEntry(self.h_sys_list[i], 'Sys. uncertainty', 'f')
+                leg2.AddEntry(self.h_pythia_list[i], 'PYTHIA8 Monash 2013', 'l')
 
         for i,beta in enumerate(self.beta_list):
             self.h_list[i].Draw('PE same')
 
         leg.Draw('same')
+        if pad == 2:
+            leg2.Draw('same')
 
         # # # # # # # # # # # # # # # # # # # # # # # #
         # text
