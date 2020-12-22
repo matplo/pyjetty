@@ -582,152 +582,34 @@ class RunAnalysis(common_base.CommonBase):
 
     # Loop through all systematic variations, and take ratio to main result
     h_list = []
+    h_unfolding_list = []
     for systematic in self.systematics_list:
 
       if final:
-        # Save plot of each systematic to directory
-        if systematic == 'main':
-          sys_label = 'RegParam'
-        elif systematic in ['prior1', 'prior2']:
-          if systematic == 'prior1':
-            sys_label = 'prior'
-          else:
-            continue
-        elif systematic in ['subtraction1', 'subtraction2']:
-          if systematic == 'subtraction1':
-            sys_label = 'subtraction'
-          else:
-            continue
-        elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
-          if systematic == 'fastsim_generator1':
-            sys_label = 'generator'
-          else:
-            continue
-        else:
-          sys_label = systematic
-        name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
-          self.observable, sys_label, jetR, obs_label,
-          reg_param, min_pt_truth, max_pt_truth)
-        h_systematic_ratio = getattr(self, name)
-
-        if self.debug_level > 0:
-          output_dir = getattr(self, 'output_dir_systematics')
-          name = 'hSystematic_{}_R{}_{}_{}-{}{}'.format(
-            systematic, self.utils.remove_periods(jetR), obs_label,
-            int(min_pt_truth), int(max_pt_truth), self.file_format)
-          outputFilename = os.path.join(output_dir, name)
-          self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
-
+        h_systematic_ratio = self.retrieve_systematic(systematic, jetR, obs_label,
+                                                      reg_param, min_pt_truth, max_pt_truth)
       else:
-        # Get systematic variation and save percentage difference as attribte
-        
-        # Combine certain systematics as average or max
-        if systematic == 'main':
-          if grooming_setting and maxbin:
-            h_systematic_ratio = self.construct_systematic_average(
-              hMain, 'RegParam', jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=False)
-          else:
-            h_systematic_ratio = self.construct_systematic_average(
-              hMain, 'RegParam', jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
-        
-        elif systematic in ['prior1', 'prior2']:
-          if systematic == 'prior1':
-            if grooming_setting and maxbin:
-              h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'prior', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
-            else:
-              h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'prior', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
-          else:
-            continue
-            
-        # For model-depedence, take the difference between two fastsim generators
-        elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
-          if systematic == 'fastsim_generator1':
-            # Get reference generator unfolded result (e.g. pythia fastsim)
-            name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
-              'fastsim_generator0', self.observable, jetR, obs_label,
-              reg_param, min_pt_truth, max_pt_truth)
-            h_reference = getattr(self, name)
-            
-            # Take the difference of generator to reference generator (e.g. herwig fastsim)
-            if grooming_setting and maxbin:
-              h_systematic_ratio = self.construct_systematic_percentage(
-                h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin+1)
-            else:
-              h_systematic_ratio = self.construct_systematic_percentage(
-                h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin)
-          else:
-            continue
-        
-        elif systematic in ['subtraction1', 'subtraction2']:
-          if systematic == 'subtraction1':
-            if grooming_setting and maxbin:
-              h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'subtraction', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
-            else:
-              h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'subtraction', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
-          else:
-            continue
-        
-        elif systematic == 'thermal_closure':
-          fname = 'nonclosure_{}-{}.root'.format(min_pt_truth, max_pt_truth)
-          outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
-          f_nonclosure = ROOT.TFile(os.path.join(outf_name, fname), 'READ')
-          h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
-          h_systematic_ratio_temp.SetDirectory(0)
-          f_nonclosure.Close()
-          
-          name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
-            self.observable, systematic, jetR, obs_label,
-            reg_param, min_pt_truth, max_pt_truth)
-          self.change_to_per(h_systematic_ratio_temp)
-          h_systematic_ratio_temp.SetMinimum(0.)
-          h_systematic_ratio_temp.SetMaximum(1.5*h_systematic_ratio_temp.GetMaximum())
-          if grooming_setting and maxbin:
-            h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin+1, name_ratio)
-          else:
-            h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
-          setattr(self, name_ratio, h_systematic_ratio)
-        
+        h_systematic_ratio = self.construct_systematic(systematic, hMain, jetR, obs_label, grooming_setting,
+                                                       reg_param, min_pt_truth, max_pt_truth, maxbin)
+      if h_systematic_ratio:
+        if systematic in ['main', 'prior1', 'truncation', 'binning']:
+          h_unfolding_list.append(h_systematic_ratio)
         else:
-          if grooming_setting and maxbin:
-            h_systematic_ratio = self.construct_systematic_percentage(
-              hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin+1)
-          else:
-            h_systematic_ratio = self.construct_systematic_percentage(
-              hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin)
-
-      h_list.append(h_systematic_ratio)
-
-    if not final:
-
-      # Add all unfolding systematics in quadrature
-      h_list_unfolding = []
-      unfolding_sys = ['RegParam', 'prior', 'truncation', 'binning']
-      for sys in unfolding_sys:
-        for h in h_list:
-          if sys in h.GetName():
-            h_list_unfolding.append(h)
-            break
-      name = 'hSystematic_Unfolding_R{}_{}_n{}_{}-{}'.format(
-        self.utils.remove_periods(jetR), obs_label,
-        reg_param, int(min_pt_truth), int(max_pt_truth))
-      hSystematic_Unfolding = self.add_in_quadrature(h_list_unfolding)
+          h_list.append(h_systematic_ratio)
+            
+    # Construct or retrieve unfolding uncertainty
+    name = 'hSystematic_Unfolding_R{}_{}_n{}_{}-{}'.format(
+               self.utils.remove_periods(jetR), obs_label,
+               reg_param, int(min_pt_truth), int(max_pt_truth))
+    if final:
+      hSystematic_Unfolding = getattr(self, name)
+    else:
+      hSystematic_Unfolding = self.add_in_quadrature(h_unfolding_list)
       setattr(self, name, hSystematic_Unfolding)
+    h_list.append(hSystematic_Unfolding)
 
-      # Add all systematic uncertainties in quadrature
+    # Construct total systematic uncertainty: Add all systematic uncertainties in quadrature
+    if not final:
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
         self.utils.remove_periods(jetR), obs_label,
         reg_param, int(min_pt_truth), int(max_pt_truth))
@@ -774,6 +656,145 @@ class RunAnalysis(common_base.CommonBase):
       self.plot_systematic_uncertainties(
         jetR, obs_label, obs_setting, grooming_setting,
         min_pt_truth, max_pt_truth, maxbin, h_list, hSystematic_Total)
+
+      # Plot unfolding uncertainties
+      self.plot_systematic_uncertainties(
+        jetR, obs_label, obs_setting, grooming_setting,
+        min_pt_truth, max_pt_truth, maxbin, h_unfolding_list, hSystematic_Unfolding, suffix='Unfolding')
+
+  #----------------------------------------------------------------------
+  # Retrieve a given systematic histogram
+  def retrieve_systematic(self, systematic, jetR, obs_label,
+                           reg_param, min_pt_truth, max_pt_truth):
+
+    if systematic == 'main':
+      sys_label = 'RegParam'
+    elif systematic in ['prior1', 'prior2']:
+      if systematic == 'prior1':
+        sys_label = 'prior'
+      else:
+        return None
+    elif systematic in ['subtraction1', 'subtraction2']:
+      if systematic == 'subtraction1':
+        sys_label = 'subtraction'
+      else:
+        return None
+    elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
+      if systematic == 'fastsim_generator1':
+        sys_label = 'generator'
+      else:
+        return None
+    else:
+      sys_label = systematic
+    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+                self.observable, sys_label, jetR, obs_label,
+                reg_param, min_pt_truth, max_pt_truth)
+    h_systematic_ratio = getattr(self, name)
+
+    if self.debug_level > 0:
+      output_dir = getattr(self, 'output_dir_systematics')
+      name = 'hSystematic_{}_R{}_{}_{}-{}{}'.format(
+                 systematic, self.utils.remove_periods(jetR), obs_label,
+                 int(min_pt_truth), int(max_pt_truth), self.file_format)
+      outputFilename = os.path.join(output_dir, name)
+      self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')      
+
+    return h_systematic_ratio
+
+  #----------------------------------------------------------------------
+  # Get systematic variation and save percentage difference as attribte
+  def construct_systematic(self, systematic, hMain, jetR, obs_label, grooming_setting,
+                           reg_param, min_pt_truth, max_pt_truth, maxbin):
+
+    # Combine certain systematics as average or max
+    if systematic == 'main':
+      if grooming_setting and maxbin:
+        h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'RegParam', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=False)
+      else:
+        h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'RegParam', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
+        
+    elif systematic in ['prior1', 'prior2']:
+      if systematic == 'prior1':
+        if grooming_setting and maxbin:
+          h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'prior', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
+        else:
+          h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'prior', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+      else:
+        return None
+            
+    # For model-depedence, take the difference between two fastsim generators
+    elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
+      if systematic == 'fastsim_generator1':
+        # Get reference generator unfolded result (e.g. pythia fastsim)
+        name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
+              'fastsim_generator0', self.observable, jetR, obs_label,
+              reg_param, min_pt_truth, max_pt_truth)
+        h_reference = getattr(self, name)
+            
+        # Take the difference of generator to reference generator (e.g. herwig fastsim)
+        if grooming_setting and maxbin:
+          h_systematic_ratio = self.construct_systematic_percentage(
+                h_reference, 'fastsim_generator1', jetR, obs_label,
+                reg_param, min_pt_truth, max_pt_truth, maxbin+1)
+        else:
+          h_systematic_ratio = self.construct_systematic_percentage(
+                h_reference, 'fastsim_generator1', jetR, obs_label,
+                reg_param, min_pt_truth, max_pt_truth, maxbin)
+      else:
+        return None
+        
+    elif systematic in ['subtraction1', 'subtraction2']:
+      if systematic == 'subtraction1':
+        if grooming_setting and maxbin:
+          h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'subtraction', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
+        else:
+          h_systematic_ratio = self.construct_systematic_average(
+                hMain, 'subtraction', jetR, obs_label, reg_param,
+                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+      else:
+        return None
+        
+    elif systematic == 'thermal_closure':
+      fname = 'nonclosure_{}-{}.root'.format(min_pt_truth, max_pt_truth)
+      outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
+      f_nonclosure = ROOT.TFile(os.path.join(outf_name, fname), 'READ')
+      h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
+      h_systematic_ratio_temp.SetDirectory(0)
+      f_nonclosure.Close()
+          
+      name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+            self.observable, systematic, jetR, obs_label,
+            reg_param, min_pt_truth, max_pt_truth)
+      self.change_to_per(h_systematic_ratio_temp)
+      h_systematic_ratio_temp.SetMinimum(0.)
+      h_systematic_ratio_temp.SetMaximum(1.5*h_systematic_ratio_temp.GetMaximum())
+      if grooming_setting and maxbin:
+        h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin+1, name_ratio)
+      else:
+        h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
+      setattr(self, name_ratio, h_systematic_ratio)
+        
+    else:
+      if grooming_setting and maxbin:
+        h_systematic_ratio = self.construct_systematic_percentage(
+              hMain, systematic, jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin+1)
+      else:
+        h_systematic_ratio = self.construct_systematic_percentage(
+              hMain, systematic, jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, maxbin)
+              
+    return h_systematic_ratio
 
   #----------------------------------------------------------------------
   # Get systematic variation and save percentage difference as attribte
@@ -862,7 +883,7 @@ class RunAnalysis(common_base.CommonBase):
 
   #----------------------------------------------------------------------
   def plot_systematic_uncertainties(self, jetR, obs_label, obs_setting, grooming_setting,
-                                    min_pt_truth, max_pt_truth, maxbin, h_list, h_total):
+                                    min_pt_truth, max_pt_truth, maxbin, h_list, h_total, suffix=''):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -924,13 +945,15 @@ class RunAnalysis(common_base.CommonBase):
             legend_label = 'generator'
           elif 'subtraction' in h.GetName():
             legend_label = 'subtraction'
+          elif 'Unfolding' in h.GetName():
+            legend_label = 'Unfolding'
         leg.AddEntry(h, legend_label, 'P')
 
     h_total.SetLineStyle(1)
     h_total.SetLineColor(1)
     h_total.SetLineWidth(2)
     h_total.DrawCopy('same hist')
-    leg.AddEntry(h_total, 'Total', 'l')
+    leg.AddEntry(h_total, 'Total {}'.format(suffix), 'l')
 
     leg.Draw()
 
@@ -956,9 +979,9 @@ class RunAnalysis(common_base.CommonBase):
       text_latex.DrawLatex(0.3, 0.64, text)
 
     output_dir = getattr(self, 'output_dir_systematics')
-    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}'.format(
+    outputFilename = os.path.join(output_dir, 'hSystematics_R{}_{}_{}-{}{}{}'.format(
       self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
-      int(max_pt_truth), self.file_format))
+      int(max_pt_truth), suffix, self.file_format))
     c.SaveAs(outputFilename)
     c.Close()
 
