@@ -604,7 +604,7 @@ class RunAnalysis(common_base.CommonBase):
     if final:
       hSystematic_Unfolding = getattr(self, name)
     else:
-      hSystematic_Unfolding = self.add_in_quadrature(h_unfolding_list)
+      hSystematic_Unfolding = self.construct_unfolding_uncertainty(h_unfolding_list)
       setattr(self, name, hSystematic_Unfolding)
     h_list.append(hSystematic_Unfolding)
 
@@ -930,12 +930,16 @@ class RunAnalysis(common_base.CommonBase):
         h.SetLineColor(self.ColorArray[i])
         h.SetLineStyle(1)
         h.SetLineWidth(2)
+        if h.GetMaximum() > h_total.GetMaximum():
+          myBlankHisto.SetMaximum(1.7*h.GetMaximum())
 
         h.DrawCopy('P X0 same')
 
         legend_label = ''
         for systematic in self.systematics_list:
-          if systematic in h.GetName():
+          if 'Unfolding' in h.GetName():
+            legend_label = 'unfolding'
+          elif systematic in h.GetName():
             legend_label = systematic
           elif 'RegParam' in h.GetName():
             legend_label = 'reg param'
@@ -945,8 +949,6 @@ class RunAnalysis(common_base.CommonBase):
             legend_label = 'generator'
           elif 'subtraction' in h.GetName():
             legend_label = 'subtraction'
-          elif 'Unfolding' in h.GetName():
-            legend_label = 'Unfolding'
         leg.AddEntry(h, legend_label, 'P')
 
     h_total.SetLineStyle(1)
@@ -1023,6 +1025,26 @@ class RunAnalysis(common_base.CommonBase):
       for value_i in values_i:
         new_value_squared += value_i*value_i
       new_value = math.sqrt(new_value_squared)
+      h_new.SetBinContent(i, new_value)
+
+    return h_new
+
+  #----------------------------------------------------------------------
+  # Take stdev of a list of (identically-binned) histograms, bin-by-bin
+  #----------------------------------------------------------------------
+  def construct_unfolding_uncertainty(self, h_list):
+
+    h_new = h_list[0].Clone()
+    h_new.SetName('hCombinedUnfoldingSystematic_{}'.format(h_list[0].GetName()))
+
+    for i in range(1, h_new.GetNbinsX()+1):
+
+      values_i = [h.GetBinContent(i) for h in h_list]
+
+      new_value_squared = 0.
+      for value_i in values_i:
+        new_value_squared += value_i*value_i
+      new_value = math.sqrt(new_value_squared / len(h_list))
       h_new.SetBinContent(i, new_value)
 
     return h_new
