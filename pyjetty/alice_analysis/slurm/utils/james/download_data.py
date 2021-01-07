@@ -20,7 +20,7 @@ import os
 import sys
 import subprocess
 
-#----------------------------------------------------------------------
+#---------------------------------------------------------------------------
 def download_data(period):
 
     # Set train info
@@ -42,44 +42,52 @@ def download_data(period):
     # Create output dir and cd into it
     output_dir = '/mnt/rstorage/alice/data/LHC18qr/550'
     if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
+        os.makedirs(output_dir)
     os.chdir(output_dir)
     print('output dir: {}'.format(output_dir))
 
     # Loop through runs, and start a download for each run
     for run in runlist:
 
-        train_output_dir = '/alice/data/{}/{}/{}/{}/{}/{}'.format(year, period, run, train_PWG, train_name, train_number)
-        print('train_output_dir: {}'.format(train_output_dir))
-        
-        temp_filelist_name = 'subdirs_temp.txt'
-        cmd = 'alien_ls {} > {}'.format(train_output_dir, temp_filelist_name)
-        os.system(cmd)
-        with open(temp_filelist_name) as f:
-            subdirs_all = f.read().splitlines()
+        download_run(year, period, run, train_PWG, train_name, train_number)
+
+#---------------------------------------------------------------------------
+def download_run(year, period, run, train_PWG, train_name, train_number):
+
+    train_output_dir = '/alice/data/{}/{}/{}/{}/{}/{}'.format(year, period, run, train_PWG, train_name, train_number)
+    print('')
+    print('train_output_dir: {}'.format(train_output_dir))
+    print('')
+
+    # Construct list of subdirectories (i.e. list of files to download)
+    temp_filelist_name = 'subdirs_temp_{}.txt'.format(run)
+    cmd = 'alien_ls {} > {}'.format(train_output_dir, temp_filelist_name)
+    os.system(cmd)
+    with open(temp_filelist_name) as f:
+        subdirs_all = f.read().splitlines()
         subdirs = [ x for x in subdirs_all if x.isdigit() ]
-        os.remove(temp_filelist_name)
+    os.remove(temp_filelist_name)
 
-        # Remove any empty directories
-        if os.path.exists(run):
-          cmd = 'find {} -empty -type d -delete'.format(run)
-          os.system(cmd)
+    # Remove any empty directories
+    if os.path.exists(run):
+        cmd = 'find {} -empty -type d -delete'.format(run)
+        os.system(cmd)
 
-        # Copy the files
-        for subdir in subdirs:
+    # Copy the files
+    for subdir in subdirs:
         
-          # Skip any directory that already exists
-          subdir_path = '{}/{}'.format(run, subdir)
-          if not os.path.exists(subdir_path):
+        # Skip any directory that already exists
+        subdir_path = '{}/{}'.format(run, subdir)
+        if not os.path.exists(subdir_path):
             os.makedirs(subdir_path)
-          else:
+        else:
             continue
 
-          cmd = 'alien_cp alien://{}/{}/AnalysisResults.root {}'.format(train_output_dir, subdir, subdir_path)
-          print(cmd)
-          os.system(cmd)
+        cmd = 'alien_cp alien://{}/{}/AnalysisResults.root {}'.format(train_output_dir, subdir, subdir_path)
+        print(cmd)
+        os.system(cmd)
 
-          sys.exit()
+        sys.exit()
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
