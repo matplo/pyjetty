@@ -32,10 +32,10 @@ def download_data(period):
     
     if period == 'LHC18q': # pass3
         train_number += '_child_1'
-        runlist = [000296414, 000296510, 000296379, 000296377, 000296309, 000296433, 000296068, 000296133, 000296423, 000296065, 000296550, 000295588, 000295586, 000296270]
+        runlist = ['000296414', '000296510', '000296379', '000296377', '000296309', '000296433', '000296068', '000296133', '000296423', '000296065', '000296550', '000295588', '000295586', '000296270']
     elif period == 'LHC18r': # pass3
         train_number += '_child_2'
-        runlist = [000296894, 000297446, 000297544, 000296899, 000297479, 000297442, 000297415, 000296934, 000297590, 000297380, 000297123, 000296694, 000296903, 000297218]
+        runlist = ['000296894', '000297446', '000297544', '000296899', '000297479', '000297442', '000297415', '000296934', '000297590', '000297380', '000297123', '000296694', '000296903', '000297218']
     else:
         sys.exit('Error: period {} unrecognized'.format(period))
 
@@ -43,22 +43,22 @@ def download_data(period):
     output_dir = '/mnt/rstorage/alice/data/LHC18qr/550'
     if not os.path.exists(output_dir):
       os.makedirs(output_dir)
-    os.system('cd {}'.format(output_dir))
-    print('output dir: {}'.format(outputdir))
+    os.chdir(output_dir)
+    print('output dir: {}'.format(output_dir))
 
-    # Loop through runs, and start a download in the background for each run
+    # Loop through runs, and start a download for each run
     for run in runlist:
 
         train_output_dir = '/alice/data/{}/{}/{}/{}/{}/{}'.format(year, period, run, train_PWG, train_name, train_number)
-        print(train_output_dir)
+        print('train_output_dir: {}'.format(train_output_dir))
         
-        cmd = 'alien_ls {}'.format(train_output_dir)
-        subdir_list = os.system(cmd)
-        print(file_list)
-        subdirs = [ x for x in subdir_list if x.isdigit() ]
-        print(subdirs)
-    
-        sys.exit()
+        temp_filelist_name = 'subdirs_temp.txt'
+        cmd = 'alien_ls {} > {}'.format(train_output_dir, temp_filelist_name)
+        os.system(cmd)
+        with open(temp_filelist_name) as f:
+            subdirs_all = f.read().splitlines()
+        subdirs = [ x for x in subdirs_all if x.isdigit() ]
+        os.remove(temp_filelist_name)
 
         # Remove any empty directories
         if os.path.exists(run):
@@ -76,7 +76,10 @@ def download_data(period):
             continue
 
           cmd = 'alien_cp alien://{}/{}/AnalysisResults.root {}'.format(train_output_dir, subdir, subdir_path)
+          print(cmd)
           os.system(cmd)
+
+          sys.exit()
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
