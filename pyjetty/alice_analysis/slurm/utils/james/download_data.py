@@ -19,6 +19,7 @@ import argparse
 import os
 import sys
 import subprocess
+import multiprocessing as mp
 
 #---------------------------------------------------------------------------
 def download_data(period):
@@ -46,18 +47,16 @@ def download_data(period):
     os.chdir(output_dir)
     print('output dir: {}'.format(output_dir))
 
-    # Loop through runs, and start a download for each run
+    # Loop through runs, and start a download for each run in parallel
     for run in runlist:
-
-        download_run(year, period, run, train_PWG, train_name, train_number)
+        p = mp.Process(target=download_run, args=(year, period, run, train_PWG, train_name, train_number))
+        p.start()
 
 #---------------------------------------------------------------------------
 def download_run(year, period, run, train_PWG, train_name, train_number):
 
     train_output_dir = '/alice/data/{}/{}/{}/{}/{}/{}'.format(year, period, run, train_PWG, train_name, train_number)
-    print('')
     print('train_output_dir: {}'.format(train_output_dir))
-    print('')
 
     # Construct list of subdirectories (i.e. list of files to download)
     temp_filelist_name = 'subdirs_temp_{}.txt'.format(run)
@@ -80,14 +79,15 @@ def download_run(year, period, run, train_PWG, train_name, train_number):
         subdir_path = '{}/{}'.format(run, subdir)
         if not os.path.exists(subdir_path):
             os.makedirs(subdir_path)
+            print('downloading: {}'.format(subdir_path))
         else:
             continue
 
-        cmd = 'alien_cp alien://{}/{}/AnalysisResults.root {}'.format(train_output_dir, subdir, subdir_path)
-        print(cmd)
-        os.system(cmd)
-
-        sys.exit()
+        logfile_name = "log_{}.txt".format(run)
+        with open('log_{}.txt'.format(run), "a") as logfile:
+            cmd = 'alien_cp alien://{}/{}/AnalysisResults.root {}'.format(train_output_dir, subdir, subdir_path)
+            print(cmd, file=logfile)
+            subprocess.run(cmd, check=True, shell=True, stdout=logfile, stderr=logfile)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
