@@ -87,7 +87,7 @@ def download_run(year, period, run, train_PWG, train_name, train_number):
         with open('log_{}.txt'.format(run), "a") as logfile:
             cmd = 'alien_cp alien://{}/{}/AnalysisResults.root {}'.format(train_output_dir, subdir, subdir_path)
             print(cmd, file=logfile)
-            subprocess.run(cmd, check=True, shell=True, stdout=logfile, stderr=logfile)
+            subprocess.run(cmd, check=False, shell=True, stdout=logfile, stderr=logfile)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
