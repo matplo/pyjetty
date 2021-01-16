@@ -9,7 +9,7 @@ On hiccup:
   - ssh to hiccupds
   - start a screen session
   - enter alidock, then `alienv enter AliRoot/latest`, then get token
-  - python download_data.py -p LHC18q
+  - python download_data.py -c LHC18q.yaml
   
 Note that if token expires or otherwise crashes, the script will automatically detect where to start copying again
 
@@ -48,11 +48,11 @@ def download_data(config_file):
     if not os.path.exists(output_dir):
       os.makedirs(output_dir)
     os.chdir(output_dir)
-    print('output dir: {}'.format(outputdir))
+    print('output dir: {}'.format(output_dir))
     
     # Loop through runs, and start a download for each run in parallel
     for run in runlist:
-        p = mp.Process(target=download_run, args=(year, period, run, train_PWG, train_name, train_number, pt_hat_bins))
+        p = mp.Process(target=download_run, args=(parent_dir, year, period, run, train_PWG, train_name, train_number, pt_hat_bins))
         p.start()
 
 #---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ def download_run(parent_dir, year, period, run, train_PWG, train_name, train_num
             download(train_output_dir, run, pt_hat_bin)
 
 #---------------------------------------------------------------------------
-def download(train_output_dir, run_path, pt_hat_bin=None):
+def download(train_output_dir, run, pt_hat_bin=None):
 
     print('train_output_dir: {}'.format(train_output_dir))
     
