@@ -1,0 +1,13 @@
+# Configuration to download LHC18q data
+# (to be used by download_data.py)
+
+period: 'LHC20g4' # pass3
+parent_dir: 'sim'
+year: '2020'
+train_name: 'HF_TreeCreator'
+pt_hat_bins: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+train_PWG: 'PWGHF'
+train_number: '564_20200112-2359'
+runlist: [297588, 297544, 297479, 297379, 297317, 297132, 296935, 296690, 296550, 296415, 296380, 296244, 296191, 295819, 295788, 295612]
+
+output_dir: '/mnt/rstorage/alice/data/LHC20g4/564'

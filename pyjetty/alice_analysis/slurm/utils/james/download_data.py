@@ -18,45 +18,69 @@ Note that if token expires or otherwise crashes, the script will automatically d
 import argparse
 import os
 import sys
+import yaml
 import subprocess
 import multiprocessing as mp
 
 #---------------------------------------------------------------------------
-def download_data(period):
+def download_data(config_file):
 
-    # Set train info
-    year = '2018'
-    train_name = 'HF_TreeCreator'
-    train_PWG = 'pass3/PWGHF'
-    filename = 'AnalysisResults.root'
-    train_number = '550_20201223-0456'
+    # Initialize config
+    with open(config_file, 'r') as stream:
+      config = yaml.safe_load(stream)
+
+    period = config['period']
+    parent_dir = config['parent_dir']
+    year = config['year']
+    train_name = config['train_name']
+    train_PWG = config['train_PWG']
+    train_number = config['train_number']
+    runlist = config['runlist']
+    output_dir = config['output_dir']
     
-    if period == 'LHC18q': # pass3
-        train_number += '_child_1'
-        runlist = ['000296414', '000296510', '000296379', '000296377', '000296309', '000296433', '000296068', '000296133', '000296423', '000296065', '000296550', '000295588', '000295586', '000296270']
-    elif period == 'LHC18r': # pass3
-        train_number += '_child_2'
-        runlist = ['000296894', '000297446', '000297544', '000296899', '000297479', '000297442', '000297415', '000296934', '000297590', '000297380', '000297123', '000296694', '000296903', '000297218']
+    if 'pt_hat_bins' in config:
+        pt_hat_bins = config['pt_hat_bins']
     else:
-        sys.exit('Error: period {} unrecognized'.format(period))
+        pt_hat_bins = None
 
     # Create output dir and cd into it
-    output_dir = '/mnt/rstorage/alice/data/LHC18qr/550'
+    output_dir = os.path.join(output_dir, period)
     if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+      os.makedirs(output_dir)
     os.chdir(output_dir)
-    print('output dir: {}'.format(output_dir))
-
+    print('output dir: {}'.format(outputdir))
+    
     # Loop through runs, and start a download for each run in parallel
     for run in runlist:
-        p = mp.Process(target=download_run, args=(year, period, run, train_PWG, train_name, train_number))
+        p = mp.Process(target=download_run, args=(year, period, run, train_PWG, train_name, train_number, pt_hat_bins))
         p.start()
 
 #---------------------------------------------------------------------------
-def download_run(year, period, run, train_PWG, train_name, train_number):
+def download_run(parent_dir, year, period, run, train_PWG, train_name, train_number, pt_hat_bins):
 
-    train_output_dir = '/alice/data/{}/{}/{}/{}/{}/{}'.format(year, period, run, train_PWG, train_name, train_number)
+    if parent_dir == 'data':
+    
+        train_output_dir = '/alice/{}/{}/{}/{}/{}/{}/{}'.format(parent_dir, year, period, run, train_PWG, train_name, train_number)
+        
+        download(train_output_dir, run)
+        
+    elif parent_dir == 'sim':
+    
+        for pt_hat_bin in pt_hat_bins:
+        
+            train_output_dir = '/alice/{}/{}/{}/{}/{}/{}/{}/{}'.format(parent_dir, year, period, pt_hat_bin, run, train_PWG, train_name, train_number)
+            
+            download(train_output_dir, run, pt_hat_bin)
+
+#---------------------------------------------------------------------------
+def download(train_output_dir, run_path, pt_hat_bin=None):
+
     print('train_output_dir: {}'.format(train_output_dir))
+    
+    if pt_hat_bin:
+        run_path = '{}/{}'.format(pt_hat_bin, run)
+    else:
+        run_path = run
 
     # Construct list of subdirectories (i.e. list of files to download)
     temp_filelist_name = 'subdirs_temp_{}.txt'.format(run)
@@ -68,15 +92,15 @@ def download_run(year, period, run, train_PWG, train_name, train_number):
     os.remove(temp_filelist_name)
 
     # Remove any empty directories
-    if os.path.exists(run):
-        cmd = 'find {} -empty -type d -delete'.format(run)
+    if os.path.exists(run_path):
+        cmd = 'find {} -empty -type d -delete'.format(run_path)
         os.system(cmd)
 
     # Copy the files
     for subdir in subdirs:
         
         # Skip any directory that already exists
-        subdir_path = '{}/{}'.format(run, subdir)
+        subdir_path = '{}/{}'.format(run_path, subdir)
         if not os.path.exists(subdir_path):
             os.makedirs(subdir_path)
             print('downloading: {}'.format(subdir_path))
@@ -92,14 +116,22 @@ def download_run(year, period, run, train_PWG, train_name, train_number):
 #----------------------------------------------------------------------
 if __name__ == '__main__':
 
-  # Define arguments
-  parser = argparse.ArgumentParser(description='Download train output')
-  parser.add_argument('-p', '--period', action='store',
-                      type=str, metavar='period',
-                      default='LHC18q',
-                      help='Run period')
+    # Define arguments
+    parser = argparse.ArgumentParser(description='Download train output')
+    parser.add_argument('-c', '--configFile', action='store',
+                        type=str, metavar='configFile',
+                        default='config.yaml',
+                        help='Path of config file')
 
-  # Parse the arguments
-  args = parser.parse_args()
+    # Parse the arguments
+    args = parser.parse_args()
 
-  download_data(period = args.period)
+    print('Configuring...')
+    print('configFile: \'{0}\''.format(args.configFile))
+
+    # If invalid configFile is given, exit
+    if not os.path.exists(args.configFile):
+        print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
+        sys.exit(0)
+
+    download_data(config_file = args.configFile)

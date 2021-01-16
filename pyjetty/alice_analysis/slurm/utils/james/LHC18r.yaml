@@ -1,0 +1,14 @@
+# Configuration to download LHC18r data
+# (to be used by download_data.py)
+
+period: 'LHC18r' # pass3
+parent_dir: 'data'
+year: '2018'
+train_name: 'HF_TreeCreator'
+train_PWG: 'pass3/PWGHF'
+train_number: '550_20201223-0456_child_2'
+runlist: [000296894, 000297446, 000297544, 000296899, 000297479, 000297442, 000297415, 000296934, 000297590, 000297380, 000297123, 000296694, 000296903, 000297218]
+    
+output_dir: '/mnt/rstorage/alice/data/LHC18qr/550'
+
+
