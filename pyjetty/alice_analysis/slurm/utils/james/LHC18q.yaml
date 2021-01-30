@@ -6,7 +6,7 @@ parent_dir: 'data'
 year: '2018'
 train_name: 'HF_TreeCreator'
 train_PWG: 'pass3/PWGHF'
-train_number: '550_20201223-0456_child_1'
+train_number: '570_20210122-0935_child_1'
 runlist: [000296414, 000296510, 000296379, 000296377, 000296309, 000296433, 000296068, 000296133, 000296423, 000296065, 000296550, 000295588, 000295586, 000296270]
 
-output_dir: '/mnt/rstorage/alice/data/LHC18qr/550'
+output_dir: '/mnt/rstorage/alice/data/LHC18qr/570'
