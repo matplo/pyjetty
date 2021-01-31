@@ -18,7 +18,6 @@ eta_max: 0.9
 debug_level: 0
 dry_run: False
 fast_simulation: True
-use_ev_id_ext: False
 #reclustering_algorithm: 'AKT'
 
 # Observable block

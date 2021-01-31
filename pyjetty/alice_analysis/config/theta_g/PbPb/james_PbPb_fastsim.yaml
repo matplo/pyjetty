@@ -19,7 +19,6 @@ debug_level: 0
 dry_run: False
 fast_simulation: True
 #event_number_max: 1000
-use_ev_id_ext: False
 #reclustering_algorithm: 'AKT'
 
 constituent_subtractor:
@@ -31,7 +30,7 @@ constituent_subtractor:
   max_pt_correct: 100
   ghost_area: 0.01
 
-emb_file_list: '/rstorage/alice/data/LHC18qr/413-414/files.txt'
+emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
 #emb_file_list: '/Users/jamesmulligan/Analysis_theta_g/test_LHC18qr/PbPb_file_list.txt'
 
 # Observable block

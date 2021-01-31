@@ -17,7 +17,6 @@ reject_tracks_fraction: 0.0
 debug_level: 0
 dry_run: False
 fast_simulation: False
-use_ev_id_ext: True
 
 # Observable block
 theta_g:
