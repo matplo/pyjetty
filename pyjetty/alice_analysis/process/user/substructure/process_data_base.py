@@ -73,9 +73,7 @@ class ProcessDataBase(process_base.ProcessBase):
       self.is_pp = False
     else:
       self.is_pp = True
-        
-    self.use_ev_id_ext = config['use_ev_id_ext']
-           
+    
     # Create dictionaries to store grooming settings and observable settings for each observable
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores the observable setting, e.g. subjetR
@@ -110,7 +108,7 @@ class ProcessDataBase(process_base.ProcessBase):
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle',
-                              is_pp=self.is_pp, use_ev_id_ext=self.use_ev_id_ext)
+                              is_pp=self.is_pp, use_ev_id_ext=True)
     self.df_fjparticles = io.load_data(m=self.m)
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)

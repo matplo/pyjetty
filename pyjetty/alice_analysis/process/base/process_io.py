@@ -44,29 +44,28 @@ class ProcessIO(common_base.CommonBase):
       self.tree_dir += '/'
     self.track_tree_name = track_tree_name
     self.event_tree_name = event_tree_name
+    self.is_pp = is_pp
+    self.use_ev_id_ext = use_ev_id_ext
     if len(output_dir) and output_dir[-1] != '/':
       self.output_dir += '/'
     self.reset_dataframes()
     
-    self.use_ev_id_ext = use_ev_id_ext
+    # Set the combination of fields that give a unique event id
+    self.unique_identifier =  ['run_number', 'ev_id']
     if self.use_ev_id_ext:
-      self.unique_identifier =  ['run_number', 'ev_id', 'ev_id_ext']
-    else:
-      self.unique_identifier =  ['run_number', 'ev_id']
-    
-    self.is_pp = is_pp
-    if self.is_pp:
-      if self.use_ev_id_ext:
-        self.event_columns = ['run_number', 'ev_id', 'ev_id_ext', 'z_vtx_reco', 'is_ev_rej']
-      else:
-        self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej']
-    else:
-      if self.use_ev_id_ext:
-        self.event_columns = ['run_number', 'ev_id', 'ev_id_ext', 'z_vtx_reco', 'is_ev_rej', 'centrality']
-      else:
-        self.event_columns = ['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej', 'centrality']
+      self.unique_identifier += ['ev_id_ext']
+      
+    # Set relevant columns of event tree
+    self.event_columns = self.unique_identifier + ['z_vtx_reco', 'is_ev_rej']
+    if not self.is_pp:
+      self.event_columns += ['centrality']
       self.min_centrality = min_cent
       self.max_centrality = max_cent
+    
+    # Set relevant columns of track tree
+    self.track_columns = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi']
+    
+    #print(self)
     
   #---------------------------------------------------------------
   # Clear dataframes
@@ -148,13 +147,24 @@ class ProcessIO(common_base.CommonBase):
     track_tree = uproot.open(self.input_file)[track_tree_name]
     if not track_tree:
       sys.exit('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
-    track_df_orig = track_tree.pandas.df()
+    track_df_orig = track_tree.pandas.df(self.track_columns)
+    
+    # Check if there are duplicated tracks
+    #print(track_df_orig)
+    #d = track_df_orig.duplicated(self.track_columns, keep=False)
+    #print(track_df_orig[d])
+    n_duplicates = sum(track_df_orig.duplicated(self.track_columns))
+    if n_duplicates > 0:
+      sys.exit('ERROR: There appear to be {} duplicate particles in the track dataframe'.format(n_duplicates))
 
     # Merge event info into track tree
     self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)
     
-    # Check if there are duplicated tracks in an event
-    n_duplicates = sum(self.track_df.duplicated(['ParticlePt', 'ParticleEta', 'ParticlePhi']))
+    # Check if there are duplicated tracks in the merge dataframe
+    #print(self.track_df)
+    #d = self.track_df.duplicated(self.track_columns, keep=False)
+    #print(self.track_df[d])
+    n_duplicates = sum(self.track_df.duplicated(self.track_columns))
     if n_duplicates > 0:
       sys.exit('ERROR: There appear to be {} duplicate particles in the merged dataframe'.format(n_duplicates))
       
