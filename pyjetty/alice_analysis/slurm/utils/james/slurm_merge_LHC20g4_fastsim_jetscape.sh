@@ -7,4 +7,4 @@
 #SBATCH --array=1-66
 #SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
-srun merge_LHC19f4_fastsim_jetscape.sh $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+srun merge_LHC20g4_fastsim_jetscape.sh $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID

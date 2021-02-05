@@ -1,9 +1,9 @@
 #! /bin/bash
 
-#OUTPUTDIR=/rstorage/alice/data/LHC18qr/413-414
-#OUTPUTDIR=/rstorage/alice/data/LHC19f4/403
+#OUTPUTDIR=/rstorage/alice/data/LHC18qr/570
+#OUTPUTDIR=/rstorage/alice/data/LHC20g4/568
 #OUTPUTDIR=/rstorage/alice/data/LHC17pq/448
-OUTPUTDIR=/rstorage/alice/data/LHC18b8/520
+OUTPUTDIR=/rstorage/alice/data/LHC18b8/569
 #OUTPUTDIR=/rstorage/alice/data/LHC18bdeghijkklnop/436
 
 FILELIST=$OUTPUTDIR/files.txt
