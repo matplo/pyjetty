@@ -50,6 +50,8 @@ class ProcessDemo(common_base.CommonBase):
         df_fjparticles_det = io_det.load_data(reject_tracks_fraction=0.)
         self.nEvents_det = len(df_fjparticles_det.index)
         self.nTracks_det = len(io_det.track_df.index)
+        print('nEvents in detector-level PYTHIA: {}'.format(self.nEvents_det))
+        print('nTracks in detector-level PYTHIA: {}'.format(self.nTracks_det))
         
         # ------------------------------------------------------------------------
 
@@ -61,7 +63,9 @@ class ProcessDemo(common_base.CommonBase):
         df_fjparticles_truth = io_truth.load_data()
         self.nEvents_truth = len(df_fjparticles_truth.index)
         self.nTracks_truth = len(io_truth.track_df.index)
-        
+        print('nEvents in truth-level PYTHIA: {}'.format(self.nEvents_truth))
+        print('nTracks in truth-level PYTHIA: {}'.format(self.nTracks_truth))
+
         # ------------------------------------------------------------------------
 
         # Now merge the two SeriesGroupBy to create a groupby df with [ev_id, run_number, fj_1, fj_2]
@@ -69,7 +73,7 @@ class ProcessDemo(common_base.CommonBase):
         print('Merge det-level and truth-level into a single dataframe grouped by event...')
         self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
         self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth']
-
+        print(self.df_fjparticles)
         # ------------------------------------------------------------------------
         
         # Set up the Pb-Pb embedding object
@@ -77,16 +81,16 @@ class ProcessDemo(common_base.CommonBase):
                                                            min_cent=0., max_cent=10.)
                        
         # ------------------------------------------------------------------------
-        
-        print(self)
-        
+                
         self.analyze_events()
 
     #---------------------------------------------------------------
     # Main function to loop through and analyze events
     #---------------------------------------------------------------
     def analyze_events(self):
-                    
+        
+        self.n_event = 0
+
         # Then can use list comprehension to iterate over the groupby and do jet-finding
         # simultaneously for fj_1 and fj_2 per event, so that I can match jets
         result = [self.analyze_event(fj_particles_det, fj_particles_truth) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
@@ -97,27 +101,32 @@ class ProcessDemo(common_base.CommonBase):
     #---------------------------------------------------------------
     def analyze_event(self, fj_particles_det, fj_particles_truth):
           
+        if self.n_event !=0:
+            return
+
         # Check that the entries exist appropriately
-        # (still need to check how this can happen -- but it is only a tiny fraction of events)
         if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
           print('fj_particles type mismatch -- skipping event')
           return
           
         # If Pb-Pb, construct embedded event
+        print('Load Pb-Pb event...')
         fj_particles_combined = self.process_io_emb.load_event()
             
-        # Form the combined det-level event
+        # Form the combined det-level event -- std::vector of fj.PseudoJet tracks
         # The pp-det tracks are each stored with a unique user_index >= 0
-        #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
+        #   (same index in fj_particles_combined and fj_particles_det)
         # The Pb-Pb tracks are each stored with a unique user_index < 0
+        print('embed PYTHIA detector-level event into Pb-Pb event')
         [fj_particles_combined.push_back(p) for p in fj_particles_det]
 
+        print('user_index of PYTHIA truth event:')
         print([p.user_index() for p in fj_particles_truth])
-        print([p.pt() for p in fj_particles_truth])
-        print([p.user_index() for p in fj_particles_det])
-        print([p.pt() for p in fj_particles_det])
+
+        print('user_index of combined detector-level event:')
         print([p.user_index() for p in fj_particles_combined])
-        print([p.pt() for p in fj_particles_combined])
+
+        self.n_event +=1
 
 ##################################################################
 if __name__ == '__main__':
