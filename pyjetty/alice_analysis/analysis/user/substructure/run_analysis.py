@@ -765,7 +765,7 @@ class RunAnalysis(common_base.CommonBase):
         return None
         
     elif systematic == 'thermal_closure':
-      fname = 'nonclosure_{}-{}.root'.format(min_pt_truth, max_pt_truth)
+      fname = 'nonclosure{}_{}_{}-{}.root'.format(jetR, grooming_setting, min_pt_truth, max_pt_truth)
       outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
       f_nonclosure = ROOT.TFile(os.path.join(outf_name, fname), 'READ')
       h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
@@ -911,11 +911,7 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
-    myBlankHisto.SetMaximum(1.7*h_total.GetMaximum())
-    if h_total.GetMaximum() > 100:
-      myBlankHisto.SetMaximum(50)
-    if h_total.GetBinContent(h_total.GetNbinsX()) > 50:
-      myBlankHisto.SetMaximum(150)
+    myBlankHisto.SetMaximum(1.7*h_total.GetMaximum(50))
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
