@@ -22,8 +22,8 @@ fast_simulation: False
 #reclustering_algorithm: 'AKT'
 
 thermal_model:
-  beta: 0.5      # 0.4
-  N_avg: 3000    # 2500
+  beta: 0.4      # R02: 0.4, R04: 0.5
+  N_avg: 2500    # R02: 2500, R05: 3000
   sigma_N: 500
 
 constituent_subtractor:
