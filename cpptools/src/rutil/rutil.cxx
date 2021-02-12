@@ -228,22 +228,22 @@ namespace RUtil
         // I don't find any global bin index implementation, so I manually loop through axes
         int* global_bin = new int[n_dim];
         double* x = new double[n_dim];
-        for (unsigned int bin_0 = 1; bin_0 < n_bins_0; bin_0++) {
+        for (unsigned int bin_0 = 1; bin_0 < n_bins_0+1; bin_0++) {
             global_bin[0] = bin_0;
             x[0] = thn->GetAxis(0)->GetBinCenter(bin_0);
 
             // print helpful message while waiting
             std::cout << bin_0 << " / " << n_bins_0 << '\r' << std::flush;
 
-            for (unsigned int bin_1 = 1; bin_1 < n_bins_1; bin_1++) {
+            for (unsigned int bin_1 = 1; bin_1 < n_bins_1+1; bin_1++) {
                 global_bin[1] = bin_1;
                 x[1] = thn->GetAxis(1)->GetBinCenter(bin_1);
 
-                for (unsigned int bin_2 = 0; bin_2 < n_bins_2; bin_2++) {
+                for (unsigned int bin_2 = 0; bin_2 < n_bins_2+1; bin_2++) {
                     global_bin[2] = bin_2;
                     x[2] = thn->GetAxis(2)->GetBinCenter(bin_2);
 
-                    for (unsigned int bin_3 = 0; bin_3 < n_bins_3; bin_3++) {
+                    for (unsigned int bin_3 = 0; bin_3 < n_bins_3+1; bin_3++) {
                         global_bin[3] = bin_3;
                         x[3] = thn->GetAxis(3)->GetBinCenter(bin_3);
 
