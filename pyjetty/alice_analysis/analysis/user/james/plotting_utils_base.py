@@ -64,6 +64,9 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
 
     main_data = config['main_data']
     main_response = config['main_response']
+    if thermal:
+        main_response = config['thermal_closure']
+
     if os.path.exists(main_data):
       self.fData = ROOT.TFile(main_data, 'READ')
     else:
@@ -500,10 +503,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     if hRM_obs.GetSumw2() == 0:
       hRM_obs.Sumw2()
     
-    if self.thermal:
-      name = 'h_{}_JetPt_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
-    else:
-      name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
+    name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     hObs_JetPt = self.fData.Get(name)
     if hObs_JetPt.GetSumw2() == 0:
       hObs_JetPt.Sumw2()
