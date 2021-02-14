@@ -17,7 +17,7 @@ reject_tracks_fraction: 0.0
 eta_max: 0.9
 debug_level: 0
 dry_run: False
-fast_simulation: False
+fast_simulation: True
 #reclustering_algorithm: 'AKT'
 
 # Observable block

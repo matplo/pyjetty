@@ -11,7 +11,7 @@ FILE_PATHS='/rstorage/alice/data/LHC18b8/569/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
-# Currently we have 7 nodes * 20 cores active
+# Currently we have 8 nodes * 20 cores active
 FILES_PER_JOB=$(( $NFILES / 160 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 

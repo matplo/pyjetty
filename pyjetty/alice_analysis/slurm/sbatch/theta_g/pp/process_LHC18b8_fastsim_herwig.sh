@@ -15,7 +15,7 @@ fi
 if [ "$2" != "" ]; then
   JOB_ID=$2
   echo "Job ID: $JOB_ID"
-else 
+else
   echo "Wrong command line arguments"
 fi
 
@@ -29,10 +29,11 @@ fi
 # Define output path from relevant sub-path of input file
 OUTPUT_PREFIX="AnalysisResults/james/$JOB_ID"
 # Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
+echo $INPUT_FILE
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
-#echo $OUTPUT_SUFFIX
+echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/rstorage/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
-#echo "Output dir: $OUTPUT_DIR"
+echo "Output dir: $OUTPUT_DIR"
 mkdir -p $OUTPUT_DIR
 
 # Load modules
@@ -44,7 +45,7 @@ module list
 
 # Run python script via pipenv
 cd /software/users/james/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/james/process_mc_theta_g.py -c config/theta_g/pp/james_pp_trkeff.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+pipenv run python process/user/james/process_mc_theta_g.py -c config/theta_g/pp/james_pp_fastsim.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/james/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}/
