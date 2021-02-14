@@ -29,12 +29,12 @@ theta_g:
     pt_bins_reported: [60, 80, 100]
     max_reg_param: 10
     plot_overlay_list:
-      - ['config1', 'config2']
+      - ['config1']
       
   # RM binnings from processing:
   #   pt-truth: 10 GeV
   #   pt-det: 5 GeV
-  #   theta_g-truth: 0.05
+  #   theta_g-truth: 0.01
   #   theta_g-det: 0.01
       
   config1:
@@ -44,20 +44,9 @@ theta_g:
     pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100, 120]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
-    obs_bins_truth: [0., 0.05, 0.1, 0.15, 0.25, 0.35, 0.45, 0.7, 1.0]
-    obs_bins_det: [0., 0.05, 0.1, 0.15, 0.25, 0.35, 0.45, 0.7, 1.0]
+    obs_bins_truth: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
+    obs_bins_det: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 1.0]
-
-  config2:
-    SoftDrop:
-      zcut: 0.1
-      beta: 0
-    pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100, 120]
-    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
-    obs_bins_truth: [0., 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0]
-    obs_bins_det: [0., 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0]
-    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36, 0.4, 0.45, 0.5,   0.6, 0.7, 0.8, 1.0]
 
 # Observable block
 zg:
@@ -68,12 +57,12 @@ zg:
     pt_bins_reported: [60, 80, 100]
     max_reg_param: 10
     plot_overlay_list:
-      - ['config1', 'config2']
+      - ['config1']
       
   # RM binnings from processing:
   #   pt-truth: 10 GeV
   #   pt-det: 5 GeV
-  #   z-truth: 0.025
+  #   z-truth: 0.01
   #   z-det: 0.01
 
   config1:
@@ -84,34 +73,23 @@ zg:
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
     obs_bins_truth: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-    obs_bins_det: [0.2, 0.23, 0.26, 0.3, 0.34, 0.38, 0.42, 0.46, 0.5]
+    obs_bins_det: [0.2, 0.23, 0.26, 0.29, 0.32, 0.35, 0.38, 0.41, 0.44, 0.47, 0.5]
     obs_bins_det_sys_binning: [0.2, 0.22, 0.24, 0.26, 0.28, 0.3, 0.32, 0.34, 0.36, 0.38, 0.4, 0.42, 0.44, 0.46, 0.48, 0.5]
- 
-  config2:
-    SoftDrop:
-      zcut: 0.1
-      beta: 0
-    pt_bins_truth: [5, 10, 20, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 150]
-    obs_bins_truth: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-    obs_bins_det: [0.1, 0.15, 0.2, 0.23, 0.26, 0.3, 0.34, 0.38, 0.42, 0.46, 0.5]
-    obs_bins_det_sys_binning: [0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.24, 0.26, 0.28, 0.3, 0.32, 0.34, 0.36,  0.38, 0.4, 0.42, 0.44, 0.46, 0.48, 0.5]
 
 ###############################################################################
 # Analysis parameters
 
 file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/217440-04'
-roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
+roounfold_path: '/Users/jamesmulligan/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.dylib'
 
 analysis_observable: 'theta_g'
-do_unfolding: False
-force_rebin: False
+do_unfolding: True
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'analysis in progress'
+figure_approval_status: 'internal'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
@@ -122,12 +100,18 @@ systematics_list:
   - prior2
   - truncation
   - binning
+  - fastsim_generator0
+  - fastsim_generator1
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC17pq/217440/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/217532/AnalysisResultsFinal.root'
-trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/217549/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8/339167/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_trkeff/339168/AnalysisResultsFinal.root'
+fastsim_response:
+ - '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_fastsim_pythia/259260/AnalysisResultsFinal.root'
+ - '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18b8_fastsim_herwig/266884/AnalysisResultsFinal.root'
 
 # Prior variation parameters
+prior_variation_option: 1
 prior1_variation_parameter: 0.5
 prior2_variation_parameter: -0.5
