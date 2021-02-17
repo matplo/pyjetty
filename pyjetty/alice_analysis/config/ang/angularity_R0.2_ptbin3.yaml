@@ -173,7 +173,7 @@ rebin_theory_response: False
 # Analysis & plotting parameters
 file_format: ".pdf"
 output_dir: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin3"
-roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-2.0.0/lib/libRooUnfold.so"
+roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
 do_unfolding: False
