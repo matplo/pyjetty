@@ -1,0 +1,73 @@
+# Theory predictions for theta_g or rg, 0-10%
+
+james:
+
+  result1:
+    observable: 'zg'
+    jetR: 0.2
+    zcut: 0.2
+    obs_label: 'SD_zcut02_B0'
+    min_pt: 60
+    max_pt: 80
+    file_pp: './PRL_results/james/pp_ref/217440-02/zg/final_results/fFinalResults.root'
+    file_AA: './PRL_results/james/PbPb/334797-02/zg/final_results/fFinalResults.root'
+
+  result2:
+    observable: 'zg'
+    jetR: 0.4
+    zcut: 0.2
+    obs_label: 'SD_zcut02_B0'
+    min_pt: 80
+    max_pt: 100
+    file_pp: './PRL_results/james/pp_ref/217440-04/zg/final_results/fFinalResults.root'
+    file_AA: './PRL_results/james/PbPb/334797-04/zg/final_results/fFinalResults.root'
+
+  result3:
+    observable: 'theta_g'
+    jetR: 0.2
+    zcut: 0.2
+    obs_label: 'SD_zcut02_B0'
+    min_pt: 60
+    max_pt: 80
+    file_pp: './PRL_results/james/pp_ref/217440-02/theta_g/final_results/fFinalResults.root'
+    file_AA: './PRL_results/james/PbPb/334797-02/theta_g/final_results/fFinalResults.root'
+
+laura:
+
+  # Some common settings
+  h_PbPb: 'h1_nom'
+  h_pp: 'h1_pp'
+  g_PbPb_sys: 'h1_nom_err'
+  g_pp_sys: 'h1_pp_err'
+  h_ratio: 'h1_nom_ratio'
+  g_ratio_sys: 'h1_nom_ratio_err'
+  
+  file_theory: 'JetSplittingModels_semicent.root'
+
+  # List of results to plot
+  result1:
+    observable: 'zg'
+    jetR: 0.4
+    zcut: 0.2
+    min_pt: 60
+    max_pt: 80
+    file: './PRL_results/laura/Resultszg_PP_4to4_May28.root'
+
+    g_theory_hybrid_lres0: 'g_zg_sd2_hyb_lres0'
+    g_theory_hybrid_lres2: 'g_zg_sd2_hyb_lres2'
+    g_theory_hybrid_lresinf: 'g_zg_sd2_hyb_lresinf'
+    g_theory_jetscape: 'g_zg_sd2_jetscape'
+    g_theory_qin: 'g_zg_sd2_gyq'
+
+  result2:
+    observable: 'rg'
+    jetR: 0.4
+    zcut: 0.2
+    min_pt: 60
+    max_pt: 80
+    file: './PRL_results/laura/Resultsrg_PP_4to4_pre_May28.root'
+
+    g_theory_hybrid_lres0: 'g_rg_sd2_hyb_lres0'
+    g_theory_hybrid_lres2: 'g_rg_sd2_hyb_lres2'
+    g_theory_hybrid_lresinf: 'g_rg_sd2_hyb_lresinf'
+    g_theory_jetscape: 'g_rg_sd2_jetscape'
