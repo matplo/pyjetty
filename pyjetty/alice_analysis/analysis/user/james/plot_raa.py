@@ -34,9 +34,9 @@ class PlotRAA(common_base.CommonBase):
   #---------------------------------------------------------------
   def initialize(self):
       
-    self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/'
-    self.observables = ['zg', 'theta_g']
-    self.jetR_list = [0.2, 0.4]
+    self.output_dir = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/'
+    self.observables = ['zg']
+    self.jetR_list = [0.4]
     self.plot_data = True
     self.plot_theory = True
     
@@ -51,7 +51,7 @@ class PlotRAA(common_base.CommonBase):
              
     self.obs_label = 'SD_zcut02_B0'
     self.formatted_grooming_label = 'Soft Drop #it{z}_{cut}=0.2, #it{#beta}=0'
-    self.figure_approval_status = 'Preliminary'
+    self.figure_approval_status = ''
     
     if not os.path.exists(self.output_dir):
       os.makedirs(self.output_dir)
@@ -62,13 +62,13 @@ class PlotRAA(common_base.CommonBase):
   def init_observable(self, observable, jetR):
   
     if jetR == 0.2:
-      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-02/'
-      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-02/'
+      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/217440-02/'
+      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/334797-02/'
       self.min_pt = 60
       self.max_pt = 80
     elif jetR == 0.4:
-      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/67940-04/'
-      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/78488-04/'
+      self.filedir_pp_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/pp_ref/217440-04/'
+      self.filedir_AA_name = '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/334797-04/'
       self.min_pt = 80
       self.max_pt = 100
   
@@ -120,7 +120,7 @@ class PlotRAA(common_base.CommonBase):
       else:
         name = 'hRAA_{}_R{}_TheoryOnly.pdf'.format(observable, self.utils.remove_periods(jetR))
     else:
-      name = 'hRAA_{}_R{}.pdf'.format(observable, self.utils.remove_periods(jetR))
+      name = 'hRAA_{}_{}_R{}.pdf'.format(observable, self.obs_label, self.utils.remove_periods(jetR))
     self.output_filename = os.path.join(self.output_dir, name)
     
     # Get theory predictions
@@ -448,7 +448,7 @@ class PlotRAA(common_base.CommonBase):
       if jetR == 0.2:
         myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
       else:
-        myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.79)
+        myBlankHisto2.GetYaxis().SetRangeUser(0.41, 1.79)
       
       ratio_legend = ROOT.TLegend(0.23,0.75,0.4,0.97)
       self.utils.setup_legend(ratio_legend,0.054)
@@ -527,12 +527,13 @@ class PlotRAA(common_base.CommonBase):
               ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
 
     # Draw curves in specified order
-    for i in self.draw_order:
-      g = self.prediction_g_list[i]
-      if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
-        g.Draw("3 same")
-      elif type(g) == ROOT.TGraph:
-        g.Draw("same")
+    if self.plot_theory:
+        for i in self.draw_order:
+          g = self.prediction_g_list[i]
+          if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+            g.Draw("3 same")
+          elif type(g) == ROOT.TGraph:
+            g.Draw("same")
       
     ratio_legend.Draw()
     ratio_legend2.Draw()
