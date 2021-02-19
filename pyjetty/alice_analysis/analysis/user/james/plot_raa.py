@@ -2,7 +2,6 @@
 
 import sys
 import os
-import argparse
 from array import *
 import numpy as np
 import ROOT
@@ -45,19 +44,24 @@ class PlotRAA(common_base.CommonBase):
         self.config_james_results = [self.config_james[name] for name in self.config_james if 'result' in name ]
 
         self.config_laura = config['laura']
-        self.config_laura_results = [self.config_james[name] for name in self.config_laura if 'result' in name ]
+        self.config_laura_results = [self.config_laura[name] for name in self.config_laura if 'result' in name ]
 
         self.plot_data = True
         self.plot_theory = True
+        self.plot_axis_rg = True
 
         self.colors = [600-6, 632-4]
         self.ratio_color = ROOT.kGray+3
-        self.markers = [20, 21, 33]
-        self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
-
+        self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12');
-        self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
-        self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
+        
+        self.theory_colors_james = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
+        self.theory_colors_laura = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kCyan-2]
+
+        self.line_style_james = [1, 1, 1, 1, 1, 1, 11, 1, 1]
+        self.line_width_james = [4, 4, 4, 4, 4, 4, 6, 4, 4]
+        self.line_style_laura = [1, 1, 1, 1, 11, 1, 1]
+        self.line_width_laura = [4, 4, 4, 4, 6, 4, 4]
          
         self.formatted_grooming_label = 'Soft Drop #it{{z}}_{{cut}}={}, #it{{#beta}}=0'
         self.figure_approval_status = ''
@@ -70,12 +74,14 @@ class PlotRAA(common_base.CommonBase):
     def plot_raa(self):
 
         for result in self.config_james_results:
+            self.centrality = [0, 10]
             self.init_result_james(result)
             self.plot_result()
 
-        #for result in self.config_laura_results:
-        #    self.init_result_laura(result)
-        #    self.plot_result()
+        for result in self.config_laura_results:
+            self.centrality = [30, 50]
+            self.init_result_laura(result)
+            self.plot_result()
 
     #---------------------------------------------------------------
     # Initialize
@@ -92,6 +98,9 @@ class PlotRAA(common_base.CommonBase):
         self.file_pp_name = result['file_pp']
         self.file_AA_name = result['file_AA']
         self.set_xy_titles()
+        self.theory_colors = self.theory_colors_james
+        self.line_style = self.line_style_james
+        self.line_width = self.line_width_james
 
         # Get hists from ROOT file
         self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
@@ -107,6 +116,18 @@ class PlotRAA(common_base.CommonBase):
         self.h_main_AA = self.file_AA.Get(self.main_result_name)
         self.h_sys_AA = self.file_AA.Get(self.sys_total_name)
         self.h_tagging_fraction_AA = self.file_AA.Get(self.h_tagging_fraction_name)
+        
+        # Option: Translate theta_g to R_g
+        if self.observable == 'theta_g' and self.plot_axis_rg:
+            self.h_main_pp = self.translate_rg_theta_g(self.h_main_pp, 'rg')
+            self.h_sys_pp = self.translate_rg_theta_g(self.h_sys_pp, 'rg')
+            self.h_main_AA = self.translate_rg_theta_g(self.h_main_AA, 'rg')
+            self.h_sys_AA = self.translate_rg_theta_g(self.h_sys_AA, 'rg')
+        
+        self.h_ratio = self.h_main_AA.Clone()
+        self.h_ratio.Divide(self.h_main_pp)
+        self.h_ratio_sys = self.h_sys_AA.Clone()
+        self.h_ratio_sys.Divide(self.h_sys_pp)
     
         if self.debug_level > 0:
             integral_inclusive = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX()+1, 'width')
@@ -127,25 +148,132 @@ class PlotRAA(common_base.CommonBase):
         self.f_tagging_AA = self.h_tagging_fraction_AA.GetBinContent(bin)
 
         self.ymax = self.h_main_pp.GetMaximum()
-    
-        if self.plot_theory:
-            if self.plot_data:
-                name = 'hRAA_{}_R{}_Theory.pdf'.format(self.observable, self.utils.remove_periods(self.jetR))
-            else:
-                name = 'hRAA_{}_R{}_TheoryOnly.pdf'.format(self.observable, self.utils.remove_periods(self.jetR))
-        else:
-            name = 'hRAA_{}_{}_R{}.pdf'.format(self.observable, self.obs_label, self.utils.remove_periods(self.jetR))
-        self.output_filename = os.path.join(self.output_dir, name)
         
         # Load theory predictions
         if self.plot_theory:
             self.init_theory_james()
     
     #---------------------------------------------------------------
+    # Initialize
+    #---------------------------------------------------------------
+    def init_result_laura(self, result):
+    
+        # Init from config file
+        self.observable = result['observable']
+        self.jetR = result['jetR']
+        self.zcut = result['zcut']
+        self.min_pt = result['min_pt']
+        self.max_pt = result['max_pt']
+        if 'xmax' in result:
+            self.rg_xmax = result['xmax']
+        self.file_name = result['file']
+        self.set_xy_titles()
+        self.theory_colors = self.theory_colors_laura
+        self.line_style = self.line_style_laura
+        self.line_width = self.line_width_laura
+        
+        h_PbPb_name = self.config_laura['h_PbPb']
+        h_pp_name = self.config_laura['h_pp']
+        g_PbPb_sys_name = self.config_laura['g_PbPb_sys']
+        g_pp_sys_name = self.config_laura['g_pp_sys']
+        h_ratio_name = self.config_laura['h_ratio']
+        g_ratio_sys_name = self.config_laura['g_ratio_sys']
+
+        # Get hists from ROOT file
+        self.file = ROOT.TFile(self.file_name, 'READ')
+        
+        self.h_main_pp = self.file.Get(h_pp_name)
+        self.h_sys_pp = self.file.Get(g_pp_sys_name)
+        self.h_main_AA = self.file.Get(h_PbPb_name)
+        self.h_sys_AA = self.file.Get(g_PbPb_sys_name)
+        self.h_ratio = self.file.Get(h_ratio_name)
+        self.h_ratio_sys = self.file.Get(g_ratio_sys_name)
+    
+        # Option: Translate R_g to theta_g
+        if self.observable == 'rg' and not self.plot_axis_rg:
+            self.h_main_pp = self.translate_rg_theta_g(self.h_main_pp, 'theta_g', tgraph=False)
+            self.h_sys_pp = self.translate_rg_theta_g(self.h_sys_pp, 'theta_g', tgraph=True)
+            self.h_main_AA = self.translate_rg_theta_g(self.h_main_AA, 'theta_g', tgraph=False)
+            self.h_sys_AA = self.translate_rg_theta_g(self.h_sys_AA, 'theta_g', tgraph=True)
+            self.h_ratio = self.translate_rg_theta_g(self.h_ratio, 'theta_g', tgraph=False, ratio=True)
+            self.h_ratio_sys = self.translate_rg_theta_g(self.h_ratio_sys, 'theta_g', tgraph=True, ratio=True)
+
+        if self.debug_level > -1:
+            integral_inclusive = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX()+1, 'width')
+            integral_reported = self.h_main_pp.Integral(2, self.h_main_pp.GetNbinsX()+1, 'width')
+            self.f_tagging_pp = integral_reported / integral_inclusive
+            print('tagging fraction pp re-computed: {}'.format(self.f_tagging_pp))
+            
+            integral_inclusive = self.h_main_AA.Integral(1, self.h_main_pp.GetNbinsX()+1, 'width')
+            integral_reported = self.h_main_AA.Integral(2, self.h_main_pp.GetNbinsX()+1, 'width')
+            self.f_tagging_AA = integral_reported / integral_inclusive
+            print('tagging fraction AA re-computed: {}'.format(self.f_tagging_AA))
+    
+        self.ymax = self.h_main_pp.GetMaximum()
+        
+        # Load theory predictions
+        if self.plot_theory:
+        
+            self.label_list = []
+            self.sublabel_list = []
+            self.prediction_g_list = []
+            
+            filename = self.config_laura['file_theory']
+            self.file_theory = ROOT.TFile(filename, 'READ')
+            
+            theory_list = result['theory']
+            for theory in theory_list:
+                key, label = list(theory.items())[0]
+                self.label_list.append(label)
+                self.sublabel_list.append('')
+                
+                g = self.file_theory.Get(key)
+                
+                # Option: Translate R_g to theta_g
+                if self.observable == 'rg' and not self.plot_axis_rg:
+                    g = self.translate_rg_theta_g(g, 'theta_g', tgraph=True, ratio=True)
+            
+                self.prediction_g_list.append(g)
+
+            self.set_draw_order()
+        
+    #---------------------------------------------------------------
     # This function is called once for each subconfiguration
+    #
+    # Required histograms:
+    #   - self.h_main_pp
+    #   - self.h_sys_pp (tgraph for laura)
+    #   - self.h_main_AA
+    #   - self.h_sys_AA (tgraph for laura)
+    #   - self.h_ratio
+    #   - self.h_ratio_sys (tgraph for laura)
+    #
+    # And the theory tgraphs should be placed in:
+    #   - self.label_list
+    #   - self.prediction_g_list
+    #
+    # As well as the tagging rates:
+    #   - self.f_tagging_pp (number)
+    #   - self.f_tagging_AA (number)
     #----------------------------------------------------------------------
     def plot_result(self):
         print('Plot final results for {}: R = {}, {}'.format(self.observable, self.jetR, self.obs_label))
+        
+        observable_label = self.observable
+        if self.observable in ['rg', 'theta_g']:
+            if self.plot_axis_rg:
+                observable_label = 'rg'
+            else:
+                observable_label = 'theta_g'
+                
+        if self.plot_theory:
+            if self.plot_data:
+                name = 'h_{}_{}-{}_R{}_zcut{}_Theory.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.zcut))
+            else:
+                name = 'h_{}_{}-{}_R{}_zcut{}_TheoryOnly.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.zcut))
+        else:
+            name = 'h_{}_{}-{}_R{}_zcut{}.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.zcut))
+        self.output_filename = os.path.join(self.output_dir, name)
 
         self.utils.set_plotting_options()
         ROOT.gROOT.ForceStyle()
@@ -191,18 +319,20 @@ class PlotRAA(common_base.CommonBase):
         self.h_sys_AA.SetFillStyle(1001)
         self.h_sys_AA.SetLineWidth(0)
           
-        xmin = self.h_sys_pp.GetBinLowEdge(2)
-        xmax = self.h_sys_pp.GetBinLowEdge(self.h_sys_pp.GetNbinsX()+1)
+        xmin = self.h_main_pp.GetBinLowEdge(2)
+        xmax = self.h_main_pp.GetBinLowEdge(self.h_main_pp.GetNbinsX()+1)
+        if self.centrality[0] == 30 and self.observable == 'rg':
+            if self.plot_axis_rg:
+                xmax = self.rg_xmax
+            else:
+                xmax = self.rg_xmax/self.jetR
             
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(self.xtitle)
         myBlankHisto.SetYTitle(self.ytitle)
-        if self.observable == 'theta_g':
-            if self.jetR == 0.2:
-                ymax = 1.9*self.ymax
-            else:
-                ymax = 2.5*self.ymax
+        if self.observable in ['rg', 'theta_g']:
+            ymax = 1.9*self.ymax
         else:
             ymax = 3.*self.ymax
         myBlankHisto.SetMaximum(ymax)
@@ -213,19 +343,25 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto.GetYaxis().SetLabelSize(0.06)
         myBlankHisto.Draw('E')
         
-        if self.observable == 'theta_g':
-            rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, self.jetR*xmax-0.01)
-            rg_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'rg_axis_tf1', 505, '- S')
-            rg_axis.SetTitle('#it{R}_{g}')
-            rg_axis.SetTitleSize(25)
-            rg_axis.SetTitleFont(43)
-            rg_axis.SetTitleOffset(0.62)
-            rg_axis.SetLabelFont(43)
-            rg_axis.SetLabelSize(25)
-            rg_axis.SetTickSize(0.025)
-            rg_axis.SetLabelOffset(0.016)
-            rg_axis.Draw()
-     
+        # Draw top x-axis
+        if self.observable in ['rg', 'theta_g']:
+            if self.plot_axis_rg: # Plot theta_g axis on top
+                top_axis_tf1 = ROOT.TF1('top_axis_tf1', 'x', 0, xmax/self.jetR-0.01)
+                top_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'top_axis_tf1', 505, '- S')
+                top_axis.SetTitle('#it{#theta}_{g}')
+            else: # Plot rg axis on top
+                top_axis_tf1 = ROOT.TF1('top_axis_tf1', 'x', 0, self.jetR*xmax-0.01)
+                top_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'top_axis_tf1', 505, '- S')
+                top_axis.SetTitle('#it{R}_{g}')
+            top_axis.SetTitleSize(25)
+            top_axis.SetTitleFont(43)
+            top_axis.SetTitleOffset(0.62)
+            top_axis.SetLabelFont(43)
+            top_axis.SetLabelSize(25)
+            top_axis.SetTickSize(0.025)
+            top_axis.SetLabelOffset(0.016)
+            top_axis.Draw()
+
         c.cd()
         pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.45)
         pad2.SetTopMargin(0)
@@ -251,9 +387,9 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto2.GetYaxis().SetLabelSize(25)
         myBlankHisto2.GetYaxis().SetNdivisions(505)
         
-        if self.observable == 'theta_g':
+        if self.observable in ['rg', 'theta_g']:
         
-            if self.jetR == 0.2:
+            if self.centrality[0] == 0:
           
                 myBlankHisto2.GetYaxis().SetRangeUser(0., 2.7)
                 
@@ -262,21 +398,26 @@ class PlotRAA(common_base.CommonBase):
                 ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.87)
                 self.utils.setup_legend(ratio_legend2,0.05)
                 
-            else:
+            elif self.centrality[0] == 30:
           
-                myBlankHisto2.GetYaxis().SetRangeUser(0., 2.7)
+                myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.2)
                 
-                ratio_legend = ROOT.TLegend(0.22,0.8,0.35,0.97)
-                self.utils.setup_legend(ratio_legend,0.05)
-                ratio_legend2 = ROOT.TLegend(0.57,0.8,0.69,0.97)
+                ratio_legend = ROOT.TLegend(0.54,0.72,0.7,0.92)
+                self.utils.setup_legend(ratio_legend,0.052)
+                ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.92)
                 self.utils.setup_legend(ratio_legend2,0.05)
             
         else:
         
-            if self.jetR == 0.2:
-                myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
-            else:
-                myBlankHisto2.GetYaxis().SetRangeUser(0.41, 1.79)
+            if self.centrality[0] == 0:
+
+                if self.jetR == 0.2:
+                    myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
+                else:
+                    myBlankHisto2.GetYaxis().SetRangeUser(0.41, 1.79)
+                    
+            elif self.centrality[0] == 30:
+                    myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
 
             ratio_legend = ROOT.TLegend(0.23,0.75,0.4,0.97)
             self.utils.setup_legend(ratio_legend,0.054)
@@ -285,20 +426,18 @@ class PlotRAA(common_base.CommonBase):
 
         myBlankHisto2.Draw('')
           
-        h_ratio = self.h_main_AA.Clone()
-        h_ratio.Divide(self.h_main_pp)
-        h_ratio.SetMarkerColor(self.ratio_color)
-        h_ratio.SetLineColor(self.ratio_color)
+        self.h_ratio.SetMarkerSize(1.5)
+        self.h_ratio.SetMarkerStyle(self.markers[1])
+        self.h_ratio.SetMarkerColor(self.ratio_color)
+        self.h_ratio.SetLineColor(self.ratio_color)
 
-        h_ratio_sys = self.h_sys_AA.Clone()
-        h_ratio_sys.Divide(self.h_sys_pp)
-        h_ratio_sys.SetFillColor(self.ratio_color)
-        h_ratio_sys.SetFillColorAlpha(self.ratio_color, 0.3)
+        self.h_ratio_sys.SetFillColor(self.ratio_color)
+        self.h_ratio_sys.SetFillColorAlpha(self.ratio_color, 0.3)
 
         pad1.cd()
         if self.plot_data:
-            self.h_sys_pp.DrawCopy('E2 same')
-            self.h_sys_AA.DrawCopy('E2 same')
+            self.h_sys_pp.Draw('E2 same')
+            self.h_sys_AA.Draw('E2 same')
             self.h_main_pp.DrawCopy('PE X0 same')
             self.h_main_AA.DrawCopy('PE X0 same')
           
@@ -316,8 +455,7 @@ class PlotRAA(common_base.CommonBase):
                 g.SetFillColor(color)
                 if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
                     g.SetLineColor(0)
-                    #g.Draw("3 same")
-                    if self.observable == 'theta_g':
+                    if self.observable in ['rg', 'theta_g']:
                         if self.jetR == 0.4:
                             if 'Pablos' in label or 'JETSCAPE' in label:
                                 ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
@@ -336,8 +474,7 @@ class PlotRAA(common_base.CommonBase):
                 elif type(g) == ROOT.TGraph:
                     g.SetLineStyle(self.line_style[i])
                     g.SetLineWidth(4)
-                    #g.Draw("same")
-                    if self.observable == 'theta_g':
+                    if self.observable in ['rg', 'theta_g']:
                         if self.jetR == 0.4:
                             if 'Pablos' in label or 'JETSCAPE' in label:
                                 ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
@@ -373,12 +510,12 @@ class PlotRAA(common_base.CommonBase):
         line.Draw()
          
         if self.plot_data:
-            h_ratio_sys.DrawCopy('E2 same')
-            h_ratio.DrawCopy('PE X0 same')
+            self.h_ratio_sys.Draw('E2 same')
+            self.h_ratio.Draw('PE X0 same')
        
         pad1.cd()
         myLegend.AddEntry(self.h_main_pp, 'pp', 'PE')
-        myLegend.AddEntry(self.h_main_AA, 'Pb#font[122]{-}Pb 0#font[122]{-}10%', 'PE')
+        myLegend.AddEntry(self.h_main_AA, 'Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1]), 'PE')
         myLegend.AddEntry(self.h_sys_pp, 'Sys. uncertainty', 'f')
         
         text_latex = ROOT.TLatex()
@@ -411,19 +548,112 @@ class PlotRAA(common_base.CommonBase):
 
         c.SaveAs(self.output_filename)
         c.Close()
+
+    #---------------------------------------------------------------
+    # Set draw order (slightly hacky-- just move selected curves to start or end of draw list)
+    #----------------------------------------------------------------------
+    def set_draw_order(self):
+    
+        self.draw_order = list(range(0, len(self.prediction_g_list)))
+        for i, g in enumerate(self.prediction_g_list):
+
+            label = self.label_list[i]
+            sublabel = self.sublabel_list[i]
+            if 'Pablos' in label:
+                index = self.draw_order.index(i)
+                self.draw_order.insert(0, self.draw_order.pop(index))
+
+            if 'JETSCAPE' in label:
+                index = self.draw_order.index(i)
+                self.draw_order.append(self.draw_order.pop(index))
+          
+        if self.observable == 'zg':
+            for i, g in enumerate(self.prediction_g_list):
+
+                label = self.label_list[i]
+                if 'JETSCAPE' in label:
+                    index = self.draw_order.index(i)
+                    self.draw_order.insert(0, self.draw_order.pop(index))
+                    
+    #---------------------------------------------------------------
+    # Translate R_g <--> theta_g
+    # Options: 'rg': theta_g --> r_g
+    #          'theta_g': r_g --> theta_g
+    #----------------------------------------------------------------------
+    def translate_rg_theta_g(self, h, option='', tgraph=False, ratio=False):
+    
+        if option == 'rg':
+            scale_factor = self.jetR
+        elif option == 'theta_g':
+            scale_factor = 1/self.jetR
+
+        if tgraph:
         
+            x = ROOT.Double()
+            y = ROOT.Double()
+            for i in range(h.GetN()):
+                h.GetPoint(i,x,y)
+                
+                if type(h) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+
+                    if type(h) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                        x_low = h.GetErrorXlow(i)
+                        x_high = h.GetErrorXhigh(i)
+                        y_low = h.GetErrorYlow(i)
+                        y_high = h.GetErrorYhigh(i)
+                        
+                        x_low_new = x_low*scale_factor
+                        x_high_new = x_high*scale_factor
+                    
+                if ratio:
+                    y_new = y
+                    if type(h) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                        y_low_new = y_low
+                        y_high_new = y_high
+                else:
+                    y_new = y/scale_factor
+                    y_low_new = y_low/scale_factor
+                    y_high_new = y_high/scale_factor
+                            
+                h.SetPoint(i,x*scale_factor,y_new)
+                if type(h) in [ROOT.TGraphAsymmErrors]:
+                    h.SetPointError(i, x_low_new, x_high_new, y_low_new, y_high_new)
+                elif type(h) in [ROOT.TGraphErrors]:
+                    h.SetPointError(i, x_low_new, y_low_new)
+                
+            return h
+            
+        else:
+            original_bins = h.GetXaxis().GetXbins()
+            new_bins = [bin*scale_factor for bin in original_bins]
+            
+            h_new = ROOT.TH1F('hnew{}'.format(h.GetName()), 'hnew{}'.format(h.GetName()),
+                              len(new_bins)-1, array('d',(new_bins)))
+            
+            for i in range(1, len(original_bins)+1):
+                content = h.GetBinContent(i)
+                uncertainty =  h.GetBinError(i)
+                h_new.SetBinContent(i, content)
+                h_new.SetBinError(i, uncertainty)
+    
+            if not ratio:
+                h_new.Scale(1./scale_factor)
+        
+            return h_new
+
     #---------------------------------------------------------------
     # Set axis title for given observable
     #----------------------------------------------------------------------
     def set_xy_titles(self):
     
-        if self.observable == 'rg':
-            self.xtitle = '#it{R}_{g}'
-        if self.observable == 'theta_g':
-            self.xtitle = '#it{#theta}_{g}'
+        if self.observable in ['rg', 'theta_g']:
+            if self.plot_axis_rg:
+                self.xtitle = '#it{R}_{g}'
+            else:
+                self.xtitle = '#it{#theta}_{g}'
         if self.observable == 'zg':
             self.xtitle = '#it{z}_{g}'
-            
+        
         self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
         
     #---------------------------------------------------------------
@@ -446,7 +676,6 @@ class PlotRAA(common_base.CommonBase):
             config = yaml.safe_load(stream)
               
         self.label_list = []
-        self.observable_name_list = []
         self.sublabel_list = []
         self.prediction_g_list = []
       
@@ -552,33 +781,16 @@ class PlotRAA(common_base.CommonBase):
                         xerr = np.zeros(n)
                         g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
     
+                    # Option: Translate R_g to theta_g
+                    if self.observable == 'theta_g' and self.plot_axis_rg:
+                        g = self.translate_rg_theta_g(g, 'rg', tgraph=True, ratio=True)
+    
                     if prediction in plot_list:
                         self.prediction_g_list.append(g)
                         self.label_list.append(theory['label'])
                         self.sublabel_list.append(theory_prediction['sublabel'])
-                        self.observable_name_list.append(theory['observable'])
 
-        # Set draw order (slightly hacky-- just move selected curves to start or end of draw list)
-        self.draw_order = list(range(0, len(self.prediction_g_list)))
-        for i, g in enumerate(self.prediction_g_list):
-
-            label = self.label_list[i]
-            sublabel = self.sublabel_list[i]
-            if 'Pablos' in label:
-                index = self.draw_order.index(i)
-                self.draw_order.insert(0, self.draw_order.pop(index))
-
-            if 'JETSCAPE' in label or 'quark' in sublabel or 'med' in sublabel:
-                index = self.draw_order.index(i)
-                self.draw_order.append(self.draw_order.pop(index))
-          
-        if self.observable == 'zg':
-            for i, g in enumerate(self.prediction_g_list):
-
-                label = self.label_list[i]
-                if 'JETSCAPE' in label:
-                    index = self.draw_order.index(i)
-                    self.draw_order.insert(0, self.draw_order.pop(index))
+        self.set_draw_order()
 
     #---------------------------------------------------------------
     # Rebin numpy arrays (xbins,y) representing a histogram,
