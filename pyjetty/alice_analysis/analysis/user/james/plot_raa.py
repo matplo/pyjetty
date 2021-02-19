@@ -48,7 +48,7 @@ class PlotRAA(common_base.CommonBase):
 
         self.plot_data = True
         self.plot_theory = True
-        self.plot_axis_rg = True
+        self.plot_axis_rg = False
 
         self.colors = [600-6, 632-4]
         self.ratio_color = ROOT.kGray+3
@@ -282,7 +282,8 @@ class PlotRAA(common_base.CommonBase):
         c.Draw()
         
         c.cd()
-        pad1 = ROOT.TPad('myPad', 'The pad',0,0.45,1,1)
+        pad2_dy = 0.45
+        pad1 = ROOT.TPad('myPad', 'The pad',0,pad2_dy,1,1)
         pad1.SetLeftMargin(0.2)
         pad1.SetTopMargin(0.08)
         pad1.SetRightMargin(0.04)
@@ -346,11 +347,11 @@ class PlotRAA(common_base.CommonBase):
         # Draw top x-axis
         if self.observable in ['rg', 'theta_g']:
             if self.plot_axis_rg: # Plot theta_g axis on top
-                top_axis_tf1 = ROOT.TF1('top_axis_tf1', 'x', 0, xmax/self.jetR-0.01)
+                top_axis_tf1 = ROOT.TF1('top_axis_tf1', 'x', 0, xmax/self.jetR-0.001)
                 top_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'top_axis_tf1', 505, '- S')
                 top_axis.SetTitle('#it{#theta}_{g}')
             else: # Plot rg axis on top
-                top_axis_tf1 = ROOT.TF1('top_axis_tf1', 'x', 0, self.jetR*xmax-0.01)
+                top_axis_tf1 = ROOT.TF1('top_axis_tf1', 'x', 0, self.jetR*xmax-0.001)
                 top_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'top_axis_tf1', 505, '- S')
                 top_axis.SetTitle('#it{R}_{g}')
             top_axis.SetTitleSize(25)
@@ -363,7 +364,7 @@ class PlotRAA(common_base.CommonBase):
             top_axis.Draw()
 
         c.cd()
-        pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, 0.45)
+        pad2 = ROOT.TPad('pad2', 'pad2', 0, 0.02, 1, pad2_dy)
         pad2.SetTopMargin(0)
         pad2.SetBottomMargin(0.21)
         pad2.SetLeftMargin(0.2)
