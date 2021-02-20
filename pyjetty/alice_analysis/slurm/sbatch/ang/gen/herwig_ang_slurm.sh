@@ -58,7 +58,7 @@ module use ~/pyjetty/modules
 module load pyjetty/1.0
 echo "python is" $(which python)
 cd /home/ezra/analysis_env/
-pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $TEMP_OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $TEMP_OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR
+pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $TEMP_OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $TEMP_OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR --no-tree
 
 # Clean up Herwig7 files to save space
 rm $TEMP_OUTDIR/LHC_5020-S$SEED.*
