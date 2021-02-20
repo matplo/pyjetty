@@ -161,11 +161,11 @@ ang:
 do_theory_comp: True
 theory_beta: [1.5, 2, 3]
 theory_dir: "/home/ezra/ALICE_table/"
-theory_pt_bins: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
-response_files: ["/rstorage/alice/AnalysisResults/ang/196181/AnalysisResultsFinal.root",
-                 "/rstorage/alice/AnalysisResults/ang/286620/AnalysisResultsFinal.root",
-                 "/rstorage/alice/AnalysisResults/ang/225271/AnalysisResultsFinal.root"]
-response_labels: ["PYTHIA8", "P8time", "Herwig7"]
+theory_pt_bins: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
+                 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
+response_files: ["/rstorage/alice/AnalysisResults/ang/344810/AnalysisResultsFinal.root",
+                 "/rstorage/alice/AnalysisResults/ang/344912/AnalysisResultsFinal.root"]
+response_labels: ["PYTHIA8", "Herwig7"]
 rebin_theory_response: False
 
 
