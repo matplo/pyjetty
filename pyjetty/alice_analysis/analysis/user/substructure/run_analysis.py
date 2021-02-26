@@ -613,7 +613,7 @@ class RunAnalysis(common_base.CommonBase):
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
         self.utils.remove_periods(jetR), obs_label,
         reg_param, int(min_pt_truth), int(max_pt_truth))
-      hSystematic_Total = self.add_in_quadrature(h_list)
+      hSystematic_Total = self.add_in_quadrature(h_list, new_name=name)
       setattr(self, name, hSystematic_Total)
 
       # Attach total systematic to main result, and save as an attribute
@@ -705,6 +705,10 @@ class RunAnalysis(common_base.CommonBase):
   # Get systematic variation and save percentage difference as attribte
   def construct_systematic(self, systematic, hMain, jetR, obs_label, grooming_setting,
                            reg_param, min_pt_truth, max_pt_truth, maxbin):
+                           
+    # Set whether to store signed uncertainty value or absolute value
+    # For now, only use signed uncertainty in cases where we don't average/combine multiple sources
+    signed = systematic in ['trkeff', 'fastsim_generator1']
 
     # Combine certain systematics as average or max
     if systematic == 'main':
@@ -743,11 +747,11 @@ class RunAnalysis(common_base.CommonBase):
         if grooming_setting and maxbin:
           h_systematic_ratio = self.construct_systematic_percentage(
                 h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin+1)
+                reg_param, min_pt_truth, max_pt_truth, maxbin+1, signed=signed)
         else:
           h_systematic_ratio = self.construct_systematic_percentage(
                 h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin)
+                reg_param, min_pt_truth, max_pt_truth, maxbin, signed=signed)
       else:
         return None
         
@@ -788,11 +792,11 @@ class RunAnalysis(common_base.CommonBase):
       if grooming_setting and maxbin:
         h_systematic_ratio = self.construct_systematic_percentage(
               hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin+1)
+              min_pt_truth, max_pt_truth, maxbin+1, signed=signed)
       else:
         h_systematic_ratio = self.construct_systematic_percentage(
               hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin)
+              min_pt_truth, max_pt_truth, maxbin, signed=signed)
               
     return h_systematic_ratio
 
@@ -800,7 +804,7 @@ class RunAnalysis(common_base.CommonBase):
   # Get systematic variation and save percentage difference as attribte
   def construct_systematic_percentage(self, hMain, systematic, jetR,
                                       obs_label, reg_param, min_pt_truth,
-                                      max_pt_truth, maxbin):
+                                      max_pt_truth, maxbin, signed=False):
 
     name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR, obs_label,
                                             reg_param, min_pt_truth, max_pt_truth)
@@ -822,7 +826,7 @@ class RunAnalysis(common_base.CommonBase):
         print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
               "-- ratio:", h_systematic_ratio_temp.GetBinContent(i))
 
-    self.change_to_per(h_systematic_ratio_temp)
+    self.change_to_per(h_systematic_ratio_temp, signed=signed)
     h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
     del h_systematic_ratio_temp   # No longer need this -- prevents memory leaks
     setattr(self, name_ratio, h_systematic_ratio)
@@ -911,8 +915,8 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
-    myBlankHisto.SetMaximum(1.7*h_total.GetMaximum(50))
-    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.SetMaximum(2.7*h_total.GetMaximum(50))
+    myBlankHisto.SetMinimum(-1.1*h_total.GetMaximum(50))
     myBlankHisto.Draw("E")
 
     leg = ROOT.TLegend(0.67,0.6,0.8,0.92)
@@ -983,10 +987,13 @@ class RunAnalysis(common_base.CommonBase):
     c.SaveAs(outputFilename)
     c.Close()
 
-    sys_root_filename = os.path.join(output_dir, 'fSystematics.root')
-    fSystematics = ROOT.TFile(sys_root_filename, 'UPDATE')
-    h_total.Write()
-    fSystematics.Close()
+    if not suffix:
+        sys_root_filename = os.path.join(output_dir, 'fSystematics.root')
+        fSystematics = ROOT.TFile(sys_root_filename, 'UPDATE')
+        h_total.Write()
+        for h in h_list:
+            h.Write()
+        fSystematics.Close()
 
   #----------------------------------------------------------------------
   # Returns truncated 1D histogram from bins [1, ..., maxbin] inclusive
@@ -1008,10 +1015,12 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   # Add a list of (identically-binned) histograms in quadrature, bin-by-bin
   #----------------------------------------------------------------------
-  def add_in_quadrature(self, h_list):
+  def add_in_quadrature(self, h_list, new_name=None):
 
     h_new = h_list[0].Clone()
-    h_new.SetName('{}_new'.format(h_list[0].GetName()))
+    if not new_name:
+        new_name = '{}_new'.format(h_list[0].GetName())
+    h_new.SetName(new_name)
 
     for i in range(1, h_new.GetNbinsX()+1):
 
@@ -1086,11 +1095,16 @@ class RunAnalysis(common_base.CommonBase):
     f.Close()
 
   #----------------------------------------------------------------------
-  def change_to_per(self, h):
+  def change_to_per(self, h, signed=False):
 
     for bin in range(0, h.GetNbinsX()+2):
       content = h.GetBinContent(bin)
-      content_new = math.fabs(1-content)
+      
+      if signed:
+        content_new = 1-content
+      else:
+        content_new = math.fabs(1-content)
+
       h.SetBinContent(bin, content_new*100)
 
   #----------------------------------------------------------------------
