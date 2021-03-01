@@ -79,17 +79,19 @@ class ProcessQG(common_base.CommonBase):
         # Cluster each jet with R=infinity
         fj.ClusterSequence.print_banner()
         print('Finding jets...')
-        jets = [self.find_jets(fj_particles) for fj_particles in self.df_fjparticles]
+        jets = [self.find_jets(fj_particles[:1]) for fj_particles in self.df_fjparticles]
         print('Done. Number of clustered jets: {}'.format(len(jets)))
         print()
-        
+   
         # Compute N-subjetiness into numpy array
         N = 1
-        beta = 1
-        axis_definition = fjcontrib.Nsubjettiness.NjettinessDefinition.KT_Axes
-        measure_definition = fjcontrib.Nsubjettiness.NjettinessDefinition.UnnormalizedMeasure(beta)
+        beta = 1.
+        # axis_definition = fjcontrib.Nsubjettiness.NjettinessDefinition.KT_Axes
+        axis_definition = fjcontrib.KT_Axes()
+        # measure_definition = fjcontrib.Nsubjettiness.NjettinessDefinition.UnnormalizedMeasure(beta)
+        measure_definition = fjcontrib.UnnormalizedMeasure(beta)
         n_subjetiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
-        n_subjetiness = np.array([n_subjetiness_calculator.result(jet) for jet in jets])
+        n_subjetiness = np.array([n_subjetiness_calculator.result(j) for jet in jets for j in jet])
         print(n_subjetiness)
         
         # Compute four-vector numpy array
