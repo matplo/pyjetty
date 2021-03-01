@@ -4,9 +4,12 @@
 Example class to read quark-gluon dataset
 """
 
+import os
+
 # Data analysis and plotting
 import pandas as pd
 import numpy as np
+from matplotlib import pyplot as plt
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -27,6 +30,8 @@ class ProcessQG(common_base.CommonBase):
     #---------------------------------------------------------------
     def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
         super(common_base.CommonBase, self).__init__(**kwargs)
+        
+        self.output_dir = '.'
         
         # Load labeled data
         self.n_train = 75000
@@ -68,6 +73,16 @@ class ProcessQG(common_base.CommonBase):
         print('Done.')
         print()
         
+        # Define Nsubjettiness to compute
+        self.N_list = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5]
+        self.beta_list = [0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2, 0.5, 1, 2, 1, 2]
+        
+        # Construct dictionary to store all jet quantities of interest
+        self.jet_variables = {}
+        for i,N in enumerate(self.N_list):
+            beta = self.beta_list[i]
+            self.jet_variables['n_subjettiness_N{}_beta{}'.format(N,beta)] = []
+        
         print(self)
         print()
 
@@ -76,45 +91,84 @@ class ProcessQG(common_base.CommonBase):
     #---------------------------------------------------------------
     def process_qg(self):
     
-        # Cluster each jet with R=infinity
+        # Loop over jets and compute quantities of interest
+        # Fill each of the jet_variables into a list
         fj.ClusterSequence.print_banner()
-        print('Finding jets...')
-        self.csas = []
-        jets = [self.find_jets(fj_particles) for fj_particles in self.df_fjparticles]
-        print('Done. Number of clustered jets: {}'.format(len(jets)))
+        print('Finding jets and computing N-subjettiness...')
+        result = [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles]
+        
+        # Transform the dictionary of lists into a dictionary of numpy arrays
+        self.jet_variables_numpy = self.transform_to_numpy(self.jet_variables)
+        n_subjettiness = self.jet_variables_numpy['n_subjettiness_N{}_beta{}'.format(self.N_list[0], self.beta_list[0])]
+        print('Done. Number of clustered jets: {}'.format(len(n_subjettiness)))
         print()
-   
-        # Compute N-subjetiness into numpy array
-        N = 1
-        beta = 1.
-        # axis_definition = fjcontrib.Nsubjettiness.NjettinessDefinition.KT_Axes
-        axis_definition = fjcontrib.KT_Axes()
-        # measure_definition = fjcontrib.Nsubjettiness.NjettinessDefinition.UnnormalizedMeasure(beta)
-        measure_definition = fjcontrib.UnnormalizedMeasure(beta)
-        n_subjetiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
-        n_subjetiness = np.array([n_subjetiness_calculator.result(j) for jet in jets for j in jet])
-        print(n_subjetiness)
         
-        # Compute four-vector numpy array
-        # ...
-        
+        # Plot jet quantities
+        self.plot_nsubjettiness()
+
         # Fit ML model
         # ...
-        
+
     #---------------------------------------------------------------
-    # Cluster jets
+    # Process an event (in this case, just a single jet per event)
     #---------------------------------------------------------------
-    def find_jets(self, fj_particles):
+    def analyze_event(self, fj_particles):
         
+        # Cluster each jet with R=infinity
         jetR = fj.JetDefinition.max_allowable_R
         jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-        jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(1.0)
         cs = fj.ClusterSequence(fj_particles, jet_def)
-        self.csas.append(cs)
-        jets = fj.sorted_by_pt(cs.inclusive_jets())
-        jets_selected = jet_selector(jets)
-        return jets_selected
+        jet = fj.sorted_by_pt(cs.inclusive_jets())[0]
+
+        # Compute N-subjetiness
+        axis_definition = fjcontrib.KT_Axes()
+        for i,N in enumerate(self.N_list):
+            beta = self.beta_list[i]
         
+            measure_definition = fjcontrib.UnnormalizedMeasure(beta)
+            n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
+            n_subjettiness = n_subjettiness_calculator.result(jet)/jet.pt()
+            self.jet_variables['n_subjettiness_N{}_beta{}'.format(N, beta)].append(n_subjettiness)
+        
+        # Compute four-vector...
+        # ...
+            
+    #---------------------------------------------------------------
+    # Plot
+    #---------------------------------------------------------------
+    def plot_nsubjettiness(self):
+    
+        linestyles = ['-', '--', ':', '-.', '-']
+    
+        bins = np.linspace(0, 0.7, 100)
+        for i,N in enumerate(self.N_list):
+            beta = self.beta_list[i]
+            
+            plt.hist(self.jet_variables_numpy['n_subjettiness_N{}_beta{}'.format(N,beta)],
+                     bins,
+                     histtype='stepfilled',
+                     label = r'$N={}, \beta={}$'.format(N, beta),
+                     linewidth=2,
+                     linestyle=linestyles[N-1],
+                     alpha=0.5)
+                     
+        plt.xlabel(r'$\tau_{N}^{\beta}$', fontsize=14)
+        plt.yscale('log')
+        legend = plt.legend(loc='best', fontsize=10, frameon=False)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, 'Nsubjettiness.pdf'))
+      
+    #---------------------------------------------------------------
+    # Transform dictionary of lists into a dictionary of numpy arrays
+    #---------------------------------------------------------------
+    def transform_to_numpy(self, jet_variables_list):
+
+        jet_variables_numpy = {}
+        for key,val in jet_variables_list.items():
+            jet_variables_numpy[key] = np.array(val)
+                    
+        return jet_variables_numpy
+            
     #---------------------------------------------------------------
     # Cluster jets
     #---------------------------------------------------------------
