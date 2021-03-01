@@ -79,7 +79,8 @@ class ProcessQG(common_base.CommonBase):
         # Cluster each jet with R=infinity
         fj.ClusterSequence.print_banner()
         print('Finding jets...')
-        jets = [self.find_jets(fj_particles[:1]) for fj_particles in self.df_fjparticles]
+        self.csas = []
+        jets = [self.find_jets(fj_particles) for fj_particles in self.df_fjparticles]
         print('Done. Number of clustered jets: {}'.format(len(jets)))
         print()
    
@@ -109,6 +110,7 @@ class ProcessQG(common_base.CommonBase):
         jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
         jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(1.0)
         cs = fj.ClusterSequence(fj_particles, jet_def)
+        self.csas.append(cs)
         jets = fj.sorted_by_pt(cs.inclusive_jets())
         jets_selected = jet_selector(jets)
         return jets_selected
