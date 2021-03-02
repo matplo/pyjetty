@@ -174,10 +174,11 @@ class ProcessQG(common_base.CommonBase):
     #---------------------------------------------------------------
     def get_fjparticles(self, df_particles_grouped):
                                                  
+        user_index_offset = 0
         return fjext.vectorize_pt_eta_phi(df_particles_grouped['pt'].values,
                                           df_particles_grouped['y'].values,
                                           df_particles_grouped['phi'].values,
-                                          user_index_offset=0)
+                                          user_index_offset)
 
 ##################################################################
 if __name__ == '__main__':
