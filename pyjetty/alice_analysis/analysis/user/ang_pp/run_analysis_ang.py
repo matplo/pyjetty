@@ -31,11 +31,10 @@ ROOT.gROOT.SetBatch(True)
 # Extrapolate y-values for values in xlist_new given points (x,y) in xlist and ylist
 # Use power=1 for linear, or power=2 for quadratic extrapolation
 #----------------------------------------------------------------------
-def list_extrapolate(self, xlist, ylist, xlist_new, power=1, require_positive=False):
+def list_extrapolate(xlist, ylist, xlist_new, power=1, require_positive=False):
 
   if len(xlist) < (power + 1):
-    print("ERROR: list_extrapolate() requires at least %i points!" % (power + 1))
-    exit(1)
+    raise ValueError("list_extrapolate() requires at least %i points!" % (power + 1))
 
   ylist_new = []
   ix = 0
@@ -44,17 +43,21 @@ def list_extrapolate(self, xlist, ylist, xlist_new, power=1, require_positive=Fa
     while (ix + power) < len(xlist) and xlist[ix+power] <= xval:
       ix += 1
 
+    x1 = xlist[ix]; y1 = ylist[ix]
+
+    # Check if data point is identical
+    if xval == x1:
+      if require_positive and y1 < 0:
+        ylist_new.append(0)
+        continue
+      ylist_new.append(y1)
+      continue
+
     # Set value to 0 if out-of-range for extrapolation
-    x1 = xlist[ix]
-    if xlist[ix] > xval or (ix + power) >= len(xlist):
+    if x1 > xval or (ix + power) >= len(xlist):
       ylist_new.append(0)
       continue
 
-    y1 = ylist[ix]
-    # Check if data point is identical
-    if xval == x1:
-      ylist_new.append(y1)
-      continue
     x2 = xlist[ix+1]; y2 = ylist[ix+1]
 
     yval = None
@@ -64,8 +67,7 @@ def list_extrapolate(self, xlist, ylist, xlist_new, power=1, require_positive=Fa
       x3 = xlist[ix+2]; y3 = ylist[ix+2]
       yval = quadratic_extrapolate(x1, y1, x2, y2, x3, y3, xval)
     else:
-      print("ERROR: Unrecognized power", power, "/ please use either 1 or 2")
-      exit(1)
+      raise ValueError("Unrecognized power", power, "/ please use either 1 or 2")
 
     # Require positive values
     if require_positive and yval < 0:
@@ -82,7 +84,7 @@ def list_extrapolate(self, xlist, ylist, xlist_new, power=1, require_positive=Fa
 #---------------------------------------------------------------
 def linear_extrapolate(x1, y1, x2, y2, x):
 
-  return (y2 - y1) / (x2 - x1) * xval + (y1 - (y2 - y1) / (x2 - x1) * x1)
+  return (y2 - y1) / (x2 - x1) * x + (y1 - (y2 - y1) / (x2 - x1) * x1)
 
 
 #---------------------------------------------------------------
@@ -108,11 +110,11 @@ def set_zero_range(yvals):
   for i in range(len(yvals)-1, -1, -1):
     if yvals[i] <= 0:
       if found_nonzero_val:
-        for j in range(0, i):
+        for j in range(0, i+1):
           yvals[j] = 0
         break
-      else:
-        continue
+      yvals[i] = 0
+      continue
     else:
       found_nonzero_val = True
       continue
@@ -165,8 +167,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # Grooming settings
     self.sd_zcut = config["sd_zcut"]
     self.sd_beta = config["sd_beta"]
-    self.grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
-    self.grooming_labels = [self.utils.grooming_label(gs) for gs in self.grooming_settings]
+    self.theory_grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
+    self.theory_grooming_labels = [self.utils.grooming_label(gs) for gs in self.theory_grooming_settings]
 
     # Theory comparisons
     if 'fPythia' in config:
@@ -177,16 +179,23 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_pt_bins = config['theory_pt_bins']
       self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
       self.theory_response_labels = config['response_labels']
+      self.theory_pt_scale_factors_filepath = os.path.join(self.theory_dir, config['pt_scale_factors_filename'])
       self.rebin_theory_response = config['rebin_theory_response']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
       self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
       # Load the RooUnfold library
       #ROOT.gSystem.Load(config['roounfold_path'])   # done globally above
       self.do_theory = config['do_theory_comp']
+      self.theory_obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
+                                             np.linspace(0.11, 0.8, 70)))
+      self.theory_obs_bins_center = np.concatenate(
+        (np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18), np.linspace(0.105, 0.795, 70)))
+      self.theory_obs_bins_width = 10 * [0.001] + 18 * [0.005] + 70 * [0.01]
     else:
       self.do_theory = False
 
     if self.do_theory:
+      self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
       print("Loading response matrix for folding theory predictions...")
       self.load_theory_response()
       print("Loading theory histograms...")
@@ -204,9 +213,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     roounfold_filename = os.path.join(self.output_dir_theory, 'fRoounfold.root')
     roounfold_exists = os.path.exists(roounfold_filename)
 
+    # Do the grooming if desired
+    label_gr = None
+    gs = None; gl = None
+    if len(self.theory_grooming_settings) == 1:
+      gs = self.theory_grooming_settings[0]
+      gl = self.theory_grooming_labels[0]
+    elif len(self.theory_grooming_settings) > 1:
+      raise NotImplementedError("Not implemented for more than one grooming setting.")
+
     for jetR in self.jetR_list:
       for beta in self.theory_beta:
         label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+        if gs:
+          label_gr = label + '_' + gl
 
         for ri, response in enumerate(self.theory_response_files):
           # Load charged hadron level folding response matrix
@@ -214,40 +234,71 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           thn_ch = response.Get(name_ch)
           name_ch = "hResponse_theory_ch_%s" % label
           setattr(self, '%s_%i' % (name_ch, ri), thn_ch)
+          name_ch_gr = None; thn_ch_gr = None; name_ch_gr = None;
+          if gs:
+            name_ch_gr = "hResponse_JetPt_%s_ch_%sScaled" % (self.observable, label_gr)
+            thn_ch_gr = response.Get(name_ch_gr)
+            name_ch_gr = "hResponse_theory_ch_%s" % label_gr
+            setattr(self, '%s_%i' % (name_ch_gr, ri), thn_ch_gr)
 
           # Load hadron-level folding response matrix (for comparison histograms)
           name_h = "hResponse_JetPt_%s_h_%sScaled" % (self.observable, label)
           thn_h = response.Get(name_h)
           name_h = "hResponse_theory_h_%s" % label
           setattr(self, '%s_%i' % (name_h, ri), thn_h)
+          name_h_gr = None; thn_h_gr = None; name_h_gr = None;
+          if gs:
+            name_h_gr = "hResponse_JetPt_%s_h_%sScaled" % (self.observable, label_gr)
+            thn_h_gr = response.Get(name_h_gr)
+            name_h_gr = "hResponse_theory_h_%s" % label_gr
+            setattr(self, '%s_%i' % (name_h_gr, ri), thn_h_gr)
 
           # Create Roounfold object
           name_roounfold_h = '%s_Roounfold_%i' % (name_h, ri)
           name_roounfold_ch = '%s_Roounfold_%i' % (name_ch, ri)
+          name_roounfold_h_gr = None; name_roounfold_ch_gr = None;
+          if gs:
+            name_roounfold_h_gr = '%s_Roounfold_%i' % (name_h_gr, ri)
+            name_roounfold_ch_gr = '%s_Roounfold_%i' % (name_ch_gr, ri)
+            
 
           if roounfold_exists and not self.rebin_theory_response:
             fRoo = ROOT.TFile(roounfold_filename, 'READ')
             roounfold_response_ch = fRoo.Get(name_roounfold_ch)
             roounfold_response_h = fRoo.Get(name_roounfold_h)
+            roounfold_response_ch_gr = None; roounfold_response_h_gr = None;
+            if gs:
+              roounfold_response_ch_gr = fRoo.Get(name_roounfold_ch_gr)
+              roounfold_response_h_gr = fRoo.Get(name_roounfold_h_gr)
             fRoo.Close()
 
-            ''' This isn't working right now and I don't know why. So you have to manually delete
-              the response file that was created before and use the (slow) manual filling. 
-          elif self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
+          # TODO: Check that everything is working now... 
+          #elif self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
+          else:
             # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
             #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
             # as compared to the usual
             #      ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-            det_pt_bin_array = array('d', range(10, 160, 10))
-            tru_pt_bin_array = array('d', range(10, 160, 10))
-            det_obs_bin_array = array('d', np.linspace(0, 1, 101, endpoint=True))
-            tru_obs_bin_array = array('d', np.linspace(-0.005, 1.005, 102, endpoint=True))
+            det_pt_bin_array = array('d', self.theory_pt_bins)
+            tru_pt_bin_array = det_pt_bin_array
+            obs_bins = array('d', self.theory_obs_bins)
+            det_obs_bin_array = array('d', obs_bins)
+            tru_obs_bin_array = det_obs_bin_array
+            obs_bins_gr = None; det_obs_bin_array_gr = None; tru_obs_bin_array_gr = None;
+            if gs:
+              if 'sd' in gs:
+                # Add bin for underflow value (tagging fraction)
+                obs_bins_gr = np.insert(obs_bins, 0, -0.001)
+              else: 
+                obs_bins_gr = obs_bins
+              det_obs_bin_array_gr = array('d', obs_bins_gr)
+              tru_obs_bin_array_gr = det_obs_bin_array_gr
 
             #for i in range(4):
             #  axis = [thn_ch.GetAxis(i).GetBinLowEdge(j) for \
             #          j in range(1, thn_ch.GetAxis(i).GetNbins()+2)]
             #  print(axis, '\n')
-            #exit()
+            #exitR
 
             n_dim = 4
             self.histutils.rebin_thn(
@@ -260,12 +311,29 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array)-1, det_obs_bin_array,
               len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array,
               label)
+            if gs:
+              use_underflow = 'sd' in gs
+              self.histutils.rebin_thn(
+                roounfold_filename, thn_ch_gr, '%s_Rebinned_%i' % (name_ch_gr, ri), name_roounfold_ch_gr, n_dim,
+                len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array_gr)-1, det_obs_bin_array_gr,
+                len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array_gr)-1, tru_obs_bin_array_gr,
+                label_gr, 0, 1, use_underflow)
+              self.histutils.rebin_thn(
+                roounfold_filename, thn_h_gr, '%s_Rebinned_%i' % (name_h_gr, ri), name_roounfold_h_gr, n_dim,
+                len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array_gr)-1, det_obs_bin_array_gr,
+                len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array_gr)-1, tru_obs_bin_array_gr,
+                label_gr, 0, 1, use_underflow)
+              
             f_resp = ROOT.TFile(roounfold_filename, 'READ')
             roounfold_response_ch = f_resp.Get(name_roounfold_ch)
             roounfold_response_h = f_resp.Get(name_roounfold_h)
+            roounfold_response_ch_gr = None; roounfold_response_h_gr = None;
+            if gs:
+              roounfold_response_ch_gr = f_resp.Get(name_roounfold_ch_gr)
+              roounfold_response_h_gr = f_resp.Get(name_roounfold_h_gr)
             f_resp.Close()
-            '''
 
+          ''' Old & slow manual rebinning (but it works in ungroomed case!)
           else:   # Theory folding matrix already has correct binning
             hist_p_jet = thn_ch.Projection(3, 1)
             hist_p_jet.SetName('hist_p_jet_%s_%i' % (label, ri))
@@ -309,9 +377,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             roounfold_response_ch.Write()
             roounfold_response_h.Write()
             fRoo.Close()
+          '''
 
           setattr(self, name_roounfold_ch, roounfold_response_ch)
           setattr(self, name_roounfold_h, roounfold_response_h)
+          if gs:
+            setattr(self, name_roounfold_ch_gr, roounfold_response_ch_gr)
+            setattr(self, name_roounfold_h_gr, roounfold_response_h_gr)
 
 
   #---------------------------------------------------------------
@@ -319,31 +391,36 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #---------------------------------------------------------------
   def load_theory_histograms(self):
 
-    # Set central value to exponential distribution
+    # Disable folding for missed tagging fraction. Useful when this is unknown or not trusted
+    disable_tagging_fraction = True
+
+    # Set central value to exponential distribution. Useful for testing folding resilience
     exp_test = False
 
-    # Require that hard scale and jet scale are varied together
+    # Require that hard scale and jet scale are varied together. Changes theory uncertainties
     scale_req = False
 
     # Do the grooming if desired
     label_gr = None
     gs = None; gl = None
-    if len(self.grooming_settings) == 1:
-      gs = self.grooming_settings[0]
-      gl = self.grooming_labels[0]
-    elif len(self.grooming_settings) > 1:
+    if len(self.theory_grooming_settings) == 1:
+      gs = self.theory_grooming_settings[0]
+      gl = self.theory_grooming_labels[0]
+    elif len(self.theory_grooming_settings) > 1:
       raise NotImplementedError("Not implemented for more than one grooming setting.")
 
-    obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
-                               np.linspace(0.11, 0.8, 70)))
-    obs_bins_center = np.concatenate((np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18),
-                                      np.linspace(0.105, 0.795, 70)))
-    obs_bins_width = 10 * [0.001] + 18 * [0.005] + 70 * [0.01]
+    pt_bins = array('d', self.theory_pt_bins)
+    obs_bins = array('d', self.theory_obs_bins)
+    obs_bins_center = self.theory_obs_bins_center
+    obs_bins_width = self.theory_obs_bins_width
 
     obs_bins_gr = None
     if gs:
-      # Add extra bin for tagging fraction
-      obs_bins_gr = np.insert(obs_bins, 0, -0.001)
+      if 'sd' in gs:
+        # Add extra bin for tagging fraction
+        obs_bins_gr = np.insert(obs_bins, 0, -0.001)
+      else: 
+        obs_bins_gr = obs_bins
 
     # Create histogram for each value of R and beta
     for jetR in self.jetR_list:
@@ -354,11 +431,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
         name_cent = "theory_cent_%s_%s_parton" % (self.observable, label)
         name_min = "theory_min_%s_%s_parton" % (self.observable, label)
-        hist_min = ROOT.TH2D(name_min, name_min, len(self.theory_pt_bins)-1, 
-                             self.theory_pt_bins, len(obs_bins)-1, obs_bins)
+        hist_min = ROOT.TH2D(name_min, name_min, len(pt_bins)-1, 
+                             pt_bins, len(obs_bins)-1, obs_bins)
         name_max = "theory_max_%s_%s_parton" % (self.observable, label)
-        hist_max = ROOT.TH2D(name_min, name_min, len(self.theory_pt_bins)-1, 
-                             self.theory_pt_bins, len(obs_bins)-1, obs_bins)
+        hist_max = ROOT.TH2D(name_max, name_max, len(pt_bins)-1, 
+                             pt_bins, len(obs_bins)-1, obs_bins)
 
         parton_hists = ( ([], [], []), ([], [], []), ([], [], []) )
 
@@ -368,11 +445,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if gs:
           name_cent_gr = "theory_cent_%s_%s_parton" % (self.observable, label_gr)
           name_min_gr = "theory_min_%s_%s_parton" % (self.observable, label_gr)
-          hist_min_gr = ROOT.TH2D(name_min_gr, name_min_gr, len(self.theory_pt_bins)-1, 
-                                  self.theory_pt_bins, len(obs_bins_gr)-1, obs_bins_gr)
+          hist_min_gr = ROOT.TH2D(name_min_gr, name_min_gr, len(pt_bins)-1,
+                                  pt_bins, len(obs_bins_gr)-1, obs_bins_gr)
           name_max_gr = "theory_max_%s_%s_parton" % (self.observable, label_gr)
-          hist_max_gr = ROOT.TH2D(name_min_gr, name_min_gr, len(self.theory_pt_bins)-1, 
-                                  self.theory_pt_bins, len(obs_bins_gr)-1, obs_bins_gr)
+          hist_max_gr = ROOT.TH2D(name_max_gr, name_max_gr, len(pt_bins)-1,
+                                  pt_bins, len(obs_bins_gr)-1, obs_bins_gr)
 
           parton_hists_gr = ( ([], [], []), ([], [], []), ([], [], []) )
 
@@ -381,14 +458,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             for n in range(0, 3):
 
               name_hist = "theory_%i%i%i_%s_%s_parton" % (l, m, n, self.observable, label)
-              hist = ROOT.TH2D(name_hist, name_hist, len(self.theory_pt_bins)-1,
-                               self.theory_pt_bins, len(obs_bins)-1, obs_bins)
+              hist = ROOT.TH2D(name_hist, name_hist, len(pt_bins)-1,
+                               pt_bins, len(obs_bins)-1, obs_bins)
 
               name_hist_gr = None; hist_gr = None
               if gs:
                 name_hist_gr = "theory_%i%i%i_%s_%s_parton" % (l, m, n, self.observable, label_gr)
-                hist_gr = ROOT.TH2D(name_hist_gr, name_hist_gr, len(self.theory_pt_bins)-1,
-                                    self.theory_pt_bins, len(obs_bins_gr)-1, obs_bins_gr)
+                hist_gr = ROOT.TH2D(name_hist_gr, name_hist_gr, len(pt_bins)-1,
+                                    pt_bins, len(obs_bins_gr)-1, obs_bins_gr)
 
               if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
                 parton_hists[l][m].append(None)
@@ -403,7 +480,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 # Get scale factor for this pT bin.
                 # This reverses the self-normalization of 1/sigma for correct pT scaling
                 #     when doing projections onto the y-axis.
-                scale_f = self.pt_scale_factor(pt_min, pt_max, -5.5)
+                scale_f = self.pt_scale_factor_jetR(pt_min, pt_max, jetR)
 
                 th_dir = os.path.join(
                   self.theory_dir, "ungr_ALICE_R%s" % str(jetR).replace('.', ''), 
@@ -426,38 +503,72 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 else:  # Load un/groomed predictions from files
                   x_val_li = None; y_val_li = None
                   # Load theory predictions for lambda values
-                  with open(os.path.join(th_dir, "%i%i%i.txt" % (l, m, n))) as f:
-                    lines = f.read().split('\n')
+                  with open(os.path.join(th_dir, "%i%i%i.dat" % (l, m, n))) as f:
+                    lines = [line for line in f.read().split('\n') if line]
                     x_val_li = [float(line.split()[0]) for line in lines]
                     y_val_li = [float(line.split()[1]) for line in lines]
 
                   # Extrapolate parton curve to all bins and set 0 range on LHS tail
-                  # Scale by scale_f and bin width (to match RM)
-                  val_li = [val * obs_bin_width[i] * scale_f for i, val in enumerate(set_zero_range(
-                    list_extrapolate(x_val_li, y_val_li, obs_bins_center, power=2, require_positive=True)))]
+                  # Scale by bin width (to match RM)
+                  power = 1
+                  #if beta == 1.5 and pt_min == 10 and l == m == n == 1:
+                  #  v = [val for i, val in enumerate(set_zero_range(
+                  #  list_extrapolate(x_val_li, y_val_li, obs_bins_center,
+                  #                   power=power, require_positive=True)))]
+                  #  integral = sum([val * obs_bins_width[i] for i, val in enumerate(v)])
+                  #  print( [val / integral for val in v])
+                  #  exit()
+                  val_li = [val * obs_bins_width[i] for i, val in enumerate(set_zero_range(
+                    list_extrapolate(x_val_li, y_val_li, obs_bins_center,
+                                     power=power, require_positive=True)))]
 
-                  tagging_fraction = None
                   if gs:
                     y_val_li_gr = None
-                    with open(os.path.join(th_dir_gr, "%i%i%i.txt" % (l, m, n))) as f:
-                      lines = f.read().split('\n')
+                    with open(os.path.join(th_dir_gr, "%i%i%i.dat" % (l, m, n))) as f:
+                      lines = [line for line in f.read().split('\n') if line]
                       y_val_li_gr = [float(line.split()[1]) for line in lines]
 
-                    # Copy tail of ungroomed distribution onto groomed one for lambda > z_cut
-                    # NOTE: assumes x_val_li is identical in groomed & ungroomed cases
-                    i = 0
-                    while i < len(x_val_li) and x_val_li[i] < gs["sd"][0]:
-                      i += 1
-                    y_val_li_gr[i:] = y_val_li[i:]
+                    if "sd" in gs:
+                      # Copy tail of ungroomed distribution onto groomed one for lambda > z_cut
+                      # NOTE: assumes x_val_li is identical in groomed & ungroomed cases
+                      k = 0
+                      while k < len(x_val_li) and x_val_li[k] < gs["sd"][0]:
+                        k += 1
+                      y_val_li_gr[k:] = y_val_li[k:]
 
                     # Extrapolate parton curve to all bins and set 0 range on LHS tail
-                    # Scale by scale_f and bin width (to match RM)
-                    val_li_gr = [val * obs_bin_width[i] * scale_f for i, val in enumerate(set_zero_range(
-                      list_extrapolate(x_val_li, y_val_li_gr, obs_bins_center, power=2, require_positive=True)))]
+                    # Scale by bin width (to match RM)
+                    val_li_gr = [val * obs_bins_width[i] for i, val in enumerate(set_zero_range(
+                      list_extrapolate(x_val_li, y_val_li_gr, obs_bins_center,
+                                       power=power, require_positive=True)))]
 
-                    # Get SD tagging fraction to save as underflow value
-                    tagging_fraction = sum(val_li_gr) / sum(val_li)
-                    val_li_gr = [tagging_fraction] + val_li_gr
+                  # Rescale histograms by the correct integral
+                  # Simultaneously scale by scale_f to get correct jet pT scaling 
+                  integral_val_li = sum(val_li)
+                  val_li = [val * scale_f / integral_val_li for val in val_li]
+                  missed_tagging_fraction = None
+                  if gs:
+                    integral_val_li_gr = sum(val_li_gr)
+                    if "sd" in gs:
+                      # Get SD tagging fraction to save as underflow value
+                      missed_tagging_fraction = 1 - integral_val_li_gr / integral_val_li
+                      if disable_tagging_fraction:
+                        missed_tagging_fraciton = 0
+                      elif missed_tagging_fraction < 0:
+                        print("WARNING: missed tagging fraction %f < 0 (\\beta = %s, R = %s)." % \
+                              (missed_tagging_fraction, beta, jetR), "Manually setting to 0.")
+                        missed_tagging_fraction = 0
+                      elif missed_tagging_fraction > 1:
+                        print("WARNING: missed tagging fraction %f > 1 (\\beta = %s, R = %s)." % \
+                              (missed_tagging_fraction, beta, jetR), "Manually setting to 0.")
+                        missed_tagging_fraction = 0
+
+                      # Add underflow bin and normalize by inclusive integral
+                      val_li_gr = [missed_tagging_fraction * scale_f] + \
+                                  [val * scale_f / integral_val_li for val in val_li_gr]
+                    else:
+                      # Normalize to 1 by dividing out groomed integral
+                      val_li_gr = [val * scale_f / integral_val_li_gr for val in val_li_gr]
 
                 for j, val in enumerate(val_li):
                   hist.SetBinContent(i+1, j+1, val)
@@ -484,19 +595,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               if gs:
                 parton_hists_gr[l][m].append(hist_gr)
 
-          setattr(self, name_cent, parton_hists[1][1][1])
-          setattr(self, name_min, hist_min)
-          setattr(self, name_max, hist_max)
+        setattr(self, name_cent, parton_hists[1][1][1])
+        setattr(self, name_min, hist_min)
+        setattr(self, name_max, hist_max)
 
-          if gs:
-            setattr(self, name_cent_gr, parton_hists_gr[1][1][1])
-            setattr(self, name_min_gr, hist_min_gr)
-            setattr(self, name_max_gr, hist_max_gr)
+        if gs:
+          setattr(self, name_cent_gr, parton_hists_gr[1][1][1])
+          setattr(self, name_min_gr, hist_min_gr)
+          setattr(self, name_max_gr, hist_max_gr)
 
-          print("Folding theory predictions...")
-          self.fold_theory(jetR, beta, parton_hists, scale_req)
-          if gs:
-            self.fold_theory(jetR, beta, partons_hists_gr, scale_req, gl)
+        print("Folding theory predictions...")
+        self.fold_theory(jetR, beta, parton_hists, scale_req)
+        if gs:
+          print("Folding theory predictions with %s..." % gl.replace('_', ' '))
+          self.fold_theory(jetR, beta, parton_hists_gr, scale_req, gl)
 
 
   #----------------------------------------------------------------------
@@ -519,38 +631,49 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       folded_ch_hists = ( ([], [], []), ([], [], []), ([], [], []) )
       folded_h_hists = ( ([], [], []), ([], [], []), ([], [], []) )
 
-      for i in range(0, 3):
-        for j in range(0, 3):
-          for k in range(0, 3):
+      for l in range(0, 3):
+        for m in range(0, 3):
+          for n in range(0, 3):
 
-            if (scale_req and j != k) or (0 in (i, j, k) and 2 in (i, j, k)):
-              folded_h_hists[i][j].append(None)
-              folded_ch_hists[i][j].append(None)
+            if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
+              folded_h_hists[l][m].append(None)
+              folded_ch_hists[l][m].append(None)
               continue
 
             # Fold theory predictions
-            h_folded_ch = response_ch.ApplyToTruth(parton_hists[i][j][k])
-            h_folded_h = response_h.ApplyToTruth(parton_hists[i][j][k])
+            h_folded_ch = response_ch.ApplyToTruth(parton_hists[l][m][n])
+            h_folded_h = response_h.ApplyToTruth(parton_hists[l][m][n])
 
-            name_ch = "theory_%i%i%i_%s_%s_ch_%i" % (i, j, k, self.observable, label, ri)
-            name_h = "theory_%i%i%i_%s_%s_h_%i" % (i, j, k, self.observable, label, ri)
+            name_ch = "theory_%i%i%i_%s_%s_ch_%i" % (l, m, n, self.observable, label, ri)
+            name_h = "theory_%i%i%i_%s_%s_h_%i" % (l, m, n, self.observable, label, ri)
 
             h_folded_ch.SetNameTitle(name_ch, name_ch)
             h_folded_h.SetNameTitle(name_h, name_h)
 
-            folded_ch_hists[i][j].append(h_folded_ch)
-            folded_h_hists[i][j].append(h_folded_h)
+            folded_ch_hists[l][m].append(h_folded_ch)
+            folded_h_hists[l][m].append(h_folded_h)
 
-      print("Scaling theory predictions for MPI effects for %s..." % self.theory_response_labels[ri])
-      self.mpi_scale_theory(jetR, beta, ri, response, folded_ch_hists, folded_h_hists, scale_req)
+      printstring = "Scaling theory predictions for MPI effects for %s" % self.theory_response_labels[ri]
+      if grooming_label:
+        printstring += " with %s..." % grooming_label.replace('_', ' ')
+      else:
+        printstring += "..."
+      print(printstring)
+      self.mpi_scale_theory(jetR, beta, ri, response, folded_ch_hists, folded_h_hists,
+                            scale_req, grooming_label)
 
 
   #----------------------------------------------------------------------
   # Fold theoretical predictions
   #----------------------------------------------------------------------
-  def mpi_scale_theory(self, jetR, beta, ri, response, folded_ch_hists, folded_h_hists, scale_req):
+  def mpi_scale_theory(self, jetR, beta, ri, response, folded_ch_hists, folded_h_hists,
+                       scale_req, grooming_label=None):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+    using_sd_grooming = False
+    if grooming_label:
+      label += '_' + grooming_label
+      using_sd_grooming = "sd" in grooming_label.lower()
 
     # Load parton-level theory predictions
     name_cent = "theory_cent_%s_%s" % (self.observable, label)
@@ -567,32 +690,22 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_mpi_off = response.Get(name_mpi_off)
     h_mpi_on = response.Get(name_mpi_on)
 
-    # Add the extra (empty) lambda bins if necessary
-    if h_mpi_off.GetYaxis().GetBinUpEdge(h_mpi_off.GetNbinsY())-1 < -1e-8:
-      n_x_bins = h_mpi_off.GetXaxis().GetNbins()
-      x_bins = array('d', [h_mpi_off.GetXaxis().GetBinLowEdge(i) for i in range(1, n_x_bins+2)])
-      y_bins = array('d', np.linspace(0, 1, 101, endpoint=True))
-      h_mpi_off = self.histutils.rebin_th2(h_mpi_off, name_mpi_off+'Rebinned', 
-                                           x_bins, n_x_bins, y_bins, len(y_bins)-1)
-    if h_mpi_on.GetYaxis().GetBinUpEdge(h_mpi_on.GetNbinsY())-1 < -1e-8:
-      n_x_bins = h_mpi_on.GetXaxis().GetNbins()
-      x_bins = array('d', [h_mpi_on.GetXaxis().GetBinLowEdge(i) for i in range(1, n_x_bins+2)])
-      y_bins = array('d', np.linspace(0, 1, 101, endpoint=True))
-      h_mpi_on = self.histutils.rebin_th2(h_mpi_on, name_mpi_on+'Rebinned', 
-                                           x_bins, n_x_bins, y_bins, len(y_bins)-1)
+    '''
+    # Assert that the MPI histograms have the same binning as the folded histograms
+    if obs_bins != h_mpi_off_y_bins or obs_bins != h_mpi_on_y_bins:
+      raise ValueError("MPI scaling histograms do not match the expected binning and/or values.")
+    '''
 
-    # Ensure that the scaling and theory histograms have the same binning
-    y_rebin_num = h_mpi_off.GetNbinsY() / folded_ch_hists[1][1][1].GetNbinsY()
-    if y_rebin_num < 1 or abs(y_rebin_num - int(y_rebin_num)) > 1e-5:
-      print("ERROR: histograms for MPI scaling from response file have insufficienct binning.")
-      print("       %i versus even multiple of %i bins required" % \
-            (h_mpi_off.GetNbinsY(), folded_ch_hists[1][1][1].GetNbinsY()))
-      exit(1)
-    h_mpi_off.RebinY(int(y_rebin_num))
-    h_mpi_on.RebinY(int(y_rebin_num))
-    if h_mpi_off.GetNbinsY() != folded_ch_hists[1][1][1].GetNbinsY():
-      print("ERROR: rebinning histograms for MPI scaling failed.")
-      exit(1)
+    # Set MPI histograms to have the same binning as folded histograms
+    x_bins = array('d', self.theory_pt_bins)
+    n_x_bins = len(x_bins) - 1
+    y_bins = array('d', self.theory_obs_bins)
+    if using_sd_grooming:
+      y_bins = np.insert(y_bins, 0, -0.001)
+    h_mpi_off = self.histutils.rebin_th2(h_mpi_off, name_mpi_off+'_Rebinned_%i' % ri, x_bins, n_x_bins,
+                                         y_bins, len(y_bins)-1, using_sd_grooming)
+    h_mpi_on = self.histutils.rebin_th2(h_mpi_on, name_mpi_on+'_Rebinned_%i' % ri, x_bins, n_x_bins,
+                                        y_bins, len(y_bins)-1, using_sd_grooming)
 
     mpi_bin_edges = [h_mpi_on.GetXaxis().GetBinLowEdge(i+1)
                      for i in range(h_mpi_on.GetNbinsX()+1)]
@@ -607,7 +720,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       # Get scale factor for this pT bin.
       # This reverses the self-normalization of 1/sigma for correct pT scaling
       #     when doing doing projections onto the y-axis.
-      scale_f = self.pt_scale_factor(pt_min, pt_max, -5.5)
+      scale_f = self.pt_scale_factor_k(pt_min, pt_max, -5)
 
       # Note: bins in ROOT are 1-indexed (0 bin is underflow). Also last bin is inclusive
       h_mpi_off_proj = h_mpi_off.ProjectionY(
@@ -627,48 +740,39 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       pt_label = '_PtBin'+str(pt_min)+'-'+str(pt_max)
 
-      h_cent_bin = h_cent.ProjectionY("%s_parton%s" % (name_cent, pt_label), i+1, j)
-      h_min_bin = h_min.ProjectionY("%s_parton%s" % (name_min, pt_label), i+1, j)
-      h_max_bin = h_max.ProjectionY("%s_parton%s" % (name_max, pt_label), i+1, j)
+      h_cent_p_bin = h_cent.ProjectionY("%s_parton%s" % (name_cent, pt_label), i+1, j)
+      h_min_p_bin = h_min.ProjectionY("%s_parton%s" % (name_min, pt_label), i+1, j)
+      h_max_p_bin = h_max.ProjectionY("%s_parton%s" % (name_max, pt_label), i+1, j)
 
       # Keep normalization by dividing by the scale factor
       #h_cent_bin.Scale(1/(j-i))
       #h_min_bin.Scale(1/(j-i))
       #h_max_bin.Scale(1/(j-i))
-      h_cent_bin.Scale(1/scale_f)
-      h_min_bin.Scale(1/scale_f)
-      h_max_bin.Scale(1/scale_f)
-      # I think there might be some small constant factor differences here...
-      # so we make sure normalization is correct
-      h_min_bin.Scale(1/h_cent_bin.Integral("width"))
-      h_max_bin.Scale(1/h_cent_bin.Integral("width"))
-      h_cent_bin.Scale(1/h_cent_bin.Integral("width"))
+      h_cent_p_bin.Scale(1/scale_f)
+      h_min_p_bin.Scale(1/scale_f)
+      h_max_p_bin.Scale(1/scale_f)
+
+      # Undo the bin width scaling and set correct normalization
+      norm_factor = h_cent_p_bin.Integral()
+      h_cent_p_bin.Scale(1/norm_factor, "width")
+      h_min_p_bin.Scale(1/norm_factor, "width")
+      h_max_p_bin.Scale(1/norm_factor, "width")
 
       # Set new names and titles to prevent issues with saving histograms
-      h_cent_bin.SetNameTitle("%s_parton%s" % (name_cent, pt_label),
-                              "%s_parton%s" % (name_cent, pt_label))
-      h_min_bin.SetNameTitle("%s_parton%s" % (name_min, pt_label),
-                             "%s_parton%s" % (name_min, pt_label))
-      h_max_bin.SetNameTitle("%s_parton%s" % (name_max, pt_label),
-                             "%s_parton%s" % (name_max, pt_label))
-
-      # Have to shift/average bins since raw theory calculation are points
-      title = 'h_cent_parton_shifted_%s%s' % (label, pt_label)
-      xbins = array('d', np.linspace(0, 1, 101, endpoint=True))
-      h_cent_p_bin = ROOT.TH1D(title, title, len(xbins)-1, xbins)
-      for bi in range(1, h_cent_bin.GetNbinsX()):
-        h_cent_p_bin.SetBinContent(
-          bi, (h_cent_bin.GetBinContent(bi) + h_cent_bin.GetBinContent(bi+1)) / 2)
-        h_cent_p_bin.SetBinError(bi, 0)
+      h_cent_p_bin.SetNameTitle("%s_parton%s" % (name_cent, pt_label),
+                                "%s_parton%s" % (name_cent, pt_label))
+      h_min_p_bin.SetNameTitle("%s_parton%s" % (name_min, pt_label),
+                               "%s_parton%s" % (name_min, pt_label))
+      h_max_p_bin.SetNameTitle("%s_parton%s" % (name_max, pt_label),
+                               "%s_parton%s" % (name_max, pt_label))
 
       # Initialize h and ch histograms
-      h_cent_ch_bin = None
-      h_min_ch_bin = None
-      h_max_ch_bin = None
+      h_cent_ch_bin = None; h_min_ch_bin = None; h_max_ch_bin = None;
+      h_cent_h_bin = None; h_min_h_bin = None; h_max_h_bin = None;
 
-      h_cent_h_bin = None
-      h_min_h_bin = None
-      h_max_h_bin = None
+      # Initialize h and ch tagging fraction for folded distributions
+      tagging_frac_cent_h = None; tagging_frac_min_h = None; tagging_frac_max_h = None;
+      tagging_frac_cent_ch = None; tagging_frac_min_ch = None; tagging_frac_max_ch = None;
 
       # Scale the theory bin and save for plotting
       for l in range(0, 3):
@@ -686,11 +790,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             #h_folded_h_bin.Scale(1/(j-i))
             #h_folded_ch_bin.Scale(1/(j-i))
 
-            # Scale all by integral of central prediction values
-            # TODO: See if there's a better way to do this... shouldn't have to scale?
-
-            h_folded_h_bin.Scale(1/h_folded_h_bin.Integral("width"))
-            h_folded_ch_bin.Scale(1/h_folded_ch_bin.Integral("width"))
+            # Undo the bin width scaling and scale all by integral
+            h_folded_h_bin.Scale(1/h_folded_h_bin.Integral(), "width")
+            h_folded_ch_bin.Scale(1/h_folded_ch_bin.Integral(), "width")
 
             # Save ratio plots for seeing the change at each level
             if l == m == n == 1:
@@ -752,9 +854,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
 
       # Steal ownership from ROOT
-      h_cent_bin.SetDirectory(0)
-      h_min_bin.SetDirectory(0)
-      h_max_bin.SetDirectory(0)
+      h_cent_p_bin.SetDirectory(0)
+      h_min_p_bin.SetDirectory(0)
+      h_max_p_bin.SetDirectory(0)
 
       h_cent_h_bin.SetDirectory(0)
       h_min_h_bin.SetDirectory(0)
@@ -765,9 +867,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h_max_ch_bin.SetDirectory(0)
 
       # Save as attributes for later access (plotting)
-      setattr(self, "%s_parton%s" % (name_cent, pt_label), h_cent_bin)
-      setattr(self, "%s_parton%s" % (name_min, pt_label), h_min_bin)
-      setattr(self, "%s_parton%s" % (name_max, pt_label), h_max_bin)
+      setattr(self, "%s_parton%s" % (name_cent, pt_label), h_cent_p_bin)
+      setattr(self, "%s_parton%s" % (name_min, pt_label), h_min_p_bin)
+      setattr(self, "%s_parton%s" % (name_max, pt_label), h_max_p_bin)
 
       setattr(self, "%s_h%s_%i" % (name_cent, pt_label, ri), h_cent_h_bin)
       setattr(self, "%s_h%s_%i" % (name_min, pt_label, ri), h_min_h_bin)
@@ -779,10 +881,49 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
 
   #---------------------------------------------------------------
-  # Returns number proportional to the integral of power law pTjet^alpha
+  # Loads pT scale factors from q/g fraction theory predictions
   #---------------------------------------------------------------
-  def pt_scale_factor(self, ptmin, ptmax, alpha):
-    return 1e9 * (ptmin**(alpha + 1) - ptmax**(alpha + 1))
+  def load_pt_scale_factors(self, filepath):
+
+    # Open file and save pT distribution
+    pt_li = None; val_li = None;
+    with open(filepath) as f:
+      lines = [line.split() for line in f.read().split('\n') if (line and line[0] != '#')]
+      pt_li = [int(float(line[0])) for line in lines]
+      val_li = [float(line[1]) + float(line[2]) for line in lines]
+
+    # Split list based on the number of measured jet R
+    n_jetR = len(self.jetR_list)
+    n_entries = len(val_li)
+    for i, jetR in enumerate(self.jetR_list):
+      val_li_jetR = val_li[i*n_entries:(i+1)*n_entries]
+      pt_li_jetR = pt_li[i*n_entries:(i+1)*n_entries]
+      setattr(self, "pt_scale_factor_R%s" % jetR, (pt_li_jetR, val_li_jetR))
+
+
+  #---------------------------------------------------------------
+  # Returns number proportional to shape of inclusive jet pT
+  #     distribution theory prediction (val = jetR)
+  #---------------------------------------------------------------
+  def pt_scale_factor_jetR(self, ptmin, ptmax, jetR):
+
+    pt_li, val_li = getattr(self, "pt_scale_factor_R%s" % jetR)
+
+    # Fit a log function between the two endpoints and approx avg integral for bin
+    start_i = pt_li.index(ptmin)
+    end_i = pt_li.index(ptmax)
+    # y = a * x^k
+    k = np.log(val_li[start_i] / val_li[end_i]) / np.log(ptmin / ptmax)
+    a = val_li[start_i] / ptmin**k
+    return self.pt_scale_factor_k(ptmin, ptmax, k, a)
+
+  #---------------------------------------------------------------
+  # Returns number proportional to the integral of power law pTjet^k
+  #---------------------------------------------------------------
+  def pt_scale_factor_k(self, ptmin, ptmax, k, a=1e9):
+    if k == -1:
+      return a * np.log(ptmax / ptmin)
+    return a * (ptmax**(k + 1) - ptmin**(k + 1)) / (k + 1)
 
 
   #---------------------------------------------------------------
@@ -838,7 +979,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
 
-      if self.do_theory and not grooming_setting and float(obs_label) in self.theory_beta:
+      if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta:
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
@@ -857,9 +998,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                       min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=False):
 
     # For theory plots, whether or not to show original parton-level predictions
-    show_parton_theory = False
+    show_parton_theory = True
     show_everything_else = True  # set 'False' to show *only* parton-level theory
-    rebin_folded = True  # combine every 2 bins to reduce statistical fluctuations
+    rebin_folded = False  # combine every 2 bins to reduce statistical fluctuations
 
     # For theory plots, whether or not to show the NP / P region
     show_np_region = True
@@ -950,7 +1091,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hmax_p = getattr(self, name_max)
 
       if show_parton_theory:
-        myBlankHisto.SetMaximum(1.25*hmax_p.GetMaximum())
+        maxval = 1.25*hmax_p.GetMaximum()
+        myBlankHisto.SetMaximum(maxval)
         myBlankHisto.Draw("E")
 
       n = hcent_p.GetNbinsX()
@@ -1416,8 +1558,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     hmin_p = getattr(self, "theory_min_%s_%s_parton" % (self.observable, label))
     hmax_p = getattr(self, "theory_max_%s_%s_parton" % (self.observable, label))
 
-    n_obs_bins = hcent_p.GetYaxis().GetNbins()
-    obs_edges = [round(hcent_p.GetYaxis().GetBinLowEdge(i), 3) for i in range(1, n_obs_bins+2)]
+    n_obs_bins = len(self.theory_obs_bins) - 1
+    obs_edges = self.theory_obs_bins
 
     # Make projections in pT bins at parton level
     for i, min_pt in list(enumerate(self.theory_pt_bins))[:-1]:
@@ -1433,9 +1575,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hmax_proj_p = hmax_p.ProjectionY()
 
       # Fix normalization
-      hmin_proj_p.Scale(1/hcent_proj_p.Integral("width"))
-      hmax_proj_p.Scale(1/hcent_proj_p.Integral("width"))
-      hcent_proj_p.Scale(1/hcent_proj_p.Integral("width"))
+      hmin_proj_p.Scale(1/hcent_proj_p.Integral(), "width")
+      hmax_proj_p.Scale(1/hcent_proj_p.Integral(), "width")
+      hcent_proj_p.Scale(1/hcent_proj_p.Integral(), "width")
 
       # Initialize canvas & pad for plotting
       name = 'cTheoryComp_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt, max_pt)
@@ -1472,7 +1614,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myBlankHisto.SetMaximum(1.7*hmax_proj_p.GetMaximum())
       myBlankHisto.Draw()
 
-      x = array('d', [round(hcent_proj_p.GetXaxis().GetBinCenter(i), 2) for i in range(1, maxbin+1)])
+      x = array('d', [round(hcent_proj_p.GetXaxis().GetBinCenter(i), 5) for i in range(1, maxbin+1)])
       y = array('d', [hcent_proj_p.GetBinContent(i) for i in range(1, maxbin+1)])
       xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)] + [0])
       xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)])
@@ -1499,7 +1641,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         h_response_projection.SetDirectory(0)
 
         # Rescale by integral for correct normalization
-        h_response_projection.Scale(1/h_response_projection.Integral("width"))
+        h_response_projection.Scale(1/h_response_projection.Integral(), "width")
 
         color = self.ColorArray[4+1+ri]
         h_response_projection.SetLineColor(color)
