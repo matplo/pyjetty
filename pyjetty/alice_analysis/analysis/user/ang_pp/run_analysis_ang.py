@@ -191,6 +191,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_obs_bins_center = np.concatenate(
         (np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18), np.linspace(0.105, 0.795, 70)))
       self.theory_obs_bins_width = 10 * [0.001] + 18 * [0.005] + 70 * [0.01]
+
+      # Use the old theory prediction binnings as test (ungroomed only)
+      self.use_old = False
+      if self.use_old:
+        self.theory_grooming_settings = []
+        self.theory_grooming_labels = []
+        self.theory_pt_bins = list(range(10, 160, 10))
+        #self.theory_obs_bins = np.linspace(0, 0.8, 81)
+        #self.theory_obs_bins_center = np.linspace(0.005, 0.795, 80)
+        #self.theory_obs_bins_width = 80 * [0.01]
+
     else:
       self.do_theory = False
 
@@ -333,52 +344,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               roounfold_response_h_gr = f_resp.Get(name_roounfold_h_gr)
             f_resp.Close()
 
-          ''' Old & slow manual rebinning (but it works in ungroomed case!)
-          else:   # Theory folding matrix already has correct binning
-            hist_p_jet = thn_ch.Projection(3, 1)
-            hist_p_jet.SetName('hist_p_jet_%s_%i' % (label, ri))
-            hist_h_jet = thn_h.Projection(2, 0)
-            hist_h_jet.SetName('hist_h_jet_%s_%i' % (label, ri))
-            hist_ch_jet = thn_ch.Projection(2, 0)
-            hist_ch_jet.SetName('hist_ch_jet_%s_%i' % (label, ri))
-            roounfold_response_ch = ROOT.RooUnfoldResponse(
-              hist_ch_jet, hist_p_jet, name_roounfold_ch, name_roounfold_ch)
-            roounfold_response_h = ROOT.RooUnfoldResponse(
-              hist_h_jet, hist_p_jet, name_roounfold_h, name_roounfold_h)
-
-            for bin_0 in range(1, thn_ch.GetAxis(0).GetNbins() + 1):
-              if bin_0 % 5 == 0:
-                print('{} / {}'.format(bin_0, thn_ch.GetAxis(0).GetNbins() + 1))
-              pt_det = thn_ch.GetAxis(0).GetBinCenter(bin_0)
-              for bin_1 in range(1, thn_ch.GetAxis(1).GetNbins() + 1):
-                pt_true = thn_ch.GetAxis(1).GetBinCenter(bin_1)
-                for bin_2 in range(0, thn_ch.GetAxis(2).GetNbins() + 1):
-                  for bin_3 in range(0, thn_ch.GetAxis(3).GetNbins() + 1):
-                    obs_det = thn_ch.GetAxis(2).GetBinCenter(bin_2)
-                    obs_true = thn_ch.GetAxis(3).GetBinCenter(bin_3)
-                    # Get content of original THn bin
-                    x_list = (pt_det, pt_true, obs_det, obs_true)
-                    x = array('d', x_list)
-                    global_bin = thn_ch.GetBin(x)
-                    content = thn_ch.GetBinContent(global_bin)
-                    roounfold_response_ch.Fill(pt_det, obs_det, pt_true, obs_true, content)
-
-                    # Assume that thn_h and thn_ch have same binning
-                    obs_det = thn_h.GetAxis(2).GetBinCenter(bin_2)
-                    obs_true = thn_h.GetAxis(3).GetBinCenter(bin_3)
-                    # Get content of original THn bin
-                    x_list = (pt_det, pt_true, obs_det, obs_true)
-                    x = array('d', x_list)
-                    global_bin = thn_h.GetBin(x)
-                    content = thn_h.GetBinContent(global_bin)
-                    roounfold_response_h.Fill(pt_det, obs_det, pt_true, obs_true, content)
-
-            fRoo = ROOT.TFile(roounfold_filename, 'UPDATE')
-            roounfold_response_ch.Write()
-            roounfold_response_h.Write()
-            fRoo.Close()
-          '''
-
           setattr(self, name_roounfold_ch, roounfold_response_ch)
           setattr(self, name_roounfold_h, roounfold_response_h)
           if gs:
@@ -403,7 +368,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # Do the grooming if desired
     label_gr = None
     gs = None; gl = None
-    if len(self.theory_grooming_settings) == 1:
+    if not self.use_old and len(self.theory_grooming_settings) == 1:
       gs = self.theory_grooming_settings[0]
       gl = self.theory_grooming_labels[0]
     elif len(self.theory_grooming_settings) > 1:
@@ -482,9 +447,16 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 #     when doing projections onto the y-axis.
                 scale_f = self.pt_scale_factor_jetR(pt_min, pt_max, jetR)
 
-                th_dir = os.path.join(
-                  self.theory_dir, "ungr_ALICE_R%s" % str(jetR).replace('.', ''), 
-                  "beta%s" % str(beta).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
+                th_dir = None
+                if not self.use_old:
+                  th_dir = os.path.join(
+                    self.theory_dir, "ungr_ALICE_R%s" % str(jetR).replace('.', ''), 
+                    "beta%s" % str(beta).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
+                else:
+                  th_dir = os.path.join(
+                    self.theory_dir, "old", "R%s" % str(jetR).replace('.', ''),
+                    "pT%s_%s" % (pt_min, pt_max), "beta%s" % str(beta).replace('.', 'p'))
+
                 th_dir_gr = None
                 if gs:  # != None:
                   th_dir_gr = os.path.join(
@@ -503,7 +475,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 else:  # Load un/groomed predictions from files
                   x_val_li = None; y_val_li = None
                   # Load theory predictions for lambda values
-                  with open(os.path.join(th_dir, "%i%i%i.dat" % (l, m, n))) as f:
+                  filetype = None
+                  if self.use_old:
+                    filetype = ".txt"
+                  else:
+                    filetype = ".dat"
+                  with open(os.path.join(th_dir, "%i%i%i%s" % (l, m, n, filetype))) as f:
                     lines = [line for line in f.read().split('\n') if line]
                     x_val_li = [float(line.split()[0]) for line in lines]
                     y_val_li = [float(line.split()[1]) for line in lines]
@@ -511,13 +488,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                   # Extrapolate parton curve to all bins and set 0 range on LHS tail
                   # Scale by bin width (to match RM)
                   power = 1
-                  #if beta == 1.5 and pt_min == 10 and l == m == n == 1:
-                  #  v = [val for i, val in enumerate(set_zero_range(
-                  #  list_extrapolate(x_val_li, y_val_li, obs_bins_center,
-                  #                   power=power, require_positive=True)))]
-                  #  integral = sum([val * obs_bins_width[i] for i, val in enumerate(v)])
-                  #  print( [val / integral for val in v])
-                  #  exit()
                   val_li = [val * obs_bins_width[i] for i, val in enumerate(set_zero_range(
                     list_extrapolate(x_val_li, y_val_li, obs_bins_center,
                                      power=power, require_positive=True)))]
@@ -979,7 +949,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
 
-      if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta:
+      if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta and \
+         ( (self.use_old and not grooming_setting) or not self.use_old ):
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
@@ -1091,7 +1062,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hmax_p = getattr(self, name_max)
 
       if show_parton_theory:
-        maxval = 1.25*hmax_p.GetMaximum()
+        maxval = 1.7*hmax_p.GetMaximum()
         myBlankHisto.SetMaximum(maxval)
         myBlankHisto.Draw("E")
 
@@ -1173,6 +1144,16 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           hcent = hcent.Rebin(); hcent.Scale(1/2)
           hmin = hmin.Rebin(); hmin.Scale(1/2)
           hmax = hmax.Rebin(); hmax.Scale(1/2)
+
+        # Write folded theory result to ROOT file
+        output_dir = getattr(self, 'output_dir_final_results')
+        final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+        fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+        if plot_theory:
+          hcent.Write()
+          hmin.Write()
+          hmax.Write()
+        fFinalResults.Close()
 
         if show_folded_uncertainty:
           n = hcent.GetNbinsX()
@@ -1339,10 +1320,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_sys.Write()
     if plot_pythia:
       hPythia.Write()
-    if plot_theory:
-      hcent.Write()
-      hmin.Write()
-      hmax.Write()
     fFinalResults.Close()
 
   
