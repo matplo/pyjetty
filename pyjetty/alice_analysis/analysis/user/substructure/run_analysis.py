@@ -42,6 +42,7 @@ import math
 import ROOT
 import yaml
 import shutil
+import hepdata_lib
 
 from pyjetty.alice_analysis.analysis.base import common_base
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
@@ -249,15 +250,19 @@ class RunAnalysis(common_base.CommonBase):
         if self.do_plot_final_result:
           # You must implement this
           self.plot_single_result(jetR, obs_label, obs_setting, grooming_setting)
-
+          
       # Plot final results for all subconfigs
       if self.do_plot_final_result:
         self.plot_all_results(jetR) # You must implement this
+        
+    # Write hepdata submission
+    if self.do_plot_final_result:
+        self.write_hepdata()
 
     # Plot additional performance plots
     if self.do_plot_performance:
       self.plot_performance() # You must implement this
-
+        
   #----------------------------------------------------------------------
   def perform_unfolding(self):
     print('Perform unfolding for all systematic variations: {} ...'.format(self.observable))
@@ -603,6 +608,10 @@ class RunAnalysis(common_base.CommonBase):
                reg_param, int(min_pt_truth), int(max_pt_truth))
     if final:
       hSystematic_Unfolding = getattr(self, name)
+      name = 'hSystematic_Unfolding_R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                                         int(min_pt_truth), int(max_pt_truth))
+      setattr(self, name, hSystematic_Unfolding)
+      
     else:
       hSystematic_Unfolding = self.construct_unfolding_uncertainty(h_unfolding_list)
       setattr(self, name, hSystematic_Unfolding)
@@ -686,10 +695,21 @@ class RunAnalysis(common_base.CommonBase):
         return None
     else:
       sys_label = systematic
-    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+    if reg_param:
+        name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
                 self.observable, sys_label, jetR, obs_label,
                 reg_param, min_pt_truth, max_pt_truth)
+    else:
+        name = 'hSystematic_{}_{}_R{}_{}_{}-{}'.format(
+                self.observable, sys_label, jetR, obs_label,
+                min_pt_truth, max_pt_truth)
+
     h_systematic_ratio = getattr(self, name)
+    
+    # Save final sys uncertainty breakdowns
+    name = 'hSystematic_{}_{}_R{}_{}_{}-{}'.format(self.observable, sys_label,
+                                   jetR, obs_label, min_pt_truth, max_pt_truth)
+    setattr(self, name, h_systematic_ratio)
 
     if self.debug_level > 0:
       output_dir = getattr(self, 'output_dir_systematics')
@@ -797,6 +817,9 @@ class RunAnalysis(common_base.CommonBase):
         h_systematic_ratio = self.construct_systematic_percentage(
               hMain, systematic, jetR, obs_label, reg_param,
               min_pt_truth, max_pt_truth, maxbin, signed=signed)
+              
+    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label, reg_param, min_pt_truth, max_pt_truth)
+    setattr(self, name, h_systematic_ratio)
               
     return h_systematic_ratio
 
@@ -1093,6 +1116,114 @@ class RunAnalysis(common_base.CommonBase):
     return index_min + min_reg_param
 
     f.Close()
+    
+  #----------------------------------------------------------------------
+  # Write HEPData submission
+  # You can test it here: https://www.hepdata.net/record/sandbox
+  #
+  # You will want to edit the tables slightly to add observable-specific info:
+  #   units, description, etc.
+  #----------------------------------------------------------------------
+  def write_hepdata(self):
+  
+    # Create submission
+    self.hepdata_dir = os.path.join(getattr(self, 'output_dir_final_results'), 'hepdata')
+    self.hepdata_submission = hepdata_lib.Submission()
+  
+    # Loop through jet radii
+    for jetR in self.jetR_list:
+
+      # Loop through subconfigurations
+      for i, subconfig in enumerate(self.obs_subconfig_list):
+
+        obs_setting = self.obs_settings[i]
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.obs_labels[i]
+
+        # Loop through pt slices, and add table for each result
+        for bin in range(0, len(self.pt_bins_reported) - 1):
+          min_pt_truth = self.pt_bins_reported[bin]
+          max_pt_truth = self.pt_bins_reported[bin+1]
+          
+          self.add_hepdata_table(jetR, obs_label, obs_setting, grooming_setting,
+                                 min_pt_truth, max_pt_truth)
+      
+    # Write submission files
+    self.hepdata_submission.create_files(self.hepdata_dir)
+
+  #----------------------------------------------------------------------
+  def add_hepdata_table(self, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
+  
+    table = hepdata_lib.Table('Table R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label, min_pt, max_pt))
+    table.location = 'Figure X. '
+    if 'sd' in grooming_setting.keys():
+        table.description = 'Note: first bin corresponds to untagged fraction'
+    else:
+        table.description = 'Description...'
+    table.keywords["reactions"] = ['P P --> jet+X']
+    table.keywords["cmenergies"] = ['5020']
+ 
+    # Create readers to read histograms
+    final_result_root_filename = os.path.join(getattr(self, 'output_dir_final_results'), 'fFinalResults.root')
+    hepdata_reader = hepdata_lib.RootFileReader(final_result_root_filename)
+ 
+    systematics_root_filename = os.path.join(self.output_dir_systematics, 'fSystematics.root')
+    hepdata_reader_systematics = hepdata_lib.RootFileReader(systematics_root_filename)
+ 
+    # Define variables
+    h_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt, max_pt)
+    h = hepdata_reader.read_hist_1d(h_name)
+ 
+    x = hepdata_lib.Variable(self.observable, is_independent=True, is_binned=True, units='()')
+    x.values = h['x_edges']
+ 
+    y = hepdata_lib.Variable('$d^{2}\sigma/dX$', is_independent=False, is_binned=False, units='()')
+    y.values = h['y']
+    y.add_qualifier('SQRT(S)', 5.02, 'TeV')
+    y.add_qualifier('ETARAP', '|0.9-R|')
+    y.add_qualifier('jet radius', jetR)
+    y.add_qualifier('jet method', 'Anti-$k_{T}$')
+ 
+    # Define uncertainties
+    stat = hepdata_lib.Uncertainty('stat', is_symmetric=True)
+    stat.values = h['dy']
+ 
+    # Add tables to submission
+    table.add_variable(x)
+    table.add_variable(y)
+    y.add_uncertainty(stat)
+ 
+    # Add unfolding systematic
+    name = 'hSystematic_Unfolding_R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                                      int(min_pt), int(max_pt))
+    h_sys_unfolding = hepdata_reader_systematics.read_hist_1d(getattr(self, name).GetName())
+    sys_unfolding = hepdata_lib.Uncertainty('sys,unfolding', is_symmetric=True)
+    sys_unfolding.values = ['{}{}'.format(y,'%') for y in h_sys_unfolding['y']]
+    y.add_uncertainty(sys_unfolding)
+ 
+    # Add systematic uncertainty breakdown
+    for systematic in self.systematics_list:
+ 
+        if systematic in ['main', 'prior1', 'truncation', 'binning']:
+            continue
+
+        h_sys = self.retrieve_systematic(systematic, jetR, obs_label,
+                                         None, min_pt, max_pt)
+        if not h_sys:
+            continue
+            
+        if 'generator' in systematic:
+          sys_label = 'generator'
+        else:
+          sys_label = systematic
+        
+        h_sys = hepdata_reader_systematics.read_hist_1d(h_sys.GetName())
+        sys = hepdata_lib.Uncertainty('sys,{}'.format(sys_label), is_symmetric=True)
+        sys.values = ['{}{}'.format(y,'%') for y in h_sys['y']]
+        y.add_uncertainty(sys)
+ 
+    # Add table to the submission
+    self.hepdata_submission.add_table(table)
 
   #----------------------------------------------------------------------
   def change_to_per(self, h, signed=False):
