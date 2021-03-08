@@ -18,7 +18,7 @@ jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distan
 reject_tracks_fraction: 0
 
 # SoftDrop setting (current same for all SD plots)
-sd_zcut: 0.1    # multiplier
+sd_zcut: 0.2    # multiplier
 sd_beta: 0      # exponent on (deltaR / R)
 
 
@@ -160,7 +160,8 @@ ang:
 # Theory comparison parameters
 do_theory_comp: True
 theory_beta: [1.5, 2, 3]
-theory_dir: "/home/ezra/ALICE_table/"
+theory_dir: "/home/ezra/theory_predictions/"
+pt_scale_factors_filename: "qg_fractions-ALICE-R04.txt"
 theory_pt_bins: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
                  110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
 response_files: ["/rstorage/alice/AnalysisResults/ang/344810/AnalysisResultsFinal.root",
@@ -202,10 +203,10 @@ systematics_list:
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/287220/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/287381/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/287382/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/351487/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/351489/AnalysisResultsFinal.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/287383/AnalysisResultsFinal.root'
-randmass_response: '/rstorage/alice/AnalysisResults/ang/287384/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/351488/AnalysisResultsFinal.root'
 fastsim_response: ['/rstorage/alice/AnalysisResults/ang/287385/AnalysisResultsFinal.root',
                    '/rstorage/alice/AnalysisResults/ang/287386/AnalysisResultsFinal.root']
 
