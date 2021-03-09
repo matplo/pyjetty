@@ -1156,7 +1156,7 @@ class RunAnalysis(common_base.CommonBase):
   
     table = hepdata_lib.Table('Table R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label, min_pt, max_pt))
     table.location = 'Figure X. '
-    if 'sd' in grooming_setting.keys():
+    if grooming_setting and 'sd' in grooming_setting.keys():
         table.description = 'Note: first bin corresponds to untagged fraction'
     else:
         table.description = 'Description...'
