@@ -128,18 +128,18 @@ def set_zero_range(yvals):
 ################################################################
 
 # Non-perturbative parameter with factored-out beta dependence
-# Sigma param is Sigma_{a=0} == Sigma_{beta=2}  (universal[?])
-def Sigma_beta(Sigma, beta):
-  return Sigma / (beta - 1)
+# Omega param is Omega_{a=0} == Omega_{beta=2}  (universal[?])
+def Sigma_beta(Omega, beta):
+  return Omega / (beta - 1)
 
 # Shape function for convolving nonperturbative effects
-def F_np(Sigma, k, beta):
-  sb = Sigma_beta(Sigma, beta)
+def F_np(Omega, k, beta):
+  sb = Omega_beta(Omega, beta)
   return (4 * k) / (sb * sb) * math.exp(-2 * k / sb)
 
 # Create and return 2D histogram, convolving h with shape function
 # Assumes pT along x-axis, observable along y-axis
-def convolve_F_np(Sigma, beta, h, name):
+def convolve_F_np(Omega, beta, h, name):
   # Initialize NP-convolved histogram to have the same binnings as h
   h_np = h.Clone()
 
@@ -165,11 +165,14 @@ def convolve_F_np(Sigma, beta, h, name):
         dpT = abs(pT_bins[pT_i+1] - pT_bins[pT_i])
         dk = pT * R * dob + ob * R * dpT
 
-        integral += dk * F_np(Sigma, k, beta) * h.GetBinContents(pT_i+1, ob_i+1)
+        integral += dk * F_np(Omega, k, beta) * h.GetBinContent(pT_i+1, ob_i+1)
         ob_i += 1
         ob = obs[ob_i]
 
-      h_np.SetBinContents(pT_i+1, ob_np_i+1, integral)
+      h_np.SetBinContent(pT_i+1, ob_np_i+1, integral)
+      h_np.SetBinError(pT_i+1, ob_np_i+1, 0)
+
+  return h_np
 
 
 ################################################################
@@ -218,28 +221,37 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.sd_zcut = config["sd_zcut"]
     self.sd_beta = config["sd_beta"]
     self.theory_grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
-    self.theory_grooming_labels = [self.utils.grooming_label(gs) for gs in self.theory_grooming_settings]
+    self.theory_grooming_labels = [self.utils.grooming_label(gs) for gs in
+                                   self.theory_grooming_settings]
 
     # Theory comparisons
     if 'fPythia' in config:
       self.fPythia_name = config['fPythia']
+
     if 'theory_dir' in config:
+      self.do_theory = config['do_theory_comp']
+
       self.theory_dir = config['theory_dir']
       self.theory_beta = config['theory_beta']
       self.theory_pt_bins = config['theory_pt_bins']
       self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
       self.theory_response_labels = config['response_labels']
-      self.theory_pt_scale_factors_filepath = os.path.join(self.theory_dir, config['pt_scale_factors_filename'])
+      self.theory_pt_scale_factors_filepath = os.path.join(
+        self.theory_dir, config['pt_scale_factors_filename'])
       self.rebin_theory_response = config['rebin_theory_response']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
       self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
-      # Load the RooUnfold library
-      #ROOT.gSystem.Load(config['roounfold_path'])   # done globally above
-      self.do_theory = config['do_theory_comp']
-      self.theory_obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
-                                             np.linspace(0.11, 0.8, 70)))
+
+      self.do_theory_F_np = False  # NP shape f'n convolution
+      if self.do_theory_F_np:
+        self.Omega_list = config['Omega_list']  # list of universal(?) parameters to try
+
+      # Define observable binnings -- may want to move to config file eventually
+      self.theory_obs_bins = np.concatenate((
+        np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19), np.linspace(0.11, 0.8, 70)))
       self.theory_obs_bins_center = np.concatenate(
-        (np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18), np.linspace(0.105, 0.795, 70)))
+        (np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18),
+         np.linspace(0.105, 0.795, 70)))
       self.theory_obs_bins_width = 10 * [0.001] + 18 * [0.005] + 70 * [0.01]
 
       # Use the old theory prediction binnings as test (ungroomed only)
@@ -260,7 +272,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       print("Loading response matrix for folding theory predictions...")
       self.load_theory_response()
       print("Loading theory histograms...")
-      self.load_theory_histograms()
+      self.load_theory_histograms()  # Loads and folds from parton -> CH level
 
 
   #---------------------------------------------------------------
@@ -295,7 +307,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           thn_ch = response.Get(name_ch)
           name_ch = "hResponse_theory_ch_%s" % label
           setattr(self, '%s_%i' % (name_ch, ri), thn_ch)
-          name_ch_gr = None; thn_ch_gr = None; name_ch_gr = None;
+          name_ch_gr = None; thn_ch_gr = None;
           if gs:
             name_ch_gr = "hResponse_JetPt_%s_ch_%sScaled" % (self.observable, label_gr)
             thn_ch_gr = response.Get(name_ch_gr)
@@ -307,12 +319,25 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           thn_h = response.Get(name_h)
           name_h = "hResponse_theory_h_%s" % label
           setattr(self, '%s_%i' % (name_h, ri), thn_h)
-          name_h_gr = None; thn_h_gr = None; name_h_gr = None;
+          name_h_gr = None; thn_h_gr = None;
           if gs:
             name_h_gr = "hResponse_JetPt_%s_h_%sScaled" % (self.observable, label_gr)
             thn_h_gr = response.Get(name_h_gr)
             name_h_gr = "hResponse_theory_h_%s" % label_gr
             setattr(self, '%s_%i' % (name_h_gr, ri), thn_h_gr)
+
+          # Load response for H --> CH with F_np-convolved predictions
+          name_Fnp = None; thn_Fnp = None; name_Fnp_gr = None; thn_Fnp_gr = None;
+          if self.do_theory_F_np:
+            name_Fnp = "hResponse_JetPt_%s_Fnp_%sScaled" % (self.observable, label)
+            thn_Fnp = response.Get(name_Fnp)
+            name_Fnp = "hResponse_theory_Fnp_%s" % label
+            setattr(self, '%s_%i' % (name_Fnp, ri), thn_Fnp)
+            if gs:
+              name_Fnp_gr = "hResponse_JetPt_%s_Fnp_%sScaled" % (self.observable, label_gr)
+              thn_Fnp_gr = response.Get(name_Fnp_gr)
+              name_Fnp_gr = "hResponse_theory_Fnp_%s" % label_gr
+              setattr(self, '%s_%i' % (name_Fnp_gr, ri), thn_Fnp_gr)
 
           # Create Roounfold object
           name_roounfold_h = '%s_Roounfold_%i' % (name_h, ri)
@@ -321,7 +346,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if gs:
             name_roounfold_h_gr = '%s_Roounfold_%i' % (name_h_gr, ri)
             name_roounfold_ch_gr = '%s_Roounfold_%i' % (name_ch_gr, ri)
-            
+          name_roounfold_Fnp = None; name_roounfold_Fnp = None;
+          if self.do_theory_F_np:
+            name_roounfold_Fnp = '%s_Roounfold_%i' % (name_Fnp, ri)
+            if gs:
+              name_roounfold_Fnp_gr = '%s_Roounfold_%i' % (name_Fnp_gr, ri)
 
           if roounfold_exists and not self.rebin_theory_response:
             fRoo = ROOT.TFile(roounfold_filename, 'READ')
@@ -331,11 +360,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             if gs:
               roounfold_response_ch_gr = fRoo.Get(name_roounfold_ch_gr)
               roounfold_response_h_gr = fRoo.Get(name_roounfold_h_gr)
+            roounfold_response_Fnp = None; roounfold_response_Fnp_gr = None;
+            if self.do_theory_F_np:
+              roounfold_response_Fnp = fRoo.Get(name_roounfold_Fnp)
+              if gs:
+                roounfold_response_Fnp_gr = fRoo.Get(name_roounfold_Fnp_gr)
             fRoo.Close()
 
-          # TODO: Check that everything is working now... 
-          #elif self.rebin_theory_response:  # Generated theory folding matrix needs rebinning
-          else:
+          else:  # Generated theory folding matrix needs rebinning
             # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
             #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
             # as compared to the usual
@@ -355,12 +387,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               det_obs_bin_array_gr = array('d', obs_bins_gr)
               tru_obs_bin_array_gr = det_obs_bin_array_gr
 
-            #for i in range(4):
-            #  axis = [thn_ch.GetAxis(i).GetBinLowEdge(j) for \
-            #          j in range(1, thn_ch.GetAxis(i).GetNbins()+2)]
-            #  print(axis, '\n')
-            #exitR
-
             n_dim = 4
             self.histutils.rebin_thn(
               roounfold_filename, thn_ch, '%s_Rebinned_%i' % (name_ch, ri), name_roounfold_ch, n_dim,
@@ -375,15 +401,30 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             if gs:
               use_underflow = 'sd' in gs
               self.histutils.rebin_thn(
-                roounfold_filename, thn_ch_gr, '%s_Rebinned_%i' % (name_ch_gr, ri), name_roounfold_ch_gr, n_dim,
-                len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array_gr)-1, det_obs_bin_array_gr,
-                len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array_gr)-1, tru_obs_bin_array_gr,
+                roounfold_filename, thn_ch_gr, '%s_Rebinned_%i' % (name_ch_gr, ri),
+                name_roounfold_ch_gr, n_dim, len(det_pt_bin_array)-1, det_pt_bin_array,
+                len(det_obs_bin_array_gr)-1, det_obs_bin_array_gr, len(tru_pt_bin_array)-1,
+                tru_pt_bin_array, len(tru_obs_bin_array_gr)-1, tru_obs_bin_array_gr,
                 label_gr, 0, 1, use_underflow)
               self.histutils.rebin_thn(
-                roounfold_filename, thn_h_gr, '%s_Rebinned_%i' % (name_h_gr, ri), name_roounfold_h_gr, n_dim,
-                len(det_pt_bin_array)-1, det_pt_bin_array, len(det_obs_bin_array_gr)-1, det_obs_bin_array_gr,
-                len(tru_pt_bin_array)-1, tru_pt_bin_array, len(tru_obs_bin_array_gr)-1, tru_obs_bin_array_gr,
+                roounfold_filename, thn_h_gr, '%s_Rebinned_%i' % (name_h_gr, ri),
+                name_roounfold_h_gr, n_dim, len(det_pt_bin_array)-1, det_pt_bin_array,
+                len(det_obs_bin_array_gr)-1, det_obs_bin_array_gr, len(tru_pt_bin_array)-1,
+                tru_pt_bin_array, len(tru_obs_bin_array_gr)-1, tru_obs_bin_array_gr,
                 label_gr, 0, 1, use_underflow)
+            if self.do_theory_F_np:
+              self.histutils.rebin_thn(
+                roounfold_filename, thn_Fnp, '%s_Rebinned_%i' % (name_Fnp, ri),
+                name_roounfold_Fnp, n_dim, len(det_pt_bin_array)-1, det_pt_bin_array,
+                len(det_obs_bin_array)-1, det_obs_bin_array, len(tru_pt_bin_array)-1,
+                tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array, label)
+              if gs:
+                # Don't need to do the underflow here for now... #TODO
+                self.histutils.rebin_thn(
+                  roounfold_filename, thn_Fnp_gr, '%s_Rebinned_%i' % (name_Fnp_gr, ri),
+                  name_roounfold_Fnp_gr, n_dim, len(det_pt_bin_array)-1, det_pt_bin_array,
+                  len(det_obs_bin_array)-1, det_obs_bin_array, len(tru_pt_bin_array)-1,
+                  tru_pt_bin_array, len(tru_obs_bin_array)-1, tru_obs_bin_array, label_gr)
               
             f_resp = ROOT.TFile(roounfold_filename, 'READ')
             roounfold_response_ch = f_resp.Get(name_roounfold_ch)
@@ -392,6 +433,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             if gs:
               roounfold_response_ch_gr = f_resp.Get(name_roounfold_ch_gr)
               roounfold_response_h_gr = f_resp.Get(name_roounfold_h_gr)
+            roounfold_response_Fnp = None; roounfold_response_Fnp_gr = None;
+            if self.do_theory_F_np:
+              roounfold_response_Fnp = f_resp.Get(name_roounfold_Fnp)
+              if gs:
+                roounfold_response_Fnp_gr = f_resp.Get(name_roounfold_Fnp_gr)
             f_resp.Close()
 
           setattr(self, name_roounfold_ch, roounfold_response_ch)
@@ -399,6 +445,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if gs:
             setattr(self, name_roounfold_ch_gr, roounfold_response_ch_gr)
             setattr(self, name_roounfold_h_gr, roounfold_response_h_gr)
+          if self.do_theory_F_np:
+            setattr(self, name_roounfold_Fnp, roounfold_response_Fnp)
+            if gs:
+              setattr(self, name_roounfold_Fnp_gr, roounfold_response_Fnp_gr)
 
 
   #---------------------------------------------------------------
@@ -624,11 +674,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           setattr(self, name_min_gr, hist_min_gr)
           setattr(self, name_max_gr, hist_max_gr)
 
+        # Fold from parton to CH level and scale by MPI
         print("Folding theory predictions...")
         self.fold_theory(jetR, beta, parton_hists, scale_req)
         if gs:
           print("Folding theory predictions with %s..." % gl.replace('_', ' '))
           self.fold_theory(jetR, beta, parton_hists_gr, scale_req, gl)
+
+        # Also do NP shape function predictions + fold from H to CH level
+        if self.do_theory_F_np:
+          print("Applying NP shape function...")
+          self.apply_np_shape_fn(jetR, beta, parton_hists, scale_req)
+          if gs:
+            print("Applying NP shape function with %s..." % gl.replace('_', ' '))
+            self.apply_np_shape_fn(jetR, beta, parton_hists, scale_req, gl)
 
 
   #----------------------------------------------------------------------
@@ -898,6 +957,83 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       setattr(self, "%s_ch%s_%i" % (name_cent, pt_label, ri), h_cent_ch_bin)
       setattr(self, "%s_ch%s_%i" % (name_min, pt_label, ri), h_min_ch_bin)
       setattr(self, "%s_ch%s_%i" % (name_max, pt_label, ri), h_max_ch_bin)
+
+
+  #---------------------------------------------------------------
+  # Apply NP corrections via shape function (includes MPI & hadronization)
+  #---------------------------------------------------------------
+  def apply_np_shape_fn(jetR, beta, parton_hists, scale_req, gl=None):
+
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+    if gl:
+      label += '_' + gl
+
+    for Omega in self.Omega_list:
+      h_hists = ( ([], [], []), ([], [], []), ([], [], []) )
+
+      # Simultaneously fold using H --> CH response (with MPI on)
+      for ri in range(len(self.theory_response_files)):
+        # Load hadron-to-charged-hadron response matrix
+        response_name = "hResponse_theory_Fnp_%s_Roounfold_%i" % (label, ri)
+        response = getattr(self, response_name)
+        ch_hists = ( ([], [], []), ([], [], []), ([], [], []) )
+        h_cent = None; h_min = None; h_max = None;
+        h_min_name = "theory_min_%s_%s_ch_Fnp_Omega%s_%i" % \
+                     (self.observable, label, str(Omega), ri)
+        h_max_name = "theory_max_%s_%s_ch_Fnp_Omega%s_%i" % \
+                     (self.observable, label, str(Omega), ri)
+        h_cent_name = "theory_cent_%s_%s_ch_Fnp_Omega%s_%i" % \
+                      (self.observable, label, str(Omega), ri)
+
+        for l in range(0, 3):
+          for m in range(0, 3):
+            for n in range(0, 3):
+
+              if (scale_req and m != n) or (0 in (l, m, n) and 2 in (l, m, n)):
+                h_hists[l][m].append(None)
+                ch_hists[l][m].append(None)
+                continue
+
+              # Apply shape function
+              name_h = "theory_%i%i%i_%s_%s_h_Fnp_Omega%s_%i" % \
+                       (l, m, n, self.observable, label, str(Omega), ri)
+              h_np = convolve_F_np(Omega, beta, parton_hists[l][m][n], name_h)
+
+              h_hists[l][m].append(h_np)
+
+              # Fold hadron-level predictions to CH level
+              h_folded_Fnp = response.ApplyToTruth(h_np)
+              name_ch = "theory_%i%i%i_%s_%s_ch_Fnp_Omega%s_%i" % \
+                        (l, m, n, self.observable, label, str(Omega), ri)
+              h_folded_Fnp.SetNameTitle(name_ch, name_ch)
+
+              ch_hists[l][m].append(h_folded_Fnp)
+
+              # Update min/max/cent histograms
+              if l == m == n == 0:  # initialize min/max histograms
+                h_min = h_folded_Fnp.Clone()
+                h_min.SetNameTitle(h_min_name, h_min_name)
+                h_max = h_folded_Fnp.Clone()
+                h_max.SetNameTitle(h_max_name, h_max_name)
+                continue
+
+              elif l == m == n == 1: # set central variation
+                h_cent = h_folded_Fnp.Clone()
+                h_cent.SetNameTitle(h_cent_name, h_cent_name)
+                continue
+
+              else:  # loop through pT & obs bins and update each min/max value
+                for i in range(h_folded_Fnp.GetNbinsX()):
+                  for j in range(h_folded_Fnp.GetNbinsY()):
+                    val = h_folded_Fnp.GetBinContent(i+1, j+1)
+                    if float(val) < h_min.GetBinContent(i+1, j+1):
+                      h_min.SetBinContent(i+1, j+1, val)
+                    elif float(val) > h_max.GetBinContent(i+1, j+1):
+                      h_max.SetBinContent(i+1, j+1, val)
+
+        setattr(self, h_cent_name, h_cent)
+        setattr(self, h_min_name, h_min)
+        setattr(self, h_max_name, h_max)
 
 
   #---------------------------------------------------------------
