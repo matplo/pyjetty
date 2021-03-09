@@ -158,7 +158,7 @@ ang:
 
 ###############################################################################
 # Theory comparison parameters
-do_theory_comp: True
+do_theory_comp: False
 theory_beta: [1.5, 2, 3]
 theory_dir: "/home/ezra/theory_predictions/"
 pt_scale_factors_filename: "qg_fractions-ALICE-R04.txt"
@@ -177,8 +177,8 @@ output_dir: "/rstorage/alice/AnalysisResults/ang/AngR04_ptbin4"
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: False
-force_rebin: False
+do_unfolding: True
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False

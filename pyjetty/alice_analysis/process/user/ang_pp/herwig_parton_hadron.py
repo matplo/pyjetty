@@ -208,7 +208,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
 
                 name = 'hResponse_JetPt_R%s' % R_label
                 h = ROOT.TH2F(name, name, 200, 0, 200, 200, 0, 200)
-                h.GetXaxis().SetTitle('#it{p}_{T}^{parotn jet}')
+                h.GetXaxis().SetTitle('#it{p}_{T}^{parton jet}')
                 h.GetYaxis().SetTitle('#it{p}_{T}^{ch jet}')
                 h.Sumw2()
                 setattr(self, name, h)
@@ -625,6 +625,37 @@ class herwig_parton_hadron(process_base.ProcessBase):
                             setattr(self, name, h)
                             getattr(self, hist_list_name).append(h)
 
+                    # Finally, a set of THn for folding H --> CH (with MPI on)
+                    title = ['p_{T}^{ch jet}', 'p_{T}^{h jet}', 
+                             '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{h}']
+
+                    name = 'hResponse_JetPt_ang_Fnp_%sScaled' % label
+                    h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+                    for i in range(0, dim):
+                        h.GetAxis(i).SetTitle(title[i])
+                        if i == 0 or i == 1:
+                            h.SetBinEdges(i, self.pt_bins)
+                        else:  # i == 2 or i == 3
+                            h.SetBinEdges(i, self.obs_bins)
+                    h.Sumw2()
+                    setattr(self, name, h)
+                    getattr(self, hist_list_name_MPIon).append(h)
+
+                    if self.use_SD:
+                        # SoftDrop groomed jet response matrices
+                        for gl in self.grooming_labels:
+                            name = 'hResponse_JetPt_ang_Fnp_%s_%sScaled' % (label, gl)
+                            h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+                            for i in range(0, dim):
+                                h.GetAxis(i).SetTitle(title[i])
+                                if i == 0 or i == 1:
+                                    h.SetBinEdges(i, self.pt_bins)
+                                else:  # i == 2 or i == 3
+                                    h.SetBinEdges(i, self.obs_bins)
+                            h.Sumw2()
+                            setattr(self, name, h)
+                            getattr(self, hist_list_name_MPIon).append(h)
+
 
     #---------------------------------------------------------------
     # Initiate jet defs, selectors, and sd (if required)
@@ -843,6 +874,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
             jetR_str = str(jetR).replace('.', '')
             jet_selector = getattr(self, "jet_selector_R%s" % jetR_str)
             jet_def = getattr(self, "jet_def_R%s" % jetR_str)
+            t = None; tw = None;
             if not self.no_tree:
                 t = getattr(self, "t_R%s" % jetR_str)
                 tw = getattr(self, "tw_R%s" % jetR_str)
@@ -853,15 +885,14 @@ class herwig_parton_hadron(process_base.ProcessBase):
             #    print("Event number %s" % str(iev+1), end='\r')
 
             jets_ch = fj.sorted_by_pt(jet_selector(jet_def(ch_hadrons)))
-            if not MPIon:  # Only need ch jets for MPI histograms
-                jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons)))
-                jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons)))
-            else:
+            jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons)))
+            jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons)))
+
+            if MPIon:
                 for jet in jets_ch:
                     self.fill_MPI_histograms(jetR, jet)
-                continue
 
-            if self.level:  # Only save info at one level w/o matching
+            if self.level and not MPIon:  # Only save info at one level w/o matching
                 if not self.no_tree:
                     jets = locals()["jets_%s" % self.level]
                     for jet in jets:
@@ -897,22 +928,28 @@ class herwig_parton_hadron(process_base.ProcessBase):
                             pinfo('matched jets: ch.h:', jchh.pt(), 'h:', jh.pt(),
                                   'p:', jp.pt(), 'dr:', dr)
 
-                        if not self.no_tree:
-                            self.fill_matched_jet_tree(tw, jetR, iev, jp, jh, jchh)
-                        self.fill_jet_histograms(jetR, jp, jh, jchh)
+                        if not MPIon:
+                            self.fill_jet_histograms(jetR, jp, jh, jchh)
+                            if not self.no_tree:
+                                self.fill_matched_jet_tree(tw, jetR, iev, jp, jh, jchh)
+                        else:
+                            self.fill_jet_histograms_MPI(jetR, jp, jh, jchh)
 
                 #print("  |-> SD jet params z={0:10.3f} dR={1:10.3f} mu={2:10.3f}".format(
                 #    sd_info.z, sd_info.dR, sd_info.mu))
 
-            setattr(self, "count1_R%s" % jetR_str, count1)
-            setattr(self, "count2_R%s" % jetR_str, count2)
-
+            if MPIon:
+                setattr(self, "count1_R%s_MPIon" % jetR_str, count1)
+                setattr(self, "count2_R%s_MPIon" % jetR_str, count2)
+            else:
+                setattr(self, "count1_R%s" % jetR_str, count1)
+                setattr(self, "count2_R%s" % jetR_str, count2)
 
 
     #---------------------------------------------------------------
     # Fill jet tree with (unscaled/raw) matched parton/hadron tracks
     #---------------------------------------------------------------
-    def fill_matched_jet_tree(self, tw, jetR, iev, jp, jh, jchh, sd=None):
+    def fill_matched_jet_tree(self, tw, jetR, iev, jp, jh, jchh):
 
         tw.fill_branch('iev', iev)
         tw.fill_branch('ch', jchh)
@@ -1195,6 +1232,42 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     x = ([jh.pt(), jp.pt(), lh, lp])
                     x_array = array('d', x)
                     getattr(self, 'hResponse_JetPt_ang_h_%s_%sScaled' % (label, gl)).Fill(x_array)
+
+
+    #---------------------------------------------------------------
+    # Fill jet histograms for MPI (which are just the H-->CH RMs)
+    #---------------------------------------------------------------
+    def fill_jet_histograms_MPI(self, jetR, jp, jh, jch):
+
+        for beta in self.beta_list:
+
+            # Calculate angularities
+            kappa = 1
+            lh = fjext.lambda_beta_kappa(jh, beta, kappa, jetR)
+            lch = fjext.lambda_beta_kappa(jch, beta, kappa, jetR)
+
+            label = ("R%s_%s" % (str(jetR), str(beta))).replace('.', '')
+
+            # 4D response matrices for "forward folding" from h to ch level
+            x = ([jch.pt(), jh.pt(), lch, lh])
+            x_array = array('d', x)
+            getattr(self, 'hResponse_JetPt_ang_Fnp_%sScaled' % label).Fill(x_array)
+
+            if self.use_SD:
+                for i, gs in enumerate(self.grooming_settings):
+                    gl = self.grooming_labels[i]
+
+                    # SoftDrop jet angularities
+                    gshop_ch = fjcontrib.GroomerShop(jch, jetR, self.reclustering_algorithm)
+                    jet_sd_ch = self.utils.groom(gshop_ch, gs, jetR).pair()
+                    lch_sd = fjext.lambda_beta_kappa(jch, jet_sd_ch, beta, kappa, jetR)
+                    gshop_h = fjcontrib.GroomerShop(jh, jetR, self.reclustering_algorithm)
+                    jet_sd_h = self.utils.groom(gshop_h, gs, jetR).pair()
+                    lh_sd = fjext.lambda_beta_kappa(jh, jet_sd_h, beta, kappa, jetR)
+
+                    x = ([jch.pt(), jh.pt(), lch_sd, lh_sd])
+                    x_array = array('d', x)
+                    getattr(self, 'hResponse_JetPt_ang_Fnp_%s_%sScaled' % (label, gl)).Fill(x_array)
 
 
     #---------------------------------------------------------------

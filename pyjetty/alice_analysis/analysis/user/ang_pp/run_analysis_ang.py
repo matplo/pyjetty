@@ -230,39 +230,40 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     if 'theory_dir' in config:
       self.do_theory = config['do_theory_comp']
+      if self.do_theory:
 
-      self.theory_dir = config['theory_dir']
-      self.theory_beta = config['theory_beta']
-      self.theory_pt_bins = config['theory_pt_bins']
-      self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
-      self.theory_response_labels = config['response_labels']
-      self.theory_pt_scale_factors_filepath = os.path.join(
-        self.theory_dir, config['pt_scale_factors_filename'])
-      self.rebin_theory_response = config['rebin_theory_response']
-      self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
-      self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
+        self.theory_dir = config['theory_dir']
+        self.theory_beta = config['theory_beta']
+        self.theory_pt_bins = config['theory_pt_bins']
+        self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
+        self.theory_response_labels = config['response_labels']
+        self.theory_pt_scale_factors_filepath = os.path.join(
+          self.theory_dir, config['pt_scale_factors_filename'])
+        self.rebin_theory_response = config['rebin_theory_response']
+        self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
+        self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
 
-      self.do_theory_F_np = False  # NP shape f'n convolution
-      if self.do_theory_F_np:
-        self.Omega_list = config['Omega_list']  # list of universal(?) parameters to try
+        self.do_theory_F_np = False  # NP shape f'n convolution
+        if self.do_theory_F_np:
+          self.Omega_list = config['Omega_list']  # list of universal(?) parameters to try
 
-      # Define observable binnings -- may want to move to config file eventually
-      self.theory_obs_bins = np.concatenate((
-        np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19), np.linspace(0.11, 0.8, 70)))
-      self.theory_obs_bins_center = np.concatenate(
-        (np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18),
-         np.linspace(0.105, 0.795, 70)))
-      self.theory_obs_bins_width = 10 * [0.001] + 18 * [0.005] + 70 * [0.01]
+        # Define observable binnings -- may want to move to config file eventually
+        self.theory_obs_bins = np.concatenate((
+          np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19), np.linspace(0.11, 0.8, 70)))
+        self.theory_obs_bins_center = np.concatenate(
+          (np.linspace(0.0005, 0.0095, 10), np.linspace(0.0125, 0.0975, 18),
+           np.linspace(0.105, 0.795, 70)))
+        self.theory_obs_bins_width = 10 * [0.001] + 18 * [0.005] + 70 * [0.01]
 
-      # Use the old theory prediction binnings as test (ungroomed only)
-      self.use_old = False
-      if self.use_old:
-        self.theory_grooming_settings = []
-        self.theory_grooming_labels = []
-        self.theory_pt_bins = list(range(10, 160, 10))
-        #self.theory_obs_bins = np.linspace(0, 0.8, 81)
-        #self.theory_obs_bins_center = np.linspace(0.005, 0.795, 80)
-        #self.theory_obs_bins_width = 80 * [0.01]
+        # Use the old theory prediction binnings as test (ungroomed only)
+        self.use_old = False
+        if self.use_old:
+          self.theory_grooming_settings = []
+          self.theory_grooming_labels = []
+          self.theory_pt_bins = list(range(10, 160, 10))
+          #self.theory_obs_bins = np.linspace(0, 0.8, 81)
+          #self.theory_obs_bins_center = np.linspace(0.005, 0.795, 80)
+          #self.theory_obs_bins_width = 80 * [0.01]
 
     else:
       self.do_theory = False
