@@ -2189,13 +2189,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       # Plot PYTHIA
       self.plot_observable_overlay_subconfigs(
         i_config, jetR, overlay_list, min_pt_truth,
-        max_pt_truth, maxbins, plot_pythia=True, plot_ratio = True)
+        max_pt_truth, maxbins, plot_MC=True, MC='PYTHIA', plot_ratio=True)
+
+      if self.do_theory and not self.use_prev_prelim and \
+         'fastsim_generator1' in self.systematics_list:
+        self.plot_observable_overlay_subconfigs(
+          i_config, jetR, overlay_list, min_pt_truth,
+          max_pt_truth, maxbins, plot_MC=True, MC='Herwig', plot_ratio=True)
 
 
   #----------------------------------------------------------------------
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth,
-                                         max_pt_truth, maxbins, plot_pythia=False,
-                                         plot_nll=False, plot_ratio=False):
+                                         max_pt_truth, maxbins, plot_MC=False,
+                                         MC='PYTHIA', plot_nll=False, plot_ratio=False):
 
     # Flag to plot ratio all on the same scale, 0 to 2.2
     plot_ratio_same_scale = True
@@ -2368,7 +2374,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           pad2.cd()
           
           myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
-          myBlankHisto2.SetYTitle("#frac{Data}{PYTHIA}")
+          myBlankHisto2.SetYTitle("#frac{Data}{%s}" % MC)
           myBlankHisto2.SetXTitle(xtitle)
           myBlankHisto2.GetXaxis().SetTitleSize(30)
           myBlankHisto2.GetXaxis().SetTitleFont(43)
@@ -2415,32 +2421,47 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           line.SetLineStyle(2)
           line.Draw()
       
-      if plot_pythia:
-        if grooming_setting and maxbin:
-          hPythia, fraction_tagged_pythia = self.MC_prediction(
-            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1,
-            MC='Pythia', overlay=True)
+      hMC = None; fraction_tagged_MC = None;
+      if plot_MC:
+        if MC.lower() == "pythia":
+          if grooming_setting and maxbin:
+            hMC, fraction_tagged_MC = self.MC_prediction(
+              jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1,
+              MC='Pythia', overlay=True)
+          else:
+            hMC, fraction_tagged_MC = self.MC_prediction(
+              jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin,
+              MC='Pythia', overlay=True)
+
+        elif MC.lower() == "herwig":
+          if grooming_setting:
+            hMC, fraction_tagged_MC = self.MC_prediction(
+              jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1,
+              'Herwig', overlay=True)
+          else:
+            hMC, fraction_tagged_MC = self.MC_prediction(
+              jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin,
+              'Herwig', overlay=True)
+
         else:
-          hPythia, fraction_tagged_pythia = self.MC_prediction(
-            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin,
-            MC='Pythia', overlay=True)
+          raise NotImplementedError("MC must be either Pythia or Herwig.")
 
         plot_errors = False
         if plot_errors:
-          hPythia.SetMarkerSize(0)
-          hPythia.SetMarkerStyle(0)
-          hPythia.SetMarkerColor(color)
-          hPythia.SetFillColor(color)
+          hMC.SetMarkerSize(0)
+          hMC.SetMarkerStyle(0)
+          hMC.SetMarkerColor(color)
+          hMC.SetFillColor(color)
         else:
-          hPythia.SetLineColor(color)
-          hPythia.SetLineColorAlpha(color, 0.5)
-          hPythia.SetLineWidth(4)
+          hMC.SetLineColor(color)
+          hMC.SetLineColorAlpha(color, 0.5)
+          hMC.SetLineWidth(4)
 
       if plot_ratio:
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
-        if plot_pythia:
-          hRatioSys.Divide(hPythia)
+        if plot_MC:
+          hRatioSys.Divide(hMC)
         hRatioSys.SetLineColor(0)
         hRatioSys.SetFillColor(color)
         hRatioSys.SetFillColorAlpha(color, 0.3)
@@ -2450,8 +2471,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           
         hRatioStat = h.Clone()
         hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
-        if plot_pythia:
-          hRatioStat.Divide(hPythia)
+        if plot_MC:
+          hRatioStat.Divide(hMC)
         hRatioStat.SetMarkerSize(1.5)
         hRatioStat.SetMarkerStyle(marker)
         hRatioStat.SetMarkerColor(color)
@@ -2461,19 +2482,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hRatioStat.SetMaximum(1.99)
 
       pad1.cd()
-      if plot_pythia:
+      if plot_MC:
         plot_errors = False
         if plot_errors:
-          hPythia.DrawCopy('E3 same')
+          hMC.DrawCopy('E3 same')
         else:
-          hPythia.DrawCopy('L hist same')
+          hMC.DrawCopy('L hist same')
 
       h_sys.DrawCopy('E2 same')
       h.DrawCopy('PE X0 same')
       
       if plot_ratio:
         pad2.cd()
-        if plot_pythia:
+        if plot_MC:
           hRatioSys.DrawCopy('E2 same')
           hRatioStat.DrawCopy('PE X0 same')
 
@@ -2491,8 +2512,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       else:
         myLegend2.AddEntry(h, text, 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
-    if plot_pythia:
-      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'l')
+    if plot_MC:
+      if MC.lower() == "pythia":
+        myLegend.AddEntry(hMC, 'PYTHIA8 Monash2013', 'l')
+      elif MC.lower() == "herwig":
+        myLegend.AddEntry(hMC, 'Herwig7 Default', 'l')
 
     text_xval = 0.63
     text_latex = ROOT.TLatex()
@@ -2526,9 +2550,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, 
                                         self.utils.remove_periods(jetR), int(min_pt_truth), 
                                         int(max_pt_truth), i_config, self.file_format)
-    if plot_pythia:
-      name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR),
-                                                 int(min_pt_truth), int(max_pt_truth),
+    if plot_MC:
+      name = 'h_{}_R{}_{}-{}_{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR),
+                                                 int(min_pt_truth), int(max_pt_truth), MC,
                                                  i_config, self.file_format)
 
 
