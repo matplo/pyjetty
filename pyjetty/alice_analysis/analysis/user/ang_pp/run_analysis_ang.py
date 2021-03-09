@@ -1087,7 +1087,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   # This function is called once for each subconfiguration
   #---------------------------------------------------------------
   def plot_single_result(self, jetR, obs_label, obs_setting, grooming_setting):
-    print('Plotting each individual result...')
+    #print('Plotting each individual result...')
 
     # Plot final result for each 1D substructure distribution (with PYTHIA)
     self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting)
@@ -1135,12 +1135,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       maxbin = self.obs_max_bins(obs_label)[i]
 
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
-                           min_pt_truth, max_pt_truth, maxbin, plot_pythia=True)
+                           min_pt_truth, max_pt_truth, maxbin, plot_MC=True)
 
       if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta and \
          ( (self.use_old and not grooming_setting) or not self.use_old ):
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
-                             min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=True)
+                             min_pt_truth, max_pt_truth, maxbin, plot_MC=False, plot_theory=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
                                 min_pt_truth, max_pt_truth, maxbin)
         self.plot_theory_response(jetR, obs_label, obs_setting, grooming_setting,
@@ -1154,11 +1154,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
-                      min_pt_truth, max_pt_truth, maxbin, plot_pythia=False, plot_theory=False):
+                      min_pt_truth, max_pt_truth, maxbin, plot_MC=False, plot_theory=False):
 
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = True
-    show_everything_else = False  # set 'False' to show *only* parton-level theory
+    show_everything_else = True  # set 'False' to show *only* parton-level theory
     rebin_folded = False  # combine every 2 bins to reduce statistical fluctuations
 
     # For theory plots, whether or not to show the NP / P region
@@ -1189,7 +1189,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
                                               min_pt_truth, max_pt_truth)
     if grooming_setting:
-      fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
+      fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(
+        jetR, obs_label, min_pt_truth, max_pt_truth))
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
       # maxbin+1 in grooming case to account for extra tagging bin
     if grooming_setting and maxbin:
@@ -1377,14 +1378,27 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         #hmax.SetLineStyle(2)
         #hmax.Draw('L hist same')
 
-    if plot_pythia:
+    plot_pythia = False; plot_herwig = False;
+    if plot_MC:
 
+      hPythia = None; fraction_tagged_pythia = None;
       if grooming_setting:
-        hPythia, fraction_tagged_pythia = self.pythia_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1)
+        hPythia, fraction_tagged_pythia = self.MC_prediction(
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1, 'Pythia')
       else:
-        hPythia, fraction_tagged_pythia = self.pythia_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin)
+        hPythia, fraction_tagged_pythia = self.MC_prediction(
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, 'Pythia')
+
+      hHerwig = None; fraction_tagged_herwig = None;
+      if self.do_theory and not self.use_prev_prelim and \
+         'fastsim_generator1' in self.systematics_list:
+        # Load Herwig comparison as well
+        if grooming_setting:
+          hHerwig, fraction_tagged_herwig = self.MC_prediction(
+            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1, 'Herwig')
+        else:
+          hHerwig, fraction_tagged_herwig = self.MC_prediction(
+            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, 'Herwig')
 
       if hPythia:
         hPythia.SetFillStyle(0)
@@ -1394,9 +1408,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hPythia.SetLineColor(600-6)
         hPythia.SetLineWidth(1)
         hPythia.Draw('E2 same')
+        plot_pythia = True
       else:
         print('No PYTHIA prediction for %s %s' % (self.observable, obs_label))
-        plot_pythia = False
+
+      if hHerwig:
+        hHerwig.SetFillStyle(0)
+        hHerwig.SetMarkerSize(1.5)
+        hHerwig.SetMarkerStyle(34)
+        hHerwig.SetMarkerColor(600+3)
+        hHerwig.SetLineColor(600+3)
+        hHerwig.SetLineWidth(1)
+        hHerwig.Draw('E2 same')
+        plot_herwig = True
 
     # Vertical line for perturbative / non-perturbative region
     if plot_theory and show_everything_else:
@@ -1447,18 +1471,21 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       
       text_latex.SetTextSize(0.04)
       text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-      text_latex.DrawLatex(text_xval, 0.66-3*delta, text)
-    
       if plot_pythia:
-        text_latex.SetTextSize(0.04)
-        text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (
-          ', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
-        text_latex.DrawLatex(text_xval, 0.66-3*delta, text)
+        text += (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+      if plot_herwig:
+        text += (', #it{f}_{tagged}^{herwig} = %3.3f' % fraction_tagged_herwig)
+      text_latex.DrawLatex(text_xval, 0.66-3*delta, text)
 
     if plot_theory and show_parton_theory and not show_everything_else:
       myLegend = ROOT.TLegend(0.21, 0.79, 0.45, 0.91)
     else:
-      miny = 0.72 if plot_pythia else 0.57
+      miny = 0.57
+      if plot_pythia:
+        if plot_herwig:
+          miny = 0.72  #TODO
+        else:
+          miny = 0.72
       myLegend = ROOT.TLegend(0.23, miny, text_xval-0.02, 0.92)
     self.utils.setup_legend(myLegend, 0.035)
     if show_everything_else:
@@ -1466,6 +1493,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
+    if plot_herwig:
+      myLegend.AddEntry(hHerwig, 'Herwig7 Default', 'pe')
     if plot_theory:
       if show_parton_theory:
         if show_np_region:
@@ -1485,13 +1514,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
                                              int(min_pt_truth), int(max_pt_truth), self.file_format)
-    if plot_pythia:
-      name = 'hUnfolded_R{}_{}_{}-{}_Pythia{}'.format(
-        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+    if plot_MC:
+      name = 'hUnfolded_R{}_{}_{}-{}_MC{}'.format(
+        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
+        int(max_pt_truth), self.file_format)
 
     if plot_theory:
       name = 'hUnfolded_R{}_{}_{}-{}_Theory{}'.format(
-        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
+        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
+        int(max_pt_truth), self.file_format)
 
     output_dir = getattr(self, 'output_dir_final_results')
     output_dir_single = output_dir + '/single_results'
@@ -1508,6 +1539,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_sys.Write()
     if plot_pythia:
       hPythia.Write()
+    if plot_herwig:
+      hHerwig.Write()
     fFinalResults.Close()
 
   
@@ -2057,19 +2090,26 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     fFinalResults.Close()
 
   #----------------------------------------------------------------------
-  def pythia_prediction(self, jetR, obs_setting, obs_label, min_pt_truth,
-                        max_pt_truth, maxbin, overlay=False):
+  def MC_prediction(self, jetR, obs_setting, obs_label, min_pt_truth,
+                    max_pt_truth, maxbin, MC='Pythia', overlay=False):
   
-    hPythia = self.get_pythia_from_response(jetR, obs_label, min_pt_truth,
-                                            max_pt_truth, maxbin, overlay)
-    n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-    n_jets_tagged = hPythia.Integral(hPythia.FindBin(
-      self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
+    if MC.lower() == 'pythia':
+      hMC = self.get_pythia_from_response(jetR, obs_label, min_pt_truth,
+                                          max_pt_truth, maxbin, overlay)
+    elif MC.lower() == 'herwig':
+      hMC = self.get_herwig_from_response(jetR, obs_label, min_pt_truth,
+                                          max_pt_truth, maxbin, overlay)
+    else:
+      raise NotImplementedError("MC must be Pythia or Herwig.")
 
-    fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
-    hPythia.Scale(1./n_jets_inclusive, 'width')
+    n_jets_inclusive = hMC.Integral(0, hMC.GetNbinsX()+1)
+    n_jets_tagged = hMC.Integral(hMC.FindBin(
+      self.truth_bin_array(obs_label)[0]), hMC.GetNbinsX())
+
+    fraction_tagged_MC =  n_jets_tagged/n_jets_inclusive
+    hMC.Scale(1./n_jets_inclusive, 'width')
       
-    return [hPythia, fraction_tagged_pythia]
+    return [hMC, fraction_tagged_MC]
 
   #----------------------------------------------------------------------
   def get_pythia_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth,
@@ -2114,6 +2154,24 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h = thn.Projection(3)
     else:
       h = self.truncate_hist(thn.Projection(3), maxbin, name)
+    h.SetDirectory(0)
+
+    return h
+
+  #----------------------------------------------------------------------
+  def get_herwig_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth,
+                               maxbin, overlay=False):
+
+    filepath = os.path.join(self.output_dir_fastsim_generator1, 'response.root')
+    f = ROOT.TFile(filepath, 'READ')
+
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
+    thn = f.Get(thn_name)
+    thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+
+    name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h = self.truncate_hist(thn.Projection(3), maxbin, name)
     h.SetDirectory(0)
 
     return h
@@ -2359,11 +2417,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       
       if plot_pythia:
         if grooming_setting and maxbin:
-          hPythia, fraction_tagged_pythia = self.pythia_prediction(
-            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1, overlay=True)
+          hPythia, fraction_tagged_pythia = self.MC_prediction(
+            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1,
+            MC='Pythia', overlay=True)
         else:
-          hPythia, fraction_tagged_pythia = self.pythia_prediction(
-            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay=True)
+          hPythia, fraction_tagged_pythia = self.MC_prediction(
+            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin,
+            MC='Pythia', overlay=True)
 
         plot_errors = False
         if plot_errors:
