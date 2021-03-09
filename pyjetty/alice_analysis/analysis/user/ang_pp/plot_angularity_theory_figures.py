@@ -213,7 +213,9 @@ class PlotAngularityFigures(common_base.CommonBase):
 
             beta_label = beta
             if beta == '1.5':
-                beta_label = 15
+                beta_label = '15'
+            if groomed:
+                beta_label += '_SD_zcut02_B0'
             name_cent = 'theory_cent_ang_R{}_{}_ch_PtBin60-80_{}'.format(
                 self.remove_periods(str(R)), beta_label, i)
             name_min = 'theory_min_ang_R{}_{}_ch_PtBin60-80_{}'.format(

@@ -10,6 +10,7 @@ import os
 import argparse
 from array import *
 import numpy as np
+import math   # for exp()
 import ROOT
 ROOT.gSystem.Load("$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so")
 import yaml
@@ -123,7 +124,56 @@ def set_zero_range(yvals):
 
 
 ################################################################
+################# NP SHAPE FUNCTION CONV. ######################
 ################################################################
+
+# Non-perturbative parameter with factored-out beta dependence
+# Sigma param is Sigma_{a=0} == Sigma_{beta=2}  (universal[?])
+def Sigma_beta(Sigma, beta):
+  return Sigma / (beta - 1)
+
+# Shape function for convolving nonperturbative effects
+def F_np(Sigma, k, beta):
+  sb = Sigma_beta(Sigma, beta)
+  return (4 * k) / (sb * sb) * math.exp(-2 * k / sb)
+
+# Create and return 2D histogram, convolving h with shape function
+# Assumes pT along x-axis, observable along y-axis
+def convolve_F_np(Sigma, beta, h, name):
+  # Initialize NP-convolved histogram to have the same binnings as h
+  h_np = h.Clone()
+
+  # Load list of bin edges and centers for convenient looping
+  ob_bins = [ h.GetYaxis().GetBinLowEdge(bi) for bi in range (1, h.GetNbinsY()+2) ]
+  pT_bins = [ h.GetXaxis().GetBinLowEdge(bi) for bi in range (1, h.GetNbinsX()+2) ]
+  obs = [ h.GetYaxis().GetBinCenter(bi) for bi in range (1, h.GetNbinsY()+1) ]
+  pTs = [ h.GetXaxis().GetBinCenter(bi) for bi in range (1, h.GetNbinsX()+2) ]
+
+  # Numerical integration
+  for ob_np_i, ob_np in enumerate(obs):  # Loop over all y-bins in the final histogram
+    for pT_i, pT in enumerate(pTs):      # Loop over all x-bins in the final histogram
+
+      # Calculate the integral for this bin
+      integral = 0
+      ob_i = 0
+      ob  = obs[ob_i]
+      while ob <= ob_np:
+        k = ob * pT * R
+
+        # Use chain rule to find dk in terms of dob and dpT
+        dob = abs(ob_bins[ob_i+1] - ob_bins[ob_i])
+        dpT = abs(pT_bins[pT_i+1] - pT_bins[pT_i])
+        dk = pT * R * dob + ob * R * dpT
+
+        integral += dk * F_np(Sigma, k, beta) * h.GetBinContents(pT_i+1, ob_i+1)
+        ob_i += 1
+        ob = obs[ob_i]
+
+      h_np.SetBinContents(pT_i+1, ob_np_i+1, integral)
+
+
+################################################################
+#######################  RUN ANALYSIS  #########################
 ################################################################
 class RunAnalysisAng(run_analysis.RunAnalysis):
 
@@ -299,7 +349,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             if gs:
               if 'sd' in gs:
                 # Add bin for underflow value (tagging fraction)
-                obs_bins_gr = np.insert(obs_bins, 0, -0.001)
+                obs_bins_gr = np.insert(obs_bins, 0, -0.1)
               else: 
                 obs_bins_gr = obs_bins
               det_obs_bin_array_gr = array('d', obs_bins_gr)
@@ -383,7 +433,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if gs:
       if 'sd' in gs:
         # Add extra bin for tagging fraction
-        obs_bins_gr = np.insert(obs_bins, 0, -0.001)
+        obs_bins_gr = np.insert(obs_bins, 0, -0.1)
       else: 
         obs_bins_gr = obs_bins
 
@@ -523,7 +573,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                       # Get SD tagging fraction to save as underflow value
                       missed_tagging_fraction = 1 - integral_val_li_gr / integral_val_li
                       if disable_tagging_fraction:
-                        missed_tagging_fraciton = 0
+                        missed_tagging_fraction = 0
                       elif missed_tagging_fraction < 0:
                         print("WARNING: missed tagging fraction %f < 0 (\\beta = %s, R = %s)." % \
                               (missed_tagging_fraction, beta, jetR), "Manually setting to 0.")
@@ -671,7 +721,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     n_x_bins = len(x_bins) - 1
     y_bins = array('d', self.theory_obs_bins)
     if using_sd_grooming:
-      y_bins = np.insert(y_bins, 0, -0.001)
+      y_bins = np.insert(y_bins, 0, -0.1)
     h_mpi_off = self.histutils.rebin_th2(h_mpi_off, name_mpi_off+'_Rebinned_%i' % ri, x_bins, n_x_bins,
                                          y_bins, len(y_bins)-1, using_sd_grooming)
     h_mpi_on = self.histutils.rebin_th2(h_mpi_on, name_mpi_on+'_Rebinned_%i' % ri, x_bins, n_x_bins,
@@ -936,7 +986,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    if self.do_theory and not grooming_setting and float(obs_label) in self.theory_beta:
+    if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta and \
+       ( (self.use_old and not grooming_setting) or not self.use_old ):
       # Compare parton-level theory to parton-level event generators
       self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
 
@@ -970,7 +1021,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = True
-    show_everything_else = True  # set 'False' to show *only* parton-level theory
+    show_everything_else = False  # set 'False' to show *only* parton-level theory
     rebin_folded = False  # combine every 2 bins to reduce statistical fluctuations
 
     # For theory plots, whether or not to show the NP / P region
