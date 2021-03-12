@@ -294,7 +294,21 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = self.get_maximum(name, overlay_list)
+    
+    # Get xmin and xmax over all hists
+    xmin = 1
+    xmax = 0
+    for i, subconfig_name in enumerate(self.obs_subconfig_list):
+      if subconfig_name not in overlay_list:
+        continue
+      xmin_temp = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
+      xmax_temp = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
+      if xmin_temp < xmin:
+        xmin = xmin_temp
+      if xmax_temp > xmax:
+        xmax = xmax_temp
       
+    # Loop through hists
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
@@ -338,8 +352,6 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         pad1.cd()
         xtitle = getattr(self, 'xtitle')
         ytitle = getattr(self, 'ytitle')
-        xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
-        xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.GetXaxis().SetTitleSize(0.085)
