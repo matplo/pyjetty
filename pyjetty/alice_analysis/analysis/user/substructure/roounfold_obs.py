@@ -155,6 +155,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         det_obs_bin_array = array('d',obs_bins_det)
         truth_obs_bin_array = array('d',obs_bins_truth)
         
+        self.xmin = self.obs_config_dict[config_name]['obs_bins_truth'][0]
+        self.xmax = self.obs_config_dict[config_name]['obs_bins_truth'][-1]
+        
         # For SD, fill underflow bin to include untagged fraction in the unfolding
         # If underflow is activated, create a new underflow bin for the observable
         if grooming_setting:
@@ -1463,6 +1466,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       hRatio3.SetMarkerStyle(21)
       hRatio3.SetMarkerColor(2)
       hRatio3.Draw("P E same")
+      
+    line = ROOT.TLine(self.xmin,1,self.xmax,1)
+    line.SetLineColor(1)
+    line.SetLineStyle(2)
+    line.Draw('same')
 
     pad1.cd()
 
