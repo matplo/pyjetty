@@ -94,7 +94,7 @@ class ProcessQG(common_base.CommonBase):
         # The K-body phase space is (3K-4)-dimensional
         # Choose K and create list of N-subjettiness observables: number of axes and beta values
         
-        self.K = 24 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
+        self.K = 2 # 24 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
         self.N_list = []
         self.beta_list = []
 
@@ -278,6 +278,29 @@ class ProcessQG(common_base.CommonBase):
         
         fpr_PFN, tpr_PFN, threshs = roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
         self.plot_roc_curve(Nsub_fpr_SGD,Nsub_tpr_SGD,fpr_PFN, tpr_PFN,"SGD_Nsub","PFN_woPID")
+        
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        
+        # Now we compare the PFN ROC curve to single observables
+
+        # 1. Jet mass (Note: This takes in (pt,y,phi) and converts it to 4-vectors and computes jet mass)
+        #             (Note: X_PFN_train is centered and normalized .. should be ok)
+        masses = np.asarray([energyflow.ms_from_p4s(energyflow.p4s_from_ptyphims(x).sum(axis=0)) for x in X_PFN_train])
+        mass_fpr, mass_tpr, threshs = roc_curve(Y_PFN_train[:,1], -masses)
+        
+        # 2. Multiplicity (Is this a useful observable for pp vs AA?)
+        mults = np.asarray([np.count_nonzero(x[:,0]) for x in X_PFN_train])
+        mult_fpr, mult_tpr, threshs = roc_curve(Y_PFN_train[:,1], -mults)
+        
+        # Make ROC curve plots
+        self.plot_roc_curve(mass_fpr,mass_tpr,fpr_PFN, tpr_PFN,"Jet_mass","PFN_woPID")
+        self.plot_roc_curve(mult_fpr,mult_tpr,fpr_PFN, tpr_PFN,"Multiplicity","PFN_woPID")
+        
+        
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        
+        # Do we need to train a DNN with 2 variables if we want to look at the discriminating power
+        # of mass and multiplicity or just pass 2 features to the ROC curve?
         
     #---------------------------------------------------------------
     # Process an event (in this case, just a single jet per event)
