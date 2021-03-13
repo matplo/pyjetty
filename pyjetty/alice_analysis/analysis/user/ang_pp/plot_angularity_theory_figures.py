@@ -103,8 +103,8 @@ class PlotAngularityFigures(common_base.CommonBase):
         for R in self.R_list:
             self.lambda_np_groomed[R] = {}
             for beta in self.beta_list:
-                self.lambda_np_groomed[R][str(beta)] = ( (self.Lambda / formula_pt)**(2 + self.sd_beta) * \
-                    R**(self.sd_beta) / self.sd_zcut )**(1 / (1 + self.sd_beta)) / R**(beta)
+                self.lambda_np_groomed[R][str(beta)] = ( (self.Lambda / formula_pt)**(beta) * \
+                    (R**(self.sd_beta) / self.sd_zcut)**(beta - 1) )**(1 / (1 + self.sd_beta)) / R**(beta)
 
 
         #------------------------------------------------------
@@ -198,9 +198,15 @@ class PlotAngularityFigures(common_base.CommonBase):
         
         # Normalize such that integral in perturbative region is 1
         n = self.h.GetNbinsX()
-        min_bin = self.h.FindBin(self.lambda_np[R])
-        if self.h.GetBinCenter(min_bin) <= round(self.lambda_np[R], 2):
-            min_bin += 1
+        min_bin = None
+        if groomed:
+            min_bin = self.h.FindBin(self.lambda_np_groomed[R][beta])
+            if self.h.GetBinCenter(min_bin) <= round(self.lambda_np_groomed[R][beta], 2):
+                min_bin += 1
+        else:
+            min_bin = self.h.FindBin(self.lambda_np[R])
+            if self.h.GetBinCenter(min_bin) <= round(self.lambda_np[R], 2):
+                min_bin += 1
         integral_perturbative = self.h.Integral(min_bin, n+1, 'width')
         self.h.Scale(1./integral_perturbative)
         self.h_sys.Scale(1./integral_perturbative)
@@ -236,9 +242,15 @@ class PlotAngularityFigures(common_base.CommonBase):
             h_theory_max_rebinned = self.rebin_theory(h_theory_max, self.h)
             
             # Normalize such that integral in perturbative region is 1
-            min_bin =  h_theory_cent_rebinned.FindBin(self.lambda_np[R])
-            if h_theory_cent_rebinned.GetBinCenter(min_bin) <= round(self.lambda_np[R], 2):
-                min_bin += 1
+            min_bin = None
+            if groomed:
+                min_bin = h_theory_cent_rebinned.FindBin(self.lambda_np_groomed[R][beta])
+                if self.h.GetBinCenter(min_bin) <= round(self.lambda_np_groomed[R][beta], 2):
+                    min_bin += 1
+            else:
+                min_bin = h_theory_cent_rebinned.FindBin(self.lambda_np[R])
+                if self.h.GetBinCenter(min_bin) <= round(self.lambda_np[R], 2):
+                    min_bin += 1
             integral_perturbative_theory =  h_theory_cent_rebinned.Integral(min_bin, n+1, 'width')
             integral_total =  h_theory_cent_rebinned.Integral(1, n+1, 'width')
 
@@ -334,22 +346,19 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.setupLegend(leg,0.07)
         self.plot_list.append(leg)
 
-        leg3 = ROOT.TLegend(0.2+shift, 0.95-0.072*scale_factor*2, 0.55, 0.95)
-        if groomed:
-            # Need lower y1 for extra soft scale
-            leg3 = ROOT.TLegend(0.2+shift, 0.95-0.072*scale_factor*3.5, 0.55, 0.95)
+        leg3 = ROOT.TLegend(0.2+shift, 0.95-0.072*scale_factor*2.5, 0.55, 0.95)
         if pad == 3:
             self.setupLegend(leg3,0.07)
             self.plot_list.append(leg3)
-            
-        line_lambda_np = ROOT.TLine(self.lambda_np[R], 0, self.lambda_np[R], self.ymax*0.6)
-        line_lambda_np.SetLineColor(self.colors[-1])
-        line_lambda_np.SetLineStyle(2)
-        line_lambda_np.SetLineWidth(2)
-        self.plot_list.append(line_lambda_np)
 
-        line_lambda_np_groomed = None
-        if groomed:
+        line_lambda_np = None; line_lambda_np_groomed = None
+        if not groomed:
+            line_lambda_np = ROOT.TLine(self.lambda_np[R], 0, self.lambda_np[R], self.ymax*0.6)
+            line_lambda_np.SetLineColor(self.colors[-1])
+            line_lambda_np.SetLineStyle(2)
+            line_lambda_np.SetLineWidth(2)
+            self.plot_list.append(line_lambda_np)
+        else:  # groomed case
             line_lambda_np_groomed = ROOT.TLine(self.lambda_np_groomed[R][beta], 0,
                                                 self.lambda_np_groomed[R][beta], self.ymax*0.6)
             line_lambda_np_groomed.SetLineColor(51)
@@ -385,8 +394,9 @@ class PlotAngularityFigures(common_base.CommonBase):
             leg.AddEntry(self.g_theory_dict[beta][i],'NLO+NLL #otimes {}'.format(folding_label),'lf')
             
         self.h_sys.Draw('E2 same')
-        line_lambda_np.Draw()
-        if groomed:
+        if not groomed:
+            line_lambda_np.Draw()
+        else:  # groomed case
             line_lambda_np_groomed.Draw()
         self.h.Draw('PE X0 same')
 
@@ -396,8 +406,9 @@ class PlotAngularityFigures(common_base.CommonBase):
             leg3.Draw('same')
         
         if pad == 3:
-            leg3.AddEntry(line_lambda_np, '#it{#lambda}_{#it{#beta}}^{NP} #leq #Lambda / (#it{p}_{T,jet}^{ch} #it{R})', 'lf')
-            if groomed:
+            if not groomed:
+                leg3.AddEntry(line_lambda_np, '#it{#lambda}_{#it{#beta}}^{NP} #leq #Lambda / (#it{p}_{T,jet}^{ch} #it{R})', 'lf')
+            else:  # groomed case
                 leg3.AddEntry(line_lambda_np_groomed, '#it{#lambda}_{#it{#beta}}^{NP, gr}', 'lf')
             leg3.AddEntry(self.h_sys, 'Sys. uncertainty', 'f')
 
@@ -519,15 +530,17 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_ratio_dict[beta][i].SetMarkerStyle(self.markers[i])
             self.h_ratio_dict[beta][i].SetMarkerSize(self.marker_size)
             self.h_ratio_dict[beta][i].Draw('PE same')
-            
-        line_lambda_np_ratio = ROOT.TLine(self.lambda_np[R], self.ymin_ratio, self.lambda_np[R], self.ymax_ratio)
-        line_lambda_np_ratio.SetLineColor(self.colors[-1])
-        line_lambda_np_ratio.SetLineStyle(2)
-        line_lambda_np_ratio.SetLineWidth(2)
-        line_lambda_np_ratio.Draw()
-        self.plot_list.append(line_lambda_np_ratio)
-        line_lambda_np_gr_ratio = None
-        if groomed:
+
+        line_lambda_np_ratio = None; line_lambda_np_gr_ratio = None;
+        if not groomed:
+            line_lambda_np_ratio = ROOT.TLine(
+                self.lambda_np[R], self.ymin_ratio, self.lambda_np[R], self.ymax_ratio)
+            line_lambda_np_ratio.SetLineColor(self.colors[-1])
+            line_lambda_np_ratio.SetLineStyle(2)
+            line_lambda_np_ratio.SetLineWidth(2)
+            line_lambda_np_ratio.Draw()
+            self.plot_list.append(line_lambda_np_ratio)
+        else:  # groomed case
             line_lambda_np_gr_ratio = ROOT.TLine(self.lambda_np_groomed[R][beta], self.ymin_ratio,
                                                  self.lambda_np_groomed[R][beta], self.ymax_ratio)
             line_lambda_np_gr_ratio.SetLineColor(51)
