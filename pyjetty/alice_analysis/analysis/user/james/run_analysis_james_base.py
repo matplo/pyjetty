@@ -339,6 +339,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       h.SetLineStyle(1)
       h.SetLineWidth(2)
       h.SetLineColor(color)
+      h.GetXaxis().SetRangeUser(self.obs_config_dict[subconfig_name]['obs_bins_truth'][0], self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1])
       
       h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
@@ -346,6 +347,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       h_sys.SetFillColorAlpha(color, 0.3)
       h_sys.SetFillStyle(1001)
       h_sys.SetLineWidth(0)
+      h_sys.GetXaxis().SetRangeUser(self.obs_config_dict[subconfig_name]['obs_bins_truth'][0], self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1])
       
       if subconfig_name == overlay_list[0]:
 
@@ -416,6 +418,8 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           hPythia.SetLineColor(color)
           hPythia.SetLineColorAlpha(color, 0.5)
           hPythia.SetLineWidth(4)
+          
+        hPythia.GetXaxis().SetRangeUser(self.obs_config_dict[subconfig_name]['obs_bins_truth'][0], self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1])
 
       if plot_nll:
         
