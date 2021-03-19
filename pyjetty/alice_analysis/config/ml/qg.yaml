@@ -1,0 +1,14 @@
+# Config file for qg classification
+
+# Load labeled data -- quark/gluon data set from energyflow data sets is up to 200.000
+n_train: 15000
+n_val: 2000
+n_test: 3000
+
+# Select model: linear, random_forest, neural_network, pfn
+models: [linear, random_forest, neural_network, pfn]
+
+# Define Nsubjettiness observables to compute
+# The K-body phase space is (3K-4)-dimensional
+# Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
+K: 2
