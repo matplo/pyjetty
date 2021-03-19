@@ -9,7 +9,7 @@ The analysis consists of two steps:
 2. Read in file, and fit model:
    ```
    cd alice_analysis/analysis/user/ml
-   python process_qg.py -c <config> -o <output_dir>
+   python analyze_qg.py -c <config> -o <output_dir>
    ```
 
 Both steps use a common config file at `alice_analysis/config/ml/qg.yaml`.
