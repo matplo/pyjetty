@@ -79,6 +79,16 @@ namespace RUtil
                         const bool move_underflow=false,
                         const bool do_roounfoldresponse=true);
 
+		//------------------------------------------------------
+		// Convolution of nonperturbative shape functions
+
+		// Create and return 2D histogram, convolving h with shape function
+		TH2D* convolve_F_np(const double & Omega, const double & R, const double & beta,
+							const double* ob_bins, const int & n_ob_bins, const double* obs,
+							const double* pT_bins, const int & n_pT_bins, const double* pTs,
+							const TH2D & h, const std::string & name, const bool groomed = false,
+							const double & sd_beta = 0, const double & sd_zcut = 0.2);
+
     private:
         // Create empty THn using provided axes
         THnF* create_empty_thn(const char* name, const int & n_dim,
@@ -101,6 +111,16 @@ namespace RUtil
 
         // Set scaling of prior
         prior_scale_func prior_scale_factor_obs(const int & option);
+
+		//------------------------------------------------------
+		// Convolution of nonperturbative shape functions
+
+        // Non-perturbative parameter with factored-out beta dependence
+        // Omega is Omega_{a=0} == Omega_{beta=2}  (universal[?])
+		inline double Omega_beta(const double & Omega, const double & beta);
+
+		// Shape function for convolving nonperturbative effects
+		inline double F_np(const double & Omega, const double & k, const double & beta);
 
     ClassDef(HistUtils, 1)
     };

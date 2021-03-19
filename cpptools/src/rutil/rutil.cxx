@@ -385,4 +385,79 @@ namespace RUtil
         return;
     }
 
+	// Create and return 2D histogram, convolving h with shape function
+	// ob & pT bins are identical in both old & new histograms 
+	// obs & pTs are arrays of the central bin values
+    TH2D* HistUtils::convolve_F_np(const double & Omega, const double & R, const double & beta,
+								   const double* ob_bins, const int & n_ob_bins, const double* obs,
+								   const double* pT_bins, const int & n_pT_bins, const double* pTs,
+								   const TH2D & h, const std::string & name,
+								   const bool groomed/*=false*/, const double & sd_beta/*=0*/,
+								   const double & sd_zcut/*=0.2*/) {
+
+		if (groomed && sd_beta != 0) {
+			printf("ERROR: currently only implemented for sd_beta == 0\n");
+			throw 1;
+		}
+
+		// Initialize NP-convolved histogram to have the same binnings as h
+		TH2D* h_np = (TH2D*) h.Clone();
+		h_np->SetNameTitle(name.c_str(), name.c_str());
+
+        // Numerical integration
+		// Loop over all y-bins in the final histogram
+		for(int ob_np_i = 0; ob_np_i < n_ob_bins; ob_np_i++) {
+			double ob_np = obs[ob_np_i];
+			// Loop over all x-bins in the final histogram
+			for(int pT_i = 0; pT_i < n_pT_bins; pT_i++) {
+				double pT = pTs[pT_i];
+
+				// Calculate the integral for this bin
+				double integral = 0;
+				int ob_i = 0;
+				do {
+					double ob = obs[ob_i];
+					double k; double dk;
+					if (!groomed) { 
+						k = ob * pT * R;
+						// Use chain rule to find dk in terms of dob and dpT
+						dk = pT * R * std::abs(ob_bins[ob_i+1] - ob_bins[ob_i]) + 
+							ob * R * std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
+					} else {  // groomed case (assumes sd_beta == 0 for simplification)
+						k = pT * R * std::pow(ob * std::pow(sd_zcut, beta - 1), 1. / beta);
+						dk = pT * R * std::pow(ob, (1 - beta) / beta) * std::pow(sd_zcut, beta - 1) *
+							std::abs(ob_bins[ob_i+1] - ob_bins[ob_i]) +
+							R * std::pow(ob * std::pow(sd_zcut, beta - 1), 1. / beta) *
+							std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
+					}
+
+					integral += dk * HistUtils::F_np(Omega, k, beta) * 
+						h.GetBinContent(pT_i+1, ob_i+1);
+					ob_i++;
+				} while (ob_i <= ob_np_i);
+
+				h_np->SetBinContent(pT_i+1, ob_np_i+1, integral);
+				h_np->SetBinError(pT_i+1, ob_np_i+1, 0);
+
+			}  // for(pT)
+		}  // for(ob)
+
+		return h_np;
+
+    }  // FnpUtils::convolve_F_np
+
+
+    // Non-perturbative parameter with factored-out beta dependence
+    // Omega is Omega_{a=0} == Omega_{beta=2}  (universal[?])
+    inline double HistUtils::Omega_beta(const double & Omega, const double & beta) {
+        return (Omega / (beta - 1));
+	}  // FnpUtils::Omega_beta
+
+
+    // Shape function for convolving nonperturbative effects
+    inline double HistUtils::F_np(const double & Omega, const double & k, const double & beta) {
+        double sb = HistUtils::Omega_beta(Omega, beta);
+		return (4 * k) / (sb * sb) * std::exp(-2 * k / sb);
+    }  // FnpUtils::F_np
+
 }  // namespace RUtil

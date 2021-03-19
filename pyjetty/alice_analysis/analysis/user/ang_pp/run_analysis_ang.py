@@ -124,58 +124,6 @@ def set_zero_range(yvals):
 
 
 ################################################################
-################# NP SHAPE FUNCTION CONV. ######################
-################################################################
-
-# Non-perturbative parameter with factored-out beta dependence
-# Omega param is Omega_{a=0} == Omega_{beta=2}  (universal[?])
-def Sigma_beta(Omega, beta):
-  return Omega / (beta - 1)
-
-# Shape function for convolving nonperturbative effects
-def F_np(Omega, k, beta):
-  sb = Omega_beta(Omega, beta)
-  return (4 * k) / (sb * sb) * math.exp(-2 * k / sb)
-
-# Create and return 2D histogram, convolving h with shape function
-# Assumes pT along x-axis, observable along y-axis
-def convolve_F_np(Omega, beta, h, name):
-  # Initialize NP-convolved histogram to have the same binnings as h
-  h_np = h.Clone()
-
-  # Load list of bin edges and centers for convenient looping
-  ob_bins = [ h.GetYaxis().GetBinLowEdge(bi) for bi in range (1, h.GetNbinsY()+2) ]
-  pT_bins = [ h.GetXaxis().GetBinLowEdge(bi) for bi in range (1, h.GetNbinsX()+2) ]
-  obs = [ h.GetYaxis().GetBinCenter(bi) for bi in range (1, h.GetNbinsY()+1) ]
-  pTs = [ h.GetXaxis().GetBinCenter(bi) for bi in range (1, h.GetNbinsX()+2) ]
-
-  # Numerical integration
-  for ob_np_i, ob_np in enumerate(obs):  # Loop over all y-bins in the final histogram
-    for pT_i, pT in enumerate(pTs):      # Loop over all x-bins in the final histogram
-
-      # Calculate the integral for this bin
-      integral = 0
-      ob_i = 0
-      ob  = obs[ob_i]
-      while ob <= ob_np:
-        k = ob * pT * R
-
-        # Use chain rule to find dk in terms of dob and dpT
-        dob = abs(ob_bins[ob_i+1] - ob_bins[ob_i])
-        dpT = abs(pT_bins[pT_i+1] - pT_bins[pT_i])
-        dk = pT * R * dob + ob * R * dpT
-
-        integral += dk * F_np(Omega, k, beta) * h.GetBinContent(pT_i+1, ob_i+1)
-        ob_i += 1
-        ob = obs[ob_i]
-
-      h_np.SetBinContent(pT_i+1, ob_np_i+1, integral)
-      h_np.SetBinError(pT_i+1, ob_np_i+1, 0)
-
-  return h_np
-
-
-################################################################
 #######################  RUN ANALYSIS  #########################
 ################################################################
 class RunAnalysisAng(run_analysis.RunAnalysis):
@@ -235,6 +183,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         self.theory_dir = config['theory_dir']
         self.theory_beta = config['theory_beta']
         self.theory_pt_bins = config['theory_pt_bins']
+        self.theory_pt_bins_center = [(self.theory_pt_bins[i] + self.theory_pt_bins[i+1]) / 2 for \
+                                      i in range(len(self.theory_pt_bins)-1)]
         self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
         self.theory_response_labels = config['response_labels']
         self.theory_pt_scale_factors_filepath = os.path.join(
@@ -243,7 +193,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response')
         self.Lambda = 1  # GeV -- This variable changes the NP vs P region of theory plots
 
-        self.do_theory_F_np = False  # NP shape f'n convolution
+        self.do_theory_F_np = True  # NP shape f'n convolution
         if self.do_theory_F_np:
           self.Omega_list = config['Omega_list']  # list of universal(?) parameters to try
 
@@ -963,11 +913,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #---------------------------------------------------------------
   # Apply NP corrections via shape function (includes MPI & hadronization)
   #---------------------------------------------------------------
-  def apply_np_shape_fn(jetR, beta, parton_hists, scale_req, gl=None):
+  def apply_np_shape_fn(self, jetR, beta, parton_hists, scale_req, gl=None):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+    grooming = False
     if gl:
       label += '_' + gl
+      grooming = True
 
     for Omega in self.Omega_list:
       h_hists = ( ([], [], []), ([], [], []), ([], [], []) )
@@ -998,7 +950,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               # Apply shape function
               name_h = "theory_%i%i%i_%s_%s_h_Fnp_Omega%s_%i" % \
                        (l, m, n, self.observable, label, str(Omega), ri)
-              h_np = convolve_F_np(Omega, beta, parton_hists[l][m][n], name_h)
+              h_np = self.histutils.convolve_F_np(
+                Omega, jetR, beta, array('d', self.theory_obs_bins),
+                len(self.theory_obs_bins_center), array('d', self.theory_obs_bins_center), 
+                array('d', self.theory_pt_bins), len(self.theory_pt_bins_center),
+                array('d', self.theory_pt_bins_center), parton_hists[l][m][n], name_h, grooming)
 
               h_hists[l][m].append(h_np)
 
