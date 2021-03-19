@@ -1,7 +1,7 @@
 # Running the code
 
 The analysis consists of two steps:
-1. Compute Nsubjettiness arrays from input events, and them write to file: 
+1. Compute Nsubjettiness arrays from input events, and write them to file: 
    ```
    cd alice_analysis/process/user/ml
    python process_qg.py -c <config> -o <output_dir>
