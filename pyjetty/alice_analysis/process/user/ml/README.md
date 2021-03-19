@@ -1,3 +1,21 @@
+# Running the code
+
+The analysis consists of two steps:
+1. Compute Nsubjettiness arrays from input events, and them write to file: 
+   ```
+   cd alice_analysis/process/user/ml
+   python process_qg.py -c <config> -o <output_dir>
+   ```
+2. Read in file, and fit model:
+   ```
+   cd alice_analysis/analysis/user/ml
+   python process_qg.py -c <config> -o <output_dir>
+   ```
+
+Both steps use a common config file at `alice_analysis/config/ml/qg.yaml`.
+
+# Pull requests
+
 To contribute code to pyjetty, you should make a pull request from your fork of the repo.
 
 For example, working with a single branch:
