@@ -134,7 +134,9 @@ class ProcessQG(common_base.CommonBase):
             hf.create_dataset('y', data=self.y)
             hf.create_dataset('X', data=self.X)
             hf.create_dataset('X_Nsub', data=X_Nsub)
-        
+            hf.create_dataset('N_list', data=self.N_list)
+            hf.create_dataset('beta_list', data=self.beta_list)
+                        
         # Plot jet quantities
         if self.K <= 6:
             self.plot_nsubjettiness()
