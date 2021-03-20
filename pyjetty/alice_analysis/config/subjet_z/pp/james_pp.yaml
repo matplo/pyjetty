@@ -11,7 +11,7 @@
 # The analysis step is intended to run for a single observable block
 
 process_observables: ['inclusive_subjet_z', 'leading_subjet_z']
-jetR: [0.4]
+jetR: [0.2, 0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.0
 eta_max: 0.9

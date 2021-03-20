@@ -29,7 +29,7 @@ fi
 # Define output path from relevant sub-path of input file
 OUTPUT_PREFIX="AnalysisResults/james/$JOB_ID"
 # Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-11)
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f5-10)
 echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/rstorage/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX"
 echo "Output dir: $OUTPUT_DIR"
@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /software/users/james/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/james/process_mc_subjet_z.py -c config/subjet_z/PbPb/james_PbPb_trkeff.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+pipenv run python process/user/james/process_mc_subjet_z.py -c config/subjet_z/PbPb/james_PbPb.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/james/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}/
