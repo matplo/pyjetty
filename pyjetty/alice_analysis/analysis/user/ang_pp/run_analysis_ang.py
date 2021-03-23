@@ -117,6 +117,8 @@ def set_zero_range(yvals):
       yvals[i] = 0
       continue
     else:
+      if yvals[i-1] <= 0:  # require at least 2 positive values in a row
+        continue
       found_nonzero_val = True
       continue
 
@@ -411,7 +413,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     disable_tagging_fraction = True
 
     # Set central value to exponential distribution. Useful for testing folding resilience
-    exp_test = False
+    self.exp_test = True
 
     # Require that hard scale and jet scale are varied together. Changes theory uncertainties
     scale_req = False
@@ -515,8 +517,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                     "beta%s" % str(beta).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
 
                 val_li = None; val_li_gr = None
-                if exp_test:
-                  val_li = [1/(x+0.4+l) for x in obs_bins_center]
+                if self.exp_test:
+                  val_li = [1 * obs_bins_width[i] for i in range(len(obs_bins_center))]
                   if gs:
                     val_li_gr = [0] + val_li
                   #np.exp(np.linspace(0, 1, 101, True))
@@ -950,11 +952,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               # Apply shape function
               name_h = "theory_%i%i%i_%s_%s_h_Fnp_Omega%s_%i" % \
                        (l, m, n, self.observable, label, str(Omega), ri)
+              pTs = [self.pt_avg_jetR(self.theory_pt_bins[i], self.theory_pt_bins[i+1], jetR) for
+                     i in range(0, len(self.theory_pt_bins) - 1)]
               h_np = self.histutils.convolve_F_np(
                 Omega, jetR, beta, array('d', self.theory_obs_bins),
-                len(self.theory_obs_bins_center), array('d', self.theory_obs_bins_center), 
+                len(self.theory_obs_bins_center), array('d', self.theory_obs_bins_center),
+                array('d', self.theory_obs_bins_width),
                 array('d', self.theory_pt_bins), len(self.theory_pt_bins_center),
-                array('d', self.theory_pt_bins_center), parton_hists[l][m][n], name_h, grooming)
+                array('d', pTs), parton_hists[l][m][n], name_h, grooming)
 
               h_hists[l][m].append(h_np)
 
@@ -968,21 +973,25 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
               # Update min/max/cent histograms
               if l == m == n == 0:  # initialize min/max histograms
-                h_min = h_folded_Fnp.Clone()
+                #h_min = h_folded_Fnp.Clone()
+                h_min = h_np.Clone()
                 h_min.SetNameTitle(h_min_name, h_min_name)
-                h_max = h_folded_Fnp.Clone()
+                #h_max = h_folded_Fnp.Clone()
+                h_max = h_np.Clone()
                 h_max.SetNameTitle(h_max_name, h_max_name)
                 continue
 
               elif l == m == n == 1: # set central variation
-                h_cent = h_folded_Fnp.Clone()
+                #h_cent = h_folded_Fnp.Clone()
+                h_cent = h_np.Clone()
                 h_cent.SetNameTitle(h_cent_name, h_cent_name)
                 continue
 
               else:  # loop through pT & obs bins and update each min/max value
                 for i in range(h_folded_Fnp.GetNbinsX()):
                   for j in range(h_folded_Fnp.GetNbinsY()):
-                    val = h_folded_Fnp.GetBinContent(i+1, j+1)
+                    #val = h_folded_Fnp.GetBinContent(i+1, j+1)
+                    val = h_np.GetBinContent(i+1, j+1)
                     if float(val) < h_min.GetBinContent(i+1, j+1):
                       h_min.SetBinContent(i+1, j+1, val)
                     elif float(val) > h_max.GetBinContent(i+1, j+1):
@@ -1029,6 +1038,24 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     k = np.log(val_li[start_i] / val_li[end_i]) / np.log(ptmin / ptmax)
     a = val_li[start_i] / ptmin**k
     return self.pt_scale_factor_k(ptmin, ptmax, k, a)
+
+
+  #---------------------------------------------------------------
+  # Returns approximate avg pT for bin given min and max pT of that bin
+  #---------------------------------------------------------------
+  def pt_avg_jetR(self, ptmin, ptmax, jetR):
+
+    pt_li, val_li = getattr(self, "pt_scale_factor_R%s" % jetR)
+
+    # Fit a log function between the two endpoints and approx avg integral for bin
+    start_i = pt_li.index(ptmin)
+    end_i = pt_li.index(ptmax)
+    # y = a * x^k
+    k = np.log(val_li[start_i] / val_li[end_i]) / np.log(ptmin / ptmax)
+    a = val_li[start_i] / ptmin**k
+    y = self.pt_scale_factor_k(ptmin, ptmax, k, a) / (ptmax - ptmin)
+    return (y / a) ** (1 / k)
+
 
   #---------------------------------------------------------------
   # Returns number proportional to the integral of power law pTjet^k
@@ -1097,6 +1124,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
          ( (self.use_old and not grooming_setting) or not self.use_old ):
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_MC=False, plot_theory=True)
+        if self.do_theory_F_np:
+          self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
+                               min_pt_truth, max_pt_truth, maxbin, plot_MC=False,
+                               plot_theory=True, plot_theory_Fnp=True)
         self.plot_theory_ratios(jetR, obs_label, obs_setting, grooming_setting,
                                 min_pt_truth, max_pt_truth, maxbin)
         self.plot_theory_response(jetR, obs_label, obs_setting, grooming_setting,
@@ -1110,7 +1141,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
-                      min_pt_truth, max_pt_truth, maxbin, plot_MC=False, plot_theory=False):
+                      min_pt_truth, max_pt_truth, maxbin, plot_MC=False,
+                      plot_theory=False, plot_theory_Fnp=False):
 
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = True
@@ -1182,11 +1214,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myBlankHisto.GetYaxis().SetTitleOffset(1.1)
     myBlankHisto.GetYaxis().SetTitleSize(0.055)
     myBlankHisto.SetMinimum(0.)
-    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
-      maxval = 1.7*h.GetMaximum()
-      myBlankHisto.SetMaximum(maxval)
-      myBlankHisto.Draw("E")
-    elif not plot_theory or not show_parton_theory:
+    if not plot_theory or not show_parton_theory:
       maxval = max(2.3*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
       myBlankHisto.SetMaximum(maxval)
       myBlankHisto.Draw("E")
@@ -1207,7 +1235,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hmax_p = getattr(self, name_max)
 
       if show_parton_theory:
-        maxval = 1.7*hmax_p.GetMaximum()
+        maxval = 1.7*max([hmax_p.GetBinContent(i) for
+                          i in range(1, round(len(self.theory_obs_bins)/2))])
         myBlankHisto.SetMaximum(maxval)
         myBlankHisto.Draw("E")
 
@@ -1271,68 +1300,156 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       hcent_list = []   # List of items for legend
       hasym_list = []   # List to prevent hists from being garbage collected by python
+      expected_list = []
       for ri in range(len(self.theory_response_files)):
-        # Get and plot the folded & MPI-scaled theory predictions
-        name_cent = "theory_cent_%s_%s_ch_PtBin%i-%i_%i" % \
-                    (self.observable, label, min_pt_truth, max_pt_truth, ri)
-        name_min = "theory_min_%s_%s_ch_PtBin%i-%i_%i" % \
-                   (self.observable, label, min_pt_truth, max_pt_truth, ri)
-        name_max = "theory_max_%s_%s_ch_PtBin%i-%i_%i" % \
-                   (self.observable, label, min_pt_truth, max_pt_truth, ri)
+        hcent = None; hmin = None; hmax = None;
 
-        hcent = getattr(self, name_cent)
-        hmin = getattr(self, name_min)
-        hmax = getattr(self, name_max)
-        color = self.ColorArray[5 + ri]
+        if plot_theory_Fnp:  # Have to have an extra loop for Omega
 
-        if rebin_folded:
-          hcent = hcent.Rebin(); hcent.Scale(1/2)
-          hmin = hmin.Rebin(); hmin.Scale(1/2)
-          hmax = hmax.Rebin(); hmax.Scale(1/2)
+          for oi, Omega in enumerate(self.Omega_list):
+            color = self.ColorArray[5 + ri + oi]
 
-        # Write folded theory result to ROOT file
-        output_dir = getattr(self, 'output_dir_final_results')
-        final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
-        fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
-        if plot_theory:
-          hcent.Write()
-          hmin.Write()
-          hmax.Write()
-        fFinalResults.Close()
+            # For testing if passed in flat distribution
+            if self.exp_test:
+              expected = ROOT.TH1D("expected Fnp", "expected Fnp", len(self.theory_obs_bins) - 1, 
+                                   array('d', self.theory_obs_bins))
+              Omega_a = Omega / (float(obs_label.split('_')[0]) - 1)
+              for i in range(1, len(self.theory_obs_bins)):
+                ob = self.theory_obs_bins_center[i-1]
+                x1 = 2 / Omega_a * jetR * 65 * ob
+                val = Omega_a * (1 - np.exp(-1*x1) * (1 + x1))
+                expected.SetBinContent(i, val)
+                expected.SetBinError(i, 0)
+              expected.Scale(1/expected.Integral("width"))
+              expected.SetLineColor(color)
+              expected.SetLineStyle(2)
+              expected.SetLineWidth(3)
+              expected.Draw('L same')
+              expected_list.append(expected)
 
-        if show_folded_uncertainty:
-          n = hcent.GetNbinsX()
-          x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
-          y = array('d', [hcent.GetBinContent(i) for i in range(1, hcent.GetNbinsX()+1)])
-          xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
-          xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
-          yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for i in range(1, hmax.GetNbinsX()+1)])
-          yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for i in range(1, hmin.GetNbinsX()+1)])
-          h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+            # Load 2D convolved/folded histograms
+            name_cent = "theory_cent_%s_%s_ch_Fnp_Omega%s_%i" % \
+                        (self.observable, label, str(Omega), ri)
+            name_min = "theory_min_%s_%s_ch_Fnp_Omega%s_%i" % \
+                       (self.observable, label, str(Omega), ri)
+            name_max = "theory_max_%s_%s_ch_Fnp_Omega%s_%i" % \
+                       (self.observable, label, str(Omega), ri)
 
-          h_ch_theory.SetFillColorAlpha(color, 0.25)
-          h_ch_theory.SetLineColor(color)
-          h_ch_theory.SetLineWidth(3)
-          if show_everything_else:
-            h_ch_theory.Draw('L 3 same')
-          hasym_list.append(h_ch_theory)
+            hcent_2D = getattr(self, name_cent)
+            hmin_2D = getattr(self, name_min)
+            hmax_2D = getattr(self, name_max)
 
-        if show_everything_else and not show_folded_uncertainty:
-          hcent.SetLineColor(color)
-          hcent.SetLineWidth(3)
-          hcent.Draw('L hist same')
-          hcent_list.append(hcent)  # Save for legend
+            # Project onto correct pT bin with new name
+            name_cent = "theory_cent_%s_%s_ch_Fnp_Omega%s_PtBin%i-%i_%i" % \
+                        (self.observable, label, str(Omega), min_pt_truth, max_pt_truth, ri)
+            name_min = "theory_min_%s_%s_ch_Fnp_Omega%s_PtBin%i-%i_%i" % \
+                       (self.observable, label, str(Omega), min_pt_truth, max_pt_truth, ri)
+            name_max = "theory_max_%s_%s_ch_Fnp_Omega%s_PtBin%i-%i_%i" % \
+                       (self.observable, label, str(Omega), min_pt_truth, max_pt_truth, ri)
+            
+            # Have to do +1 for ROOT 1-indexing
+            min_pt_i = self.theory_pt_bins.index(min_pt_truth)+1
+            max_pt_i = self.theory_pt_bins.index(max_pt_truth)+1
+            hcent = hcent_2D.ProjectionY(name_cent, min_pt_i, max_pt_i)
+            hmin = hmin_2D.ProjectionY(name_min, min_pt_i, max_pt_i)
+            hmax = hmax_2D.ProjectionY(name_max, min_pt_i, max_pt_i)
+            hmin.Scale(1/hcent.Integral(), "width")
+            hmax.Scale(1/hcent.Integral(), "width")
+            hcent.Scale(1/hcent.Integral(), "width")
 
-        # Dotted lines for error bars
-        #hmin.SetLineColor(color)
-        #hmin.SetLineWidth(1)
-        #hmin.SetLineStyle(2)
-        #hmin.Draw('L hist same')
+            if rebin_folded:
+              hcent = hcent.Rebin(); hcent.Scale(1/2)
+              hmin = hmin.Rebin(); hmin.Scale(1/2)
+              hmax = hmax.Rebin(); hmax.Scale(1/2)
 
-        #hmax.SetLineColor(color)
-        #hmax.SetLineWidth(1)
-        #hmax.SetLineStyle(2)
-        #hmax.Draw('L hist same')
+            # Write folded theory result to ROOT file
+            output_dir = getattr(self, 'output_dir_final_results')
+            final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+            fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+            if plot_theory:
+              hcent.Write()
+              hmin.Write()
+              hmax.Write()
+            fFinalResults.Close()
+
+            if show_folded_uncertainty:
+              n = hcent.GetNbinsX()
+              x = array('d', [hcent.GetXaxis().GetBinCenter(i) for
+                              i in range(1, hcent.GetNbinsX()+1)])
+              y = array('d', [hcent.GetBinContent(i) for
+                              i in range(1, hcent.GetNbinsX()+1)])
+              xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
+              xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
+              yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for
+                                   i in range(1, hmax.GetNbinsX()+1)])
+              yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for
+                                   i in range(1, hmin.GetNbinsX()+1)])
+              h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+
+              h_ch_theory.SetFillColorAlpha(color, 0.25)
+              h_ch_theory.SetLineColor(color)
+              h_ch_theory.SetLineWidth(3)
+              if show_everything_else:
+                h_ch_theory.Draw('L 3 same')
+              hasym_list.append(h_ch_theory)
+
+            if show_everything_else and not show_folded_uncertainty:
+              hcent.SetLineColor(color)
+              hcent.SetLineWidth(3)
+              hcent.Draw('L hist same')
+              hcent_list.append(hcent)  # Save for legend
+
+        else:
+          # Get and plot the folded & MPI-scaled theory predictions
+          name_cent = "theory_cent_%s_%s_ch_PtBin%i-%i_%i" % \
+                      (self.observable, label, min_pt_truth, max_pt_truth, ri)
+          name_min = "theory_min_%s_%s_ch_PtBin%i-%i_%i" % \
+                     (self.observable, label, min_pt_truth, max_pt_truth, ri)
+          name_max = "theory_max_%s_%s_ch_PtBin%i-%i_%i" % \
+                     (self.observable, label, min_pt_truth, max_pt_truth, ri)
+
+          hcent = getattr(self, name_cent)
+          hmin = getattr(self, name_min)
+          hmax = getattr(self, name_max)
+          color = self.ColorArray[5 + ri]
+
+          if rebin_folded:
+            hcent = hcent.Rebin(); hcent.Scale(1/2)
+            hmin = hmin.Rebin(); hmin.Scale(1/2)
+            hmax = hmax.Rebin(); hmax.Scale(1/2)
+
+          # Write folded theory result to ROOT file
+          output_dir = getattr(self, 'output_dir_final_results')
+          final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+          fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+          if plot_theory:
+            hcent.Write()
+            hmin.Write()
+            hmax.Write()
+          fFinalResults.Close()
+
+          if show_folded_uncertainty:
+            n = hcent.GetNbinsX()
+            x = array('d', [hcent.GetXaxis().GetBinCenter(i) for i in range(1, hcent.GetNbinsX()+1)])
+            y = array('d', [hcent.GetBinContent(i) for i in range(1, hcent.GetNbinsX()+1)])
+            xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(n-1)] + [0])
+            xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(n-1)])
+            yerrup = array('d', [hmax.GetBinContent(i)-y[i-1] for i in range(1, hmax.GetNbinsX()+1)])
+            yerrdn = array('d', [y[i-1]-hmin.GetBinContent(i) for i in range(1, hmin.GetNbinsX()+1)])
+            h_ch_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+
+            h_ch_theory.SetFillColorAlpha(color, 0.25)
+            h_ch_theory.SetLineColor(color)
+            h_ch_theory.SetLineWidth(3)
+            if show_everything_else:
+              h_ch_theory.Draw('L 3 same')
+            hasym_list.append(h_ch_theory)
+
+          if show_everything_else and not show_folded_uncertainty:
+            hcent.SetLineColor(color)
+            hcent.SetLineWidth(3)
+            hcent.Draw('L hist same')
+            hcent_list.append(hcent)  # Save for legend
 
     plot_pythia = False; plot_herwig = False;
     if plot_MC:
@@ -1454,18 +1571,31 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if plot_theory:
       if show_parton_theory:
         if show_np_region:
-          myLegend.AddEntry(h_parton_theory_np, 'NLO+NLL (non-perturbative)', 'lf')
-          myLegend.AddEntry(h_parton_theory_p, 'NLO+NLL (perturbative)', 'lf')
+          myLegend.AddEntry(h_parton_theory_np, 'NLL\' (non-perturbative)', 'lf')
+          myLegend.AddEntry(h_parton_theory_p, 'NLL\' (perturbative)', 'lf')
         else:
-          myLegend.AddEntry(hcent_p, 'NLO+NLL (Parton)', 'lf')
+          myLegend.AddEntry(hcent_p, 'NLL\' (Parton)', 'lf')
       if show_everything_else:
         if show_folded_uncertainty:
           for ri, lab in enumerate(self.theory_response_labels):
-            myLegend.AddEntry(hasym_list[ri], 'NLO+NLL #otimes '+lab, 'lf')
+            if plot_theory_Fnp:
+              for oi, Omega in enumerate(self.Omega_list):
+                myLegend.AddEntry(hasym_list[(ri+1)*oi],
+                                  'NLL\' #otimes F_{NP}^{#Omega=%s} #otimes %s' %
+                                  (str(Omega), lab), 'lf')
+            else:
+              myLegend.AddEntry(hasym_list[ri], 'NLL\' #otimes '+lab, 'lf')
         else:
           for ri, lab in enumerate(self.theory_response_labels):
-            myLegend.AddEntry(hcent_list[ri], 'NLO+NLL #otimes '+lab, 'lf')
-        myLegend.AddEntry(line, '#it{#lambda}_{#it{#beta}}^{NP region} #leq #Lambda / (#it{p}_{T,jet}^{ch} #it{R})', 'lf')
+            if plot_theory_Fnp:
+              for oi, Omega in enumerate(self.Omega_list):
+                myLegend.AddEntry(hcent_list[(ri+1)*oi],
+                                  'NLL\' #otimes F_{NP}^{#Omega=%s} #otimes %s' %
+                                  (str(Omega), lab), 'lf')
+            else:
+              myLegend.AddEntry(hcent_list[ri], 'NLL\' #otimes '+lab, 'lf')
+        myLegend.AddEntry(line, '#it{#lambda}_{#it{#beta}}^{NP region} #leq' + \
+                          '#Lambda / (#it{p}_{T,jet}^{ch} #it{R})', 'lf')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
@@ -1476,9 +1606,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         int(max_pt_truth), self.file_format)
 
     if plot_theory:
-      name = 'hUnfolded_R{}_{}_{}-{}_Theory{}'.format(
-        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
-        int(max_pt_truth), self.file_format)
+      if plot_theory_Fnp:
+        name = 'hUnfolded_R{}_{}_{}-{}_FnpTheory{}'.format(
+          self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
+          int(max_pt_truth), self.file_format)
+      else:
+        name = 'hUnfolded_R{}_{}_{}-{}_Theory{}'.format(
+          self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
+          int(max_pt_truth), self.file_format)
 
     output_dir = getattr(self, 'output_dir_final_results')
     output_dir_single = output_dir + '/single_results'

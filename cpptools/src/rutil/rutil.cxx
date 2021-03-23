@@ -390,10 +390,12 @@ namespace RUtil
 	// obs & pTs are arrays of the central bin values
     TH2D* HistUtils::convolve_F_np(const double & Omega, const double & R, const double & beta,
 								   const double* ob_bins, const int & n_ob_bins, const double* obs,
+								   const double* ob_bin_width,
 								   const double* pT_bins, const int & n_pT_bins, const double* pTs,
 								   const TH2D & h, const std::string & name,
 								   const bool groomed/*=false*/, const double & sd_beta/*=0*/,
-								   const double & sd_zcut/*=0.2*/) {
+								   const double & sd_zcut/*=0.2*/, 
+								   const std::string & option/*=""*/) {
 
 		if (groomed && sd_beta != 0) {
 			printf("ERROR: currently only implemented for sd_beta == 0\n");
@@ -419,16 +421,18 @@ namespace RUtil
 					double ob = obs[ob_i];
 					double k; double dk;
 					if (!groomed) { 
-						k = ob * pT * R;
+						k = (ob_np - ob) * pT * R;
 						// Use chain rule to find dk in terms of dob and dpT
-						dk = pT * R * std::abs(ob_bins[ob_i+1] - ob_bins[ob_i]) + 
-							ob * R * std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
+						dk = pT * R;
+						if (option == "width") { dk *= ob_bin_width[ob_i]; }
+							//+ ob * R * std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
 					} else {  // groomed case (assumes sd_beta == 0 for simplification)
-						k = pT * R * std::pow(ob * std::pow(sd_zcut, beta - 1), 1. / beta);
-						dk = pT * R * std::pow(ob, (1 - beta) / beta) * std::pow(sd_zcut, beta - 1) *
-							std::abs(ob_bins[ob_i+1] - ob_bins[ob_i]) +
-							R * std::pow(ob * std::pow(sd_zcut, beta - 1), 1. / beta) *
-							std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
+						k = pT * R * std::pow(ob_np - ob * std::pow(sd_zcut, beta - 1), 1. / beta);
+						dk = pT * R * std::pow(ob_np - ob, (1 - beta) / beta) *
+							std::pow(sd_zcut, beta - 1);
+						if (option == "width") { dk *= ob_bin_width[ob_i]; }
+							//+ R * std::pow(ob * std::pow(sd_zcut, beta - 1), 1. / beta) *
+							//std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
 					}
 
 					integral += dk * HistUtils::F_np(Omega, k, beta) * 
@@ -436,7 +440,8 @@ namespace RUtil
 					ob_i++;
 				} while (ob_i <= ob_np_i);
 
-				h_np->SetBinContent(pT_i+1, ob_np_i+1, integral);
+				if (option == "width") { h_np->SetBinContent(pT_i+1, ob_np_i+1, integral); }
+				else { h_np->SetBinContent(pT_i+1, ob_np_i+1, integral * ob_bin_width[ob_np_i]); }
 				h_np->SetBinError(pT_i+1, ob_np_i+1, 0);
 
 			}  // for(pT)
@@ -450,14 +455,14 @@ namespace RUtil
     // Non-perturbative parameter with factored-out beta dependence
     // Omega is Omega_{a=0} == Omega_{beta=2}  (universal[?])
     inline double HistUtils::Omega_beta(const double & Omega, const double & beta) {
-        return (Omega / (beta - 1));
+        return (Omega / (beta - 1.));
 	}  // FnpUtils::Omega_beta
 
 
     // Shape function for convolving nonperturbative effects
     inline double HistUtils::F_np(const double & Omega, const double & k, const double & beta) {
         double sb = HistUtils::Omega_beta(Omega, beta);
-		return (4 * k) / (sb * sb) * std::exp(-2 * k / sb);
+		return (4. * k) / (sb * sb) * std::exp(-2. * k / sb);
     }  // FnpUtils::F_np
 
 }  // namespace RUtil

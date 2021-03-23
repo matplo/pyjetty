@@ -85,9 +85,11 @@ namespace RUtil
 		// Create and return 2D histogram, convolving h with shape function
 		TH2D* convolve_F_np(const double & Omega, const double & R, const double & beta,
 							const double* ob_bins, const int & n_ob_bins, const double* obs,
+							const double* ob_bin_width,
 							const double* pT_bins, const int & n_pT_bins, const double* pTs,
 							const TH2D & h, const std::string & name, const bool groomed = false,
-							const double & sd_beta = 0, const double & sd_zcut = 0.2);
+							const double & sd_beta = 0, const double & sd_zcut = 0.2,
+							const std::string & option = "");
 
     private:
         // Create empty THn using provided axes
