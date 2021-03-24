@@ -4,18 +4,18 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-1000
+#SBATCH --array=1-3000
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 # Number of events per pT-hat bin (for statistics)
-NEV_DESIRED=5000000
+NEV_DESIRED=15000000
 
 # Lower edges of the pT-hat bins
 PTHAT_BINS=(7 9 12 16 21 28 36 45 57 70 85 99 115 132 150 169 190 212 235 260)
 echo "Number of pT-hat bins: ${#PTHAT_BINS[@]}"
 
 # Currently we have 8 nodes * 20 cores active
-NCORES=1000
+NCORES=3000
 NEV_PER_JOB=$(( $NEV_DESIRED * ${#PTHAT_BINS[@]} / $NCORES ))
 echo "Number of events per job: $NEV_PER_JOB"
 NCORES_PER_BIN=$(( $NCORES / ${#PTHAT_BINS[@]} ))
@@ -58,7 +58,7 @@ module use ~/pyjetty/modules
 module load pyjetty/1.0
 echo "python is" $(which python)
 cd /home/ezra/analysis_env/
-pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $TEMP_OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $TEMP_OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR
+pipenv run python $PYTHON_SCRIPT -c $CONFIG --input-file $TEMP_OUTDIR/LHC_5020-S$SEED.log --input-file-mpi $TEMP_OUTDIR/LHC_5020_MPI-S$SEED.log --output-dir $OUTDIR --no-tree
 
 # Clean up Herwig7 files to save space
 rm $TEMP_OUTDIR/LHC_5020-S$SEED.*

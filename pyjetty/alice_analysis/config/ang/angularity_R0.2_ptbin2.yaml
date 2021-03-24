@@ -164,12 +164,14 @@ ang:
 # Theory comparison parameters
 do_theory_comp: True
 theory_beta: [1.5, 2, 3]
-theory_dir: "/home/ezra/ALICE_table/"
-theory_pt_bins: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
-response_files: ["/rstorage/alice/AnalysisResults/ang/196181/AnalysisResultsFinal.root",
-                 "/rstorage/alice/AnalysisResults/ang/286620/AnalysisResultsFinal.root",
-                 "/rstorage/alice/AnalysisResults/ang/225271/AnalysisResultsFinal.root"]
-response_labels: ["PYTHIA8", "P8time", "Herwig7"]
+theory_dir: "/home/ezra/theory_predictions/"
+pt_scale_factors_filename: "qg_fractions-ALICE-R04.txt"
+theory_pt_bins: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
+                 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
+Omega_list: [0.1, 0.3, 0.8]
+response_files: ["/rstorage/alice/AnalysisResults/ang/353823/AnalysisResultsFinal.root",
+                 "/rstorage/alice/AnalysisResults/ang/344912/AnalysisResultsFinal.root"]
+response_labels: ["PYTHIA8", "Herwig7"]
 rebin_theory_response: False
 
 
@@ -177,7 +179,7 @@ rebin_theory_response: False
 # Analysis & plotting parameters
 file_format: ".pdf"
 output_dir: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin2"
-roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-2.0.0/lib/libRooUnfold.so"
+roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
 do_unfolding: False
@@ -206,10 +208,10 @@ systematics_list:
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/287220/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/287381/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/287382/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/351487/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/351489/AnalysisResultsFinal.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/287383/AnalysisResultsFinal.root'
-randmass_response: '/rstorage/alice/AnalysisResults/ang/287384/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/351488/AnalysisResultsFinal.root'
 fastsim_response: ['/rstorage/alice/AnalysisResults/ang/287385/AnalysisResultsFinal.root',
                    '/rstorage/alice/AnalysisResults/ang/287386/AnalysisResultsFinal.root']
 
