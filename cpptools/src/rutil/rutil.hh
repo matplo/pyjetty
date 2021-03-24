@@ -58,6 +58,10 @@ namespace RUtil
         TH2F* rebin_th2(TH2F & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
                         double* y_bins, int n_y_bins, bool move_y_underflow = false);
 
+        // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
+        TH2D* rebin_th2(TH2D & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
+                        double* y_bins, int n_y_bins, bool move_y_underflow = false);
+
         // Rebin N-dimensional THn to a new histogram with name name_thn_rebinned using provided axes
         // WARNING: currently requires n_dim = 4
         THnF* rebin_thn(const std::string & response_file_name,

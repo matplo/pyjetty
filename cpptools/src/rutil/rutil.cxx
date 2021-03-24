@@ -72,6 +72,64 @@ namespace RUtil
 
     }  // rebin_th2
 
+
+    //---------------------------------------------------------------
+	// Same function, but overloaded for TH2D 
+    //---------------------------------------------------------------
+    TH2D* HistUtils::rebin_th2(TH2D & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
+                    double* y_bins, int n_y_bins, bool move_y_underflow /*= false*/) {
+
+        // Initialize the new empty histogram
+        std::string name = std::string(hname) + "_rebinned";
+        TH2D* h = new TH2D(name.c_str(), name.c_str(), n_x_bins, x_bins, n_y_bins, y_bins);
+
+        /*  Probably don't need this check
+        // Check whether sumw2 has been previously set, just for our info
+        if (h->GetSumw2() == 0) {
+            std::cout << "rebin_th2() -- sumw2 has not been set" << std::endl;
+        } else {
+            std::cout << "rebin_th2() -- sumw2 has been set" << std::endl;
+        }  // if (h->GetSumw2() == 0)
+        */
+
+        // Loop over all bins and fill rebinned histogram
+        for (unsigned int bin_x = 1; bin_x <= h_to_rebin.GetNbinsX(); bin_x++) {
+            for (unsigned int bin_y = 0; bin_y <= h_to_rebin.GetNbinsY(); bin_y++) {
+
+                // If underflow bin of observable, and if use_underflow is activated,
+                //   put the contents of the underflow bin into the first bin of the rebinned TH2
+                if (bin_y == 0) {
+                    if (move_y_underflow) {
+                        h->Fill(h_to_rebin.GetXaxis()->GetBinCenter(bin_x),
+                                h->GetYaxis()->GetBinCenter(1),
+                                h_to_rebin.GetBinContent(bin_x, bin_y));
+                    }
+                    continue;
+                }  // biny == 0
+
+                h->Fill(h_to_rebin.GetXaxis()->GetBinCenter(bin_x),
+                        h_to_rebin.GetYaxis()->GetBinCenter(bin_y),
+                        h_to_rebin.GetBinContent(bin_x, bin_y));
+
+            }  // for(biny)
+        }  // for(binx)
+
+        // We need to manually set the uncertainties, since sumw2 does the wrong thing in this case
+        // Specifically: We fill the rebinned histo from several separate weighted fills, so sumw2
+        // gives sqrt(a^2+b^2) where we simply want counting uncertainties of sqrt(a+b).
+        for (unsigned int i = 0; i <= h->GetNcells(); i++) {
+            h->SetBinError(i, std::sqrt(h->GetBinContent(i)));
+        }
+
+        // We want to make sure sumw2 is set after rebinning, since
+        // we will scale etc. this histogram
+        if (h->GetSumw2() == 0) { h->Sumw2(); }
+
+        return h;
+
+    }  // rebin_th2
+
+
     //---------------------------------------------------------------
     // Rebin THn according to specified binnings; return pointer to rebinned THn
     //---------------------------------------------------------------
@@ -407,36 +465,34 @@ namespace RUtil
 		h_np->SetNameTitle(name.c_str(), name.c_str());
 
         // Numerical integration
-		// Loop over all y-bins in the final histogram
-		for(int ob_np_i = 0; ob_np_i < n_ob_bins; ob_np_i++) {
-			double ob_np = obs[ob_np_i];
-			// Loop over all x-bins in the final histogram
-			for(int pT_i = 0; pT_i < n_pT_bins; pT_i++) {
-				double pT = pTs[pT_i];
+		// Loop over all x-bins in the final histogram
+		for(int pT_i = 0; pT_i < n_pT_bins; pT_i++) {
+			double pT = pTs[pT_i];
+			// Loop over all y-bins in the final histogram
+			for(int ob_np_i = 0; ob_np_i < n_ob_bins; ob_np_i++) {
+				double ob_np = obs[ob_np_i];
 
 				// Calculate the integral for this bin
 				double integral = 0;
 				int ob_i = 0;
+				double ob; double k; double dk;
 				do {
-					double ob = obs[ob_i];
-					double k; double dk;
+					ob = obs[ob_i];
 					if (!groomed) { 
 						k = (ob_np - ob) * pT * R;
 						// Use chain rule to find dk in terms of dob and dpT
 						dk = pT * R;
 						if (option == "width") { dk *= ob_bin_width[ob_i]; }
-							//+ ob * R * std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
 					} else {  // groomed case (assumes sd_beta == 0 for simplification)
-						k = pT * R * std::pow(ob_np - ob * std::pow(sd_zcut, beta - 1), 1. / beta);
+						k = pT * R * std::pow((ob_np - ob) * std::pow(sd_zcut, beta - 1), 1. / beta);
 						dk = pT * R * std::pow(ob_np - ob, (1 - beta) / beta) *
 							std::pow(sd_zcut, beta - 1);
 						if (option == "width") { dk *= ob_bin_width[ob_i]; }
-							//+ R * std::pow(ob * std::pow(sd_zcut, beta - 1), 1. / beta) *
-							//std::abs(pT_bins[pT_i+1] - pT_bins[pT_i]);
 					}
 
 					integral += dk * HistUtils::F_np(Omega, k, beta) * 
 						h.GetBinContent(pT_i+1, ob_i+1);
+
 					ob_i++;
 				} while (ob_i <= ob_np_i);
 
@@ -444,8 +500,8 @@ namespace RUtil
 				else { h_np->SetBinContent(pT_i+1, ob_np_i+1, integral * ob_bin_width[ob_np_i]); }
 				h_np->SetBinError(pT_i+1, ob_np_i+1, 0);
 
-			}  // for(pT)
-		}  // for(ob)
+			}  // for(ob)
+		}  // for(pT)
 
 		return h_np;
 
