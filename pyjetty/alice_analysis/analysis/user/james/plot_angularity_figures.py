@@ -41,7 +41,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.logy = False # Note: logy is also not great, since the right-hand tails drop to different values
 
         self.xmin = -0.01
-        self.xmax = 0.65
+        self.xmax = 0.699
         if self.logx:
             self.xmin = 0.001
         self.scale_factor_groomed_beta3 = 0.04
@@ -64,8 +64,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.marker_size = 2.5
         self.marker_size_ratio = 2
         self.alpha = 0.7
-        self.colors = [ROOT.kBlue+3, ROOT.kBlue-2, ROOT.kBlue-6, ROOT.kBlue-9]
-        #ROOT.kViolet-8, ROOT.kBlue-4, ROOT.kRed-7, ROOT.kTeal-8]
+        self.colors = [ROOT.kViolet-8, ROOT.kBlue-9, ROOT.kRed-7, ROOT.kTeal-8]
 
         #------------------------------------------------------
         # Store paths to all final results in a dictionary
@@ -298,13 +297,13 @@ class PlotAngularityFigures(common_base.CommonBase):
         # Draw data
         for i,beta in enumerate(self.beta_list):
 
-            self.h_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
+            self.h_list[i].SetMarkerColorAlpha(self.colors[i], 1)
             self.h_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
             self.h_list[i].SetLineWidth(2)
             self.h_list[i].SetMarkerStyle(self.markers[i])
             self.h_list[i].SetMarkerSize(self.marker_size)
             scale_label = self.scale_histogram_for_visualization(self.h_list[i], i, groomed)
-            self.h_list[i].Draw('PE same')
+            self.h_list[i].Draw('PE X0 same')
 
             self.h_sys_list[i].SetLineColor(0)
             self.h_sys_list[i].SetMarkerSize(0)
@@ -337,7 +336,7 @@ class PlotAngularityFigures(common_base.CommonBase):
                 leg2.AddEntry(self.h_herwig_list[i], 'HERWIG7', 'l')
 
         for i,beta in enumerate(self.beta_list):
-            self.h_list[i].Draw('PE same')
+            self.h_list[i].Draw('PE X0 same')
 
         leg.Draw('same')
         if pad == 2:
@@ -495,12 +494,12 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_pythia_ratio_sys_list[i].SetLineWidth(0)
             self.h_pythia_ratio_sys_list[i].Draw('E2 same')
 
-            self.h_pythia_ratio_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
+            self.h_pythia_ratio_list[i].SetMarkerColorAlpha(self.colors[i], 1)
             self.h_pythia_ratio_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
             self.h_pythia_ratio_list[i].SetLineWidth(2)
             self.h_pythia_ratio_list[i].SetMarkerStyle(self.markers[i])
             self.h_pythia_ratio_list[i].SetMarkerSize(self.marker_size)
-            self.h_pythia_ratio_list[i].Draw('PE same')
+            self.h_pythia_ratio_list[i].Draw('PE X0 same')
             
             pad3.cd()
             self.h_herwig_ratio_sys_list[i].SetLineColor(0)
@@ -510,12 +509,12 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_herwig_ratio_sys_list[i].SetLineWidth(0)
             self.h_herwig_ratio_sys_list[i].Draw('E2 same')
 
-            self.h_herwig_ratio_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
+            self.h_herwig_ratio_list[i].SetMarkerColorAlpha(self.colors[i], 1)
             self.h_herwig_ratio_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
             self.h_herwig_ratio_list[i].SetLineWidth(2)
             self.h_herwig_ratio_list[i].SetMarkerStyle(self.markers[i])
             self.h_herwig_ratio_list[i].SetMarkerSize(self.marker_size)
-            self.h_herwig_ratio_list[i].Draw('PE same')
+            self.h_herwig_ratio_list[i].Draw('PE X0 same')
 
     # Scale vertical amplitude of histogram, for visualization
     #-------------------------------------------------------------------------------------------
