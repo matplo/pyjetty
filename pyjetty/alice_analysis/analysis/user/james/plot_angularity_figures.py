@@ -33,8 +33,8 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         #------------------------------------------------------
 
-        self.base_dir = '/home/james/plot-angularity/'
-        self.file = 'ang/final_results/fFinalResults.root'
+        self.base_dir = '/Users/jamesmulligan/Analysis_Angularity/plot-angularity/v2'
+        self.file = 'fFinalResults.root'
         self.beta_list = [1, 1.5, 2, 3]
 
         self.logx = False # Note: logx doesn't work well, since lowest bins are different, and dominate some plots
@@ -56,8 +56,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         self.left_offset = 0.2
         self.bottom_offset = 0.15
-        self.ratio_height = 0.25
-        self.top_bottom_scale_factor = (1 - self.ratio_height) / (1 - self.bottom_offset - self.ratio_height)
+        self.ratio_height = 0.2
 
         #------------------------------------------------------
 
@@ -74,12 +73,14 @@ class PlotAngularityFigures(common_base.CommonBase):
         subdirs = [x for _,x,_ in os.walk(self.base_dir)][0]
         for subdir in subdirs:
             subdir_path = os.path.join(self.base_dir, subdir)
-            filename = os.path.join(subdir_path, 'ang/final_results/fFinalResults.root')
+            filename = os.path.join(subdir_path, self.file)
             if 'R02' in subdir:
                 self.predictions['0.2'].append(filename)
             if 'R04' in subdir:
                 self.predictions['0.4'].append(filename)
             continue
+        self.predictions['0.2'].sort()
+        self.predictions['0.4'].sort()
 
         print(self)
 
@@ -92,16 +93,16 @@ class PlotAngularityFigures(common_base.CommonBase):
         ROOT.gROOT.ForceStyle()
 
         self.plot_multipanel(R=0.2, groomed=False)
-        self.plot_multipanel(R=0.4, groomed=False)
+        #self.plot_multipanel(R=0.4, groomed=False)
         self.plot_multipanel(R=0.2, groomed=True)
-        self.plot_multipanel(R=0.4, groomed=True)
+        #self.plot_multipanel(R=0.4, groomed=True)
 
     #-------------------------------------------------------------------------------------------
     def plot_multipanel(self, R=1, groomed=False):
 
         # Create multi-panel canvas
         cname = 'c{}{}'.format(R,groomed)
-        c = ROOT.TCanvas(cname,cname,1800,1600)
+        c = ROOT.TCanvas(cname,cname,1800,2200)
         c.SetRightMargin(0.05);
         c.SetLeftMargin(self.left_offset);
         c.SetTopMargin(0.05);
@@ -139,8 +140,11 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.h_list = []
         self.h_sys_list = []
         self.h_pythia_list = []
-        self.h_ratio_list = []
-        self.h_ratio_sys_list = []
+        self.h_herwig_list = []
+        self.h_pythia_ratio_list = []
+        self.h_pythia_ratio_sys_list = []
+        self.h_herwig_ratio_list = []
+        self.h_herwig_ratio_sys_list = []
         self.blank_histo_list = []
 
         grooming_label = ''
@@ -149,37 +153,54 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         for i,beta in enumerate(self.beta_list):
 
-
-
             h_name ='hmain_ang_R{}_{}{}_{}-{}_trunc'.format(R, beta, grooming_label, minpt, maxpt)
             h_sys_name =  'hResult_ang_systotal_R{}_{}{}_n3_{}-{}'.format(R, beta, grooming_label, minpt, maxpt)
             h_pythia_name = 'hPythia_ang_R{}_{}{}_{}-{}'.format(R, beta, grooming_label, minpt, maxpt)
+            h_herwig_name = 'hHerwig_ang_R{}_{}{}_{}-{}'.format(R, beta, grooming_label, minpt, maxpt)
 
             h = f.Get(h_name)
             h_sys = f.Get(h_sys_name)
             h_pythia = f.Get(h_pythia_name)
+            h_herwig = f.Get(h_herwig_name)
             h.SetDirectory(0)
             h_sys.SetDirectory(0)
             h_pythia.SetDirectory(0)
+            h_herwig.SetDirectory(0)
 
             self.h_list.append(h)
             self.h_sys_list.append(h_sys)
             self.h_pythia_list.append(h_pythia)
+            self.h_herwig_list.append(h_herwig)
 
-            # Plot the ratio
-            h_ratio = h.Clone()
-            h_ratio.SetName('{}_{}_{}_{}_{}'.format(h_ratio.GetName(), R, ptbin, beta, pad))
-            h_ratio.SetDirectory(0)
-            h_ratio.Divide(h_pythia)
-            self.plot_list.append(h_ratio)
-            self.h_ratio_list.append(h_ratio)
+            # Plot the pythia ratio
+            h_pythia_ratio = h.Clone()
+            h_pythia_ratio.SetName('{}_{}_{}_{}_{}'.format(h_pythia_ratio.GetName(), R, ptbin, beta, pad))
+            h_pythia_ratio.SetDirectory(0)
+            h_pythia_ratio.Divide(h_pythia)
+            self.plot_list.append(h_pythia_ratio)
+            self.h_pythia_ratio_list.append(h_pythia_ratio)
 
-            h_ratio_sys = h_sys.Clone()
-            h_ratio_sys.SetName('sys{}_{}_{}_{}_{}'.format(h_ratio.GetName(), R, ptbin, beta, pad))
-            h_ratio_sys.SetDirectory(0)
-            h_ratio_sys.Divide(h_pythia)
-            self.plot_list.append(h_ratio_sys)
-            self.h_ratio_sys_list.append(h_ratio_sys)
+            h_pythia_ratio_sys = h_sys.Clone()
+            h_pythia_ratio_sys.SetName('sys{}_{}_{}_{}_{}'.format(h_pythia_ratio.GetName(), R, ptbin, beta, pad))
+            h_pythia_ratio_sys.SetDirectory(0)
+            h_pythia_ratio_sys.Divide(h_pythia)
+            self.plot_list.append(h_pythia_ratio_sys)
+            self.h_pythia_ratio_sys_list.append(h_pythia_ratio_sys)
+            
+            # Plot the herwig ratio
+            h_herwig_ratio = h.Clone()
+            h_herwig_ratio.SetName('{}_{}_{}_{}_{}'.format(h_herwig_ratio.GetName(), R, ptbin, beta, pad))
+            h_herwig_ratio.SetDirectory(0)
+            h_herwig_ratio.Divide(h_herwig)
+            self.plot_list.append(h_herwig_ratio)
+            self.h_herwig_ratio_list.append(h_herwig_ratio)
+
+            h_herwig_ratio_sys = h_sys.Clone()
+            h_herwig_ratio_sys.SetName('sys{}_{}_{}_{}_{}'.format(h_herwig_ratio.GetName(), R, ptbin, beta, pad))
+            h_herwig_ratio_sys.SetDirectory(0)
+            h_herwig_ratio_sys.Divide(h_herwig)
+            self.plot_list.append(h_herwig_ratio_sys)
+            self.h_herwig_ratio_sys_list.append(h_herwig_ratio_sys)
 
         f.Close()
 
@@ -190,8 +211,11 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.plot_list.append(self.h_list)
         self.plot_list.append(self.h_sys_list)
         self.plot_list.append(self.h_pythia_list)
-        self.plot_list.append(self.h_ratio_list)
-        self.plot_list.append(self.h_ratio_sys_list)
+        self.plot_list.append(self.h_pythia_ratio_list)
+        self.plot_list.append(self.h_pythia_ratio_sys_list)
+        self.plot_list.append(self.h_herwig_list)
+        self.plot_list.append(self.h_herwig_ratio_list)
+        self.plot_list.append(self.h_herwig_ratio_sys_list)
         self.plot_list.append(self.blank_histo_list)
 
     #-------------------------------------------------------------------------------------------
@@ -204,9 +228,9 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         # Set pad to plot distributions
         if pad in [3,4]:
-            pad1 = ROOT.TPad("pad1_{}".format(R), "pad1{}".format(R),0, self.bottom_offset + self.ratio_height,1,1)
+            pad1 = ROOT.TPad("pad1_{}".format(R), "pad1{}".format(R),0, self.bottom_offset + 2*self.ratio_height,1,1)
         else:
-            pad1 = ROOT.TPad("pad1_{}".format(R), "pad1{}".format(R),0, self.ratio_height,1,1)
+            pad1 = ROOT.TPad("pad1_{}".format(R), "pad1{}".format(R),0, 2*self.ratio_height,1,1)
         self.plot_list.append(pad1)
         if pad in [1,3]:
             pad1.SetLeftMargin(self.left_offset)
@@ -232,13 +256,13 @@ class PlotAngularityFigures(common_base.CommonBase):
         else:
             myBlankHisto.SetYTitle(self.ytitle)    
         if pad in [1,2]:
-            myBlankHisto.GetYaxis().SetTitleSize(0.1)
+            myBlankHisto.GetYaxis().SetTitleSize(1.1*0.1)
             myBlankHisto.GetYaxis().SetTitleOffset(0.7)
-            myBlankHisto.GetYaxis().SetLabelSize(0.06)
+            myBlankHisto.GetYaxis().SetLabelSize(1.1*0.06)
         else:
-            myBlankHisto.GetYaxis().SetTitleSize(0.115)
+            myBlankHisto.GetYaxis().SetTitleSize(1.1*0.115)
             myBlankHisto.GetYaxis().SetTitleOffset(0.6)
-            myBlankHisto.GetYaxis().SetLabelSize(0.07)
+            myBlankHisto.GetYaxis().SetLabelSize(1.1*0.07)
         if self.logy:
             myBlankHisto.SetMinimum(0.02)
             myBlankHisto.SetMaximum(1000)
@@ -266,9 +290,9 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.setupLegend(leg,0.08)
         self.plot_list.append(leg)
 
-        leg2 = ROOT.TLegend(0.13+shift,0.9-0.072*scale_factor*2,0.3,0.9)
+        leg2 = ROOT.TLegend(0.13+shift,0.9-0.072*scale_factor*3,0.3,0.9)
         if pad == 2:
-            self.setupLegend(leg2,0.07)
+            self.setupLegend(leg2,0.06)
             self.plot_list.append(leg2)
 
         # Draw data
@@ -297,12 +321,20 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_pythia_list[i].SetLineWidth(3)
             scale_label = self.scale_histogram_for_visualization(self.h_pythia_list[i], i, groomed)
             self.h_pythia_list[i].Draw('L hist same')
+            
+            self.h_herwig_list[i].SetLineColor(self.colors[i])
+            self.h_herwig_list[i].SetLineColorAlpha(self.colors[i], 0.5)
+            self.h_herwig_list[i].SetLineWidth(3)
+            self.h_herwig_list[i].SetLineStyle(2)
+            scale_label = self.scale_histogram_for_visualization(self.h_herwig_list[i], i, groomed)
+            self.h_herwig_list[i].Draw('L hist same')
 
             leg.AddEntry(self.h_list[i],'#beta = {}{}'.format(beta, scale_label),'P')
             
             if i == 2:
                 leg2.AddEntry(self.h_sys_list[i], 'Sys. uncertainty', 'f')
                 leg2.AddEntry(self.h_pythia_list[i], 'PYTHIA8 Monash 2013', 'l')
+                leg2.AddEntry(self.h_herwig_list[i], 'HERWIG7', 'l')
 
         for i,beta in enumerate(self.beta_list):
             self.h_list[i].Draw('PE same')
@@ -364,27 +396,39 @@ class PlotAngularityFigures(common_base.CommonBase):
         # Set pad for ratio
         c.cd(pad)
         if pad in [3,4]:
-            pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),0,0,1,self.bottom_offset+self.ratio_height)
+            pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),0,self.bottom_offset+self.ratio_height,1,self.bottom_offset+2*self.ratio_height)
+            pad3 = ROOT.TPad("pad3_{}".format(R), "pad3{}".format(R),0,0,1,self.bottom_offset+self.ratio_height)
         else:
-            pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),0,0,1,self.ratio_height)
+            pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),0,self.ratio_height,1,2*self.ratio_height)
+            pad3 = ROOT.TPad("pad3_{}".format(R), "pad3{}".format(R),0,0,1,self.ratio_height)
         self.plot_list.append(pad2)
+        self.plot_list.append(pad3)
         if pad in [1,3]:
             pad2.SetLeftMargin(self.left_offset)
+            pad3.SetLeftMargin(self.left_offset)
         else:
             pad2.SetLeftMargin(0.)
+            pad3.SetLeftMargin(0.)
         pad2.SetRightMargin(0.)
         pad2.SetTopMargin(0.)
+        pad3.SetRightMargin(0.)
+        pad3.SetTopMargin(0.)
         if pad in [3,4]:
-            pad2.SetBottomMargin(self.bottom_offset/(self.bottom_offset+self.ratio_height))
+            pad2.SetBottomMargin(0.)
+            pad3.SetBottomMargin(self.bottom_offset/(self.bottom_offset+self.ratio_height))
         else:
             pad2.SetBottomMargin(0.)
+            pad3.SetBottomMargin(0.)
         if self.logx:
             pad2.SetLogx()
+            pad3.SetLogx()
         pad2.SetTicks(1,1)
         pad2.Draw()
-        pad2.cd()
+        pad3.SetTicks(1,1)
+        pad3.Draw()
 
         # Draw blank histos
+        pad2.cd()
         blankname = 'myBlankHisto2_{}_{}'.format(pad, R)
         myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto2.SetNdivisions(505, "y")
@@ -392,46 +436,86 @@ class PlotAngularityFigures(common_base.CommonBase):
             myBlankHisto2.SetXTitle(self.xtitle_groomed)
         else:
             myBlankHisto2.SetXTitle(self.xtitle)
-        myBlankHisto2.SetYTitle('#frac{Data}{MC}')        
+        myBlankHisto2.SetYTitle('#frac{Data}{PYTHIA8}')
         if pad in [1,2]:
             myBlankHisto2.GetYaxis().SetTitleSize(0.2)
-            myBlankHisto2.GetYaxis().SetTitleOffset(0.3)
+            myBlankHisto2.GetYaxis().SetTitleOffset(0.4)
             myBlankHisto2.GetYaxis().SetLabelSize(0.2)
-            myBlankHisto2.SetMinimum(0.01)
         else:
-            myBlankHisto2.GetXaxis().SetTitleSize(0.2)
-            myBlankHisto2.GetXaxis().SetTitleOffset(0.8)
-            myBlankHisto2.GetXaxis().SetLabelSize(0.12)      
-            myBlankHisto2.GetYaxis().SetTitleSize(0.12)
-            myBlankHisto2.GetYaxis().SetTitleOffset(0.5)
-            myBlankHisto2.GetYaxis().SetLabelSize(0.12)
-            myBlankHisto2.SetMinimum(0.)
+            myBlankHisto2.GetYaxis().SetTitleSize(0.2)
+            myBlankHisto2.GetYaxis().SetTitleOffset(0.4)
+            myBlankHisto2.GetYaxis().SetLabelSize(0.2)
+        myBlankHisto2.SetMinimum(0.01)
         myBlankHisto2.SetMaximum(1.99)
         myBlankHisto2.Draw()
         self.blank_histo_list.append(myBlankHisto2)
+        
+        pad3.cd()
+        blankname = 'myBlankHisto3_{}_{}'.format(pad, R)
+        myBlankHisto3 = myBlankHisto2.Clone()
+        myBlankHisto3.SetNdivisions(505, "y")
+        if groomed:
+            myBlankHisto3.SetXTitle(self.xtitle_groomed)
+        else:
+            myBlankHisto3.SetXTitle(self.xtitle)
+        myBlankHisto3.SetYTitle('#frac{Data}{HERWIG7}')
+        if pad in [1,2]:
+            myBlankHisto3.GetYaxis().SetTitleSize(0.2)
+            myBlankHisto3.GetYaxis().SetTitleOffset(0.4)
+            myBlankHisto3.GetYaxis().SetLabelSize(0.2)
+            myBlankHisto3.SetMinimum(0.01)
+        else:
+            myBlankHisto3.GetXaxis().SetTitleSize(0.2)
+            myBlankHisto3.GetXaxis().SetTitleOffset(0.8)
+            myBlankHisto3.GetXaxis().SetLabelSize(0.12)
+            myBlankHisto3.GetYaxis().SetTitleSize(0.11)
+            myBlankHisto3.GetYaxis().SetTitleOffset(0.7)
+            myBlankHisto3.GetYaxis().SetLabelSize(0.11)
+            myBlankHisto3.SetMinimum(0.)
+        myBlankHisto3.Draw()
+        self.blank_histo_list.append(myBlankHisto3)
 
         line = ROOT.TLine(self.xmin,1,self.xmax,1)
         line.SetLineColor(1)
         line.SetLineStyle(2)
+        pad2.cd()
+        line.Draw('same')
+        pad3.cd()
         line.Draw('same')
         self.plot_list.append(line)
 
         # Draw ratio
         for i,beta in enumerate(self.beta_list):
+        
+            pad2.cd()
+            self.h_pythia_ratio_sys_list[i].SetLineColor(0)
+            self.h_pythia_ratio_sys_list[i].SetFillColor(self.colors[i])
+            self.h_pythia_ratio_sys_list[i].SetFillColorAlpha(self.colors[i], 0.3)
+            self.h_pythia_ratio_sys_list[i].SetFillStyle(1001)
+            self.h_pythia_ratio_sys_list[i].SetLineWidth(0)
+            self.h_pythia_ratio_sys_list[i].Draw('E2 same')
 
-            self.h_ratio_sys_list[i].SetLineColor(0)
-            self.h_ratio_sys_list[i].SetFillColor(self.colors[i])
-            self.h_ratio_sys_list[i].SetFillColorAlpha(self.colors[i], 0.3)
-            self.h_ratio_sys_list[i].SetFillStyle(1001)
-            self.h_ratio_sys_list[i].SetLineWidth(0)
-            self.h_ratio_sys_list[i].Draw('E2 same')
+            self.h_pythia_ratio_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
+            self.h_pythia_ratio_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
+            self.h_pythia_ratio_list[i].SetLineWidth(2)
+            self.h_pythia_ratio_list[i].SetMarkerStyle(self.markers[i])
+            self.h_pythia_ratio_list[i].SetMarkerSize(self.marker_size)
+            self.h_pythia_ratio_list[i].Draw('PE same')
+            
+            pad3.cd()
+            self.h_herwig_ratio_sys_list[i].SetLineColor(0)
+            self.h_herwig_ratio_sys_list[i].SetFillColor(self.colors[i])
+            self.h_herwig_ratio_sys_list[i].SetFillColorAlpha(self.colors[i], 0.3)
+            self.h_herwig_ratio_sys_list[i].SetFillStyle(1001)
+            self.h_herwig_ratio_sys_list[i].SetLineWidth(0)
+            self.h_herwig_ratio_sys_list[i].Draw('E2 same')
 
-            self.h_ratio_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
-            self.h_ratio_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
-            self.h_ratio_list[i].SetLineWidth(2)
-            self.h_ratio_list[i].SetMarkerStyle(self.markers[i])
-            self.h_ratio_list[i].SetMarkerSize(self.marker_size)
-            self.h_ratio_list[i].Draw('PE same')
+            self.h_herwig_ratio_list[i].SetMarkerColorAlpha(self.colors[i], self.alpha)
+            self.h_herwig_ratio_list[i].SetLineColorAlpha(self.colors[i], self.alpha)
+            self.h_herwig_ratio_list[i].SetLineWidth(2)
+            self.h_herwig_ratio_list[i].SetMarkerStyle(self.markers[i])
+            self.h_herwig_ratio_list[i].SetMarkerSize(self.marker_size)
+            self.h_herwig_ratio_list[i].Draw('PE same')
 
     # Scale vertical amplitude of histogram, for visualization
     #-------------------------------------------------------------------------------------------
