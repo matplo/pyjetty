@@ -107,7 +107,7 @@ class ProcessQG(common_base.CommonBase):
         self.train = config['n_train']
         self.val = config['n_val']
         self.test = config['n_test']
-        self.K = config['K']
+        self.K = max(config['K'])
 
     #---------------------------------------------------------------
     # Main processing function

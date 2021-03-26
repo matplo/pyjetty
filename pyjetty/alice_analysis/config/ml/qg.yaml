@@ -12,14 +12,14 @@ n_test: 3000
 # Define Nsubjettiness observables to compute
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
-K: 6
+K: [2, 4, 6]
 
 #------------------------------------------------------------------------------
 # All parameters below are only used in the analysis script
 #------------------------------------------------------------------------------
 
 # Select model: linear, random_forest, neural_network, pfn
-models: [linear, random_forest, neural_network, pfn]
+models: [random_forest]
 
 linear:
     # Model hyperparameters

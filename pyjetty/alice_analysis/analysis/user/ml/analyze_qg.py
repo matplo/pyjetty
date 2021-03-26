@@ -59,7 +59,7 @@ class AnalyzeQG(common_base.CommonBase):
             self.X_Nsub = hf['X_Nsub'][:]
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
-        
+
         # Define formatted labels for features
         self.feature_labels = []
         for i,N in enumerate(self.N_list):
@@ -68,8 +68,28 @@ class AnalyzeQG(common_base.CommonBase):
 
         # Split into training and test sets
         # We will split into validatation sets (for tuning hyperparameters) separately for each model
-        self.X_Nsub_train, self.X_Nsub_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.X_Nsub, self.y, test_size=self.test_frac)
-        
+        X_Nsub_train, X_Nsub_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.X_Nsub, self.y, test_size=self.test_frac)
+               
+        # Construct training/test sets for each K
+        self.training_data = {}
+        for K in self.K_list:
+            n = 3*K-4
+            self.training_data[K] = {}
+            self.training_data[K]['X_Nsub_train'] = X_Nsub_train[:,:n]
+            self.training_data[K]['X_Nsub_test'] = X_Nsub_test[:,:n]
+            self.training_data[K]['N_list'] = self.N_list[:n]
+            self.training_data[K]['beta_list'] = self.beta_list[:n]
+            self.training_data[K]['feature_labels'] = self.feature_labels[:n]
+            
+        # Set up dict to store roc curves
+        self.roc_curve_dict = {}
+        if 'linear' in self.models:
+            self.roc_curve_dict['SGDClassifier'] = {}
+        if 'random_forest' in self.models:
+            self.roc_curve_dict['RandomForest'] = {}
+        if 'neural_network' in self.models:
+            self.roc_curve_dict['DNN'] = {}
+                    
     #---------------------------------------------------------------
     # Initialize config file into class members
     #---------------------------------------------------------------
@@ -85,7 +105,7 @@ class AnalyzeQG(common_base.CommonBase):
         self.n_total = self.n_train + self.n_val + self.n_test
         self.test_frac = 1. * self.n_test / self.n_total
         
-        self.K = config['K']
+        self.K_list = config['K']
         
         # Initialize model-specific settings
         self.models = config['models']
@@ -126,22 +146,23 @@ class AnalyzeQG(common_base.CommonBase):
     def analyze_qg(self):
     
         # Plot the input data
-        self.plot_training_data()
+        [self.plot_training_data(K) for K in self.K_list]
 
         # Train ML models
-        self.roc_curve_dict = {}
         for model in self.models:
         
             model_settings = self.model_settings[model]
-        
-            if model == 'linear':
-                self.fit_linear_model(model_settings)
-            if model == 'random_forest':
-                self.fit_random_forest(model_settings)
-            if model == 'neural_network':
-                self.fit_neural_network(model_settings)
-            if model == 'pfn':
-                self.fit_pfn(model_settings)
+            
+            for K in self.K_list:
+            
+                if model == 'linear':
+                    self.fit_linear_model(K, model_settings)
+                if model == 'random_forest':
+                    self.fit_random_forest(K, model_settings)
+                if model == 'neural_network':
+                    self.fit_neural_network(K, model_settings)
+                if model == 'pfn':
+                    self.fit_pfn(model_settings)
                 
         # Plot ROC curves
         self.plot_roc_curves()
@@ -149,22 +170,26 @@ class AnalyzeQG(common_base.CommonBase):
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
-    def plot_training_data(self):
-
+    def plot_training_data(self, K):
+            
         # Print fraction of q/g jets
-        print('Fraction of quark jets: {}'.format(np.sum(self.y_train)/self.y_train.size))
-        print()
+        if K == min(self.K_list):
+            print('Fraction of quark jets: {}'.format(np.sum(self.y_train)/self.y_train.size))
+            print()
         
+        print(f'Plotting input data, K={K}...')
+        print()
+
         # Plot scatter matrix
-        df = pd.DataFrame(self.X_Nsub_train, columns=self.feature_labels)
+        df = pd.DataFrame(self.training_data[K]['X_Nsub_train'], columns=self.training_data[K]['feature_labels'])
         sns.pairplot(df, kind='hist', corner=True)
-        plt.savefig(os.path.join(self.output_dir, 'training_data_scatter_matrix.png'), dpi=200)
+        plt.savefig(os.path.join(self.output_dir, f'training_data_scatter_matrix_K{K}.png'), dpi=200)
         plt.close()
         
         # Plot correlation matrix
         corr_matrix = df.corr()
         sns.heatmap(corr_matrix)
-        plt.savefig(os.path.join(self.output_dir, 'training_data_correlation_matrix.pdf'))
+        plt.savefig(os.path.join(self.output_dir, f'training_data_correlation_matrix_K{K}.pdf'))
         plt.close()
        
     #---------------------------------------------------------------
@@ -172,9 +197,9 @@ class AnalyzeQG(common_base.CommonBase):
     #   - Linear model (SVM by default, w/o kernel) with SGD training
     #   - For best performance, data should have zero mean and unit variance
     #---------------------------------------------------------------
-    def fit_linear_model(self, model_settings):
-            
-        print('Training SGDClassifier')
+    def fit_linear_model(self, K, model_settings):
+        print(f'Training SGDClassifier, K={K}...')
+        
         sgd_clf = sklearn.linear_model.SGDClassifier(loss=model_settings['loss'],
                                                      penalty=model_settings['penalty'],
                                                      alpha=model_settings['alpha'],
@@ -183,10 +208,10 @@ class AnalyzeQG(common_base.CommonBase):
                                                      learning_rate=model_settings['learning_rate'],
                                                      early_stopping=model_settings['early_stopping'],
                                                      random_state=model_settings['random_state'])
-        sgd_clf.fit(self.X_Nsub_train, self.y_train)
+        sgd_clf.fit(self.training_data[K]['X_Nsub_train'], self.y_train)
         
         # Use cross validation predict (here split training set) and compute the confusion matrix from the predictions
-        y_Nsub_crossval_SGD = sklearn.model_selection.cross_val_predict(sgd_clf, self.X_Nsub_train, self.y_train, cv=3,method="decision_function")
+        y_Nsub_crossval_SGD = sklearn.model_selection.cross_val_predict(sgd_clf, self.training_data[K]['X_Nsub_train'], self.y_train, cv=3,method="decision_function")
         #confusion_SGD = sklearn.metrics.confusion_matrix(y_Nsub_train, y_Nsub_crossval_SGD)
         #print('Confusion matrix for SGD Classifier (test set): \n {}'.format(confusion_SGD))
 
@@ -195,11 +220,11 @@ class AnalyzeQG(common_base.CommonBase):
         
         # Get AUC from training process
         Nsub_auc_SGD = sklearn.metrics.roc_auc_score(self.y_train, y_Nsub_crossval_SGD)
-        print('SGDClassifier: AUC = {} (cross validation)'.format(Nsub_auc_SGD))
+        print(f'AUC = {Nsub_auc_SGD} (cross validation)')
         print()
 
         # Compute ROC curve: the roc_curve() function expects labels and scores
-        self.roc_curve_dict['SGDClassifier'] = sklearn.metrics.roc_curve(self.y_train, y_Nsub_crossval_SGD)
+        self.roc_curve_dict['SGDClassifier'][K] = sklearn.metrics.roc_curve(self.y_train, y_Nsub_crossval_SGD)
         
         # Check number of threhsolds used for ROC curve
         # n_thresholds = len(np.unique(y_Nsub_scores_SGD)) + 1
@@ -207,10 +232,11 @@ class AnalyzeQG(common_base.CommonBase):
     #---------------------------------------------------------------
     # Fit ML model -- 2. Random Forest Classifier
     #---------------------------------------------------------------
-    def fit_random_forest(self, model_settings):
-                
+    def fit_random_forest(self, K, model_settings):
+        print(f'Training Random Forest Classifier, K={K}...')
+        
         forest_clf = sklearn.ensemble.RandomForestClassifier(random_state=model_settings['random_state'])
-        y_Nsub_probas_forest = sklearn.model_selection.cross_val_predict(forest_clf, self.X_Nsub_train, self.y_train, cv=3,method="predict_proba")
+        y_Nsub_probas_forest = sklearn.model_selection.cross_val_predict(forest_clf, self.training_data[K]['X_Nsub_train'], self.y_train, cv=3,method="predict_proba")
         
         # The output here are class probabilities. We us use the positive class's probability for the ROC curve
         y_Nsub_scores_forest = y_Nsub_probas_forest[:,1]
@@ -219,19 +245,20 @@ class AnalyzeQG(common_base.CommonBase):
         
         # Compute AUC & ROC curve
         Nsub_auc_RFC = sklearn.metrics.roc_auc_score(self.y_train,y_Nsub_scores_forest)
-        print('Random Forest Classifier: AUC = {} (cross validation)'.format(Nsub_auc_RFC))
+        print(f'AUC = {Nsub_auc_RFC} (cross validation)')
         print()
 
-        self.roc_curve_dict['RandomForest'] = sklearn.metrics.roc_curve(self.y_train,y_Nsub_scores_forest)
+        self.roc_curve_dict['RandomForest'][K] = sklearn.metrics.roc_curve(self.y_train,y_Nsub_scores_forest)
 
     #---------------------------------------------------------------
     # Fit ML model -- 3. Dense Neural network with Keras
     #---------------------------------------------------------------
-    def fit_neural_network(self, model_settings):
+    def fit_neural_network(self, K, model_settings):
+        print(f'Training Dense Neural Network, K={K}...')
         
         # input_shape expects shape of an instance (not including batch size)
         DNN = keras.models.Sequential()
-        DNN.add(keras.layers.Flatten(input_shape=[self.X_Nsub_train.shape[1]]))
+        DNN.add(keras.layers.Flatten(input_shape=[self.training_data[K]['X_Nsub_train'].shape[1]]))
         DNN.add(keras.layers.Dense(300,activation='relu'))
         DNN.add(keras.layers.Dense(300,activation='relu'))
         DNN.add(keras.layers.Dense(100,activation='relu'))
@@ -247,18 +274,18 @@ class AnalyzeQG(common_base.CommonBase):
                     metrics=model_settings['metrics'])
 
         # Train DNN - need validation set here (use test set for now)
-        DNN.fit(self.X_Nsub_train, self.y_train, epochs=model_settings['epochs'],
-                validation_data=(self.X_Nsub_test, self.y_test))
+        DNN.fit(self.training_data[K]['X_Nsub_train'], self.y_train, epochs=model_settings['epochs'],
+                validation_data=(self.training_data[K]['X_Nsub_test'], self.y_test))
         
         # Get predictions for validation data set
-        y_Nsub_test_preds_DNN = DNN.predict(self.X_Nsub_test).reshape(-1)
+        y_Nsub_test_preds_DNN = DNN.predict(self.training_data[K]['X_Nsub_test']).reshape(-1)
         
         # Get AUC
         Nsub_auc_DNN = sklearn.metrics.roc_auc_score(self.y_test, y_Nsub_test_preds_DNN)
-        print('Dense Neural Network: AUC = {} (validation set)'.format(Nsub_auc_DNN))
+        print(f'AUC = {Nsub_auc_DNN} (validation set)')
         
         # Get ROC curve results
-        self.roc_curve_dict['DNN'] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
+        self.roc_curve_dict['DNN'][K] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
     
     #---------------------------------------------------------------
     # Fit ML model -- 4. Deep Set/Particle Flow Networks
@@ -337,12 +364,16 @@ class AnalyzeQG(common_base.CommonBase):
     
         for label,value in self.roc_curve_dict.items():
             
-            FPR = value[0]
-            TPR = value[1]
-            thresholds = value[2]
-    
-            plt.plot(FPR, TPR, linewidth=2, label=label)
-            
+            if label in ['PFN', 'Jet_mass', 'Multiplicity']:
+                FPR = value[0]
+                TPR = value[1]
+                plt.plot(FPR, TPR, linewidth=2, label=label)
+            else:
+                for K in self.K_list:
+                    FPR = value[K][0]
+                    TPR = value[K][1]
+                    plt.plot(FPR, TPR, linewidth=2, label=f'{label}, K={K}')
+                    
         plt.legend(loc='lower right')
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'ROC.pdf'))
