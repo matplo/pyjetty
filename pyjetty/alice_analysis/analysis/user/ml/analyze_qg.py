@@ -85,8 +85,40 @@ class AnalyzeQG(common_base.CommonBase):
         self.n_total = self.n_train + self.n_val + self.n_test
         self.test_frac = 1. * self.n_test / self.n_total
         
-        self.models = config['models']
         self.K = config['K']
+        
+        # Initialize model-specific settings
+        self.models = config['models']
+        self.model_settings = {}
+        for model in self.models:
+            self.model_settings[model] = {}
+            
+            if model == 'linear':
+                self.model_settings[model]['loss'] = config[model]['loss']
+                self.model_settings[model]['penalty'] = config[model]['penalty']
+                self.model_settings[model]['alpha'] = config[model]['alpha']
+                self.model_settings[model]['max_iter'] = config[model]['max_iter']
+                self.model_settings[model]['tol'] = float(config[model]['tol'])
+                self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
+                self.model_settings[model]['early_stopping'] = config[model]['early_stopping']
+                self.model_settings[model]['random_state'] = config[model]['random_state']
+
+            if model == 'random_forest':
+                self.model_settings[model]['random_state'] = config[model]['random_state']
+
+            if model == 'neural_network':
+                self.model_settings[model]['loss'] = config[model]['loss']
+                self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
+                self.model_settings[model]['epochs'] = config[model]['epochs']
+                self.model_settings[model]['metrics'] = config[model]['metrics']
+                self.model_settings[model]['random_state'] = config[model]['random_state']
+            
+            if model == 'pfn':
+                self.model_settings[model]['Phi_sizes'] = tuple(config[model]['Phi_sizes'])
+                self.model_settings[model]['F_sizes'] = tuple(config[model]['F_sizes'])
+                self.model_settings[model]['epochs'] = config[model]['epochs']
+                self.model_settings[model]['batch_size'] = config[model]['batch_size']
+                self.model_settings[model]['use_pids'] = config[model]['use_pids']
 
     #---------------------------------------------------------------
     # Main processing function
@@ -97,15 +129,23 @@ class AnalyzeQG(common_base.CommonBase):
         self.plot_training_data()
 
         # Train ML models
-        if 'linear' in self.models:
-            self.fit_linear_model()
-        if 'random_forest' in self.models:
-            self.fit_random_forest()
-        if 'neural_network' in self.models:
-            self.fit_neural_network()
-        if 'pfn' in self.models:
-            self.fit_pfn()
- 
+        self.roc_curve_dict = {}
+        for model in self.models:
+        
+            model_settings = self.model_settings[model]
+        
+            if model == 'linear':
+                self.fit_linear_model(model_settings)
+            if model == 'random_forest':
+                self.fit_random_forest(model_settings)
+            if model == 'neural_network':
+                self.fit_neural_network(model_settings)
+            if model == 'pfn':
+                self.fit_pfn(model_settings)
+                
+        # Plot ROC curves
+        self.plot_roc_curves()
+        
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
@@ -132,24 +172,17 @@ class AnalyzeQG(common_base.CommonBase):
     #   - Linear model (SVM by default, w/o kernel) with SGD training
     #   - For best performance, data should have zero mean and unit variance
     #---------------------------------------------------------------
-    def fit_linear_model(self):
+    def fit_linear_model(self, model_settings):
             
         print('Training SGDClassifier')
-        
-        # Model hyperparameters
-        loss = 'hinge'                # cost function
-        penalty = 'l2'                # regularization term
-        alpha = 0.0001                # regularization strength
-        max_iter = 1000               # max number of epochs
-        tol = 1e-3                    # criteria to stop training
-        learning_rate = 'optimal'     # Learning schedule (learning rate decreases over time in proportion to alpha)
-        early_stopping = False        # Whether to stop training based on validation score
-        random_state = None           # seed for shuffling data (set to an int to have reproducible results)
-        
-        sgd_clf = sklearn.linear_model.SGDClassifier(loss=loss, penalty=penalty,
-                                                     alpha=alpha, max_iter=max_iter, tol=tol,
-                                                     learning_rate=learning_rate, early_stopping=early_stopping,
-                                                     random_state=random_state)
+        sgd_clf = sklearn.linear_model.SGDClassifier(loss=model_settings['loss'],
+                                                     penalty=model_settings['penalty'],
+                                                     alpha=model_settings['alpha'],
+                                                     max_iter=model_settings['max_iter'],
+                                                     tol=model_settings['tol'],
+                                                     learning_rate=model_settings['learning_rate'],
+                                                     early_stopping=model_settings['early_stopping'],
+                                                     random_state=model_settings['random_state'])
         sgd_clf.fit(self.X_Nsub_train, self.y_train)
         
         # Use cross validation predict (here split training set) and compute the confusion matrix from the predictions
@@ -163,13 +196,10 @@ class AnalyzeQG(common_base.CommonBase):
         # Get AUC from training process
         Nsub_auc_SGD = sklearn.metrics.roc_auc_score(self.y_train, y_Nsub_crossval_SGD)
         print('SGDClassifier: AUC = {} (cross validation)'.format(Nsub_auc_SGD))
-        
-        # Compute ROC curve: the roc_curve() function expects labels and scores
-        self.Nsub_fpr_SGD, self.Nsub_tpr_SGD, thresholds = sklearn.metrics.roc_curve(self.y_train, y_Nsub_crossval_SGD)
-        
-        # Plot ROC curve for SGDClassifier
-        self.plot_roc_curve(self.Nsub_fpr_SGD, self.Nsub_tpr_SGD, label1='SGDClassifier')
         print()
+
+        # Compute ROC curve: the roc_curve() function expects labels and scores
+        self.roc_curve_dict['SGDClassifier'] = sklearn.metrics.roc_curve(self.y_train, y_Nsub_crossval_SGD)
         
         # Check number of threhsolds used for ROC curve
         # n_thresholds = len(np.unique(y_Nsub_scores_SGD)) + 1
@@ -177,9 +207,9 @@ class AnalyzeQG(common_base.CommonBase):
     #---------------------------------------------------------------
     # Fit ML model -- 2. Random Forest Classifier
     #---------------------------------------------------------------
-    def fit_random_forest(self):
+    def fit_random_forest(self, model_settings):
                 
-        forest_clf = sklearn.ensemble.RandomForestClassifier(random_state=42)
+        forest_clf = sklearn.ensemble.RandomForestClassifier(random_state=model_settings['random_state'])
         y_Nsub_probas_forest = sklearn.model_selection.cross_val_predict(forest_clf, self.X_Nsub_train, self.y_train, cv=3,method="predict_proba")
         
         # The output here are class probabilities. We us use the positive class's probability for the ROC curve
@@ -190,16 +220,14 @@ class AnalyzeQG(common_base.CommonBase):
         # Compute AUC & ROC curve
         Nsub_auc_RFC = sklearn.metrics.roc_auc_score(self.y_train,y_Nsub_scores_forest)
         print('Random Forest Classifier: AUC = {} (cross validation)'.format(Nsub_auc_RFC))
-        self.Nsub_fpr_forest, self.Nsub_tpr_forest, thresholds_forest = sklearn.metrics.roc_curve(self.y_train,y_Nsub_scores_forest)
-        
-        # Plot ROC curve
-        self.plot_roc_curve(self.Nsub_fpr_SGD, self.Nsub_tpr_SGD, self.Nsub_fpr_forest, self.Nsub_tpr_forest,"SGD_Nsub","RF_Nsub")
         print()
+
+        self.roc_curve_dict['RandomForest'] = sklearn.metrics.roc_curve(self.y_train,y_Nsub_scores_forest)
 
     #---------------------------------------------------------------
     # Fit ML model -- 3. Dense Neural network with Keras
     #---------------------------------------------------------------
-    def fit_neural_network(self):
+    def fit_neural_network(self, model_settings):
         
         # input_shape expects shape of an instance (not including batch size)
         DNN = keras.models.Sequential()
@@ -213,13 +241,14 @@ class AnalyzeQG(common_base.CommonBase):
         DNN.summary()
         
         # Compile DNN
-        opt = keras.optimizers.Adam(learning_rate=0.001) # lr = 0.001 (cf 1810.05165)
-        DNN.compile(loss="binary_crossentropy",          # Loss function - use categorical_crossentropy instead ?
+        opt = keras.optimizers.Adam(lr=model_settings['learning_rate']) # if error, change name to learning_rate
+        DNN.compile(loss=model_settings['loss'],
                     optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
-                    metrics=["accuracy"])                # Measure accuracy during training
+                    metrics=model_settings['metrics'])
 
         # Train DNN - need validation set here (use test set for now)
-        DNN.fit(self.X_Nsub_train, self.y_train, epochs=39, validation_data=(self.X_Nsub_test, self.y_test))
+        DNN.fit(self.X_Nsub_train, self.y_train, epochs=model_settings['epochs'],
+                validation_data=(self.X_Nsub_test, self.y_test))
         
         # Get predictions for validation data set
         y_Nsub_test_preds_DNN = DNN.predict(self.X_Nsub_test).reshape(-1)
@@ -229,26 +258,13 @@ class AnalyzeQG(common_base.CommonBase):
         print('Dense Neural Network: AUC = {} (validation set)'.format(Nsub_auc_DNN))
         
         # Get ROC curve results
-        self.Nsub_fpr_DNN, self.Nsub_tpr_DNN, thresholds = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
-        
-        # Plot ROC curve
-        self.plot_roc_curve(self.Nsub_fpr_SGD, self.Nsub_tpr_SGD, self.Nsub_fpr_DNN, self.Nsub_tpr_DNN, "SGD_Nsub", "DNN_Nsub")
+        self.roc_curve_dict['DNN'] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
     
     #---------------------------------------------------------------
     # Fit ML model -- 4. Deep Set/Particle Flow Networks
     #---------------------------------------------------------------
-    def fit_pfn(self):
+    def fit_pfn(self, model_settings):
 
-        # network architecture parameters
-        Phi_sizes, F_sizes = (100, 100, 256), (100, 100, 100)
-        
-        # network training parameters
-        num_epoch = 3
-        batch_size = 500
-        
-        # Use PID information
-        use_pids = True
-        
         # convert labels to categorical
         Y_PFN = energyflow.utils.to_categorical(self.y, num_classes=2)
         
@@ -261,7 +277,7 @@ class AnalyzeQG(common_base.CommonBase):
             x_PFN[mask,0] /= x_PFN[:,0].sum()
         
         # handle particle id channel [?? ... remap_pids is not working]
-        #if use_pids:
+        #if model_settings['use_pids']:
         #    energyflow.utils.remap_pids(X_PFN, pid_i=3)
         #else:
         X_PFN = X_PFN[:,:,:3]
@@ -270,12 +286,14 @@ class AnalyzeQG(common_base.CommonBase):
         (X_PFN_train, X_PFN_val, X_PFN_test,Y_PFN_train, Y_PFN_val, Y_PFN_test) = energyflow.utils.data_split(X_PFN, Y_PFN,
                                                                                              val=self.n_val, test=self.n_test)
         # build architecture
-        pfn = energyflow.archs.PFN(input_dim=X_PFN.shape[-1], Phi_sizes=Phi_sizes, F_sizes=F_sizes)
+        pfn = energyflow.archs.PFN(input_dim=X_PFN.shape[-1],
+                                   Phi_sizes=model_settings['Phi_sizes'],
+                                   F_sizes=model_settings['F_sizes'])
 
         # train model
         pfn.fit(X_PFN_train, Y_PFN_train,
-                epochs=num_epoch,
-                batch_size=batch_size,
+                epochs=model_settings['epochs'],
+                batch_size=model_settings['batch_size'],
                 validation_data=(X_PFN_val, Y_PFN_val),
                 verbose=1)
         
@@ -286,8 +304,7 @@ class AnalyzeQG(common_base.CommonBase):
         auc_PFN = sklearn.metrics.roc_auc_score(Y_PFN_test[:,1], preds_PFN[:,1])
         print('Particle Flow Networks/Deep Sets: AUC = {} (test set)'.format(auc_PFN))
         
-        fpr_PFN, tpr_PFN, threshs = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
-        self.plot_roc_curve(self.Nsub_fpr_SGD, self.Nsub_tpr_SGD, fpr_PFN, tpr_PFN,"SGD_Nsub","PFN_woPID")
+        self.roc_curve_dict['PFN'] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
         
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         
@@ -296,43 +313,39 @@ class AnalyzeQG(common_base.CommonBase):
         # 1. Jet mass (Note: This takes in (pt,y,phi) and converts it to 4-vectors and computes jet mass)
         #             (Note: X_PFN_train is centered and normalized .. should be ok)
         masses = np.asarray([energyflow.ms_from_p4s(energyflow.p4s_from_ptyphims(x).sum(axis=0)) for x in X_PFN_train])
-        mass_fpr, mass_tpr, threshs = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -masses)
+        self.roc_curve_dict['Jet_mass'] = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -masses)
         
         # 2. Multiplicity (Is this a useful observable for pp vs AA?)
         mults = np.asarray([np.count_nonzero(x[:,0]) for x in X_PFN_train])
-        mult_fpr, mult_tpr, threshs = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -mults)
-        
-        # Make ROC curve plots
-        self.plot_roc_curve(mass_fpr,mass_tpr,fpr_PFN, tpr_PFN,"Jet_mass","PFN_woPID")
-        self.plot_roc_curve(mult_fpr,mult_tpr,fpr_PFN, tpr_PFN,"Multiplicity","PFN_woPID")
-    
-        
+        self.roc_curve_dict['Multiplicity'] = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -mults)
+
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         
         # Do we need to train a DNN with 2 variables if we want to look at the discriminating power
         # of mass and multiplicity or just pass 2 features to the ROC curve?
 
-
     #--------------------------------------------------------------- 
-    # Plot ROC curve                                                 
+    # Plot ROC curves
     #--------------------------------------------------------------- 
-    def plot_roc_curve(self, fpr1=None, tpr1=None, fpr2=None, tpr2=None, label1=None, label2=None):
+    def plot_roc_curves(self):
     
-        plt.plot(fpr1, tpr1, "b:", label=label1)
-        if label2:
-            plt.plot(fpr2, tpr2, linewidth=2, label=label2)
         plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
-        plt.axis([0, 1, 0, 1])                                   
+        plt.axis([0, 1, 0, 1])
         plt.xlabel('False Positive Rate', fontsize=16)
-        plt.ylabel('True Positive Rate', fontsize=16) 
-        plt.grid(True)    
-        plt.legend(loc="lower right")        
+        plt.ylabel('True Positive Rate', fontsize=16)
+        plt.grid(True)
+    
+        for label,value in self.roc_curve_dict.items():
+            
+            FPR = value[0]
+            TPR = value[1]
+            thresholds = value[2]
+    
+            plt.plot(FPR, TPR, linewidth=2, label=label)
+            
+        plt.legend(loc='lower right')
         plt.tight_layout()
-        
-        outputfilename = 'ROC_{}'.format(label1)
-        if label2:
-            outputfilename += '_{}'.format(label2)
-        plt.savefig(os.path.join(self.output_dir, '{}.pdf'.format(outputfilename)))
+        plt.savefig(os.path.join(self.output_dir, 'ROC.pdf'))
         plt.close()
             
 ##################################################################
