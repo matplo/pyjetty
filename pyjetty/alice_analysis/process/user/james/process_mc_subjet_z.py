@@ -65,7 +65,9 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     for observable in self.observable_list:
 
       for subjetR in self.obs_settings[observable]:
-      
+        
+        obs_label = self.utils.obs_label(subjetR, None)      
+
         if (jetR - subjetR) < 1e-3:
           continue
       
@@ -78,7 +80,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
         
         if self.thermal_model:
           for R_max in self.max_distance:
-            name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, subjetR)
+            name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
             h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.0)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#z_{r}')
