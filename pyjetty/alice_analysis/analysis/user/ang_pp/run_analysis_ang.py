@@ -601,9 +601,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                       k = 0
                       while k < len(x_val_li) and x_val_li[k] < gs["sd"][0]:
                         k += 1
-                      y_val_li_gr[k:] = y_val_li[k:]
+                      if y_val_li[k] <= 0:
+                        y_val_li_gr[k:] = [0] * len(y_val_li_gr[k:])
+                      else:
+                        # Prefactor is to rescale tail to match correctly
+                        y_val_li_gr[k:] = [(y_val_li_gr[k] / y_val_li[k]) * value for
+                                           value in y_val_li[k:]]
 
-                    # Extrapolate parton curve to all bins and set 0 range on LHS tail
+                    # Interpolate parton curve to all bins and set 0 range on LHS tail
                     # Scale by bin width (to match RM)
                     val_li_gr = [val * obs_bins_width[i] for i, val in enumerate(set_zero_range(
                       list_interpolate(x_val_li, y_val_li_gr, obs_bins_center,
@@ -674,9 +679,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                     if l == m == n == 0:
                       hist_min_gr.SetBinContent(i+1, j+1, val)
                       hist_max_gr.SetBinContent(i+1, j+1, val)
-                    elif float(val) < hist_min.GetBinContent(i+1, j+1):
+                    elif float(val) < hist_min_gr.GetBinContent(i+1, j+1):
                       hist_min_gr.SetBinContent(i+1, j+1, val)
-                    elif float(val) > hist_max.GetBinContent(i+1, j+1):
+                    elif float(val) > hist_max_gr.GetBinContent(i+1, j+1):
                       hist_max_gr.SetBinContent(i+1, j+1, val)
 
                   if self.do_theory_F_np:
