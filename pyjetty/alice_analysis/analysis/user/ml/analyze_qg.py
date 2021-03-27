@@ -116,11 +116,13 @@ class AnalyzeQG(common_base.CommonBase):
             if model == 'linear':
                 self.model_settings[model]['loss'] = config[model]['loss']
                 self.model_settings[model]['penalty'] = config[model]['penalty']
-                self.model_settings[model]['alpha'] = config[model]['alpha']
+                self.model_settings[model]['alpha'] = [float(x) for x in config[model]['alpha']]
                 self.model_settings[model]['max_iter'] = config[model]['max_iter']
-                self.model_settings[model]['tol'] = float(config[model]['tol'])
+                self.model_settings[model]['tol'] = [float(x) for x in config[model]['tol']]
                 self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
                 self.model_settings[model]['early_stopping'] = config[model]['early_stopping']
+                self.model_settings[model]['n_iter'] = config[model]['n_iter']
+                self.model_settings[model]['cv'] = config[model]['cv']
                 self.model_settings[model]['random_state'] = config[model]['random_state']
 
             if model == 'random_forest':
@@ -200,35 +202,47 @@ class AnalyzeQG(common_base.CommonBase):
     def fit_linear_model(self, K, model_settings):
         print(f'Training SGDClassifier, K={K}...')
         
+        # Define model
         sgd_clf = sklearn.linear_model.SGDClassifier(loss=model_settings['loss'],
-                                                     penalty=model_settings['penalty'],
-                                                     alpha=model_settings['alpha'],
                                                      max_iter=model_settings['max_iter'],
-                                                     tol=model_settings['tol'],
                                                      learning_rate=model_settings['learning_rate'],
                                                      early_stopping=model_settings['early_stopping'],
                                                      random_state=model_settings['random_state'])
-        sgd_clf.fit(self.training_data[K]['X_Nsub_train'], self.y_train)
-        
-        # Use cross validation predict (here split training set) and compute the confusion matrix from the predictions
-        y_Nsub_crossval_SGD = sklearn.model_selection.cross_val_predict(sgd_clf, self.training_data[K]['X_Nsub_train'], self.y_train, cv=3,method="decision_function")
-        #confusion_SGD = sklearn.metrics.confusion_matrix(y_Nsub_train, y_Nsub_crossval_SGD)
-        #print('Confusion matrix for SGD Classifier (test set): \n {}'.format(confusion_SGD))
 
-        # Get predictions for the test set .. actually don't need this when using cross_val_predict (?)
-        # preds_Nsub_SGD = sgd_clf.predict(X_Nsub_test)
-        
-        # Get AUC from training process
-        Nsub_auc_SGD = sklearn.metrics.roc_auc_score(self.y_train, y_Nsub_crossval_SGD)
-        print(f'AUC = {Nsub_auc_SGD} (cross validation)')
+        # Optimize hyperparameters with random search, using cross-validation to determine best set
+        # Here we just search over discrete values, although can also easily specify a distribution
+        param_distributions = {'penalty': model_settings['penalty'],
+                               'alpha': model_settings['alpha'],
+                               'tol': model_settings['tol']}
+        randomized_search = sklearn.model_selection.RandomizedSearchCV(sgd_clf, param_distributions,
+                                                                       n_iter=model_settings['n_iter'],
+                                                                       cv=model_settings['cv'],
+                                                                       random_state=model_settings['random_state'])
+        search_result = randomized_search.fit(self.training_data[K]['X_Nsub_train'], self.y_train)
+        final_model = search_result.best_estimator_
+        result_info = search_result.cv_results_
+        print(f'Best params: {search_result.best_params_}')
+
+        # Get predictions for the test set
+        y_predict_train = final_model.predict(self.training_data[K]['X_Nsub_train'])
+        y_predict_test = final_model.predict(self.training_data[K]['X_Nsub_test'])
+
+        # Compare AUC on train set and test set
+        AUC_train = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
+        print(f'AUC = {AUC_train} (train set)')
+        AUC_test = sklearn.metrics.roc_auc_score(self.y_test, y_predict_test)
+        print(f'AUC = {AUC_test} (test set)')
         print()
 
         # Compute ROC curve: the roc_curve() function expects labels and scores
-        self.roc_curve_dict['SGDClassifier'][K] = sklearn.metrics.roc_curve(self.y_train, y_Nsub_crossval_SGD)
-        
+        self.roc_curve_dict['SGDClassifier'][K] = sklearn.metrics.roc_curve(self.y_test, y_predict_test)
+    
         # Check number of threhsolds used for ROC curve
-        # n_thresholds = len(np.unique(y_Nsub_scores_SGD)) + 1
-       
+        print('thresholds: {}'.format(self.roc_curve_dict['SGDClassifier'][K][2]))
+        
+        # Plot confusion matrix
+        #self.plot_confusion_matrix(self.y_train, y_predict_train, f'linear_K{K}')
+ 
     #---------------------------------------------------------------
     # Fit ML model -- 2. Random Forest Classifier
     #---------------------------------------------------------------
@@ -377,6 +391,17 @@ class AnalyzeQG(common_base.CommonBase):
         plt.legend(loc='lower right')
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'ROC.pdf'))
+        plt.close()
+        
+    #---------------------------------------------------------------
+    # Plot confusion matrix
+    # Note: not normalized to relative error
+    #---------------------------------------------------------------
+    def plot_confusion_matrix(self, y_train, y_predict_train, label):
+    
+        confusion_matrix = sklearn.metrics.confusion_matrix(y_train, y_predict_train)
+        sns.heatmap(confusion_matrix)
+        plt.savefig(os.path.join(self.output_dir, f'confusion_matrix_{label}.pdf'))
         plt.close()
             
 ##################################################################
