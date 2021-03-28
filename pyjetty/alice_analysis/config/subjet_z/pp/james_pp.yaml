@@ -119,6 +119,8 @@ systematics_list:
   - prior2
   - truncation
   - binning
+  - fastsim_generator0
+  - fastsim_generator1
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/156853/AnalysisResultsFinal.root'

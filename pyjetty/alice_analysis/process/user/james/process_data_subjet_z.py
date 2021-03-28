@@ -63,11 +63,23 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
           if (jetR - subjetR) < 1e-3:
             continue
         
-          name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, subjetR)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
-          h.GetXaxis().SetTitle('p_{T,ch jet}')
-          h.GetYaxis().SetTitle('z_{r}')
-          setattr(self, name, h)
+          if self.is_pp:
+
+              name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, subjetR)
+              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('z_{r}')
+              setattr(self, name, h)
+              
+          else:
+          
+              for R_max in self.max_distance:
+              
+                  name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
+                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+                  h.GetXaxis().SetTitle('p_{T,ch jet}')
+                  h.GetYaxis().SetTitle('z_{r}')
+                  setattr(self, name, h)
       
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
@@ -88,13 +100,13 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
       if 'inclusive' in observable:
         for subjet in subjets:
           z = subjet.pt() / jet.pt()
-          getattr(self, 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_setting)).Fill(jet.pt(), z)
+          getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z)
           
       # Fill leading subjets
       if 'leading' in observable:
         leading_subjet = self.utils.leading_jet(subjets)
         z_leading = leading_subjet.pt() / jet.pt()
-        getattr(self, 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_setting)).Fill(jet.pt(), z_leading)
+        getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z_leading)
 
 ##################################################################
 if __name__ == '__main__':
