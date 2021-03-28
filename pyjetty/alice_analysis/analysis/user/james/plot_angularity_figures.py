@@ -32,6 +32,8 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.file_format = '.pdf'
 
         #------------------------------------------------------
+        
+        self.jetR = 0.2
 
         self.base_dir = '/Users/jamesmulligan/Analysis_Angularity/plot-angularity/v2'
         self.file = 'fFinalResults.root'
@@ -41,13 +43,23 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.logy = False # Note: logy is also not great, since the right-hand tails drop to different values
 
         self.xmin = -0.01
-        self.xmax = 0.699
+        self.xmax = 0.6499
         if self.logx:
             self.xmin = 0.001
-        self.scale_factor_groomed_beta3 = 0.04
-        self.scale_factor_groomed_beta2 = 0.2
-        self.scale_factor_groomed_beta15 = 0.5
-        self.scale_factor_ungroomed_beta3 = 0.5
+            
+        self.scale_factor_groomed_beta3_lowpt = 0.03
+        self.scale_factor_groomed_beta2_lowpt = 0.2
+        self.scale_factor_groomed_beta15_lowpt = 0.5
+        self.scale_factor_ungroomed_beta3_lowpt = 0.5
+        self.scale_factor_ungroomed_beta2_lowpt = 1.
+        self.scale_factor_ungroomed_beta15_lowpt = 1.
+        
+        self.scale_factor_groomed_beta3_highpt = 0.02
+        self.scale_factor_groomed_beta2_highpt = 0.1
+        self.scale_factor_groomed_beta15_highpt = 0.25
+        self.scale_factor_ungroomed_beta3_highpt = 0.3
+        self.scale_factor_ungroomed_beta2_highpt = 0.5
+        self.scale_factor_ungroomed_beta15_highpt = 0.7
 
         self.xtitle =  '#it{#lambda}_{#it{#beta}}'
         self.ytitle = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}}'
@@ -91,10 +103,12 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.setOptions()
         ROOT.gROOT.ForceStyle()
 
-        self.plot_multipanel(R=0.2, groomed=False)
-        #self.plot_multipanel(R=0.4, groomed=False)
-        self.plot_multipanel(R=0.2, groomed=True)
-        #self.plot_multipanel(R=0.4, groomed=True)
+        if self.jetR == 0.2:
+            self.plot_multipanel(R=0.2, groomed=False)
+            self.plot_multipanel(R=0.2, groomed=True)
+        elif self.jetR == 0.4:
+            self.plot_multipanel(R=0.4, groomed=False)
+            self.plot_multipanel(R=0.4, groomed=True)
 
     #-------------------------------------------------------------------------------------------
     def plot_multipanel(self, R=1, groomed=False):
@@ -222,6 +236,11 @@ class PlotAngularityFigures(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     def plot_beta_overlay(self, c, pad, R, minpt, maxpt, groomed):
 
+        if groomed:
+            if R == 0.4:
+                self.xmax += 0.05
+            self.logy = True
+
         # Create canvas
         c.cd(pad)
 
@@ -255,22 +274,50 @@ class PlotAngularityFigures(common_base.CommonBase):
         else:
             myBlankHisto.SetYTitle(self.ytitle)    
         if pad in [1,2]:
-            myBlankHisto.GetYaxis().SetTitleSize(1.1*0.1)
-            myBlankHisto.GetYaxis().SetTitleOffset(0.7)
-            myBlankHisto.GetYaxis().SetLabelSize(1.1*0.06)
+            if groomed:
+                myBlankHisto.GetYaxis().SetTitleSize(1.05*0.1)
+                myBlankHisto.GetYaxis().SetTitleOffset(0.78)
+                myBlankHisto.GetYaxis().SetLabelSize(1.*0.06)
+            else:
+                myBlankHisto.GetYaxis().SetTitleSize(1.1*0.1)
+                myBlankHisto.GetYaxis().SetTitleOffset(0.7)
+                myBlankHisto.GetYaxis().SetLabelSize(1.1*0.06)
         else:
-            myBlankHisto.GetYaxis().SetTitleSize(1.1*0.115)
-            myBlankHisto.GetYaxis().SetTitleOffset(0.6)
-            myBlankHisto.GetYaxis().SetLabelSize(1.1*0.07)
+            if groomed:
+                myBlankHisto.GetYaxis().SetTitleSize(1.1*0.115)
+                myBlankHisto.GetYaxis().SetTitleOffset(0.65)
+                myBlankHisto.GetYaxis().SetLabelSize(1.1*0.07)
+            else:
+                myBlankHisto.GetYaxis().SetTitleSize(1.1*0.115)
+                myBlankHisto.GetYaxis().SetTitleOffset(0.6)
+                myBlankHisto.GetYaxis().SetLabelSize(1.1*0.07)
         if self.logy:
-            myBlankHisto.SetMinimum(0.02)
-            myBlankHisto.SetMaximum(1000)
+            if pad in [1,2]:
+                if R == 0.2:
+                    myBlankHisto.SetMinimum(0.0011)
+                    myBlankHisto.SetMaximum(5e7)
+                elif R == 0.4:
+                    myBlankHisto.SetMinimum(0.0002)
+                    myBlankHisto.SetMaximum(5e7)
+            else:
+                if R == 0.2:
+                    myBlankHisto.SetMinimum(2e-4)
+                    myBlankHisto.SetMaximum(2e2)
+                elif R == 0.4:
+                    myBlankHisto.SetMinimum(4e-3)
+                    myBlankHisto.SetMaximum(2e1)
         else:
             myBlankHisto.SetMinimum(0.001)
             if pad in [1,2]:
-                myBlankHisto.SetMaximum(16.99)
+                if groomed:
+                    myBlankHisto.SetMaximum(12.99)
+                else:
+                    myBlankHisto.SetMaximum(14.99)
             else:
-                myBlankHisto.SetMaximum(16.99)
+                if groomed:
+                    myBlankHisto.SetMaximum(12.99)
+                else:
+                    myBlankHisto.SetMaximum(9.99)
         myBlankHisto.Draw()
         self.blank_histo_list.append(myBlankHisto)
 
@@ -302,7 +349,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_list[i].SetLineWidth(2)
             self.h_list[i].SetMarkerStyle(self.markers[i])
             self.h_list[i].SetMarkerSize(self.marker_size)
-            scale_label = self.scale_histogram_for_visualization(self.h_list[i], i, groomed)
+            scale_label = self.scale_histogram_for_visualization(self.h_list[i], i, minpt, groomed)
             self.h_list[i].Draw('PE X0 same')
 
             self.h_sys_list[i].SetLineColor(0)
@@ -312,20 +359,20 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_sys_list[i].SetFillColorAlpha(self.colors[i], 0.3)
             self.h_sys_list[i].SetFillStyle(1001)
             self.h_sys_list[i].SetLineWidth(0)
-            scale_label = self.scale_histogram_for_visualization(self.h_sys_list[i], i, groomed)
+            scale_label = self.scale_histogram_for_visualization(self.h_sys_list[i], i, minpt, groomed)
             self.h_sys_list[i].Draw('E2 same')
 
             self.h_pythia_list[i].SetLineColor(self.colors[i])
             self.h_pythia_list[i].SetLineColorAlpha(self.colors[i], 0.5)
             self.h_pythia_list[i].SetLineWidth(3)
-            scale_label = self.scale_histogram_for_visualization(self.h_pythia_list[i], i, groomed)
+            scale_label = self.scale_histogram_for_visualization(self.h_pythia_list[i], i, minpt, groomed)
             self.h_pythia_list[i].Draw('L hist same')
             
             self.h_herwig_list[i].SetLineColor(self.colors[i])
             self.h_herwig_list[i].SetLineColorAlpha(self.colors[i], 0.5)
             self.h_herwig_list[i].SetLineWidth(3)
             self.h_herwig_list[i].SetLineStyle(2)
-            scale_label = self.scale_histogram_for_visualization(self.h_herwig_list[i], i, groomed)
+            scale_label = self.scale_histogram_for_visualization(self.h_herwig_list[i], i, minpt, groomed)
             self.h_herwig_list[i].Draw('L hist same')
 
             leg.AddEntry(self.h_list[i],'#beta = {}{}'.format(beta, scale_label),'P')
@@ -379,7 +426,17 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.plot_list.append(system2)
             self.plot_list.append(system3)
 
-        system4 = ROOT.TLatex(x+0.2,ymax-6.*dy, str(minpt) + ' < #it{p}_{T,jet}^{ch} < ' + str(maxpt) + ' GeV/#it{c}')
+        if groomed:
+            if pad in [1,2]:
+                x_pt = x+0.2
+                y_pt = ymax-5.5*dy
+            else:
+                x_pt = x+0.22
+                y_pt = ymax-9.*dy
+        else:
+            x_pt = x+0.2
+            y_pt = ymax-5.*dy
+        system4 = ROOT.TLatex(x_pt, y_pt, str(minpt) + ' < #it{p}_{T}^{ch jet} < ' + str(maxpt) + ' GeV/#it{c}')
         system4.SetNDC()
         system4.SetTextSize(size*scale_factor)
         system4.Draw()
@@ -518,19 +575,41 @@ class PlotAngularityFigures(common_base.CommonBase):
 
     # Scale vertical amplitude of histogram, for visualization
     #-------------------------------------------------------------------------------------------
-    def scale_histogram_for_visualization(self, h, i, groomed):
+    def scale_histogram_for_visualization(self, h, i, minpt, groomed):
 
         scale_factor = 1.
         if groomed:
             if i == 1:
-                scale_factor = self.scale_factor_groomed_beta15
+                if minpt > 50.:
+                    scale_factor = self.scale_factor_groomed_beta15_highpt
+                else:
+                    scale_factor = self.scale_factor_groomed_beta15_lowpt
             if i == 2:
-                scale_factor = self.scale_factor_groomed_beta2
+                if minpt > 50.:
+                    scale_factor = self.scale_factor_groomed_beta2_highpt
+                else:
+                    scale_factor = self.scale_factor_groomed_beta2_lowpt
             if i == 3:
-                scale_factor = self.scale_factor_groomed_beta3       
+                if minpt > 50.:
+                    scale_factor = self.scale_factor_groomed_beta3_highpt
+                else:
+                    scale_factor = self.scale_factor_groomed_beta3_lowpt
         else:
+            if i == 1:
+                if minpt > 50.:
+                    scale_factor = self.scale_factor_ungroomed_beta15_highpt
+                else:
+                    scale_factor = self.scale_factor_ungroomed_beta15_lowpt
+            if i == 2:
+                if minpt > 50.:
+                    scale_factor = self.scale_factor_ungroomed_beta2_highpt
+                else:
+                    scale_factor = self.scale_factor_ungroomed_beta2_lowpt
             if i == 3:
-                scale_factor = self.scale_factor_ungroomed_beta3
+                if minpt > 50.:
+                    scale_factor = self.scale_factor_ungroomed_beta3_highpt
+                else:
+                    scale_factor = self.scale_factor_ungroomed_beta3_lowpt
 
         h.Scale(scale_factor)
 
