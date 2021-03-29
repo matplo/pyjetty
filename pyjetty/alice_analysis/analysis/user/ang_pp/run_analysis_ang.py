@@ -716,9 +716,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if self.do_theory_F_np:
           print("Applying NP shape function...")
           self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp, scale_req)
-          #if gs:
-          #  print("Applying NP shape function with %s..." % gl.replace('_', ' '))
-          #  self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp_gr, scale_req, gl)
+          if gs:
+            print("Applying NP shape function with %s..." % gl.replace('_', ' '))
+            self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp_gr, scale_req, gl)
 
 
   #----------------------------------------------------------------------
@@ -763,7 +763,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             folded_ch_hists[l][m].append(h_folded_ch)
             folded_h_hists[l][m].append(h_folded_h)
 
-      printstring = "Scaling theory predictions for MPI effects for %s" % self.theory_response_labels[ri]
+      printstring = "Scaling theory predictions for MPI effects for %s" % \
+                    self.theory_response_labels[ri]
       if grooming_label:
         printstring += " with %s..." % grooming_label.replace('_', ' ')
       else:
@@ -1216,7 +1217,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
          ( (self.use_old and not grooming_setting) or not self.use_old ):
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_MC=False, plot_theory=True)
-        if self.do_theory_F_np and not grooming_setting:
+        if self.do_theory_F_np:
           self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                                min_pt_truth, max_pt_truth, maxbin, plot_MC=False,
                                plot_theory=True, plot_theory_Fnp=True)
