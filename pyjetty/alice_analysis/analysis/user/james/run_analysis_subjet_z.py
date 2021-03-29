@@ -142,32 +142,34 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
         self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_truth(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         
-      # Plot subjet matched pt histograms
-      self.prong_match_threshold = 0.5
-      for i, overlay_list in enumerate(self.plot_overlay_list):
-
-        self.create_output_subdir(output_dir_performance, 'matched_pt_fraction_pt')
-        hname = 'h_{}_matched_pt_JetPt_R{}'.format(self.observable, jetR)
-        self.plotting_utils.plot_subjet_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
-        
-        #getattr(self, name).Fill(jet_pt_truth, z_det, matched_pt)
-        #name = 'h_{}_matched_pt_deltaZ_JetPt_R{}_{}_Rmax{}'.format(self.observable, jetR, subjetR, R_max)
-        #name = 'h_{}_matched_pt_deltaR_JetPt_R{}_{}_Rmax{}'.format(self.observable, jetR, subjetR, R_max)
-        #getattr(self, name).Fill(jet_pt_truth, matched_pt, deltaZ)
+      if not self.is_pp:
       
-      for i, _ in enumerate(self.obs_subconfig_list):
+          # Plot subjet matched pt histograms
+          self.prong_match_threshold = 0.5
+          for i, overlay_list in enumerate(self.plot_overlay_list):
 
-        obs_setting = self.obs_settings[i]
-        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-        
-        if (jetR - obs_setting) < 1e-3:
-          continue
-        
-        output_dir_money = os.path.join(output_dir_performance, 'matched_pt_money')
-        self.create_output_subdir(output_dir_money, os.path.join(str(jetR), str(obs_setting)))
-        self.plotting_utils.plot_subjet_money_plot(self.observable, jetR, R_max, self.prong_match_threshold,
-                                                   obs_setting, self.pt_bins_reported,
-                                                   output_dir_money, self.ytitle)
+            self.create_output_subdir(output_dir_performance, 'matched_pt_fraction_pt')
+            hname = 'h_{}_matched_pt_JetPt_R{}'.format(self.observable, jetR)
+            self.plotting_utils.plot_subjet_matching(i, jetR, hname, self.obs_subconfig_list, self.obs_settings, self.grooming_settings, overlay_list, self.prong_match_threshold)
+            
+            #getattr(self, name).Fill(jet_pt_truth, z_det, matched_pt)
+            #name = 'h_{}_matched_pt_deltaZ_JetPt_R{}_{}_Rmax{}'.format(self.observable, jetR, subjetR, R_max)
+            #name = 'h_{}_matched_pt_deltaR_JetPt_R{}_{}_Rmax{}'.format(self.observable, jetR, subjetR, R_max)
+            #getattr(self, name).Fill(jet_pt_truth, matched_pt, deltaZ)
+          
+          for i, _ in enumerate(self.obs_subconfig_list):
+
+            obs_setting = self.obs_settings[i]
+            obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+            
+            if (jetR - obs_setting) < 1e-3:
+              continue
+            
+            output_dir_money = os.path.join(output_dir_performance, 'matched_pt_money')
+            self.create_output_subdir(output_dir_money, os.path.join(str(jetR), str(obs_setting)))
+            self.plotting_utils.plot_subjet_money_plot(self.observable, jetR, R_max, self.prong_match_threshold,
+                                                       obs_setting, self.pt_bins_reported,
+                                                       output_dir_money, self.ytitle)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':

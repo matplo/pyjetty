@@ -11,7 +11,7 @@
 # The analysis step is intended to run for a single observable block
 
 process_observables: ['inclusive_subjet_z', 'leading_subjet_z']
-jetR: [0.2, 0.4]
+jetR: [0.2]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
 reject_tracks_fraction: 0.02
@@ -39,10 +39,10 @@ inclusive_subjet_z:
   common_settings:
     xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
-    pt_bins_reported: [60, 80, 100]
+    pt_bins_reported: [60, 80]
     max_reg_param: 10
     plot_overlay_list:
-      - ['config1', 'config2']
+      - ['config1']
       
   # RM binnings from processing:
   #   pt-truth: 10 GeV
@@ -52,15 +52,6 @@ inclusive_subjet_z:
 
   config1:
     subjet_R: 0.1
-    pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
-    pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    pt_bins_det_sys_truncation: [30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    obs_bins_truth: [0., 0.02, 0.04, 0.06, 0.1, 0.2, 0.34, 0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
-    obs_bins_det: [0., 0.02, 0.04, 0.06, 0.1, 0.2, 0.34, 0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
-    obs_bins_det_sys_binning: [0., 0.01, 0.02, 0.03, 0.04, 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 0.99, 1.0]
-    
-  config2:
-    subjet_R: 0.2
     pt_bins_truth: [5, 20, 40, 60, 80, 100, 120, 150, 300]
     pt_bins_det: [35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     pt_bins_det_sys_truncation: [30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
@@ -74,10 +65,10 @@ leading_subjet_z:
   common_settings:
     xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
-    pt_bins_reported: [60, 80, 100]
+    pt_bins_reported: [60, 80]
     max_reg_param: 10
     plot_overlay_list:
-      - ['config1', 'config2']
+      - ['config1']
       
   # RM binnings from processing:
   #   pt-truth: 10 GeV
@@ -87,27 +78,19 @@ leading_subjet_z:
 
   config1:
     subjet_R: 0.1
-    pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150, 200]
-    pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120]
-    pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
-    obs_bins_truth: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
-    obs_bins_det: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
+    pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150]
+    pt_bins_det: [40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    pt_bins_det_sys_truncation: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
+    #obs_bins_truth: [0., 0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
+    obs_bins_truth: [0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
+    obs_bins_det: [0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
-    
-  config2:
-    subjet_R: 0.2
-    pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150, 200]
-    pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120]
-    pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
-    obs_bins_truth: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
-    obs_bins_det: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
-    obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
-  
+
 ###############################################################################
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/449697-04'
+output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/449697-02'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'leading_subjet_z'
@@ -116,7 +99,7 @@ force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: True
-figure_approval_status: 'ongoing analysis'
+figure_approval_status: 'internal'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]

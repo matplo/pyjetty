@@ -66,7 +66,7 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
           if self.is_pp:
 
               name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, subjetR)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+              h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
               h.GetYaxis().SetTitle('z_{r}')
               setattr(self, name, h)
@@ -76,7 +76,7 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
               for R_max in self.max_distance:
               
                   name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-                  h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0, 1.)
+                  h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.)
                   h.GetXaxis().SetTitle('p_{T,ch jet}')
                   h.GetYaxis().SetTitle('z_{r}')
                   setattr(self, name, h)

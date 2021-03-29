@@ -238,7 +238,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
     myBlankHisto.SetNdivisions(505)
     #myBlankHisto.SetMinimum(0.01)
-    xtitle = h3D.GetXaxis().GetTitle()
+    xtitle = h3D.GetYaxis().GetTitle()
     myBlankHisto.GetXaxis().SetTitle(xtitle)
     myBlankHisto.GetXaxis().SetTitleSize(30)
     myBlankHisto.GetXaxis().SetTitleFont(43)

@@ -94,18 +94,18 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
             # Subjet matching histograms -- only need one set for inclusive/leading
             if observable == self.observable_list[0]:
               name = 'hDeltaR_combined_ppdet_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0., 2.)
               setattr(self, name, h)
               
               name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0., 2.)
               setattr(self, name, h)
               
             # Plot deltaR distribution between the truth-detector leading subjets
             # (since they are not matched geometrically, and can contain "swaps")
             if 'leading' in observable:
               name = 'hDeltaR_det_truth_{}_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-              h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+              h = ROOT.TH3F(name, name, 200, 0, 200, 100, 0, 1.0, 50, 0., 1.)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
               h.GetYaxis().SetTitle('#it{z_{r}}')
               h.GetZaxis().SetTitle('#DeltaR')
@@ -113,21 +113,21 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
                         
             # Create prong matching histograms
             name = 'h_{}_matched_pt_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-            h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 10, 0., 1.)
+            h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0, 1.0, 10, 0., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
             h.GetYaxis().SetTitle('#it{z_{r,det}}')
             h.GetZaxis().SetTitle('Matched p_{T,det} fraction')
             setattr(self, name, h)
             
             name = 'h_{}_matched_pt_deltaZ_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-            h = ROOT.TH3F(name, name, 30, 0, 300, 10, 0, 1.0, 100, -1., 1.)
+            h = ROOT.TH3F(name, name, 20, 0, 200, 10, 0, 1.0, 100, -1., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
             h.GetYaxis().SetTitle('Matched p_{T,det} fraction')
             h.GetZaxis().SetTitle('#Delta#it{z_{r}}')
             setattr(self, name, h)
             
             name = 'h_{}_matched_pt_deltaR_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-            h = ROOT.TH3F(name, name, 30, 0, 300, 10, 0, 1.0, 100, 0., 1.)
+            h = ROOT.TH3F(name, name, 20, 0, 200, 10, 0, 1.0, 100, 0., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
             h.GetYaxis().SetTitle('Matched p_{T,det} fraction')
             h.GetZaxis().SetTitle('#Delta#it{R}')
@@ -138,14 +138,14 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           # Subjet matching histograms -- only need one set for inclusive/leading
           if observable == self.observable_list[0]:
             name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+            h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0., 2.)
             setattr(self, name, h)
             
           # Plot deltaR distribution between the truth-detector leading subjets
           # (since they are not matched geometrically, and can contain "swaps")
           if 'leading' in observable:
             name = 'hDeltaR_det_truth_{}_R{}_{}'.format(observable, jetR, subjetR)
-            h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+            h = ROOT.TH3F(name, name, 200, 0, 200, 100, 0, 1.0, 50, 0., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#it{z_{r}}')
             h.GetZaxis().SetTitle('#DeltaR')
@@ -181,9 +181,9 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     # Create THn of response for subjet z
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', 'z_{r,det}', 'z_{r,truth}']
-    nbins = [30, 30, 100, 50]
+    nbins = [30, 20, 100, 100]
     min = [0., 0., 0., 0.]
-    max = [150., 300., 1., 1.]
+    max = [150., 200., 1., 1.]
     name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, subjetR, suffix)
     self.create_thn(name, title, dim, nbins, min, max)
     
