@@ -186,10 +186,10 @@ ang:
 do_theory_comp: True
 theory_beta: [1.5, 2, 3]
 theory_dir: "/home/ezra/theory_predictions/"
-pt_scale_factors_filename: "qg_fractions-ALICE-R04.txt"
+pt_scale_factors_filename: "qg_fractions-ALICE-R02.txt"
 theory_pt_bins: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
                  110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
-Omega_list: [0.1, 0.3, 0.8]
+Omega_list: [0.2, 0.4, 0.8]
 response_files: ["/rstorage/alice/AnalysisResults/ang/353823/AnalysisResultsFinal.root",
                  "/rstorage/alice/AnalysisResults/ang/344912/AnalysisResultsFinal.root"]
 response_labels: ["PYTHIA8", "Herwig7"]
