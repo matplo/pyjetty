@@ -661,9 +661,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
                 for j, val in enumerate(val_li):
                   hist.SetBinContent(i+1, j+1, val)
+                  hist.SetBinError(i+1, j+1, 0)
                   if l == m == n == 0:
                     hist_min.SetBinContent(i+1, j+1, val)
+                    hist_min.SetBinError(i+1, j+1, 0)
                     hist_max.SetBinContent(i+1, j+1, val)
+                    hist_max.SetBinError(i+1, j+1, 0)
                   elif float(val) < hist_min.GetBinContent(i+1, j+1):
                     hist_min.SetBinContent(i+1, j+1, val)
                   elif float(val) > hist_max.GetBinContent(i+1, j+1):
@@ -672,13 +675,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 if self.do_theory_F_np:
                   for j, val in enumerate(val_li_Fnp):
                     hist_Fnp.SetBinContent(i+1, j+1, val)
+                    hist_Fnp.SetBinError(i+1, j+1, 0)
 
                 if gs:
                   for j, val in enumerate(val_li_gr):
                     hist_gr.SetBinContent(i+1, j+1, val)
+                    hist_gr.SetBinError(i+1, j+1, 0)
                     if l == m == n == 0:
                       hist_min_gr.SetBinContent(i+1, j+1, val)
+                      hist_min_gr.SetBinError(i+1, j+1, 0)
                       hist_max_gr.SetBinContent(i+1, j+1, val)
+                      hist_max_gr.SetBinError(i+1, j+1, 0)
                     elif float(val) < hist_min_gr.GetBinContent(i+1, j+1):
                       hist_min_gr.SetBinContent(i+1, j+1, val)
                     elif float(val) > hist_max_gr.GetBinContent(i+1, j+1):
@@ -687,6 +694,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                   if self.do_theory_F_np:
                     for j, val in enumerate(val_li_Fnp_gr):
                       hist_Fnp_gr.SetBinContent(i+1, j+1, val)
+                      hist_Fnp_gr.SetBinError(i+1, j+1, 0)
 
               parton_hists[l][m].append(hist)
               if self.do_theory_F_np:
