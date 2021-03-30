@@ -33,7 +33,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         #------------------------------------------------------
         
-        self.jetR = 0.2
+        self.jetR = 0.4
 
         self.base_dir = '/Users/jamesmulligan/Analysis_Angularity/plot-angularity/v2'
         self.file = 'fFinalResults.root'
@@ -43,7 +43,6 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.logy = False # Note: logy is also not great, since the right-hand tails drop to different values
 
         self.xmin = -0.01
-        self.xmax = 0.6499
         if self.logx:
             self.xmin = 0.001
             
@@ -237,9 +236,26 @@ class PlotAngularityFigures(common_base.CommonBase):
     def plot_beta_overlay(self, c, pad, R, minpt, maxpt, groomed):
 
         if groomed:
-            if R == 0.4:
-                self.xmax += 0.05
             self.logy = True
+            if pad in [2,4]:
+                if R == 0.4:
+                    self.xmax = 0.5999
+                else:
+                    self.xmax = 0.5499
+            else:
+                if R == 0.4:
+                    self.xmax = 0.6999
+                else:
+                    self.xmax = 0.6499
+        else:
+            if pad in [2,4]:
+                if R == 0.4:
+                    self.xmax = 0.5999
+                else:
+                    self.xmax = 0.5499
+            else:
+                self.xmax = 0.6499
+
 
         # Create canvas
         c.cd(pad)
