@@ -601,9 +601,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                       k = 0
                       while k < len(x_val_li) and x_val_li[k] < gs["sd"][0]:
                         k += 1
-                      y_val_li_gr[k:] = y_val_li[k:]
+                      if y_val_li[k] <= 0:
+                        y_val_li_gr[k:] = [0] * len(y_val_li_gr[k:])
+                      else:
+                        # Prefactor is to rescale tail to match correctly
+                        y_val_li_gr[k:] = [(y_val_li_gr[k] / y_val_li[k]) * value for
+                                           value in y_val_li[k:]]
 
-                    # Extrapolate parton curve to all bins and set 0 range on LHS tail
+                    # Interpolate parton curve to all bins and set 0 range on LHS tail
                     # Scale by bin width (to match RM)
                     val_li_gr = [val * obs_bins_width[i] for i, val in enumerate(set_zero_range(
                       list_interpolate(x_val_li, y_val_li_gr, obs_bins_center,
@@ -656,9 +661,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
                 for j, val in enumerate(val_li):
                   hist.SetBinContent(i+1, j+1, val)
+                  hist.SetBinError(i+1, j+1, 0)
                   if l == m == n == 0:
                     hist_min.SetBinContent(i+1, j+1, val)
+                    hist_min.SetBinError(i+1, j+1, 0)
                     hist_max.SetBinContent(i+1, j+1, val)
+                    hist_max.SetBinError(i+1, j+1, 0)
                   elif float(val) < hist_min.GetBinContent(i+1, j+1):
                     hist_min.SetBinContent(i+1, j+1, val)
                   elif float(val) > hist_max.GetBinContent(i+1, j+1):
@@ -667,21 +675,26 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 if self.do_theory_F_np:
                   for j, val in enumerate(val_li_Fnp):
                     hist_Fnp.SetBinContent(i+1, j+1, val)
+                    hist_Fnp.SetBinError(i+1, j+1, 0)
 
                 if gs:
                   for j, val in enumerate(val_li_gr):
                     hist_gr.SetBinContent(i+1, j+1, val)
+                    hist_gr.SetBinError(i+1, j+1, 0)
                     if l == m == n == 0:
                       hist_min_gr.SetBinContent(i+1, j+1, val)
+                      hist_min_gr.SetBinError(i+1, j+1, 0)
                       hist_max_gr.SetBinContent(i+1, j+1, val)
-                    elif float(val) < hist_min.GetBinContent(i+1, j+1):
+                      hist_max_gr.SetBinError(i+1, j+1, 0)
+                    elif float(val) < hist_min_gr.GetBinContent(i+1, j+1):
                       hist_min_gr.SetBinContent(i+1, j+1, val)
-                    elif float(val) > hist_max.GetBinContent(i+1, j+1):
+                    elif float(val) > hist_max_gr.GetBinContent(i+1, j+1):
                       hist_max_gr.SetBinContent(i+1, j+1, val)
 
                   if self.do_theory_F_np:
                     for j, val in enumerate(val_li_Fnp_gr):
                       hist_Fnp_gr.SetBinContent(i+1, j+1, val)
+                      hist_Fnp_gr.SetBinError(i+1, j+1, 0)
 
               parton_hists[l][m].append(hist)
               if self.do_theory_F_np:
@@ -711,9 +724,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if self.do_theory_F_np:
           print("Applying NP shape function...")
           self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp, scale_req)
-          #if gs:
-          #  print("Applying NP shape function with %s..." % gl.replace('_', ' '))
-          #  self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp_gr, scale_req, gl)
+          if gs:
+            print("Applying NP shape function with %s..." % gl.replace('_', ' '))
+            self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp_gr, scale_req, gl)
 
 
   #----------------------------------------------------------------------
@@ -758,7 +771,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             folded_ch_hists[l][m].append(h_folded_ch)
             folded_h_hists[l][m].append(h_folded_h)
 
-      printstring = "Scaling theory predictions for MPI effects for %s" % self.theory_response_labels[ri]
+      printstring = "Scaling theory predictions for MPI effects for %s" % \
+                    self.theory_response_labels[ri]
       if grooming_label:
         printstring += " with %s..." % grooming_label.replace('_', ' ')
       else:
@@ -1211,7 +1225,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
          ( (self.use_old and not grooming_setting) or not self.use_old ):
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_MC=False, plot_theory=True)
-        if self.do_theory_F_np and not grooming_setting:
+        if self.do_theory_F_np:
           self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                                min_pt_truth, max_pt_truth, maxbin, plot_MC=False,
                                plot_theory=True, plot_theory_Fnp=True)

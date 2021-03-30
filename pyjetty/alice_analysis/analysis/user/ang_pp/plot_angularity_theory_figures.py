@@ -1,6 +1,6 @@
 """
-  macro for plotting multi-paneled angularity figures
-  """
+macro for plotting multi-paneled angularity theory figures
+"""
 
 # General
 import os
@@ -26,7 +26,7 @@ class PlotAngularityFigures(common_base.CommonBase):
     # ---------------------------------------------------------------
     # Constructor
     # ---------------------------------------------------------------
-    def __init__(self, output_dir='', **kwargs):
+    def __init__(self, input_dir='', output_dir='', **kwargs):
         super(PlotAngularityFigures, self).__init__(**kwargs)
 
         self.output_dir = output_dir
@@ -35,19 +35,26 @@ class PlotAngularityFigures(common_base.CommonBase):
         #------------------------------------------------------
 
         #self.base_dir = '/home/james/plot-angularity/'
-        self.base_dir = '~/'
+        self.base_dir = input_dir
         self.file = 'ang/final_results/fFinalResults.root'
         self.beta_list = [1.5, 2, 3]
-        self.R_list = [0.2, 0.4]
-        self.min_pt = 60
-        self.max_pt = 80
+        self.R_list = [0.4]
+        self.Omega_list = [0.2, 0.4, 0.8]
+        self.pt_list = [20, 40, 60, 80, 100]
         self.folding_labels = ['PYTHIA8', 'Herwig7']
+
+        # Note: logx doesn't work well, since lowest bins are different, and dominate some plots
+        self.logx = False 
+        # Note: logy is also not great, since the right-hand tails drop to different values
+        self.logy = False 
 
         # Grooming settings
         self.sd_zcut = 0.2  #config["sd_zcut"]
         self.sd_beta = 0    #config["sd_beta"]
-        #self.theory_grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
-        #self.theory_grooming_labels = [self.utils.grooming_label(gs) for gs in self.theory_grooming_settings]
+        #self.theory_grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]
+        # self.utils.grooming_settings
+        #self.theory_grooming_labels = [self.utils.grooming_label(gs) for\
+        #                               gs in self.theory_grooming_settings]
 
         self.xmin = -0.01
         #self.ymax = 18.99
@@ -55,28 +62,34 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.ymax_ratio = 15
 
         # R=0.2 scale factors
-        self.scale_factor_groomed_R02_beta3 = 0.04
-        self.scale_factor_groomed_R02_beta2 = 0.2
-        self.scale_factor_groomed_R02_beta15 = 0.5
+        self.scale_factor_groomed_R02_beta3 = 0.6
+        self.scale_factor_groomed_R02_beta2 = 1
+        self.scale_factor_groomed_R02_beta15 = 1
         self.scale_factor_ungroomed_R02_beta2 = 0.5
         self.scale_factor_ungroomed_R02_beta3 = 0.1
 
         # R=0.4 scale factors
-        self.scale_factor_groomed_R04_beta3 = 0.04
-        self.scale_factor_groomed_R04_beta2 = 0.2
-        self.scale_factor_groomed_R04_beta15 = 0.5
+        self.scale_factor_groomed_R04_beta3 = 0.4
+        self.scale_factor_groomed_R04_beta2 = 1
+        self.scale_factor_groomed_R04_beta15 = 1
         self.scale_factor_ungroomed_R04_beta2 = 0.7
         self.scale_factor_ungroomed_R04_beta3 = 0.25
 
         self.xtitle =  '#it{#lambda}_{#it{#beta}}'
-        self.ytitle = '#frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}} #/#int_{#it{#lambda}_{#it{#beta}}^{NP}}^{1} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}} d#it{#lambda}_{#it{#beta}}'
+        self.ytitle = '#frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}} ' + \
+                      '#/#int_{#it{#lambda}_{#it{#beta}}^{NP}}^{1} ' + \
+                      '#frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}} d#it{#lambda}_{#it{#beta}}'
         self.xtitle_groomed =  '#it{#lambda}_{#it{#beta},g}'
-        self.ytitle_groomed = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta},g}}'
+        self.ytitle_groomed = '#frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta},g}} ' + \
+                      '#/#int_{#it{#lambda}_{#it{#beta},g}^{NP}}^{1} ' + \
+                      '#frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta},g}} ' + \
+                      'd#it{#lambda}_{#it{#beta},g}'
 
         self.left_offset = 0.4
         self.bottom_offset = 0.15
         self.ratio_height = 0.25
-        self.top_bottom_scale_factor = (1 - self.ratio_height) / (1 - self.bottom_offset - self.ratio_height)
+        self.top_bottom_scale_factor = (1 - self.ratio_height) / \
+                                       (1 - self.bottom_offset - self.ratio_height)
 
         #------------------------------------------------------
 
@@ -90,34 +103,43 @@ class PlotAngularityFigures(common_base.CommonBase):
         
         #------------------------------------------------------
 
-        # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
-        # Formula assumes that jet pT xsec falls like pT^(-5.5)
-        formula_pt = (4.5/3.5)*(self.min_pt**-3.5 - self.max_pt**-3.5)/(self.min_pt**-4.5 - self.max_pt**-4.5)
-        self.Lambda = 1.
         # Soft scale for ungroomed case
         self.lambda_np = {}
-        for R in self.R_list:
-            self.lambda_np[R] = self.Lambda / (formula_pt * R)
         # Soft scale for groomed case
         self.lambda_np_groomed = {}
-        for R in self.R_list:
-            self.lambda_np_groomed[R] = {}
-            for beta in self.beta_list:
-                self.lambda_np_groomed[R][str(beta)] = ( (self.Lambda / formula_pt)**(beta) * \
-                    (R**(self.sd_beta) / self.sd_zcut)**(beta - 1) )**(1 / (1 + self.sd_beta)) / R**(beta)
+
+        for i, min_pt in list(enumerate(self.pt_list))[:-1]:
+            max_pt = self.pt_list[i+1]
+
+            self.lambda_np[min_pt] = {}
+            self.lambda_np_groomed[min_pt] = {}
+
+            # P vs NP cutoff point ~ Lambda / (pT * R) -- use avg value of pT for the bin.
+            # Formula assumes that jet pT xsec falls like pT^(-5.5)
+            formula_pt = (4.5/3.5)*(min_pt**-3.5 - max_pt**-3.5) / \
+                         (min_pt**-4.5 - max_pt**-4.5)
+            self.Lambda = 1.
+
+            for R in self.R_list:
+                self.lambda_np[min_pt][R] = self.Lambda / (formula_pt * R)
+                self.lambda_np_groomed[min_pt][R] = {}
+                for beta in self.beta_list:
+                    self.lambda_np_groomed[min_pt][R][str(beta)] = (
+                        (self.Lambda / formula_pt)**(beta) * (R**(self.sd_beta) / self.sd_zcut) \
+                        **(beta - 1) )**(1 / (1 + self.sd_beta)) / R**(beta)
 
 
         #------------------------------------------------------
         # Store paths to all final results in a dictionary
         self.predictions = {}
         
-        subdir_path = os.path.join(self.base_dir, 'AngR02_ptbin3')
-        filename = os.path.join(subdir_path, 'ang/final_results/fFinalResults.root')
-        self.predictions['0.2'] = filename
-
-        subdir_path = os.path.join(self.base_dir, 'AngR04_ptbin3')
-        filename = os.path.join(subdir_path, 'ang/final_results/fFinalResults.root')
-        self.predictions['0.4'] = filename
+        for i, min_pt in list(enumerate(self.pt_list))[:-1]:
+            self.predictions[min_pt] = {}
+            for R in self.R_list:
+                subdir_path = os.path.join(self.base_dir,
+                                           'AngR%s_ptbin%i' % (str(R).replace('.', ''), (i+1)))
+                filename = os.path.join(subdir_path, 'ang/final_results/fFinalResults.root')
+                self.predictions[min_pt][str(R)] = filename
 
         print(self)
 
@@ -129,17 +151,22 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.setOptions()
         ROOT.gROOT.ForceStyle()
 
-        self.plot_multipanel(R=0.2, groomed=False)
-        self.plot_multipanel(R=0.4, groomed=False)
+        for R in self.R_list:
+            for i, min_pt in list(enumerate(self.pt_list))[:-1]:
+                max_pt = self.pt_list[i+1]
 
-        self.plot_multipanel(R=0.2, groomed=True)
-        self.plot_multipanel(R=0.4, groomed=True)
+                if min_pt >= 60:
+                    self.plot_multipanel(R, min_pt, max_pt, groomed=False)
+                    self.plot_multipanel(R, min_pt, max_pt, groomed=True)
+                self.plot_multipanel(R, min_pt, max_pt, groomed=False, Fnp=True)
+                self.plot_multipanel(R, min_pt, max_pt, groomed=True, Fnp=True)
 
     #-------------------------------------------------------------------------------------------
-    def plot_multipanel(self, R=1, groomed=False):
+    def plot_multipanel(self, R=1, min_pt=60, max_pt=80, groomed=False, Fnp=False):
 
         # Create multi-panel canvas
-        cname = 'c{}{}'.format(R,groomed)
+        cname = "c_" + str(R) + '_PtBin' + str(min_pt) + '-' + str(max_pt) + \
+                '_' + str(groomed) + '_' + str(Fnp)
         c = ROOT.TCanvas(cname,cname,2400,1400)
         c.SetRightMargin(0.05);
         c.SetLeftMargin(self.left_offset);
@@ -148,30 +175,37 @@ class PlotAngularityFigures(common_base.CommonBase):
         c.cd()
         c.Divide(3, 1, 0.01, 0.)
 
-        # Keep histograms in memory, otherwise there can be problems with double deletes (i.e. ROOT then python deletes)
+        # Keep histograms in memory, otherwise there can be problems
+        #   with double deletes (i.e. ROOT then python deletes)
         self.plot_list = []
         self.g_theory_dict = {'1.5': [], '2': [], '3': []}
         self.h_ratio_dict = {'1.5': [], '2': [], '3': []}
         self.g_ratio_dict = {'1.5': [], '2': [], '3': []}
 
         # Plot each pt bin in its own pad
-        self.plot_angularity(c, pad=1, R=R, beta = '1.5', groomed=groomed)
-        self.plot_angularity(c, pad=2, R=R, beta = '2',   groomed=groomed)
-        self.plot_angularity(c, pad=3, R=R, beta = '3',   groomed=groomed)
+        self.plot_angularity(c, pad=1, R=R, beta = '1.5',
+                             min_pt=min_pt, max_pt=max_pt, groomed=groomed, Fnp=Fnp)
+        self.plot_angularity(c, pad=2, R=R, beta = '2',
+                             min_pt=min_pt, max_pt=max_pt, groomed=groomed, Fnp=Fnp)
+        self.plot_angularity(c, pad=3, R=R, beta = '3',
+                             min_pt=min_pt, max_pt=max_pt, groomed=groomed, Fnp=Fnp)
 
+        outfilename = "hJetAngularity_Theory_%s_PtBin%i-%i" % (str(R), min_pt, max_pt)
         if groomed:
-            outfilename = 'hJetAngularity_Theory_{}_SD{}'.format(R, self.file_format)
-        else:
-            outfilename = 'hJetAngularity_Theory_{}{}'.format(R, self.file_format)
+            outfilename += "_SD"
+        if Fnp:
+            outfilename += "_Fnp"
+        outfilename += self.file_format
         output_filename = os.path.join(self.output_dir, outfilename)
         c.SaveAs(output_filename)
 
     #-------------------------------------------------------------------------------------------
     # Get beta histograms from file, and call plot_beta_overlay to draw them
     #-------------------------------------------------------------------------------------------
-    def plot_angularity(self, c, pad=0, R=1, beta = '', groomed=False):
+    def plot_angularity(self, c, pad=0, R=1, beta = '', min_pt=60, max_pt=80,
+                        groomed=False, Fnp=False):
         
-        filename = self.predictions[str(R)]
+        filename = self.predictions[min_pt][str(R)]
         f = ROOT.TFile(filename, 'READ')
 
         self.h = None
@@ -184,13 +218,18 @@ class PlotAngularityFigures(common_base.CommonBase):
             
         # Get data hist
         h_name ='hmain_ang_R{}_{}{}_{}-{}_trunc'.format(
-            R, beta, grooming_label, self.min_pt, self.max_pt)
+            R, beta, grooming_label, min_pt, max_pt)
         h_sys_name =  'hResult_ang_systotal_R{}_{}{}_n3_{}-{}'.format(
-            R, beta, grooming_label, self.min_pt, self.max_pt)
+            R, beta, grooming_label, min_pt, max_pt)
         self.h = f.Get(h_name)
         self.h_sys = f.Get(h_sys_name)
         self.h.SetDirectory(0)
         self.h_sys.SetDirectory(0)
+
+        if groomed:
+            # Remove negative bin edges (which has the tagging fraction)
+            self.h = self.remove_negative_bin_edges(self.h)
+            self.h_sys = self.remove_negative_bin_edges(self.h_sys)
 
         # Set ymax corresponding to the beta=1.5 case
         if beta == '1.5':
@@ -200,12 +239,12 @@ class PlotAngularityFigures(common_base.CommonBase):
         n = self.h.GetNbinsX()
         min_bin = None
         if groomed:
-            min_bin = self.h.FindBin(self.lambda_np_groomed[R][beta])
-            if self.h.GetBinCenter(min_bin) <= round(self.lambda_np_groomed[R][beta], 2):
+            min_bin = self.h.FindBin(self.lambda_np_groomed[min_pt][R][beta])
+            if self.h.GetBinCenter(min_bin) <= round(self.lambda_np_groomed[min_pt][R][beta], 2):
                 min_bin += 1
         else:
-            min_bin = self.h.FindBin(self.lambda_np[R])
-            if self.h.GetBinCenter(min_bin) <= round(self.lambda_np[R], 2):
+            min_bin = self.h.FindBin(self.lambda_np[min_pt][R])
+            if self.h.GetBinCenter(min_bin) <= round(self.lambda_np[min_pt][R], 2):
                 min_bin += 1
         integral_perturbative = self.h.Integral(min_bin, n+1, 'width')
         self.h.Scale(1./integral_perturbative)
@@ -215,20 +254,33 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.scale_histogram_for_visualization(self.h, R, beta, groomed)
         
         # Get folded theory predictions
-        for i,folding_label in enumerate(self.folding_labels):
+        iterlist = self.folding_labels if not Fnp else self.Omega_list
+        for i, folding_label in enumerate(iterlist):
 
             beta_label = beta
             if beta == '1.5':
                 beta_label = '15'
             if groomed:
                 beta_label += '_SD_zcut02_B0'
-            name_cent = 'theory_cent_ang_R{}_{}_ch_PtBin60-80_{}'.format(
-                self.remove_periods(str(R)), beta_label, i)
-            name_min = 'theory_min_ang_R{}_{}_ch_PtBin60-80_{}'.format(
-                self.remove_periods(str(R)), beta_label, i)
-            name_max = 'theory_max_ang_R{}_{}_ch_PtBin60-80_{}'.format(
-                self.remove_periods(str(R)), beta_label, i)
-            
+
+            name_cent = None; name_min = None; name_max = None
+            if Fnp:
+                name_cent = 'theory_cent_ang_R{}_{}_ch_Fnp_Omega{}_PtBin{}-{}_0'.format(
+                    self.remove_periods(str(R)), beta_label, folding_label, min_pt, max_pt)
+                name_min = 'theory_min_ang_R{}_{}_ch_Fnp_Omega{}_PtBin{}-{}_0'.format(
+                    self.remove_periods(str(R)), beta_label, folding_label, min_pt, max_pt)
+                name_max = 'theory_max_ang_R{}_{}_ch_Fnp_Omega{}_PtBin{}-{}_0'.format(
+                    self.remove_periods(str(R)), beta_label, folding_label, min_pt, max_pt)
+
+            else:
+                name_cent = 'theory_cent_ang_R{}_{}_ch_PtBin{}-{}_{}'.format(
+                    self.remove_periods(str(R)), beta_label, min_pt, max_pt, i)
+                name_min = 'theory_min_ang_R{}_{}_ch_PtBin{}-{}_{}'.format(
+                    self.remove_periods(str(R)), beta_label, min_pt, max_pt, i)
+                name_max = 'theory_max_ang_R{}_{}_ch_PtBin{}-{}_{}'.format(
+                    self.remove_periods(str(R)), beta_label, min_pt, max_pt, i)
+
+
             h_theory_cent = f.Get(name_cent)
             h_theory_min = f.Get(name_min)
             h_theory_max = f.Get(name_max)
@@ -240,16 +292,21 @@ class PlotAngularityFigures(common_base.CommonBase):
             h_theory_cent_rebinned = self.rebin_theory(h_theory_cent, self.h)
             h_theory_min_rebinned = self.rebin_theory(h_theory_min, self.h)
             h_theory_max_rebinned = self.rebin_theory(h_theory_max, self.h)
+
+            if groomed:
+                h_theory_cent_rebinned = self.remove_negative_bin_edges(h_theory_cent_rebinned)
+                h_theory_min_rebinned = self.remove_negative_bin_edges(h_theory_min_rebinned)
+                h_theory_max_rebinned = self.remove_negative_bin_edges(h_theory_max_rebinned)
             
             # Normalize such that integral in perturbative region is 1
             min_bin = None
             if groomed:
-                min_bin = h_theory_cent_rebinned.FindBin(self.lambda_np_groomed[R][beta])
-                if self.h.GetBinCenter(min_bin) <= round(self.lambda_np_groomed[R][beta], 2):
+                min_bin = h_theory_cent_rebinned.FindBin(self.lambda_np_groomed[min_pt][R][beta])
+                if self.h.GetBinCenter(min_bin) <= round(self.lambda_np_groomed[min_pt][R][beta], 2):
                     min_bin += 1
             else:
-                min_bin = h_theory_cent_rebinned.FindBin(self.lambda_np[R])
-                if self.h.GetBinCenter(min_bin) <= round(self.lambda_np[R], 2):
+                min_bin = h_theory_cent_rebinned.FindBin(self.lambda_np[min_pt][R])
+                if self.h.GetBinCenter(min_bin) <= round(self.lambda_np[min_pt][R], 2):
                     min_bin += 1
             integral_perturbative_theory =  h_theory_cent_rebinned.Integral(min_bin, n+1, 'width')
             integral_total =  h_theory_cent_rebinned.Integral(1, n+1, 'width')
@@ -269,17 +326,21 @@ class PlotAngularityFigures(common_base.CommonBase):
             yerrup = np.array([h_theory_max_rebinned.GetBinContent(i)-y[i-1] for i in range(1, n+1)])
             yerrdn = np.array([y[i-1]-h_theory_min_rebinned.GetBinContent(i) for i in range(1, n+1)])
             g_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
-            g_theory.SetName('g_theory_{}_{}'.format(i, beta))
+            g_theory_name = 'g_theory_%i_%s' % (i, str(beta))
+            if Fnp:
+                g_theory_name += '_Fnp'
+            g_theory.SetNameTitle(g_theory_name, g_theory_name)
             self.g_theory_dict[beta].append(g_theory)
 
             # Construct ratios in self.h_ratio_dict, self.g_ratio_dict
             self.construct_ratio(self.h, self.h_sys, h_theory_cent_rebinned, h_theory_min_rebinned,
-                                 h_theory_max_rebinned, n, x, xerrup, xerrdn, y, yerrup, yerrdn, R, beta, i, pad)
+                                 h_theory_max_rebinned, n, x, xerrup, xerrdn, y, yerrup, yerrdn,
+                                 R, beta, i, pad)
             
         f.Close()
 
         # Plot overlay of beta values
-        self.plot_beta_overlay(c, pad, R, beta, groomed)
+        self.plot_beta_overlay(c, pad, R, beta, min_pt, max_pt, groomed, Fnp)
 
         # Keep histograms in memory
         self.plot_list.append(self.h)
@@ -292,16 +353,22 @@ class PlotAngularityFigures(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     # Draw beta histograms in given pad
     #-------------------------------------------------------------------------------------------
-    def plot_beta_overlay(self, c, pad, R, beta, groomed):
+    def plot_beta_overlay(self, c, pad, R, beta, min_pt, max_pt, groomed, Fnp):
+
+        if groomed:
+            self.logy = True
+        else:
+            self.logy = False
 
         # Create canvas
         c.cd(pad)
 
         # Set pad to plot distributions
-        setattr(self, "pad1_{}_{}_{}".format(R, pad, groomed), 
-                ROOT.TPad("pad1_{}_{}_{}".format(R, pad, groomed), "pad1_{}_{}_{}".format(R, pad, groomed),
+        setattr(self, "pad1_{}_PtBin{}-{}_{}_{}".format(R, min_pt, max_pt, pad, groomed), 
+                ROOT.TPad("pad1_{}_PtBin{}-{}_{}_{}".format(R, min_pt, max_pt, pad, groomed),
+                          "pad1_{}_PtBin{}-{}_{}_{}".format(R, min_pt, max_pt, pad, groomed),
                           0, self.bottom_offset + self.ratio_height,1,1))
-        pad1 = getattr(self, "pad1_{}_{}_{}".format(R, pad, groomed))
+        pad1 = getattr(self, "pad1_{}_PtBin{}-{}_{}_{}".format(R, min_pt, max_pt, pad, groomed))
         self.plot_list.append(pad1)
         if pad in [1]:
             pad1.SetLeftMargin(self.left_offset)
@@ -311,26 +378,44 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad1.SetTopMargin(0.0)
         pad1.SetBottomMargin(0.)
         pad1.SetTicks(0,1)
-        # This breaks everything and I have no idea why...
-        #if groomed:
-        #    pad1.SetLogy()
+        if self.logy:
+            pad1.SetLogy()
+        if self.logx:
+            pad1.SetLogx()
         pad1.Draw()
         pad1.cd()
 
         # Draw blank histos
-        blankname = 'myBlankHisto_{}_{}'.format(pad, R)
+        blankname = 'myBlankHisto_{}_PtBin{}-{}_{}'.format(pad, min_pt, max_pt, R)
         xmax = self.h.GetXaxis().GetBinUpEdge(self.h.GetXaxis().GetNbins())
         myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         if groomed:
             myBlankHisto.SetYTitle(self.ytitle_groomed)
         else:
-            myBlankHisto.SetYTitle(self.ytitle)    
+            myBlankHisto.SetYTitle(self.ytitle)
         myBlankHisto.GetYaxis().SetTitleSize(0.1)
         myBlankHisto.GetYaxis().SetTitleOffset(1.4)
         myBlankHisto.GetYaxis().SetLabelSize(0.06)
-        myBlankHisto.SetMinimum(0.001)
-        myBlankHisto.SetMaximum(self.ymax)
+        if self.logy:
+            if R == 0.2:
+                if Fnp:
+                    myBlankHisto.SetMinimum(0.2)
+                    myBlankHisto.SetMaximum(9e3)
+                else:
+                    myBlankHisto.SetMinimum(0.2)
+                    myBlankHisto.SetMaximum(9e3)
+            elif R == 0.4:
+                if Fnp:
+                    myBlankHisto.SetMinimum(0.05)
+                    myBlankHisto.SetMaximum(9e3)
+                else:
+                    myBlankHisto.SetMinimum(0.15)
+                    myBlankHisto.SetMaximum(9e3)
+        else:
+            myBlankHisto.SetMinimum(0.001)
+            myBlankHisto.SetMaximum(self.ymax)
+
         myBlankHisto.Draw()
         self.blank_histo_list.append(myBlankHisto)
 
@@ -340,9 +425,13 @@ class PlotAngularityFigures(common_base.CommonBase):
             shift2 = 0.0
         else:
             shift = -0.08
-            shift2 = -0.08 - shift
+            shift2 = -0.15 - shift
         
         leg = ROOT.TLegend(0.2+shift,0.96-0.072*scale_factor*4,0.6,0.96)
+        if pad in [1,2]:
+            self.setupLegend(leg,0.07)
+        else:
+            self.setupLegend(leg,0.08)
         self.setupLegend(leg,0.07)
         self.plot_list.append(leg)
 
@@ -353,14 +442,16 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         line_lambda_np = None; line_lambda_np_groomed = None
         if not groomed:
-            line_lambda_np = ROOT.TLine(self.lambda_np[R], 0, self.lambda_np[R], self.ymax*0.6)
+            line_lambda_np = ROOT.TLine(self.lambda_np[min_pt][R], 0, 
+                                        self.lambda_np[min_pt][R], self.ymax*0.6)
             line_lambda_np.SetLineColor(self.colors[-1])
             line_lambda_np.SetLineStyle(2)
             line_lambda_np.SetLineWidth(2)
             self.plot_list.append(line_lambda_np)
         else:  # groomed case
-            line_lambda_np_groomed = ROOT.TLine(self.lambda_np_groomed[R][beta], 0,
-                                                self.lambda_np_groomed[R][beta], self.ymax*0.6)
+            line_lambda_np_groomed = ROOT.TLine(
+                self.lambda_np_groomed[min_pt][R][beta], 0,
+                self.lambda_np_groomed[min_pt][R][beta], self.ymax*0.6)
             line_lambda_np_groomed.SetLineColor(51)
             line_lambda_np_groomed.SetLineStyle(2)
             line_lambda_np_groomed.SetLineWidth(2)
@@ -384,14 +475,19 @@ class PlotAngularityFigures(common_base.CommonBase):
         leg.AddEntry(self.h,'ALICE','PE')
         
         # Draw theory
-        for i,folding_label in enumerate(self.folding_labels):
-        
+        iterlist = self.folding_labels if not Fnp else self.Omega_list
+        for i, folding_label in enumerate(iterlist):
+
             self.g_theory_dict[beta][i].SetFillColorAlpha(self.colors[i], 0.25)
             self.g_theory_dict[beta][i].SetLineColor(self.colors[i])
             self.g_theory_dict[beta][i].SetLineWidth(3)
             self.g_theory_dict[beta][i].Draw('L 3 same')
             
-            leg.AddEntry(self.g_theory_dict[beta][i],'NLL\' #otimes {}'.format(folding_label),'lf')
+            if Fnp:
+                leg.AddEntry(self.g_theory_dict[beta][i],
+                             'NLL\' #otimes F_{NP}^{#Omega=%s} #otimes PYTHIA8' % folding_label, 'lf')
+            else:
+                leg.AddEntry(self.g_theory_dict[beta][i], 'NLL\' #otimes '+folding_label, 'lf')
             
         self.h_sys.Draw('E2 same')
         if not groomed:
@@ -407,10 +503,15 @@ class PlotAngularityFigures(common_base.CommonBase):
         
         if pad == 3:
             if not groomed:
-                leg3.AddEntry(line_lambda_np, '#it{#lambda}_{#it{#beta}}^{NP} #leq #Lambda / (#it{p}_{T,jet}^{ch} #it{R})', 'lf')
+                leg3.AddEntry(line_lambda_np,
+                              '#it{#lambda}_{#it{#beta}}^{NP} #leq #Lambda / ' + \
+                              '(#it{p}_{T,jet}^{ch} #it{R})', 'lf')
             else:  # groomed case
-                leg3.AddEntry(line_lambda_np_groomed, '#it{#lambda}_{#it{#beta}}^{NP, gr}', 'lf')
+                leg3.AddEntry(line_lambda_np_groomed, '#it{#lambda}_{#it{#beta},g}^{NP}', 'lf')
             leg3.AddEntry(self.h_sys, 'Sys. uncertainty', 'f')
+
+        # Reset for ratio plot
+        #self.logy = False
 
         # # # # # # # # # # # # # # # # # # # # # # # #
         # text
@@ -436,12 +537,15 @@ class PlotAngularityFigures(common_base.CommonBase):
             system2.SetTextSize(size*scale_factor)
             system2.Draw()
 
-            system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    | #it{{#eta}}_{{jet}}| < {}'.format(R, 0.9-R))
+            system3 = ROOT.TLatex(x,ymax-3*dy,
+                                  '#it{{R}} = {}    | #it{{#eta}}_{{jet}}| < {}'.format(R, 0.9-R))
             system3.SetNDC()
             system3.SetTextSize(size*scale_factor)
             system3.Draw()
             
-            system4 = ROOT.TLatex(x,ymax-4.*dy-0.02, str(self.min_pt) + ' < #it{p}_{T,jet}^{ch} < ' + str(self.max_pt) + ' GeV/#it{c}')
+            system4 = ROOT.TLatex(x,ymax-4.*dy-0.02,
+                                  str(min_pt) + ' < #it{p}_{T,jet}^{ch} < ' + \
+                                  str(max_pt) + ' GeV/#it{c}')
             system4.SetNDC()
             system4.SetTextSize(size*scale_factor)
             system4.Draw()
@@ -452,7 +556,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.plot_list.append(system3)
             self.plot_list.append(system4)
             
-        system5 = ROOT.TLatex(x+0.2,ymax-6.*dy, '#it{{#beta}} = {}{}'.format(beta,self.scale_label))
+        system5 = ROOT.TLatex(x+0.2, ymax-6.*dy, '#it{{#beta}} = {}{}'.format(beta,self.scale_label))
         system5.SetNDC()
         if pad in [1]:
             beta_size = size
@@ -463,7 +567,8 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.plot_list.append(system5)
 
         if groomed and pad == 3:
-            system5 = ROOT.TLatex(0.2+shift, ymax-4*dy, 'Soft Drop: #it{z}_{cut} = 0.2, #it{#beta}_{SD} = 0')
+            system5 = ROOT.TLatex(0.2+shift, ymax-3.5*dy,
+                                  'Soft Drop: #it{z}_{cut} = 0.2, #it{#beta}_{SD} = 0')
             system5.SetNDC()
             system5.SetTextSize(size*scale_factor)
             system5.Draw()
@@ -471,7 +576,8 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         # Set pad for ratio
         c.cd(pad)
-        pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),0,0,1,self.bottom_offset+self.ratio_height)
+        pad2 = ROOT.TPad("pad2_{}".format(R), "pad2{}".format(R),
+                         0,0,1,self.bottom_offset+self.ratio_height)
         self.plot_list.append(pad2)
         if pad in [1]:
             pad2.SetLeftMargin(self.left_offset)
@@ -481,12 +587,15 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad2.SetTopMargin(0.)
         pad2.SetBottomMargin(self.bottom_offset/(self.bottom_offset+self.ratio_height))
         pad2.SetTicks(1,1)
-        pad2.SetLogy()
+        if self.logy:
+            pad2.SetLogy()
+        if self.logx:
+            pad2.SetLogx()
         pad2.Draw()
         pad2.cd()
 
         # Draw blank histos
-        blankname = 'myBlankHisto2_{}_{}'.format(pad, R)
+        blankname = 'myBlankHisto2_{}_PtBin{}-{}_{}'.format(pad, min_pt, max_pt, R)
         myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, xmax-0.001)
         myBlankHisto2.SetNdivisions(505, "y")
         myBlankHisto2.SetNdivisions(505, "x")
@@ -513,7 +622,8 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.plot_list.append(line)
 
         # Draw ratio
-        for i,folding_label in enumerate(self.folding_labels):
+        iterlist = self.folding_labels if not Fnp else self.Omega_list
+        for i, folding_label in enumerate(iterlist):
         
             # Draw tgraph with sys uncertainty
             self.g_ratio_dict[beta][i].SetFillColorAlpha(self.colors[i], 0.25)
@@ -534,15 +644,17 @@ class PlotAngularityFigures(common_base.CommonBase):
         line_lambda_np_ratio = None; line_lambda_np_gr_ratio = None;
         if not groomed:
             line_lambda_np_ratio = ROOT.TLine(
-                self.lambda_np[R], self.ymin_ratio, self.lambda_np[R], self.ymax_ratio)
+                self.lambda_np[min_pt][R], self.ymin_ratio,
+                self.lambda_np[min_pt][R], self.ymax_ratio)
             line_lambda_np_ratio.SetLineColor(self.colors[-1])
             line_lambda_np_ratio.SetLineStyle(2)
             line_lambda_np_ratio.SetLineWidth(2)
             line_lambda_np_ratio.Draw()
             self.plot_list.append(line_lambda_np_ratio)
         else:  # groomed case
-            line_lambda_np_gr_ratio = ROOT.TLine(self.lambda_np_groomed[R][beta], self.ymin_ratio,
-                                                 self.lambda_np_groomed[R][beta], self.ymax_ratio)
+            line_lambda_np_gr_ratio = ROOT.TLine(
+                self.lambda_np_groomed[min_pt][R][beta], self.ymin_ratio,
+                self.lambda_np_groomed[min_pt][R][beta], self.ymax_ratio)
             line_lambda_np_gr_ratio.SetLineColor(51)
             line_lambda_np_gr_ratio.SetLineStyle(2)
             line_lambda_np_gr_ratio.SetLineWidth(2)
@@ -579,14 +691,17 @@ class PlotAngularityFigures(common_base.CommonBase):
         yerr_dn_relative = np.divide(yerrdn, y)
         
         # Combine systematics in quadrature
-        y_sys_total_up_relative = np.sqrt( np.square(y_sys_data_relative) + np.square(yerr_up_relative))
-        y_sys_total_dn_relative = np.sqrt( np.square(y_sys_data_relative) + np.square(yerr_dn_relative))
+        y_sys_total_up_relative = np.sqrt( np.square(y_sys_data_relative) + \
+                                           np.square(yerr_up_relative))
+        y_sys_total_dn_relative = np.sqrt( np.square(y_sys_data_relative) + \
+                                           np.square(yerr_dn_relative))
         
         y_sys_total_up = np.multiply(y_sys_total_up_relative, y_ratio)
         y_sys_total_dn = np.multiply(y_sys_total_dn_relative, y_ratio)
         
         # Note: invert direction of asymmetric uncertainty
-        g_ratio = ROOT.TGraphAsymmErrors(n, x, y_ratio, xerrdn, xerrup, y_sys_total_up, y_sys_total_dn)
+        g_ratio = ROOT.TGraphAsymmErrors(n, x, y_ratio, xerrdn, xerrup,
+                                         y_sys_total_up, y_sys_total_dn)
         g_ratio.SetName('g_ratio_{}_{}'.format(i, beta))
         self.g_ratio_dict[beta].append(g_ratio)
         
@@ -603,7 +718,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             # Undo scaling by bin width before rebinning
             h_theory.SetBinContent(bi, h_theory.GetBinContent(bi) * h_theory.GetBinWidth(bi))
 
-        h_theory_rebinned = h_theory.Rebin(n, '{}_rebinned'.format(h_theory.GetName()), xbins)
+        h_theory_rebinned = h_theory.Rebin(n, h_theory.GetName()+'_rebinned', xbins)
         h_theory_rebinned.SetDirectory(0)
         h_theory_rebinned.Scale(1., 'width')
         
@@ -611,6 +726,23 @@ class PlotAngularityFigures(common_base.CommonBase):
             h_theory_rebinned.SetBinError(bi, 0)
     
         return h_theory_rebinned
+
+    #-------------------------------------------------------------------------------------------
+    # Remove bins from histogram that have negative edges for plotting purposes
+    #-------------------------------------------------------------------------------------------
+    def remove_negative_bin_edges(self, h):
+
+        n = h.GetNbinsX()
+        xbins = array('d', [h.GetBinLowEdge(bi) for bi in range(1, n+2)])
+
+        while xbins[0] < 0:
+            xbins = xbins[1:]
+            n -= 1
+
+        h_rebinned = h.Rebin(n, h.GetName()+'_negrm', xbins)
+        h_rebinned.SetDirectory(0)
+
+        return h_rebinned
 
     #-------------------------------------------------------------------------------------------
     # Scale vertical amplitude of histogram, for visualization
@@ -713,6 +845,15 @@ if __name__ == '__main__':
     # Define arguments
     parser = argparse.ArgumentParser(description='Plot angularity')
     parser.add_argument(
+        '-i',
+        '--inputDir',
+        action='store',
+        type=str,
+        metavar='inputDir',
+        default='.',
+        help='input directory containing ROOT file'
+    )
+    parser.add_argument(
         '-o',
         '--outputDir',
         action='store',
@@ -725,5 +866,5 @@ if __name__ == '__main__':
     # Parse the arguments
     args = parser.parse_args()
 
-    analysis = PlotAngularityFigures(output_dir=args.outputDir)
+    analysis = PlotAngularityFigures(input_dir=args.inputDir, output_dir=args.outputDir)
     analysis.plot_results()

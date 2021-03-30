@@ -485,7 +485,7 @@ namespace RUtil
 						if (option == "width") { dk *= ob_bin_width[ob_i]; }
 					} else {  // groomed case (assumes sd_beta == 0 for simplification)
 						k = pT * R * std::pow((ob_np - ob) * std::pow(sd_zcut, beta - 1), 1. / beta);
-						dk = pT * R * std::pow(ob_np - ob, (1 - beta) / beta) *
+						dk = pT * R * std::pow(ob, (1 - beta) / beta) *
 							std::pow(sd_zcut, beta - 1);
 						if (option == "width") { dk *= ob_bin_width[ob_i]; }
 					}
