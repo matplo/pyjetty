@@ -16,9 +16,11 @@ def main():
 	with rootutils.QuietWarning():
 		tu = rootutils.list_trees_dict(args.fname)
 	for t in tu:
-		print('Tree name: {}'.format(t.decode("utf-8")))
+		# print('Tree name: {}'.format(t.decode("utf-8")))
+		print('Tree name: {}'.format(t))
 		if args.branches:
-			_path = os.path.join(args.fname, t.decode("utf-8"))
+			# _path = os.path.join(args.fname, t.decode("utf-8"))
+			_path = os.path.join(args.fname, t)
 			with rootutils.QuietWarning():
 				tu = rootutils.TreeUtils(_path)
 				bnames = tu.bnames

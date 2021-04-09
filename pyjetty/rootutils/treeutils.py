@@ -20,7 +20,7 @@ class TreeUtils(object):
 		self.fin = ROOT.TFile(self.fname)
 		self.tname = os.path.basename(tpath.split(".root")[1].replace(".root", ""))
 		tdir = os.path.dirname(tpath.split(".root")[1].replace(".root", "")).lstrip("/")
-		# print ("fname:", fname, "tdir:", tdir, "tname:", tname)
+		print ("tpath:", tpath, "fname:", self.fname, "tdir:", tdir, "tname:", self.tname)
 		_tpath = self.tname
 		if len(tdir) == 0:
 			din = self.fin
