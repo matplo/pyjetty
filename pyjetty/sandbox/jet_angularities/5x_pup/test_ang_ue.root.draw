@@ -1,0 +1,31 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+#logy 1
+#x multiplicity
+#y 1/N dN/dM
+#normalize self
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/single_pup/test_ang_ue.root 		:hmult_hard :p  : title=multiplicity in hard events (jet selected)
+# test_ang_ue.root 		:hmult_hard :p  : title=multiplicity in hard events (jet selected)
+
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/single_pup/test_ang_ue.root 		:hmult_pup :p  : title=multiplicity in min. bias events
+test_ang_ue.root 		:hmult_pup :p +p24 : title=multiplicity in min. bias x 5 events
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title hard event p_{T} density (w/ jets R=0.4 20<p_{T}<200 |#eta| < 0.6) tx_size=0.04
+#legend pos=ur
+test_ang_ue.root 		:hpt_acc_hard :colz  : title=hard event p_{T} density
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title min. bias event p_{T} density tx_size=0.04
+#legend pos=ur
+test_ang_ue.root 		:hpt_acc_pup :colz  : title=min. bias event p_{T} density
+

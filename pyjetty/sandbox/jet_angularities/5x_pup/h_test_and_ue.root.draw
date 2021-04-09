@@ -1,0 +1,131 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title pileup: 5x tx_size=0.04
+#legend pos=ur title= 20 < p_{T}^{jet} < 40    R=0.4
+#comment 0.23,0.528,0.835,0.618, tx_size=0.035 item=dotted lines: matched jets in events w/ pile-up item=open symbols: jets in events w/ pile-up (no matching)
+#normalize self
+##scalebwidth 1
+##logx 0
+##logy 0
+#miny 0
+#maxy 18
+#x #lambda_{#alpha}
+#y #frac{1}{#sigma} #frac{d#sigma}{d#lambda_{#alpha}}
+
+../single_pup/h_test_and_ue.root 		:h_pt20_L11 :p +p20 : title=#lambda_{1}
+#../single_pup/h_test_and_ue.root 		:h_pt20_L11m :noleg hist +l3 +w3 -k: title=#lambda_{1}
+#../single_pup/h_test_and_ue_pup.root 		:hPUP_pt20_L11 :noleg p +p24 -k  : title=#lambda_{1}
+./h_test_and_ue.root 		:h_pt20_L11m :noleg hist +l3 +w3 -k: title=#lambda_{1}
+./h_test_and_ue_pup.root 		:hPUP_pt20_L11 :noleg p +p24 -k  : title=#lambda_{1}
+
+../single_pup/h_test_and_ue.root 		:h_pt20_L21 :p +p21  : title=#lambda_{2}
+#../single_pup/h_test_and_ue.root 		:h_pt20_L21m :noleg hist +l3 +w3 -k: title=#lambda_{2}
+#../single_pup/h_test_and_ue_pup.root 		:hPUP_pt20_L21 :noleg p +p25 -k: title=#lambda_{2}
+./h_test_and_ue.root 		:h_pt20_L21m :noleg hist +l3 +w3 -k: title=#lambda_{2}
+./h_test_and_ue_pup.root 		:hPUP_pt20_L21 :noleg p +p25 -k: title=#lambda_{2}
+
+../single_pup/h_test_and_ue.root 		:h_pt20_L31 :p +p34 : title=#lambda_{3}
+#../single_pup/h_test_and_ue.root 		:h_pt20_L31m :noleg hist +l3 +w3 -k: title=#lambda_{3}
+#../single_pup/h_test_and_ue_pup.root 		:hPUP_pt20_L31 :noleg p +p28 -k: title=#lambda_{1}
+./h_test_and_ue.root 		:h_pt20_L31m :noleg hist +l3 +w3 -k: title=#lambda_{3}
+./h_test_and_ue_pup.root 		:hPUP_pt20_L31 :noleg p +p28 -k: title=#lambda_{1}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title pileup: 5x tx_size=0.04
+#legend pos=ur title= 80 < p_{T}^{jet} < 100    R=0.4
+#comment 0.23,0.528,0.835,0.618, tx_size=0.035 item=dotted lines: matched jets in events w/ pile-up item=open symbols: jets in events w/ pile-up (no matching)
+#normalize self
+##scalebwidth 1
+##logx 0
+##logy 0
+#miny 0
+#maxy 18
+#x #lambda_{#alpha}
+#y #frac{1}{#sigma} #frac{d#sigma}{d#lambda_{#alpha}}
+
+../single_pup/h_test_and_ue.root 		:h_pt80_L11 :p +p20 : title=#lambda_{1}
+#../single_pup/h_test_and_ue.root 		:h_pt80_L11m :noleg hist +l3 +w3 -k: title=#lambda_{1}
+#../single_pup/h_test_and_ue_pup.root 		:hPUP_pt80_L11 :noleg p +p24 -k  : title=#lambda_{1}
+./h_test_and_ue.root 		:h_pt80_L11m :noleg hist +l3 +w3 -k: title=#lambda_{1}
+./h_test_and_ue_pup.root 		:hPUP_pt80_L11 :noleg p +p24 -k  : title=#lambda_{1}
+
+../single_pup/h_test_and_ue.root 		:h_pt80_L21 :p +p21  : title=#lambda_{2}
+#../single_pup/h_test_and_ue.root 		:h_pt80_L21m :noleg hist +l3 +w3 -k: title=#lambda_{2}
+#../single_pup/h_test_and_ue_pup.root 		:hPUP_pt80_L21 :noleg p +p25 -k: title=#lambda_{2}
+./h_test_and_ue.root 		:h_pt80_L21m :noleg hist +l3 +w3 -k: title=#lambda_{2}
+./h_test_and_ue_pup.root 		:hPUP_pt80_L21 :noleg p +p25 -k: title=#lambda_{2}
+
+../single_pup/h_test_and_ue.root 		:h_pt80_L31 :p +p34 : title=#lambda_{3}
+#../single_pup/h_test_and_ue.root 		:h_pt80_L31m :noleg hist +l3 +w3 -k: title=#lambda_{3}
+#../single_pup/h_test_and_ue_pup.root 		:hPUP_pt80_L31 :noleg p +p28 -k: title=#lambda_{1}
+./h_test_and_ue.root 		:h_pt80_L31m :noleg hist +l3 +w3 -k: title=#lambda_{3}
+./h_test_and_ue_pup.root 		:hPUP_pt80_L31 :noleg p +p28 -k: title=#lambda_{1}
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul title= 20 < p_{T}^{jet} < 40    R=0.4
+#normalize self
+##scalebwidth 1
+##logx 0
+#logy 1
+#maxy 220
+#miny 0.15
+#x #delta #lambda_{#alpha} = #lambda_{#alpha} - #lambda_{#alpha}^{pileup}
+#y #frac{1}{#sigma} #frac{d#sigma}{d#delta#lambda_{#alpha}}
+
+../single_pup/h_test_and_ue.root 		:h_pt20_L11delta :p +p20 : title=#delta #lambda_{1}
+./h_test_and_ue.root 		:h_pt20_L11delta :p +p24 -k noleg  : title=#delta #lambda_{1}
+
+../single_pup/h_test_and_ue.root 		:h_pt20_L21delta :p +p21 : title=#delta #lambda_{2}
+./h_test_and_ue.root 		:h_pt20_L21delta :p +p25 -k noleg  : title=#delta #lambda_{2}
+
+../single_pup/h_test_and_ue.root 		:h_pt20_L31delta :p +p34 : title=#delta #lambda_{3}
+./h_test_and_ue.root 		:h_pt20_L31delta :p +p31 -k noleg  : title=#delta #lambda_{3}
+
+#line 0,0.2,0,200,8,9,1,100
+
+#comment 0.585,0.65,0.775,0.824, tx_size=0.035 item=note: #delta is defined item=for matched jets only item= item=open symbols for pileup x 5
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul title= 80 < p_{T}^{jet} < 100    R=0.4
+#normalize self
+##scalebwidth 1
+##logx 0
+#logy 1
+#maxy 220
+#miny 0.15
+#x #delta #lambda_{#alpha} = #lambda_{#alpha} - #lambda_{#alpha}^{pileup}
+#y #frac{1}{#sigma} #frac{d#sigma}{d#delta#lambda_{#alpha}}
+
+../single_pup/h_test_and_ue.root 		:h_pt80_L11delta :p +p20 : title=#delta #lambda_{1}
+./h_test_and_ue.root 		:h_pt80_L11delta :p +p24 -k noleg  : title=#delta #lambda_{1}
+
+../single_pup/h_test_and_ue.root 		:h_pt80_L21delta :p +p21 : title=#delta #lambda_{2}
+./h_test_and_ue.root 		:h_pt80_L21delta :p +p25 -k noleg  : title=#delta #lambda_{2}
+
+../single_pup/h_test_and_ue.root 		:h_pt80_L31delta :p +p34 : title=#delta #lambda_{3}
+./h_test_and_ue.root 		:h_pt80_L31delta :p +p31 -k noleg  : title=#delta #lambda_{3}
+#line 0,0.2,0,200,8,9,1,100
+
+#comment 0.585,0.65,0.775,0.824, tx_size=0.035 item=note: #delta is defined item=for matched jets only item= item=open symbols for pileup x 5
+
+### -----------------------
+### figure
+### geom 500x500
+### date
+### title: smart group
+### legend pos=ur
+### ../single_pup/h_test_and_ue.root 		:h_pt :p  : title=jet pt
+
