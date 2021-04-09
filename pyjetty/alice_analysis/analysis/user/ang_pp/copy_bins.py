@@ -61,12 +61,20 @@ def create_merged_file_lmn(new_dir, old_dir, create_dir, l, m, n):
         x_li_old, y_li_old = get_val_li(f)
 
     # Find correct place to do the splice
-    min_i = 0
-    while x_li_old[min_i] < x_li_new[0]:
-        min_i += 1
-    max_i = min_i
-    while x_li_old[max_i] < x_li_new[-1]:
-        max_i += 1
+    min_i = bisect.bisect_left(x_li_old, x_li_new[0])
+    max_i = bisect.bisect(x_li_old, x_li_new[-1], lo=min_i)
+
+    # Renormalize the new points to match the expected value of
+    #     the last old point that was removed
+    if min_i != max_i:
+        x_old = x_li_old[max_i-1]
+        try:  # if x_old in x_li_new
+            # Renormalize purely by one point
+            y_new = y_li_new[x_li_new.index(x_old)]
+            y_li_new = [y * y_new / y_li_old[max_i] for y in y_li_new]
+        except ValueError:  # x_old not in x_li_new
+            # Renormalize by avg of two points
+            
 
     x_li = x_li_old[0:min_i] + x_li_new + x_li_old[max_i:-1]
     y_li = y_li_old[0:min_i] + y_li_new + y_li_old[max_i:-1]
