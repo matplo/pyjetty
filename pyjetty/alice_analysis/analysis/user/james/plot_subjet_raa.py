@@ -53,14 +53,13 @@ class PlotRAA(common_base.CommonBase):
         
         self.line_style_james = [1, 1, 1, 1, 1, 1, 11, 1, 1]
         self.line_width_james = [4, 4, 4, 4, 4, 4, 6, 4, 4]
-        self.line_style_laura = [1, 1, 1, 1, 11, 1, 1]
-        self.line_width_laura = [4, 4, 4, 4, 6, 4, 4]
          
         self.figure_approval_status = 'prel. candidate'
         
         self.xtitle = '#it{z}_{r}'
-        self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
-        
+        #self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
+        self.ytitle = '#frac{{1}}{{#it{{N}}}} #frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
+
         self.debug_level = 0
         
     #---------------------------------------------------------------
@@ -89,6 +88,10 @@ class PlotRAA(common_base.CommonBase):
         self.theory_colors = self.theory_colors_james
         self.line_style = self.line_style_james
         self.line_width = self.line_width_james
+        
+        # Get binning to plot
+        self.bins = np.array(result['bins'])
+        self.n_bins = len(self.bins) - 1
 
         # Get hists from ROOT file
         self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
@@ -97,16 +100,17 @@ class PlotRAA(common_base.CommonBase):
         self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
         self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
 
-        self.h_main_AA = self.file_AA.Get(self.main_result_name)
-        self.h_sys_AA = self.file_AA.Get(self.sys_total_name)
-        
-        n_bins_AA = self.h_main_AA.GetXaxis().GetNbins()
-        bins_AA = self.h_main_AA.GetXaxis().GetXbins().GetArray()
+        h_main_AA = self.file_AA.Get(self.main_result_name)
+        h_sys_AA = self.file_AA.Get(self.sys_total_name)
+        #print(bins)
+        #print([h_main_AA.GetXaxis().GetXbins().GetArray()[i] for i in range(n_bins+1)])
+        self.h_main_AA = h_main_AA.Rebin(self.n_bins, f'{h_main_AA.GetName()}_rebinned', self.bins)
+        self.h_sys_AA = h_sys_AA.Rebin(self.n_bins, f'{h_sys_AA.GetName()}_rebinned', self.bins)
         
         h_main_pp = self.file_pp.Get(self.main_result_name)
         h_sys_pp = self.file_pp.Get(self.sys_total_name)
-        self.h_main_pp = h_main_pp.Rebin(n_bins_AA, f'{h_main_pp.GetName()}_rebinned', bins_AA)
-        self.h_sys_pp = h_sys_pp.Rebin(n_bins_AA, f'{h_sys_pp.GetName()}_rebinned', bins_AA)
+        self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
+        self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
         
         self.h_ratio = self.h_main_AA.Clone()
         self.h_ratio.Divide(self.h_main_pp)
@@ -124,11 +128,11 @@ class PlotRAA(common_base.CommonBase):
     #
     # Required histograms:
     #   - self.h_main_pp
-    #   - self.h_sys_pp (tgraph for laura)
+    #   - self.h_sys_pp
     #   - self.h_main_AA
-    #   - self.h_sys_AA (tgraph for laura)
+    #   - self.h_sys_AA
     #   - self.h_ratio
-    #   - self.h_ratio_sys (tgraph for laura)
+    #   - self.h_ratio_sys
     #
     # And the theory tgraphs should be placed in:
     #   - self.label_list
@@ -197,10 +201,10 @@ class PlotRAA(common_base.CommonBase):
         self.h_sys_AA.SetFillStyle(1001)
         self.h_sys_AA.SetLineWidth(0)
           
-        xmin = self.h_main_pp.GetBinLowEdge(2)
-        xmax = self.h_main_pp.GetBinLowEdge(self.h_main_pp.GetNbinsX()+1)
+        #xmin = self.h_main_pp.GetBinLowEdge(1)
+        #xmax = self.h_main_pp.GetBinLowEdge(self.h_main_pp.GetNbinsX()+1)
             
-        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
+        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, self.bins[0], self.bins[-1])
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(self.xtitle)
         myBlankHisto.SetYTitle(self.ytitle)
@@ -323,8 +327,7 @@ class PlotRAA(common_base.CommonBase):
           
         ratio_legend.Draw()
         ratio_legend2.Draw()
-
-        line = ROOT.TLine(xmin,1,xmax,1)
+        line = ROOT.TLine(self.bins[0], 1, self.bins[-1], 1)
         line.SetLineColor(920+2)
         line.SetLineStyle(2)
         line.SetLineWidth(2)
