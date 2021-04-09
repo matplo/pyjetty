@@ -338,7 +338,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     x = 0.23
     y = 0.9
     text_latex.SetTextSize(0.05)
-    text = 'PYTHIA8 embedded in thermal background'
+    text = 'PYTHIA8 embedded in 0-10% Pb-Pb'
     text_latex.DrawLatex(x, y, text)
   
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -378,5 +378,48 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
 
     output_filename = os.path.join(output_dir, '{}/{}/money_plot_{}-{}.pdf'.format(jetR, obs_setting,
                                           min_pt, max_pt))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  def plot_subjet_DeltaR(self, jetR, subjetR, jet_matching_distance):
+
+    if self.is_pp:
+      name = f'hDeltaR_ppdet_pptrue_subjet_z_R{jetR}_{subjetR}{self.scaled_suffix}'
+    else:
+      name = f'hDeltaR_combined_ppdet_subjet_z_R{jetR}_{subjetR}{self.suffix}{self.scaled_suffix}'
+
+    h = self.fMC.Get(name)
+    
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.15)
+    ROOT.gPad.SetRightMargin(0.15)
+    c.SetLogz()
+
+    h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
+    h.GetYaxis().SetTitle('#DeltaR_{match}')
+    
+    x_max = 200.
+    h.GetXaxis().SetRangeUser(0., x_max)
+    h.GetYaxis().SetRangeUser(0., 1.)
+    h.Draw('colz')
+    h.Scale(1e6)
+    
+    deltaR_max = jet_matching_distance * float(subjetR)
+    line = ROOT.TLine(0, deltaR_max, x_max, deltaR_max)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.SetLineWidth(4)
+    line.Draw()
+    
+    text = f'R = {jetR}, r = {subjetR}'
+    textFit = ROOT.TLatex()
+    textFit.SetTextSize(0.04)
+    textFit.SetNDC()
+    textFit.DrawLatex(0.62,0.8,text)
+
+    output_filename = os.path.join(self.output_dir, 'jet/{}.pdf'.format(self.remove_periods(name)))
     c.SaveAs(output_filename)
     c.Close()

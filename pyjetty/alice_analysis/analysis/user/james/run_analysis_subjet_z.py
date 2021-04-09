@@ -136,6 +136,7 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
         if (jetR - obs_setting) < 1e-3:
           continue
     
+        self.plotting_utils.plot_subjet_DeltaR(jetR, obs_label, self.jet_matching_distance)
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual_pt(jetR, obs_label, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_residual_obs(jetR, obs_label, self.xtitle)

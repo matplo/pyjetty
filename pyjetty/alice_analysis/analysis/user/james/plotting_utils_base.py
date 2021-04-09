@@ -110,6 +110,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     h.GetXaxis().SetRangeUser(0., x_max)
     h.GetYaxis().SetRangeUser(0., 1.)
     h.Draw('colz')
+    h.Scale(1e6)
     
     deltaR_max = jet_matching_distance * jetR
     line = ROOT.TLine(0, deltaR_max, x_max, deltaR_max)
