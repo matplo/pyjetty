@@ -515,10 +515,14 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     text_latex.SetTextSize(0.04)
     text = 'PYTHIA leading subjet '
     text_latex.DrawLatex(0.23, 0.5, text)
-    text = 'tagged in PYTHIA#oplusPb#font[122]{-}Pb'
+    if plot_matched:
+        text = 'tagged in PYTHIA#oplusPb#font[122]{-}Pb'
+    else:
+        text = 'mis-tagged in PYTHIA#oplusPb#font[122]{-}Pb'
     text_latex.DrawLatex(0.23, 0.46, text)
-    text = 'leading subjet'
-    text_latex.DrawLatex(0.23, 0.42, text)
+    if plot_matched:
+        text = 'leading subjet'
+        text_latex.DrawLatex(0.23, 0.42, text)
 
     if plot_matched:
         label = 'matched'

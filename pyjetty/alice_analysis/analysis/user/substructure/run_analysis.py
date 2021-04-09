@@ -466,7 +466,10 @@ class RunAnalysis(common_base.CommonBase):
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
       
       pt_det_bins = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
-      pt_det_bins = pt_det_bins[pt_det_bins.index(min_pt) : pt_det_bins.index(max_pt) + 1]
+      if min_pt < pt_det_bins[0]:
+        pt_det_bins = pt_det_bins
+      else:
+        pt_det_bins = pt_det_bins[pt_det_bins.index(min_pt) : pt_det_bins.index(max_pt) + 1]
       for i in range(len(pt_det_bins)-1):
         min_det_pt = int(pt_det_bins[i])
         max_det_pt = int(pt_det_bins[i+1])

@@ -90,7 +90,7 @@ leading_subjet_z:
     pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150, 200]
     pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120]
     pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
-    obs_bins_truth: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
+    obs_bins_truth: [0., 0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
     obs_bins_det: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
     
@@ -99,7 +99,7 @@ leading_subjet_z:
     pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150, 200]
     pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120]
     pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
-    obs_bins_truth: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
+    obs_bins_truth: [0., 0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
     obs_bins_det: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
   
@@ -115,14 +115,14 @@ do_unfolding: True
 force_rebin: True
 do_systematics: True
 do_plot_final_result: True
-do_plot_performance: True
+do_plot_performance: False
 figure_approval_status: 'ongoing analysis'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
 systematics_list:
   - main
-#  - trkeff
+  - trkeff
   - prior1
   - prior2
   - truncation
@@ -145,7 +145,7 @@ R_max_variation2: 0.7
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18qr/449697/AnalysisResultsFinal.root'
 main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC20g4_embedding/436853/AnalysisResultsFinal.root'
-#trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/156853/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC20g4_embedding_trkeff/436854/AnalysisResultsFinal.root'
 
 # Thermal closure test
 thermal_closure: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC20g4_thermal02/447495/AnalysisResultsFinal.root'
