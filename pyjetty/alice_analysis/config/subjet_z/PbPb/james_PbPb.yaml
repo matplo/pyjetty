@@ -74,7 +74,7 @@ leading_subjet_z:
   common_settings:
     xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
-    pt_bins_reported: [60, 80, 100]
+    pt_bins_reported: [80, 120]
     max_reg_param: 10
     plot_overlay_list:
       - ['config1', 'config2']
@@ -87,20 +87,20 @@ leading_subjet_z:
 
   config1:
     subjet_R: 0.1
-    pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150, 200]
-    pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120]
-    pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
-    obs_bins_truth: [0., 0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
-    obs_bins_det: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
+    pt_bins_truth: [10, 20, 40, 60, 80, 120, 150, 200]
+    pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120, 150]
+    pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    obs_bins_truth: [0., 0.5, 0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
+    obs_bins_det: [0.5, 0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
-    
+
   config2:
     subjet_R: 0.2
-    pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150, 200]
-    pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120]
-    pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
-    obs_bins_truth: [0., 0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
-    obs_bins_det: [0.5, 0.66, 0.76, 0.82, 0.88, 0.94, 1.0]
+    pt_bins_truth: [10, 20, 40, 60, 80, 120, 150, 200]
+    pt_bins_det: [60, 65, 70, 75, 80, 90, 100, 110, 120, 150]
+    pt_bins_det_sys_truncation: [50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    obs_bins_truth: [0., 0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
+    obs_bins_det: [0.5, 0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
   
 ###############################################################################
