@@ -57,8 +57,8 @@ class PlotRAA(common_base.CommonBase):
         self.figure_approval_status = 'prel. candidate'
         
         self.xtitle = '#it{z}_{r}'
-        #self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
-        self.ytitle = '#frac{{1}}{{#it{{N}}}} #frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
+        self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{#it{{z}}_{{r}} > 0.7}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
+        #self.ytitle = '#frac{{1}}{{#it{{N}}}} #frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
 
         self.debug_level = 0
         
@@ -106,11 +106,22 @@ class PlotRAA(common_base.CommonBase):
         #print([h_main_AA.GetXaxis().GetXbins().GetArray()[i] for i in range(n_bins+1)])
         self.h_main_AA = h_main_AA.Rebin(self.n_bins, f'{h_main_AA.GetName()}_rebinned', self.bins)
         self.h_sys_AA = h_sys_AA.Rebin(self.n_bins, f'{h_sys_AA.GetName()}_rebinned', self.bins)
-        
+
         h_main_pp = self.file_pp.Get(self.main_result_name)
         h_sys_pp = self.file_pp.Get(self.sys_total_name)
         self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
         self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
+        
+        # Normalize to the integral over the reported range
+        integral_AA = self.h_main_AA.Integral(1, self.h_main_AA.GetNbinsX()+1, 'width')
+        self.h_main_AA.Scale(1./integral_AA)
+        self.h_sys_AA.Scale(1./integral_AA)
+        print(f'integral AA: {integral_AA}')
+    
+        integral_pp = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX()+1, 'width')
+        self.h_main_pp.Scale(1./integral_pp)
+        self.h_sys_pp.Scale(1./integral_pp)
+        print(f'integral pp: {integral_pp}')
         
         self.h_ratio = self.h_main_AA.Clone()
         self.h_ratio.Divide(self.h_main_pp)
