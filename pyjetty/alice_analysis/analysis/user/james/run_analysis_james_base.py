@@ -293,7 +293,18 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     self.utils.setup_legend(myLegend,0.05)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
-    ymax = self.get_maximum(name, overlay_list)
+    ymax = 2*self.get_maximum(name, overlay_list)
+    ymin = 2e-4
+    ymax_ratio = 1.99
+    if self.observable == 'leading_subjet_z':
+        ymax = 12.
+        ymin = 1e-1
+        ymax_ratio = 2.19
+    if self.observable == 'inclusive_subjet_z':
+        ymax = 2e3
+        ymin = 2e-1
+        pad1.SetLogy()
+        ymax_ratio = 2.19
     
     # Get xmin and xmax over all hists
     xmin = 1
@@ -360,10 +371,10 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(2*ymax)
-        myBlankHisto.SetMinimum(0.)
+        myBlankHisto.SetMaximum(ymax)
+        myBlankHisto.SetMinimum(ymin)
         if plot_ratio:
-          myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
+          myBlankHisto.SetMinimum(ymin) # Don't draw 0 on top panel
           myBlankHisto.GetYaxis().SetTitleSize(0.075)
           myBlankHisto.GetYaxis().SetTitleOffset(1.2)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
@@ -396,7 +407,8 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
-          myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+          
+          myBlankHisto2.GetYaxis().SetRangeUser(0., ymax_ratio)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(xmin,1,xmax,1)
@@ -478,6 +490,25 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         hRatioStat.SetLineColor(color)
 
       pad1.cd()
+      
+      # Scale inclusive subjets to N_jets rather than N_subjets -- fill in by hand for now
+      if self.observable == 'leading_subjet_z':
+        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX()+1, 'width')
+        print(f'integral, leading_subjet_z, {obs_label}: {integral}')
+      if self.observable == 'inclusive_subjet_z':
+        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX()+1, 'width')
+        print(f'integral, inclusive_subjet_z, {obs_label}: {integral}')
+        
+        if np.isclose(float(obs_label), 0.1):
+            integral_leading_subjet = 0.7764822604248643 # R=0.4, r=0.2
+        elif np.isclose(float(obs_label), 0.2):
+            integral_leading_subjet = 0.9257835945755017 # R=0.4, r=0.2
+
+        normalization = integral_leading_subjet / integral
+        print(f'normalization: {normalization}')
+        h.Scale(normalization)
+        h_sys.Scale(normalization)
+        hPythia.Scale(normalization)
       
       if plot_pythia:
         plot_errors = False
@@ -567,7 +598,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   # Return maximum y-value of unfolded results in a subconfig list
   def get_maximum(self, name, overlay_list):
-  
+
     max = 0.
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
