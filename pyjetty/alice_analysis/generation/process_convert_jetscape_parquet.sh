@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# This script takes an input HepMC file path as an argument, and runs a python script to
+# This script takes an input parquet file path as an argument, and runs a python script to
 # process the input file and write an output ROOT file.
 # The main use is to give this script to a slurm script.
 
@@ -28,8 +28,8 @@ fi
 # Define output path from relevant sub-path of input file
 # Note: suffix depends on file structure of input file -- need to edit appropriately for each dataset
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f6-9)
-#echo $INPUT_FILE
-#echo $OUTPUT_SUFFIX
+echo $INPUT_FILE
+echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/rstorage/generators/jetscape_alice/tree_gen/$JOB_ID/$OUTPUT_SUFFIX"
 echo "Output dir: $OUTPUT_DIR"
 mkdir -p $OUTPUT_DIR
