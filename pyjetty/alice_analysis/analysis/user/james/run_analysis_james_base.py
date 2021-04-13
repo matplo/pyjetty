@@ -509,7 +509,21 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         h.Scale(normalization)
         h_sys.Scale(normalization)
         hPythia.Scale(normalization)
-      
+        
+      # Compute z_loss for leading subjets
+      # Should come up with a better way to decide bin center
+      z_moment = 0.
+      if self.observable == 'leading_subjet_z':
+        for i in range(1, h.GetNbinsX()+1):
+            zr = h.GetBinCenter(i)
+            content = h.GetBinContent(i)
+            width =  h.GetXaxis().GetBinWidth(i)
+            z_moment += zr*content*width
+            #print(f'bin: {i} (zr = {zr}, width = {width}): content = {content} -- {zr*content*width}')
+        z_loss = 1 - z_moment
+        #print(z_moment)
+        #print(f'z_loss for r={obs_label}: {1-z_moment}')
+
       if plot_pythia:
         plot_errors = False
         if plot_errors:
@@ -538,6 +552,15 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       if grooming_setting:
         text += self.utils.formatted_grooming_label(grooming_setting, verbose=True)
       myLegend.AddEntry(h, '{}'.format(text), 'pe')
+      
+      pad1.cd()
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text_latex.SetTextSize(0.05)
+      x = 0.3
+      y = 0.3 - 0.7*float(obs_setting)
+      text = f'< #it{{z}}_{{loss}}^{{{subobs_label} = {obs_setting}}} > = {np.round(z_loss,2)}'
+      text_latex.DrawLatex(x, y, text)
         
     pad1.cd()
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
@@ -582,6 +605,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       rg_axis.SetTickSize(0.015)
       rg_axis.SetLabelOffset(0.015)
       rg_axis.Draw()
+
 
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:
