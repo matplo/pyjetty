@@ -99,7 +99,7 @@ class Parquet2antuple(common_base.CommonBase):
     pid = event['particle_ID']
     status = event['status']
     event_plane_angle = event['event_plane_angle']
-    
+
     # Looop through and fill each particle to tree
     for i,pid_i in enumerate(pid):
     
@@ -108,11 +108,11 @@ class Parquet2antuple(common_base.CommonBase):
       phi = np.arctan2(py[i],px[i])
       if phi < 0:
         phi += 2*np.pi
-      
+
       # (e-, mu-, pi+, K+, p+, Sigma+, Sigma-, Xi-, Omega-)
       if abs(pid_i) in [11, 13, 211, 321, 2212, 3222, 3112, 3312, 3334]:
           self.particles_accepted.add(self.pdg.GetParticle(int(pid_i)).GetName())
-          self.t_p.Fill(self.run_number, self.ev_id, pt, eta, phi, pid_i, status, event_plane_angle)
+          self.t_p.Fill(self.run_number, self.ev_id, pt, eta, phi, pid_i, status[i], event_plane_angle)
         
   #---------------------------------------------------------------
   def increment_event(self):
