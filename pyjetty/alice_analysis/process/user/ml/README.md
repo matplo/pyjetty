@@ -1,5 +1,7 @@
 # Running the code
 
+## Quark-gluon
+
 The analysis consists of two steps:
 1. Compute Nsubjettiness arrays from input events, and write them to file: 
    ```
@@ -13,6 +15,24 @@ The analysis consists of two steps:
    ```
 
 Both steps use a common config file at `alice_analysis/config/ml/qg.yaml`.
+
+## pp-AA
+
+The analysis consists of two steps:
+1. Compute Nsubjettiness arrays from input events, and write them to file: 
+   ```
+   cd alice_analysis/process/user/ml
+   python process_ppAA.py -c <config> -o <output_dir>
+   ```
+2. Read in file, and fit model:
+   ```
+   cd alice_analysis/analysis/user/ml
+   python analyze_ppAA.py -c <config> -o <output_dir>
+   ```
+
+Both steps use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
+
+The PYTHIA/JEWEL + HYDJET events are located on hiccup at `/rstorage/ml/egml/data_ppAA_PythiaJewel_jets.h5`.
 
 # Pull requests
 
