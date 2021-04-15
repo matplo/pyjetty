@@ -2,14 +2,15 @@
     Ezra Lesser (elesser@berkeley.edu), Spring 2021
 '''
 
-import os
+import os       # File operations
 from pathlib import Path
+import bisect   # Some sorted list operations
 
 
 # User-defined parameters
-old_path = "./Archive/"     # Old data points to merge into
-new_path = "./firstbin/"    # New data points to insert into old
-create_path = "./merged/"   # Path for newly created data
+old_path = "/home/ezra/Archive/"     # Old data points to merge into
+new_path = "/home/ezra/firstbin/"    # New data points to insert into old
+create_path = "/home/ezra/merged/"   # Path for newly created data
 
 pT_list = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, \
            100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
@@ -66,15 +67,18 @@ def create_merged_file_lmn(new_dir, old_dir, create_dir, l, m, n):
 
     # Renormalize the new points to match the expected value of
     #     the last old point that was removed
-    if min_i != max_i:
+    if min_i != max_i:  # simultaneously requires max_i > 0
         x_old = x_li_old[max_i-1]
+        y_old = y_li_old[max_i-1]
         try:  # if x_old in x_li_new
             # Renormalize purely by one point
             y_new = y_li_new[x_li_new.index(x_old)]
-            y_li_new = [y * y_new / y_li_old[max_i] for y in y_li_new]
+            y_li_new = [y * y_old / y_new for y in y_li_new]
         except ValueError:  # x_old not in x_li_new
             # Renormalize by avg of two points
-            
+            min_i_new = bisect.bisect_left(x_li_new, x_old)
+            avg = (y_li_new[min_i_new-1] + y_li_new[min_i_new]) / 2.
+            y_li_new = [y * y_old / avg for y in y_li_new]
 
     x_li = x_li_old[0:min_i] + x_li_new + x_li_old[max_i:-1]
     y_li = y_li_old[0:min_i] + y_li_new + y_li_old[max_i:-1]
