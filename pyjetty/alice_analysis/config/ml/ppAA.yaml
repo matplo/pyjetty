@@ -1,0 +1,67 @@
+# Config file for pp vs AA jet classification
+
+#------------------------------------------------------------------------------
+# These parameters are used in both the process script and the analysis script
+#------------------------------------------------------------------------------
+
+# Load labeled data -- max currently 62532
+n_train: 15000
+n_val: 2000
+n_test: 3000
+
+# Define Nsubjettiness observables to compute
+# (The processing script will compute and store the maximum K provided)
+# The K-body phase space is (3K-4)-dimensional
+# Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
+K: [2, 4, 6]
+
+#------------------------------------------------------------------------------
+# All parameters below are only used in the analysis script
+#------------------------------------------------------------------------------
+
+# Select model: linear, random_forest, neural_network, pfn
+models: [linear]
+
+linear:
+
+    # Model hyperparameters
+    loss: 'hinge'                # cost function
+    penalty: ['l2', 'l1']        # regularization term
+    alpha: [1e-5, 1e-4, 1e-3]    # regularization strength
+    max_iter: 1000               # max number of epochs
+    tol: [1e-5, 1e-4, 1e-3]      # criteria to stop training
+    learning_rate: 'optimal'     # learning schedule (learning rate decreases over time in proportion to alpha)
+    early_stopping: False        # whether to stop training based on validation score
+    
+    # Hyperparameter tuning
+    n_iter: 10                   # number of random hyperparameter sets to try
+    cv: 5                        # number of cross-validation folds
+    
+    random_state: null           # seed for shuffling data (set to an int to have reproducible results)
+
+random_forest:
+
+    # Model hyperparameters
+    random_state: null           # seed for shuffling data (set to an int to have reproducible results)
+
+neural_network:
+
+    # Model hyperparameters
+    learning_rate: 0.001         # (cf 1810.05165)
+    loss: 'binary_crossentropy'  # loss function - use categorical_crossentropy instead ?
+    metrics: ['accuracy']        # measure accuracy during training
+    epochs: 39                   # number of training epochs
+    random_state: null           # seed for shuffling data (set to an int to have reproducible results)
+
+pfn:
+
+    # Network architecture parameters
+    Phi_sizes: [100, 100, 256]
+    F_sizes: [100, 100, 100]
+
+    # Network training parameters
+    epochs: 3                    # number of training epochs
+    batch_size: 500
+    use_pids: True               # Use PID information
+
+
