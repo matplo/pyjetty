@@ -37,9 +37,10 @@ class eff_smear:
     #---------------------------------------------------------------
     # Constructor
     #---------------------------------------------------------------
-    def __init__(self, inputFile='', outputDir=''):
+    def __init__(self, inputFile='', outputDir='', is_jetscape=False):
         self.input_file = inputFile
         self.output_dir = outputDir
+        self.is_jetscape = is_jetscape
 
     #---------------------------------------------------------------
     # Main processing function
@@ -89,7 +90,7 @@ class eff_smear:
         print(self.df_fjparticles)
         print("Writing fast simulation to ROOT TTree...")
         self.io.save_dataframe("AnalysisResultsFastSim.root", self.df_fjparticles,
-                               df_true=True, histograms=self.hist_list)
+                               df_true=True, histograms=self.hist_list, is_jetscape=self.is_jetscape)
         print('--- {} seconds ---'.format(time.time() - start_time))
 
 
@@ -102,7 +103,8 @@ class eff_smear:
         self.io = process_io.ProcessIO(input_file=self.input_file, output_dir=self.output_dir,
                                         tree_dir='PWGHF_TreeCreator',
                                         track_tree_name='tree_Particle_gen',
-                                        use_ev_id_ext=False)
+                                        use_ev_id_ext=False,
+                                        is_jetscape=self.is_jetscape)
         self.df_fjparticles = self.io.load_dataframe()
         self.nTracks_truth = len(self.df_fjparticles)
         print("DataFrame loaded from data.")
@@ -147,10 +149,17 @@ class eff_smear:
     def apply_pt_smear(self, df):
         true_pt = df["ParticlePt"]
         smeared_pt = [ np.random.normal(pt, sigma_pt(pt)) for pt in true_pt ]
-        df = pd.DataFrame({"run_number": df["run_number"], "ev_id": df["ev_id"], 
-                           "ParticlePt": smeared_pt, "ParticleEta": df["ParticleEta"], 
-                           "ParticlePhi": df["ParticlePhi"], "z_vtx_reco": df["z_vtx_reco"],
-                           "is_ev_rej": df["is_ev_rej"]})
+        if self.is_jetscape:
+            df = pd.DataFrame({"run_number": df["run_number"], "ev_id": df["ev_id"],
+                               "ParticlePt": smeared_pt, "ParticleEta": df["ParticleEta"],
+                               "ParticlePhi": df["ParticlePhi"], "z_vtx_reco": df["z_vtx_reco"],
+                               "is_ev_rej": df["is_ev_rej"],
+                               "status": df["status"], "event_plane_angle": df["event_plane_angle"]})
+        else:
+            df = pd.DataFrame({"run_number": df["run_number"], "ev_id": df["ev_id"],
+                               "ParticlePt": smeared_pt, "ParticleEta": df["ParticleEta"],
+                               "ParticlePhi": df["ParticlePhi"], "z_vtx_reco": df["z_vtx_reco"],
+                               "is_ev_rej": df["is_ev_rej"]})
         print("pT has been smeared for all tracks.")
 
         # Create histogram to verify pt smearing distribution
@@ -171,16 +180,18 @@ if __name__ == "__main__":
                         default="AnalysisResults.root", help="Path of ROOT file containing MC TTrees")
     parser.add_argument("-o", "--outputDir", action="store", type=str, metavar="outputDir",
                         default="./TestOutput", help="Output path for fast sim ROOT TTree")
+    parser.add_argument('--jetscape', action='store_true')
     args = parser.parse_args()
 
     print('Configuring...')
     print('inputFile: \'{0}\''.format(args.inputFile))
     print('ouputDir: \'{0}\"'.format(args.outputDir))
+    print(f'is_jetscape: {args.jetscape}')
 
     # If invalid inputFile is given, exit
     if not os.path.exists(args.inputFile):
         print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
         sys.exit(0)
 
-    processor = eff_smear(inputFile=args.inputFile, outputDir=args.outputDir)
+    processor = eff_smear(inputFile=args.inputFile, outputDir=args.outputDir, is_jetscape=args.jetscape)
     processor.eff_smear()
