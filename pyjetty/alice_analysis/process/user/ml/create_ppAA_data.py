@@ -33,6 +33,9 @@ for i,file in enumerate(os.listdir('/rstorage/ml/egml/pythia8/')):
             # Change format: jet, particle, 4-vector
             dataset_pythia = np.transpose(np.array(dataset_pythia0),(0,2,1)) 
             
+            # Reorder 4-vector from (px,py,pz,E) to (E,px,py,pz)
+            dataset_pythia[:,:,[0,1,2,3]] = dataset_pythia[:,:,[3,0,1,2]]
+            
             # Replace nan with zero
             where_are_nan = np.isnan(dataset_pythia)
             dataset_pythia[where_are_nan] = 0.
@@ -71,6 +74,9 @@ for i,file in enumerate(os.listdir('/rstorage/ml/egml/jewel/')):
             
             # Change format: jet, particle, 4-vector
             dataset_jewel = np.transpose(np.array(dataset_jewel0),(0,2,1)) 
+            
+            # Reorder 4-vector from (px,py,pz,E) to (E,px,py,pz)
+            dataset_jewel[:,:,[0,1,2,3]] = dataset_jewel[:,:,[3,0,1,2]]
             
             # Replace nan with zero
             where_are_nan = np.isnan(dataset_jewel)
