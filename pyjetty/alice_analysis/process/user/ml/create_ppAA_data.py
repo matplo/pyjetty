@@ -24,9 +24,9 @@ data_pythia = np.zeros((1,800,4))
 #print(data_pythia.shape)
 
 print('Reading in Pythia h5 files')
-for i,file in enumerate(os.listdir('/rstorage/ml/egml/pythia8/')):
+for i,file in enumerate(os.listdir('/rstorage/ml/egml/data/pythia8/')):
     if file.endswith('.h5') and i<nh5:
-        with h5py.File(os.path.join('/rstorage/ml/egml/pythia8/', file),'r') as hdf:
+        with h5py.File(os.path.join('/rstorage/ml/egml/data/pythia8/', file),'r') as hdf:
             # jetsubs_cons are the 4-vectors of particles inside the jets
             dataset_pythia0 = hdf.get('jetsubs_cons')
             
@@ -66,9 +66,9 @@ data_jewel = np.zeros((1,800,4))
 #print(data_jewel.shape)
 
 print('Reading in Jewel h5 files')
-for i,file in enumerate(os.listdir('/rstorage/ml/egml/jewel/')):
+for i,file in enumerate(os.listdir('/rstorage/ml/egml/data/jewel/')):
     if file.endswith('.h5') and i<nh5:
-        with h5py.File(os.path.join('/rstorage/ml/egml/jewel/', file),'r') as hdf:
+        with h5py.File(os.path.join('/rstorage/ml/egml/data/jewel/', file),'r') as hdf:
             # jetsubs_cons are the 4-vectors of particles inside the jets
             dataset_jewel0 = hdf.get('jetsubs_cons')
             
