@@ -5,6 +5,7 @@ Class to read pp vs AA data set and compute N-subjettiness
 """
 
 import os
+import sys
 import argparse
 import yaml
 import h5py
@@ -31,7 +32,7 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Constructor
     #---------------------------------------------------------------
-    def __init__(self, config_file='', output_dir='', **kwargs):
+    def __init__(self, config_file='', input_file='', output_dir='', **kwargs):
         super(common_base.CommonBase, self).__init__(**kwargs)
         
         self.config_file = config_file
@@ -49,10 +50,10 @@ class ProcessppAA(common_base.CommonBase):
         # The jets are padded with zero-particles in order to make a contiguous array.
         print()
         print('Loading pp vs. AA dataset:')
-        with h5py.File('/rstorage/ml/egml/data_ppAA_PythiaJewel_jets.h5','r') as hdf:
-            ppAA_jets = hdf.get('data_ppAA_PythiaJewel')[:self.train + self.val + self.test]
+        with h5py.File(input_file,'r') as hdf:
+            ppAA_jets = hdf.get('data')[:self.train + self.val + self.test]
             self.X = np.array(ppAA_jets)
-            ppAA_labels = hdf.get('labels_ppAA_PythiaJewel')[:self.train + self.val + self.test]
+            ppAA_labels = hdf.get('labels')[:self.train + self.val + self.test]
             self.y = np.array(ppAA_labels)
             print('(n_jets, n_particles per jet, n_variables): {}'.format(self.X.shape))
         print()
@@ -226,8 +227,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process pp AA')
     parser.add_argument('-c', '--configFile', action='store',
                         type=str, metavar='configFile',
-                        default='../../../config/ml/ppAA.yaml',
+                        default='./config/ml/ppAA.yaml',
                         help='Path of config file for analysis')
+    parser.add_argument('-f', '--inputFile', action='store',
+                        type=str, metavar='inputFile',
+                default='./skim_blah.h5',
+                        help='Path of input file for analysis')
     parser.add_argument('-o', '--outputDir', action='store',
                         type=str, metavar='outputDir',
                         default='./TestOutput',
@@ -238,6 +243,7 @@ if __name__ == '__main__':
 
     print('Configuring...')
     print('configFile: \'{0}\''.format(args.configFile))
+    print('inputFile: \'{0}\''.format(args.inputFile))
     print('ouputDir: \'{0}\"'.format(args.outputDir))
 
     # If invalid configFile is given, exit
@@ -245,5 +251,10 @@ if __name__ == '__main__':
         print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
         sys.exit(0)
 
-    analysis = ProcessppAA(config_file=args.configFile, output_dir=args.outputDir)
+    # If invalid inputFile is given, exit
+    if not os.path.exists(args.inputFile):
+        print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
+        sys.exit(0)
+
+    analysis = ProcessppAA(config_file=args.configFile, input_file=args.inputFile, output_dir=args.outputDir)
     analysis.process_ppAA()
