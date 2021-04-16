@@ -20,7 +20,7 @@ K: [2, 4, 6]
 #------------------------------------------------------------------------------
 
 # Select model: linear, random_forest, neural_network, pfn
-models: [linear]
+models: [linear, random_forest, neural_network]
 
 linear:
 

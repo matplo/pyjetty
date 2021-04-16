@@ -33,7 +33,7 @@ from tensorflow import keras
 from pyjetty.alice_analysis.process.base import common_base
 
 ################################################################
-class AnalyzeQG(common_base.CommonBase):
+class AnalyzePPAA(common_base.CommonBase):
 
     #---------------------------------------------------------------
     # Constructor
@@ -55,7 +55,8 @@ class AnalyzeQG(common_base.CommonBase):
         # Read input variables
         with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
             self.y = hf['y'][:]
-            self.X_particles = hf['X'][:]
+            if 'X' in hf:
+                self.X_particles = hf['X'][:]
             self.X_Nsub = hf['X_Nsub'][:]
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
@@ -145,7 +146,7 @@ class AnalyzeQG(common_base.CommonBase):
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
-    def analyze_qg(self):
+    def analyze_pp_aa(self):
     
         # Plot the input data
         [self.plot_training_data(K) for K in self.K_list]
@@ -176,7 +177,7 @@ class AnalyzeQG(common_base.CommonBase):
             
         # Print fraction of q/g jets
         if K == min(self.K_list):
-            print('Fraction of quark jets: {}'.format(np.sum(self.y_train)/self.y_train.size))
+            print('Fraction of AA jets: {}'.format(np.sum(self.y_train)/self.y_train.size))
             print()
         
         print(f'Plotting input data, K={K}...')
@@ -413,7 +414,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process qg')
     parser.add_argument('-c', '--configFile', action='store',
                         type=str, metavar='configFile',
-                        default='../../../config/ml/qg.yaml',
+                        default='../../../config/ml/ppAA.yaml',
                         help='Path of config file for analysis')
     parser.add_argument('-o', '--outputDir', action='store',
                         type=str, metavar='outputDir',
@@ -432,5 +433,5 @@ if __name__ == '__main__':
         print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
         sys.exit(0)
 
-    analysis = AnalyzeQG(config_file=args.configFile, output_dir=args.outputDir)
-    analysis.analyze_qg()
+    analysis = AnalyzePPAA(config_file=args.configFile, output_dir=args.outputDir)
+    analysis.analyze_pp_aa()

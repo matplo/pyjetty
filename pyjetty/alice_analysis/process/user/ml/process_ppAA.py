@@ -45,7 +45,7 @@ class ProcessppAA(common_base.CommonBase):
         
         # Load reformatted pp and AA jets from rstorage
         # X : a three-dimensional numpy array of jets:
-        #     list of jets with list of particles for each jet, with (E,px,py,pz) - not on-shell, no PID!
+        #     list of jets with list of particles for each jet, with (E,px,py,pz) - not massless, no PID!
         # y : a numpy array of pp/AA jet labels (pp=0 and AA=1).
         # The jets are padded with zero-particles in order to make a contiguous array.
         print()
@@ -75,9 +75,6 @@ class ProcessppAA(common_base.CommonBase):
         df_particles_grouped = df_particles.groupby('jet_id')
         
         # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet::PseudoJets
-        # NOTE: for now we neglect the mass -- and assume y=eta
-        # TO DO: Add y to https://github.com/matplo/heppy/blob/master/cpptools/src/fjext/fjtools.cxx
-        # TO DO: Add mass vector using pdg
         print('Converting particle dataframe to fastjet::PseudoJets...')
         self.df_fjparticles = df_particles_grouped.apply(self.get_fjparticles)
         print('Done.')
