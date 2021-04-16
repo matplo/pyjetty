@@ -1,5 +1,47 @@
 # Running the code
 
+## pp-AA
+
+The PYTHIA/JEWEL + HYDJET events are located on hiccup at `/rstorage/ml/egml/data/files.txt`.
+
+1. Skim the events into numpy arrays of four-vectors and labels
+   ```
+   cd pyjetty/alice_analysis/process/user/ml/slurm
+   sbatch slurm_skim.sh
+   ```
+   This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL).
+   
+   This step likely does not have to be repeated, unless we get new event samples.
+
+2. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
+   ```
+   cd pyjetty/alice_analysis/process/user/ml/slurm
+   sbatch slurm_compute_nsubjettiness.sh
+   ```
+   You should update the skimmed filelist in `slurm_compute_nsubjettiness.sh` if necessary (if step 1 is repeated).
+   
+   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`. Note however that since we process single files here, the maximum number of jets (`n_train`, etc) does not apply, but rather all jets will be processed.
+   
+   This writes output to `/rstorage/ml/egml/nsubjettiness/<job_id>/files.txt`
+
+3. Aggregate the results from each file's processing output
+   ```
+   cd pyjetty/alice_analysis/process/user/ml
+   python aggregate_nsubjettiness.py -o /rstorage/ml/egml/nsubjettiness/<process_job_id>
+   ```
+   The `-o` path should point to the directory containing `files.txt` from Step 2. This is the location that the output file, `nsubjettiness.h5`, will be written to. 
+   
+   Note that aggregating the four-vectors is rather slow for the full dataset; to include this, add the optional flag `--include_four_vectors` in the command above. 
+   
+4. Fit model and make plots:
+   ```
+   cd alice_analysis/analysis/user/ml
+   python analyze_ppAA.py -c <config> -o <output_dir>
+   ```
+   The `-o` path should point to the directory containing `nsubjettiness.h5` from Step 3. This is the location that the output plots will be written to. 
+   
+   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
+
 ## Quark-gluon
 
 The analysis consists of two steps:
@@ -15,24 +57,6 @@ The analysis consists of two steps:
    ```
 
 Both steps use a common config file at `alice_analysis/config/ml/qg.yaml`.
-
-## pp-AA
-
-The analysis consists of two steps:
-1. Compute Nsubjettiness arrays from input events, and write them to file: 
-   ```
-   cd alice_analysis/process/user/ml
-   python process_ppAA.py -c <config> -o <output_dir>
-   ```
-2. Read in file, and fit model:
-   ```
-   cd alice_analysis/analysis/user/ml
-   python analyze_ppAA.py -c <config> -o <output_dir>
-   ```
-
-Both steps use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
-
-The PYTHIA/JEWEL + HYDJET events are located on hiccup at `/rstorage/ml/egml/data_ppAA_PythiaJewel_jets.h5`.
 
 # Pull requests
 
