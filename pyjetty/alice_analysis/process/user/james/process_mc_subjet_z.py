@@ -228,10 +228,15 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
   def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth,
                                   jet_truth_groomed_lund, jet_pp_det, jetR,
                                   obs_setting, grooming_setting, obs_label,
-                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
+                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix, **kwargs):
        
     if (jetR - obs_setting) < 1e-3:
       return
+      
+    # If jetscape, we will need to correct substructure observable for holes (pt is corrected in base class)
+    if self.jetscape:
+        holes_in_det_jet = kwargs['holes_in_det_jet']
+        holes_in_truth_jet = kwargs['holes_in_truth_jet']
        
     # Find subjets
     subjetR = obs_setting

@@ -254,7 +254,7 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
   def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth,
                                   jet_truth_groomed_lund, jet_pp_det, jetR,
                                   obs_setting, grooming_setting, obs_label,
-                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
+                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix, **kwargs):
     
     # Compute groomed observables
     theta_g_det = jet_det_groomed_lund.Delta()/jetR
@@ -277,7 +277,7 @@ class ProcessMC_theta_g(process_mc_base.ProcessMCBase):
     # If PbPb, fill extra RM only for successful prong matches
     if self.is_pp:
       prong_match = False
-    
+
     # Fill histograms
     observable = 'theta_g'
     self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, theta_g_det, theta_g_truth, obs_label, R_max, prong_match = prong_match)

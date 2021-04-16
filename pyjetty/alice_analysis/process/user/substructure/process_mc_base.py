@@ -76,6 +76,10 @@ class ProcessMCBase(process_base.ProcessBase):
       config = yaml.safe_load(stream)
       
     self.fast_simulation = config['fast_simulation']
+    if 'jetscape' in config:
+        self.jetscape = config['jetscape']
+    else:
+        self.jetscape = False
     self.dry_run = config['dry_run']
     self.skip_deltapt_RC_histograms = True
     self.fill_RM_histograms = True
@@ -142,30 +146,57 @@ class ProcessMCBase(process_base.ProcessBase):
     else:
       tree_dir = 'PWGHF_TreeCreator'
     io_det = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
-                                  track_tree_name='tree_Particle', use_ev_id_ext=False)
+                                  track_tree_name='tree_Particle', use_ev_id_ext=False,
+                                  is_jetscape=self.jetscape)
     df_fjparticles_det = io_det.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
+    
+    # If jetscape, store also the negative status particles (holes)
+    if self.jetscape:
+        io_det_holes = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
+                                           track_tree_name='tree_Particle', use_ev_id_ext=False,
+                                           is_jetscape=self.jetscape, holes=True)
+        df_fjparticles_det_holes = io_det_holes.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
+        self.nEvents_det_holes = len(df_fjparticles_det_holes.index)
+        self.nTracks_det_holes = len(io_det_holes.track_df.index)
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
     
     # ------------------------------------------------------------------------
 
     # Use IO helper class to convert truth-level ROOT TTree into
     # a SeriesGroupBy object of fastjet particles per event
     io_truth = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
-                                    track_tree_name='tree_Particle_gen', use_ev_id_ext=False)
+                                    track_tree_name='tree_Particle_gen', use_ev_id_ext=False,
+                                    is_jetscape=self.jetscape)
     df_fjparticles_truth = io_truth.load_data(m=self.m)
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     
+    # If jetscape, store also the negative status particles (holes)
+    if self.jetscape:
+        io_truth_holes = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
+                                              track_tree_name='tree_Particle_gen', use_ev_id_ext=False,
+                                              is_jetscape=self.jetscape, holes=True)
+        df_fjparticles_truth_holes = io_truth_holes.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
+        self.nEvents_truth_holes = len(df_fjparticles_truth_holes.index)
+        self.nTracks_truth_holes = len(io_truth_holes.track_df.index)
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
+    
     # ------------------------------------------------------------------------
 
     # Now merge the two SeriesGroupBy to create a groupby df with [ev_id, run_number, fj_1, fj_2]
     # (Need a structure such that we can iterate event-by-event through both fj_1, fj_2 simultaneously)
+    # In the case of jetscape, we merge also the hole collections fj_3, fj_4
     print('Merge det-level and truth-level into a single dataframe grouped by event...')
-    self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
-    self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth']
+    if self.jetscape:
+        self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth, df_fjparticles_det_holes, df_fjparticles_truth_holes], axis=1)
+        self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth', 'fj_particles_det_holes', 'fj_particles_truth_holes']
+    else:
+        self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
+        self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth']
     print('--- {} seconds ---'.format(time.time() - self.start_time))
 
     # ------------------------------------------------------------------------
@@ -291,7 +322,10 @@ class ProcessMCBase(process_base.ProcessBase):
     
     # Then can use list comprehension to iterate over the groupby and do jet-finding
     # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
-    result = [self.analyze_event(fj_particles_det, fj_particles_truth) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+    if self.jetscape:
+        result = [self.analyze_event(fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes) for fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'], self.df_fjparticles['fj_particles_det_holes'], self.df_fjparticles['fj_particles_truth_holes'])]
+    else:
+        result = [self.analyze_event(fj_particles_det, fj_particles_truth) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
     
     if self.debug_level > 0:
       for attr in dir(self):
@@ -319,7 +353,7 @@ class ProcessMCBase(process_base.ProcessBase):
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyze_event(self, fj_particles_det, fj_particles_truth):
+  def analyze_event(self, fj_particles_det, fj_particles_truth, fj_particles_det_holes=None, fj_particles_truth_holes=None):
   
     self.event_number += 1
     if self.event_number > self.event_number_max:
@@ -437,13 +471,18 @@ class ProcessMCBase(process_base.ProcessBase):
           cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
           jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
           jets_combined_selected = jet_selector_det(jets_combined)
-          
-          self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched, jetR, jets_det_pp_selected = jets_det_pp_selected, R_max = R_max)
+
+          self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched, jetR,
+                            jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
+                            fj_particles_det_holes = fj_particles_det_holes,
+                            fj_particles_truth_holes = fj_particles_truth_holes)
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   #---------------------------------------------------------------
-  def analyze_jets(self, jets_det_selected, jets_truth_selected, jets_truth_selected_matched, jetR, jets_det_pp_selected = None, R_max = None):
+  def analyze_jets(self, jets_det_selected, jets_truth_selected, jets_truth_selected_matched, jetR,
+                   jets_det_pp_selected = None, R_max = None,
+                   fj_particles_det_holes = None, fj_particles_truth_holes = None):
   
     if self.debug_level > 1:
       print('Number of det-level jets: {}'.format(len(jets_det_selected)))
@@ -485,7 +524,7 @@ class ProcessMCBase(process_base.ProcessBase):
         [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
           
     # Loop through jets and fill response histograms if both det and truth jets are unique match
-    result = [self.fill_jet_matches(jet_det, jetR, R_max) for jet_det in jets_det_selected]
+    result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes) for jet_det in jets_det_selected]
 
   #---------------------------------------------------------------
   # Fill some background histograms
@@ -595,7 +634,7 @@ class ProcessMCBase(process_base.ProcessBase):
   # Loop through jets and call user function to fill matched
   # histos if both det and truth jets are unique match.
   #---------------------------------------------------------------
-  def fill_jet_matches(self, jet_det, jetR, R_max):
+  def fill_jet_matches(self, jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes):
   
     # Set suffix for filling histograms
     if R_max:
@@ -657,13 +696,28 @@ class ProcessMCBase(process_base.ProcessBase):
           
             jet_det_groomed_lund = None
             jet_truth_groomed_lund = None
+            
+          # If jetscape, pass the list of holes within R of the jet to the user
+          holes_in_det_jet = None
+          holes_in_truth_jet = None
+          if self.jetscape:
+            holes_in_det_jet = [hadron for hadron in fj_particles_det_holes if jet_det.delta_R(hadron) < jetR]
+            holes_in_truth_jet = [hadron for hadron in fj_particles_truth_holes if jet_truth.delta_R(hadron) < jetR]
+            
+            # Get the corrected jet pt by subtracting the negative recoils within R
+            for hadron in holes_in_det_jet:
+                jet_pt_det_ungroomed -= hadron.pt()
+                
+            for hadron in holes_in_truth_jet:
+                jet_pt_truth_ungroomed -= hadron.pt()
               
           # Call user function to fill histos
           self.fill_matched_jet_histograms(jet_det, jet_det_groomed_lund, jet_truth,
-                                           jet_truth_groomed_lund, jet_pp_det, jetR,
-                                           obs_setting, grooming_setting, obs_label,
-                                           jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
-                                           R_max, suffix)
+                                 jet_truth_groomed_lund, jet_pp_det, jetR,
+                                 obs_setting, grooming_setting, obs_label,
+                                 jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+                                 R_max, suffix, holes_in_det_jet=holes_in_det_jet,
+                                 holes_in_truth_jet=holes_in_truth_jet)
 
   #---------------------------------------------------------------
   # Fill response histograms -- common utility function
@@ -722,6 +776,7 @@ class ProcessMCBase(process_base.ProcessBase):
                                   jet_truth_groomed_lund, jet_pp_det, jetR,
                                   obs_setting, grooming_setting, obs_label,
                                   jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
-                                  R_max, suffix):
+                                  R_max, suffix,
+                                  **kwargs):
 
     raise NotImplementedError('You must implement fill_matched_jet_histograms()!')
