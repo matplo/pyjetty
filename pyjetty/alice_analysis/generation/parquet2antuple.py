@@ -40,8 +40,8 @@ class Parquet2antuple(common_base.CommonBase):
     self.outf.cd()
     self.tdf = ROOT.TDirectoryFile('PWGHF_TreeCreator', 'PWGHF_TreeCreator')
     self.tdf.cd()
-    self.t_p = ROOT.TNtuple('tree_Particle_gen', 'tree_Particle_gen', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:status:event_plane_angle')
-    self.t_e = ROOT.TNtuple('tree_event_char', 'tree_event_char', 'run_number:ev_id:z_vtx_reco:is_ev_rej')
+    self.t_p = ROOT.TNtuple('tree_Particle_gen', 'tree_Particle_gen', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:status')
+    self.t_e = ROOT.TNtuple('tree_event_char', 'tree_event_char', 'run_number:ev_id:z_vtx_reco:is_ev_rej:event_plane_angle')
 
     # run number will be a double - file size in MB
     self.run_number = os.path.getsize(self.input) / 1.e6
@@ -88,7 +88,7 @@ class Parquet2antuple(common_base.CommonBase):
   #---------------------------------------------------------------
   def fill_event(self, event):
   
-    self.t_e.Fill(self.run_number, self.ev_id, 0, 0)
+    self.t_e.Fill(self.run_number, self.ev_id, 0, 0, event['event_plane_angle'])
         
     # Get arrays of particle quantities in the event
     #   We will use the status to subtract holes at analysis time
@@ -98,7 +98,6 @@ class Parquet2antuple(common_base.CommonBase):
     e = event['E']
     pid = event['particle_ID']
     status = event['status']
-    event_plane_angle = event['event_plane_angle']
 
     # Looop through and fill each particle to tree
     for i,pid_i in enumerate(pid):
@@ -112,7 +111,7 @@ class Parquet2antuple(common_base.CommonBase):
       # (e-, mu-, pi+, K+, p+, Sigma+, Sigma-, Xi-, Omega-)
       if abs(pid_i) in [11, 13, 211, 321, 2212, 3222, 3112, 3312, 3334]:
           self.particles_accepted.add(self.pdg.GetParticle(int(pid_i)).GetName())
-          self.t_p.Fill(self.run_number, self.ev_id, pt, eta, phi, pid_i, status[i], event_plane_angle)
+          self.t_p.Fill(self.run_number, self.ev_id, pt, eta, phi, pid_i, status[i])
         
   #---------------------------------------------------------------
   def increment_event(self):

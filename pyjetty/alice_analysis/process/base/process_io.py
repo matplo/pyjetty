@@ -61,11 +61,13 @@ class ProcessIO(common_base.CommonBase):
       self.event_columns += ['centrality']
       self.min_centrality = min_cent
       self.max_centrality = max_cent
+    if is_jetscape:
+      self.event_columns += ['event_plane_angle']
     
     # Set relevant columns of track tree
     self.track_columns = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi']
     if is_jetscape:
-        self.track_columns += ['status', 'event_plane_angle']
+        self.track_columns += ['status']
     
     #print(self)
     
@@ -190,7 +192,6 @@ class ProcessIO(common_base.CommonBase):
                       "ParticleEta": float, "ParticlePhi": float}
       if is_jetscape:
         branchdict["status"] = int
-        branchdict["event_plane_angle"] = float
 
       if df_true:
         # Create tree with truth particle info
@@ -203,8 +204,7 @@ class ProcessIO(common_base.CommonBase):
                                "ParticlePt": self.track_df["ParticlePt"],
                                "ParticleEta": self.track_df["ParticleEta"],
                                "ParticlePhi": self.track_df["ParticlePhi"],
-                               "status": self.track_df["status"],
-                               "event_plane_angle": self.track_df["event_plane_angle"] } )
+                               "status": self.track_df["status"] } )
         else:
             f[title].extend( { "run_number": self.track_df["run_number"],
                                "ev_id": self.track_df["ev_id"],
@@ -222,8 +222,7 @@ class ProcessIO(common_base.CommonBase):
                            "ParticlePt": df["ParticlePt"],
                            "ParticleEta": df["ParticleEta"],
                            "ParticlePhi": df["ParticlePhi"],
-                           "status": df["status"],
-                           "event_plane_angle": df["event_plane_angle"] } )
+                           "status": df["status"] } )
       else:
         f[title].extend( { "run_number": df["run_number"],
                            "ev_id": df["ev_id"],
@@ -234,8 +233,17 @@ class ProcessIO(common_base.CommonBase):
       # Create tree with event char
       title = self.event_tree_name
       branchdict = {"is_ev_rej": int, "run_number": int, "ev_id": int, "z_vtx_reco": float}
+      if is_jetscape:
+        branchdict["event_plane_angle"] = float
       f[title] = uproot.newtree(branchdict, title=title)
-      f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
+      if is_jetscape:
+        f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
+                        "run_number": self.event_df_orig["run_number"], 
+                        "ev_id": self.event_df_orig["ev_id"],
+                        "z_vtx_reco": self.event_df_orig["z_vtx_reco"],
+                        "event_plane_angle": self.event_df_orig["event_plane_angle"] } )
+      else:
+        f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
                         "run_number": self.event_df_orig["run_number"], 
                         "ev_id": self.event_df_orig["ev_id"],
                         "z_vtx_reco": self.event_df_orig["z_vtx_reco"] } )

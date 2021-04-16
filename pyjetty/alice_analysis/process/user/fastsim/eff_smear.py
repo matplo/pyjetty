@@ -109,7 +109,7 @@ class eff_smear:
         self.nTracks_truth = len(self.df_fjparticles)
         print("DataFrame loaded from data.")
         print(self.df_fjparticles)
-
+        print(f'columns: {list(self.df_fjparticles.columns)}')
         # Initialize a list of histograms to be written to file
         self.hist_list = []
 
@@ -154,7 +154,7 @@ class eff_smear:
                                "ParticlePt": smeared_pt, "ParticleEta": df["ParticleEta"],
                                "ParticlePhi": df["ParticlePhi"], "z_vtx_reco": df["z_vtx_reco"],
                                "is_ev_rej": df["is_ev_rej"],
-                               "status": df["status"], "event_plane_angle": df["event_plane_angle"]})
+                               "status": df["status"]})
         else:
             df = pd.DataFrame({"run_number": df["run_number"], "ev_id": df["ev_id"],
                                "ParticlePt": smeared_pt, "ParticleEta": df["ParticleEta"],

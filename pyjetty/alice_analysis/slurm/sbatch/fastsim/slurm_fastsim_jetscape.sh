@@ -4,15 +4,15 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-500
+#SBATCH --array=1-583
 #SBATCH --output=/rstorage/generators/jetscape_alice/tree_fastsim/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/generators/jetscape_alice/tree_gen/293580/files.txt'
+FILE_PATHS='/rstorage/generators/jetscape_alice/tree_gen/485558/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 8 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 500 + 1 ))
+FILES_PER_JOB=1
 echo "Files per job: $FILES_PER_JOB"
 
 STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))
