@@ -49,11 +49,11 @@ def aggregate(filelist, output_dir, include_four_vector):
                 print(f'{i}/{n_files} -- {X_Nsub_total.shape} -- {y_total.shape[0]}')
 
     #  Shuffle data set # check again!
-    idx = np.random.permutation(len(y))
+    idx = np.random.permutation(len(y_total))
     if include_four_vector:
         X_shuffled = X_total[idx] 
     X_Nsub_shuffled, y_shuffled = X_Nsub_total[idx], y_total[idx]
-
+    print(f'shuffled: {X_Nsub_shuffled.shape} -- {y_shuffled.shape}')
     # Write jet arrays to file
     with h5py.File(os.path.join(output_dir, 'nsubjettiness.h5'), 'w') as hf:
         hf.create_dataset('y', data=y_shuffled)
