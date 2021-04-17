@@ -7,5 +7,6 @@ do
     BIN_LOW=${BINS[$i]}
     BIN_UP=${BINS[$i+1]}
     INDEX=$(($i+1))
+    mkdir -p $INDEX
     mv JetscapeHadronListBin${BIN_LOW}_${BIN_UP} $INDEX
 done

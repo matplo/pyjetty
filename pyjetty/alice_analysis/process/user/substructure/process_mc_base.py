@@ -367,6 +367,10 @@ class ProcessMCBase(process_base.ProcessBase):
     if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
       print('fj_particles type mismatch -- skipping event')
       return
+    if self.jetscape:
+      if type(fj_particles_det_holes) != fj.vectorPJ or type(fj_particles_truth_holes) != fj.vectorPJ:
+        print('fj_particles_holes type mismatch -- skipping event')
+        return
       
     if len(fj_particles_truth) > 1:
       if np.abs(fj_particles_truth[0].pt() - fj_particles_truth[1].pt()) <  1e-10:
