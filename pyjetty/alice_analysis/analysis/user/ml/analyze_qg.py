@@ -317,11 +317,11 @@ class AnalyzeQG(common_base.CommonBase):
             x_PFN[mask,1:3] -= yphi_avg
             x_PFN[mask,0] /= x_PFN[:,0].sum()
         
-        # handle particle id channel [?? ... remap_pids is not working]
-        #if model_settings['use_pids']:
-        #    energyflow.utils.remap_pids(X_PFN, pid_i=3)
-        #else:
-        X_PFN = X_PFN[:,:,:3]
+        # handle particle id channel
+        if model_settings['use_pids']:
+            self.my_remap_pids(X_PFN)
+        else:
+            X_PFN = X_PFN[:,:,:3]
 
         # Split data into train, val and test sets
         (X_PFN_train, X_PFN_val, X_PFN_test,Y_PFN_train, Y_PFN_val, Y_PFN_test) = energyflow.utils.data_split(X_PFN, Y_PFN,
@@ -365,6 +365,52 @@ class AnalyzeQG(common_base.CommonBase):
         # Do we need to train a DNN with 2 variables if we want to look at the discriminating power
         # of mass and multiplicity or just pass 2 features to the ROC curve?
 
+    #--------------------------------------------------------------- 
+    # My own remap PID routine (similar to remap_pids from energyflow)
+    #---------------------------------------------------------------         
+    def my_remap_pids(self,events, pid_i=3, error_on_unknown=True):
+        # PDGid to small float dictionary
+        PID2FLOAT_MAP = {0: 0.0, 22: 1.4,
+                         211: .1, -211: .2,
+                         321: .3, -321: .4,
+                         130: .5,
+                         2112: .6, -2112: .7,
+                         2212: .8, -2212: .9,
+                         11: 1.0, -11: 1.1,
+                         13: 1.2, -13: 1.3}
+        
+        """Remaps PDG id numbers to small floats for use in a neural network.
+        `events` are modified in place and nothing is returned.
+    
+        **Arguments**
+    
+        - **events** : _numpy.ndarray_
+            - The events as an array of arrays of particles.
+        - **pid_i** : _int_
+            - The column index corresponding to pid information in an event.
+        - **error_on_unknown** : _bool_
+            - Controls whether a `KeyError` is raised if an unknown PDG ID is
+            encountered. If `False`, unknown PDG IDs will map to zero.
+        """
+    
+        if events.ndim == 3:
+            pids = events[:,:,pid_i].astype(int).reshape((events.shape[0]*events.shape[1]))
+            if error_on_unknown:
+                events[:,:,pid_i] = np.asarray([PID2FLOAT_MAP[pid]
+                                                for pid in pids]).reshape(events.shape[:2])
+            else:
+                events[:,:,pid_i] = np.asarray([PID2FLOAT_MAP.get(pid, 0)
+                                                for pid in pids]).reshape(events.shape[:2])
+        else:
+            if error_on_unknown:
+                for event in events:
+                    event[:,pid_i] = np.asarray([PID2FLOAT_MAP[pid]
+                                                 for pid in event[:,pid_i].astype(int)])
+            else:
+                for event in events:
+                    event[:,pid_i] = np.asarray([PID2FLOAT_MAP.get(pid, 0)
+                                                 for pid in event[:,pid_i].astype(int)])        
+        
     #--------------------------------------------------------------- 
     # Plot ROC curves
     #--------------------------------------------------------------- 
