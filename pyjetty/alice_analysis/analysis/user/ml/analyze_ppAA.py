@@ -167,8 +167,9 @@ class AnalyzePPAA(common_base.CommonBase):
                 if model == 'pfn':
                     self.fit_pfn(model_settings)
                 
-        # Plot ROC curves
+        # Plot ROC curve and significance improvement
         self.plot_roc_curves()
+        self.plot_significance_improvement()
         
     #---------------------------------------------------------------
     # Main processing function
@@ -443,6 +444,33 @@ class AnalyzePPAA(common_base.CommonBase):
         plt.legend(loc='lower right')
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, 'ROC.pdf'))
+        plt.close()
+        
+    #--------------------------------------------------------------- 
+    # Plot Significance improvement
+    #--------------------------------------------------------------- 
+    def plot_significance_improvement(self):
+    
+        plt.axis([0, 1, 0, 3])
+        plt.xlabel('True Positive Rate', fontsize=16)
+        plt.ylabel('Significance improvement', fontsize=16)
+        plt.grid(True)
+    
+        for label,value in self.roc_curve_dict.items():
+            
+            if label in ['PFN', 'Jet_mass', 'Multiplicity']:
+                FPR = value[0]
+                TPR = value[1]
+                plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=label)
+            else:
+                for K in self.K_list:
+                    FPR = value[K][0]
+                    TPR = value[K][1]
+                    plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=f'{label}, K={K}')
+                    
+        plt.legend(loc='lower right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir, 'Significance_improvement.pdf'))
         plt.close()
         
     #---------------------------------------------------------------
