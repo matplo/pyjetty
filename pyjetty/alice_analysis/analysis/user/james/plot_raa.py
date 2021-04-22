@@ -290,6 +290,7 @@ class PlotRAA(common_base.CommonBase):
         pad1.SetTopMargin(0.08)
         pad1.SetRightMargin(0.04)
         pad1.SetBottomMargin(0.)
+        pad1.SetTicks(0,1)
         pad1.Draw()
         pad1.cd()
 
@@ -343,7 +344,7 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto.GetYaxis().SetTitleSize(0.065)
         myBlankHisto.GetYaxis().SetTitleSize(0.08)
         myBlankHisto.GetYaxis().SetTitleOffset(1.15)
-        myBlankHisto.GetYaxis().SetLabelSize(0.06)
+        myBlankHisto.GetYaxis().SetLabelSize(0.075)
         myBlankHisto.Draw('E')
         
         # Draw top x-axis
@@ -535,10 +536,10 @@ class PlotRAA(common_base.CommonBase):
         text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
         text_latex.DrawLatex(0.56, 0.75, text)
 
-        text = 'Charged jets   anti-#it{k}_{T}'
+        text = 'Charged jets,   anti-#it{k}_{T}'
         text_latex.DrawLatex(0.56, 0.67, text)
         
-        text = '#it{R} = ' + str(self.jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
+        text = '#it{R} = ' + str(self.jetR) + ',   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
         text_latex.DrawLatex(0.56, 0.6, text)
         
         text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
