@@ -210,6 +210,8 @@ class PlotRAA(common_base.CommonBase):
             print('tagging fraction AA re-computed: {}'.format(self.f_tagging_AA))
     
         self.ymax = self.h_main_pp.GetMaximum()
+        if 'ymax' in result:
+            self.ymax = result['ymax']
         
         # Load theory predictions
         if self.plot_theory:

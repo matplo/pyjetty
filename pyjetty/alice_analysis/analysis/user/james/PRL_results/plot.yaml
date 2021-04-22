@@ -74,3 +74,19 @@ laura:
      - g_rg_sd2_hyb_lres0: 'Pablos et al., #it{L}_{res} = 0'
      - g_rg_sd2_hyb_lres2: 'Pablos et al., #it{L}_{res} = 2/#pi#it{T}'
      - g_rg_sd2_hyb_lresinf: 'Pablos et al., #it{L}_{res} = #infty'
+
+  result3:
+    observable: 'rg'
+    jetR: 0.4
+    zcut: 0.4
+    min_pt: 60
+    max_pt: 80
+    xmax: 0.2
+    ymax: 2.5
+    file: './PRL_results/leticia/ResultstsRg_semicent_zcut4.root'
+
+    theory:
+     - g_rg_sd4_jetscape: 'JETSCAPE, MATTER+LBT (Prel.)'
+     - g_rg_sd4_hyb_lres0: 'Pablos et al., #it{L}_{res} = 0'
+     - g_rg_sd4_hyb_lres2: 'Pablos et al., #it{L}_{res} = 2/#pi#it{T}'
+     - g_rg_sd4_hyb_lresinf: 'Pablos et al., #it{L}_{res} = #infty'
