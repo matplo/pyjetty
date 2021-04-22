@@ -13,14 +13,14 @@ n_test: 3000
 # (The processing script will compute and store the maximum K provided)
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
-K: [2, 4, 6]
+K: [6]
 
 #------------------------------------------------------------------------------
 # All parameters below are only used in the analysis script
 #------------------------------------------------------------------------------
 
 # Select model: linear, random_forest, neural_network, pfn
-models: [linear, random_forest, neural_network]
+models: [lasso]
 
 linear:
 
@@ -63,5 +63,11 @@ pfn:
     epochs: 3                    # number of training epochs
     batch_size: 500
     use_pids: True               # Use PID information
+    
+lasso:
+
+    # Network architecture parameters
+    alpha: 0.01                 # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    
 
 

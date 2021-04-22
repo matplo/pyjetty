@@ -142,6 +142,9 @@ class AnalyzeQG(common_base.CommonBase):
                 self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 self.model_settings[model]['use_pids'] = config[model]['use_pids']
 
+            if model == 'lasso':
+                self.model_settings[model]['alpha'] = config[model]['alpha']
+
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
@@ -165,6 +168,8 @@ class AnalyzeQG(common_base.CommonBase):
                     self.fit_neural_network(K, model_settings)
                 if model == 'pfn':
                     self.fit_pfn(model_settings)
+                if model == 'lasso':
+                    self.fit_lasso(K, model_settings)
                 
         # Plot ROC curve and significance improvement
         self.plot_roc_curves()
@@ -363,8 +368,42 @@ class AnalyzeQG(common_base.CommonBase):
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         
-        # Do we need to train a DNN with 2 variables if we want to look at the discriminating power
-        # of mass and multiplicity or just pass 2 features to the ROC curve?
+    #---------------------------------------------------------------
+    # Fit ML model -- 5. Lasso regression
+    #---------------------------------------------------------------
+    def fit_lasso(self, K, model_settings):
+        print(f'Training Lasso regression...')
+        
+        # Take the logarithm of the data and labels
+        # Not taking log of test labels to make ROC curve later which requires integers for the test data
+        X_train_lasso = np.log(self.training_data[K]['X_Nsub_train'])
+        X_test_lasso = np.log(self.training_data[K]['X_Nsub_test'])
+        
+        eps = .01
+        y_train_lasso = np.log(eps + (1. - 2. * eps) * self.y_train)
+        y_test_lasso = self.y_test
+        
+        # Use Lasso regression
+        # The parameter alpha multiplies to L1 term
+        lasso_clf = sklearn.linear_model.Lasso(alpha = model_settings['alpha'])
+        
+        # Fit model
+        lasso_clf.fit(X_train_lasso, y_train_lasso)
+        
+        # Print coefficients of log(tau_N^beta) or exponents of the product observable
+        print('Coefficients of lasso regression: c_N^beta * log(tau_n^beta):\n {}'.format(lasso_clf.coef_))
+
+        # Make predictions for test set
+        preds_lasso = lasso_clf.predict(X_test_lasso)
+        
+        # Compute AUC
+        auc_lasso = sklearn.metrics.roc_auc_score(y_test_lasso, preds_lasso)
+        print(f'AUC = {auc_lasso} (test set)')
+        
+        # ROC curve
+        self.roc_curve_dict['Lasso'] = sklearn.metrics.roc_curve(y_test_lasso, preds_lasso)
+
+        # Seems we would have to scan different alpha and K and see if some observable has a nice interpretation??
 
     #--------------------------------------------------------------- 
     # My own remap PID routine (similar to remap_pids from energyflow)
@@ -425,7 +464,7 @@ class AnalyzeQG(common_base.CommonBase):
     
         for label,value in self.roc_curve_dict.items():
             
-            if label in ['PFN', 'Jet_mass', 'Multiplicity']:
+            if label in ['PFN', 'Jet_mass', 'Multiplicity','Lasso']:
                 FPR = value[0]
                 TPR = value[1]
                 plt.plot(FPR, TPR, linewidth=2, label=label)
@@ -452,7 +491,7 @@ class AnalyzeQG(common_base.CommonBase):
     
         for label,value in self.roc_curve_dict.items():
             
-            if label in ['PFN', 'Jet_mass', 'Multiplicity']:
+            if label in ['PFN', 'Jet_mass', 'Multiplicity','Lasso']:
                 FPR = value[0]
                 TPR = value[1]
                 plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=label)
