@@ -12,7 +12,8 @@ The analysis workflow is as follows:
 1. Skim the events into numpy arrays of four-vectors and labels
    ```
    cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_skim.sh
+   sbatch slurm_skim.sh (for PYTHIA/JEWEL + HYDJET)
+   sbatch slurm_skim_no_ue.sh (for no UE)
    ```
    This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL).
    
