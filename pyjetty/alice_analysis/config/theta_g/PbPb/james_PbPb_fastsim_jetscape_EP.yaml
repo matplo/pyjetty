@@ -1,0 +1,178 @@
+# Configuration for:
+#   (a) Processing of ROOT trees into histograms
+#   (b) Analysis of histograms into final result
+#
+# The observables are structured into observable blocks (e.g. theta_g, subjet_z, etc.)
+# each containing multiple individual subconfigurations (e.g. zcut, beta, subjetR, etc.),
+# where each subconfiguration corresponds to a single unfolded result.
+# One can also specify a list of jetR, which will be looped over.
+#
+# The process step is intended  to loop over all observables simultaneously
+# The analysis step is intended to run for a single observable block
+
+process_observables: ['theta_g', 'zg']
+jetR: [0.2, 0.4]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+reject_tracks_fraction: 0.02
+eta_max: 0.9
+debug_level: 0
+dry_run: False
+fast_simulation: True
+jetscape: True
+event_plane_angle: [-0.524, 0.524]
+#event_number_max: 1000
+reclustering_algorithm: 'CA'
+
+constituent_subtractor:
+  max_distance: [0.05, 0.25, 0.7]
+  main_R_max: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
+#emb_file_list: '/Users/jamesmulligan/Analysis_theta_g/test/test_LHC18qr_pass3/PbPb_file_list.txt'
+
+# Observable block
+theta_g:
+
+  common_settings:
+    xtitle: '#theta_{g}'
+    ytitle: '#frac{1}{#sigma_{jet, inc}} #frac{d#sigma}{d#theta_{g}}'
+    pt_bins_reported: [40, 60, 80, 100]
+    max_reg_param: 10
+    plot_overlay_list:
+      - ['config1', 'config2']
+      
+    # RM binnings from processing:
+    #   pt-truth: 10 GeV
+    #   pt-det: 5 GeV
+    #   theta_g-truth: 0.01
+    #   theta_g-det: 0.01
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    pt_bins_truth: [10, 20, 30, 40, 60, 80, 100, 120, 150, 200]
+    pt_bins_det: [40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    pt_bins_det_sys_truncation: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
+    
+    #obs_bins_truth: [0., 0.1, 0.17, 0.23, 0.3, 0.4, 0.5, 0.7, 1.0]
+    #obs_bins_det: [0., 0.06, 0.10, 0.13, 0.16, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.7, 1.0]
+    
+    obs_bins_truth: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
+    obs_bins_det: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
+    
+    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 1.0]
+    #reg_param:
+    #  0.2: 3
+    
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+    pt_bins_truth: [10, 20, 30, 40, 60, 80, 100, 120, 150, 200]
+    pt_bins_det: [40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    pt_bins_det_sys_truncation: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
+    obs_bins_truth: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
+    obs_bins_det: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
+    obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 1.0]
+
+# Observable block
+zg:
+
+  common_settings:
+    xtitle: '#it{z}_{g}'
+    ytitle: '#frac{1}{#sigma_{jets, inc}} #frac{d#sigma}{d#it{z}_{g}}'
+    pt_bins_reported: [60, 80]
+    max_reg_param: 10
+    plot_overlay_list:
+      - ['config1', 'config2']
+
+  # RM binnings from processing:
+  #   pt-truth: 10 GeV
+  #   pt-det: 5 GeV
+  #   z-truth: 0.01
+  #   z-det: 0.01
+ 
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    pt_bins_truth: [10, 20, 40, 60, 80, 100, 120, 150]
+    pt_bins_det: [40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    pt_bins_det_sys_truncation: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
+    obs_bins_truth: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    obs_bins_det: [0.2, 0.23, 0.26, 0.29, 0.32, 0.35, 0.38, 0.41, 0.44, 0.47, 0.5]
+    obs_bins_det_sys_binning: [0.2, 0.22, 0.24, 0.26, 0.28, 0.3, 0.32, 0.34, 0.36, 0.38, 0.4, 0.42, 0.44, 0.46, 0.48, 0.5]
+    #reg_param:
+    #  0.2: 3
+    
+  config2:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+    pt_bins_truth: [10, 20, 30, 40, 60, 80, 100, 120, 150, 200]
+    pt_bins_det: [40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120]
+    pt_bins_det_sys_truncation: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 90, 100, 120, 150]
+    obs_bins_truth: [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    obs_bins_det: [0.1, 0.13, 0.17, 0.2, 0.23, 0.26, 0.29, 0.32, 0.35, 0.38, 0.41, 0.44, 0.47, 0.5]
+    obs_bins_det_sys_binning: [0.1, 0.12, 0.14,  0.16, 0.18, 0.2, 0.22, 0.24, 0.26, 0.28, 0.3, 0.32, 0.34, 0.36, 0.38, 0.4, 0.42, 0.44, 0.46, 0.48, 0.5]
+    #reg_param:
+    #  0.2: 3
+
+###############################################################################
+# Analysis parameters
+
+file_format: '.pdf'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/334797-02'
+roounfold_path: '/Users/jamesmulligan/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.dylib'
+
+analysis_observable: 'zg'
+do_unfolding: True
+force_rebin: True
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: False
+figure_approval_status: 'internal'
+
+# List of which systematics to perform
+# Options: [main, trkeff, prior1, prior2, truncation, binning, subtraction1, subtraction2, prong_matching, thermal_closure]
+systematics_list:
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
+  - subtraction1
+  - subtraction2
+  - thermal_closure
+  - fastsim_generator0
+  - fastsim_generator1
+  
+# Prior variation parameters
+prior_variation_option: 1
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5
+
+# R_max variations
+R_max_variation1: 0.05
+R_max_variation2: 0.7
+
+# Paths to processing output, to be used for unfolding
+main_data: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC18qr_pass3/334797/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_embedding/336239/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_embedding_trkeff/339172/AnalysisResultsFinal.root'
+
+# Model uncertainty from fastsim (compare JETSCAPE fastsim to PYTHIA)
+fastsim_response:
+- '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_embedding/336239/AnalysisResultsFinal.root'
+- '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC19f4_fastsim_jetscape/295402/AnalysisResultsFinal.root'
+
+# Thermal closure test
+thermal_closure: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_thermal/342290/AnalysisResultsFinal.root'

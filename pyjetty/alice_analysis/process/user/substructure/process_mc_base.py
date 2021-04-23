@@ -80,6 +80,10 @@ class ProcessMCBase(process_base.ProcessBase):
         self.jetscape = config['jetscape']
     else:
         self.jetscape = False
+    if 'event_plane_angle' in config:
+      self.event_plane_range = config['event_plane_angle']
+    else:
+      self.event_plane_range = None
     self.dry_run = config['dry_run']
     self.skip_deltapt_RC_histograms = True
     self.fill_RM_histograms = True
@@ -147,7 +151,7 @@ class ProcessMCBase(process_base.ProcessBase):
       tree_dir = 'PWGHF_TreeCreator'
     io_det = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                   track_tree_name='tree_Particle', use_ev_id_ext=False,
-                                  is_jetscape=self.jetscape)
+                                  is_jetscape=self.jetscape, event_plane_range=self.event_plane_range)
     df_fjparticles_det = io_det.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
     self.nEvents_det = len(df_fjparticles_det.index)
     self.nTracks_det = len(io_det.track_df.index)
@@ -157,7 +161,8 @@ class ProcessMCBase(process_base.ProcessBase):
     if self.jetscape:
         io_det_holes = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                            track_tree_name='tree_Particle', use_ev_id_ext=False,
-                                           is_jetscape=self.jetscape, holes=True)
+                                            is_jetscape=self.jetscape, holes=True,
+                                            event_plane_range=self.event_plane_range)
         df_fjparticles_det_holes = io_det_holes.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
         self.nEvents_det_holes = len(df_fjparticles_det_holes.index)
         self.nTracks_det_holes = len(io_det_holes.track_df.index)
@@ -169,7 +174,7 @@ class ProcessMCBase(process_base.ProcessBase):
     # a SeriesGroupBy object of fastjet particles per event
     io_truth = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                     track_tree_name='tree_Particle_gen', use_ev_id_ext=False,
-                                    is_jetscape=self.jetscape)
+                                    is_jetscape=self.jetscape, event_plane_range=self.event_plane_range)
     df_fjparticles_truth = io_truth.load_data(m=self.m)
     self.nEvents_truth = len(df_fjparticles_truth.index)
     self.nTracks_truth = len(io_truth.track_df.index)
@@ -179,7 +184,8 @@ class ProcessMCBase(process_base.ProcessBase):
     if self.jetscape:
         io_truth_holes = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                               track_tree_name='tree_Particle_gen', use_ev_id_ext=False,
-                                              is_jetscape=self.jetscape, holes=True)
+                                              is_jetscape=self.jetscape, holes=True,
+                                              event_plane_range=self.event_plane_range)
         df_fjparticles_truth_holes = io_truth_holes.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
         self.nEvents_truth_holes = len(df_fjparticles_truth_holes.index)
         self.nTracks_truth_holes = len(io_truth_holes.track_df.index)
