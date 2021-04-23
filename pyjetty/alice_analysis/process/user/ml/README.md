@@ -12,8 +12,8 @@ The analysis workflow is as follows:
 1. Skim the events into numpy arrays of four-vectors and labels
    ```
    cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_skim.sh (for PYTHIA/JEWEL + HYDJET)
-   sbatch slurm_skim_no_ue.sh (for no UE)
+   sbatch slurm_skim.sh                                # (for PYTHIA/JEWEL + HYDJET)
+   sbatch slurm_skim_no_ue.sh                          # (for no UE)
    ```
    This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL).
    
@@ -22,7 +22,8 @@ The analysis workflow is as follows:
 2. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
    ```
    cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_compute_nsubjettiness.sh
+   sbatch slurm_compute_nsubjettiness.sh               # (for PYTHIA/JEWEL + HYDJET)
+   sbatch slurm_compute_nsubjettiness_no_ue.sh         # (for no UE)
    ```
    You should update the skimmed filelist in `slurm_compute_nsubjettiness.sh` if necessary (if step 1 is repeated).
    
