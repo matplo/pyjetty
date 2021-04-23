@@ -2,7 +2,11 @@
 
 ## pp-AA
 
-The PYTHIA/JEWEL + HYDJET events are located on hiccup at `/rstorage/ml/egml/data/files.txt`.
+The events are located on hiccup at:
+- PYTHIA/JEWEL + HYDJET: `/rstorage/ml/egml/data/with_hydjet/files.txt`
+- PYTHIA/JEWEL (no UE): `/rstorage/ml/egml/data/no_ue/files.txt`
+- (The initial events, now superceded, are located at `/rstorage/ml/egml/data/v1/files.txt`)
+
 
 1. Skim the events into numpy arrays of four-vectors and labels
    ```
