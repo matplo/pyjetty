@@ -397,19 +397,19 @@ class PlotRAA(common_base.CommonBase):
           
                 myBlankHisto2.GetYaxis().SetRangeUser(0., 2.7)
                 
-                ratio_legend = ROOT.TLegend(0.25,0.72,0.43,0.975)
-                self.utils.setup_legend(ratio_legend,0.052)
-                ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.87)
-                self.utils.setup_legend(ratio_legend2,0.05)
+                ratio_legend = ROOT.TLegend(0.29,0.72,0.43,0.975)
+                self.utils.setup_legend(ratio_legend,0.06)
+                ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.975)
+                self.utils.setup_legend(ratio_legend2,0.06)
                 
             elif self.centrality[0] == 30:
           
                 myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.2)
                 
-                ratio_legend = ROOT.TLegend(0.54,0.72,0.7,0.92)
-                self.utils.setup_legend(ratio_legend,0.052)
-                ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.92)
-                self.utils.setup_legend(ratio_legend2,0.05)
+                ratio_legend = ROOT.TLegend(0.54,0.65,0.7,0.92)
+                self.utils.setup_legend(ratio_legend,0.06)
+                ratio_legend2 = ROOT.TLegend(0.54,0.65,0.7,0.92)
+                self.utils.setup_legend(ratio_legend2,0.06)
             
         else:
         
@@ -423,10 +423,21 @@ class PlotRAA(common_base.CommonBase):
             elif self.centrality[0] == 30:
                     myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
 
-            ratio_legend = ROOT.TLegend(0.23,0.75,0.4,0.97)
-            self.utils.setup_legend(ratio_legend,0.054)
-            ratio_legend2 = ROOT.TLegend(0.65,0.75,0.8,0.97)
-            self.utils.setup_legend(ratio_legend2,0.054)
+            if self.centrality[0] == 0 and self.jetR == 0.4:
+                ratio_legend = ROOT.TLegend(0.23,0.7,0.38,0.95)
+                self.utils.setup_legend(ratio_legend,0.07)
+                ratio_legend2 = ROOT.TLegend(0.43,0.72,0.58,0.95)
+                self.utils.setup_legend(ratio_legend2,0.07)
+            elif self.centrality[0] == 30:
+                ratio_legend = ROOT.TLegend(0.3,0.74,0.45,0.91)
+                self.utils.setup_legend(ratio_legend,0.07)
+                ratio_legend2 = ROOT.TLegend(0.5,0.72,0.65,0.95)
+                self.utils.setup_legend(ratio_legend2,0.07)
+            else:
+                ratio_legend = ROOT.TLegend(0.3,0.7,0.45,0.95)
+                self.utils.setup_legend(ratio_legend,0.07)
+                ratio_legend2 = ROOT.TLegend(0.5,0.72,0.65,0.95)
+                self.utils.setup_legend(ratio_legend2,0.07)
 
         myBlankHisto2.Draw('')
           
@@ -466,7 +477,7 @@ class PlotRAA(common_base.CommonBase):
                             else:
                                 ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
                         elif self.jetR == 0.2:
-                            if 'Yuan' in label:
+                            if 'Yuan' in label or 'Caucal' in label:
                                 ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
                             else:
                                 ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
@@ -527,26 +538,23 @@ class PlotRAA(common_base.CommonBase):
         
         text_latex.SetTextSize(0.055)
         text = '#it{{f}}_{{tagged}}^{{pp}} = {:.2f}, #it{{f}}_{{tagged}}^{{AA}} = {:.2f}'.format(self.f_tagging_pp, self.f_tagging_AA)
-        text_latex.DrawLatex(0.56, 0.36, text)
+        text_latex.DrawLatex(0.55, 0.36, text)
 
         text_latex.SetTextSize(0.065)
-        text = 'ALICE {}'.format(self.figure_approval_status)
-        text_latex.DrawLatex(0.56, 0.83, text)
+        text = f'#bf{{ALICE}} {self.figure_approval_status} #sqrt{{#it{{s_{{#it{{NN}}}}}}}} = 5.02 TeV'
+        text_latex.DrawLatex(0.55, 0.83, text)
         
-        text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
-        text_latex.DrawLatex(0.56, 0.75, text)
-
-        text = 'Charged jets,   anti-#it{k}_{T}'
-        text_latex.DrawLatex(0.56, 0.67, text)
+        text = 'Charged particle jets'#, anti-#it{k}_{T}'
+        text_latex.DrawLatex(0.55, 0.75, text)
         
         text = '#it{R} = ' + str(self.jetR) + ',   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
-        text_latex.DrawLatex(0.56, 0.6, text)
+        text_latex.DrawLatex(0.55, 0.67, text)
         
         text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
-        text_latex.DrawLatex(0.56, 0.53, text)
+        text_latex.DrawLatex(0.55, 0.58, text)
         
         text = self.formatted_grooming_label.format(self.zcut)
-        text_latex.DrawLatex(0.56, 0.44, text)
+        text_latex.DrawLatex(0.55, 0.48, text)
         
         myLegend.Draw()
 

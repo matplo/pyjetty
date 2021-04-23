@@ -54,11 +54,11 @@ laura:
     file: './PRL_results/laura/Resultszg_PP_4to4_May28.root'
 
     theory:
-     - g_zg_sd2_jetscape: 'JETSCAPE 2.0, MATTER+LBT'
-     - g_zg_sd2_hyb_lres0: 'Pablos et al., #it{L}_{res} = 0'
-     - g_zg_sd2_hyb_lres2: 'Pablos et al., #it{L}_{res} = 2/#pi#it{T}'
-     - g_zg_sd2_hyb_lresinf: 'Pablos et al., #it{L}_{res} = #infty'
-     - g_zg_sd2_gyq: 'Qin et al.,      90 < #it{p}_{T,jet} < 120 GeV/#it{c}'
+     - g_zg_sd2_jetscape: 'JETSCAPE'
+     - g_zg_sd2_hyb_lres0: 'Pablos, #it{L}_{res} = 0'
+     - g_zg_sd2_hyb_lres2: 'Pablos, #it{L}_{res} = 2/#pi#it{T}'
+     - g_zg_sd2_hyb_lresinf: 'Pablos, #it{L}_{res} = #infty'
+     - g_zg_sd2_gyq: 'Qin'# et al.,      90 < #it{p}_{T,jet} < 120 GeV/#it{c}'
 
   result2:
     observable: 'rg'
@@ -70,10 +70,10 @@ laura:
     file: './PRL_results/laura/Resultsrg_PP_4to4_pre_May28.root'
 
     theory:
-     - g_rg_sd2_jetscape: 'JETSCAPE 2.0, MATTER+LBT'
-     - g_rg_sd2_hyb_lres0: 'Pablos et al., #it{L}_{res} = 0'
-     - g_rg_sd2_hyb_lres2: 'Pablos et al., #it{L}_{res} = 2/#pi#it{T}'
-     - g_rg_sd2_hyb_lresinf: 'Pablos et al., #it{L}_{res} = #infty'
+     - g_rg_sd2_jetscape: 'JETSCAPE'
+     - g_rg_sd2_hyb_lres0: 'Pablos, #it{L}_{res} = 0'
+     - g_rg_sd2_hyb_lres2: 'Pablos, #it{L}_{res} = 2/#pi#it{T}'
+     - g_rg_sd2_hyb_lresinf: 'Pablos, #it{L}_{res} = #infty'
 
   result3:
     observable: 'rg'
@@ -86,7 +86,7 @@ laura:
     file: './PRL_results/leticia/ResultstsRg_semicent_zcut4.root'
 
     theory:
-     - g_rg_sd4_jetscape: 'JETSCAPE 2.0, MATTER+LBT'
-     - g_rg_sd4_hyb_lres0: 'Pablos et al., #it{L}_{res} = 0'
-     - g_rg_sd4_hyb_lres2: 'Pablos et al., #it{L}_{res} = 2/#pi#it{T}'
-     - g_rg_sd4_hyb_lresinf: 'Pablos et al., #it{L}_{res} = #infty'
+     - g_rg_sd4_jetscape: 'JETSCAPE'
+     - g_rg_sd4_hyb_lres0: 'Pablos, #it{L}_{res} = 0'
+     - g_rg_sd4_hyb_lres2: 'Pablos, #it{L}_{res} = 2/#pi#it{T}'
+     - g_rg_sd4_hyb_lresinf: 'Pablos, #it{L}_{res} = #infty'
