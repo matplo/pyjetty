@@ -434,7 +434,7 @@ class AnalysisUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   # Set legend parameters
   #---------------------------------------------------------------
-  def setup_legend(self, leg, textSize):
+  def setup_legend(self, leg, textSize, sep=0.5):
     
     leg.SetTextFont(42);
     leg.SetBorderSize(0);
@@ -442,7 +442,7 @@ class AnalysisUtils(common_utils.CommonUtils):
     leg.SetFillColor(0);
     leg.SetMargin(0.25);
     leg.SetTextSize(textSize);
-    leg.SetEntrySeparation(0.5);
+    leg.SetEntrySeparation(sep);
   
   #---------------------------------------------------------------
   # Configure style options

@@ -295,7 +295,7 @@ class PlotRAA(common_base.CommonBase):
         pad1.cd()
 
         myLegend = ROOT.TLegend(0.25,0.65,0.45,0.85)
-        self.utils.setup_legend(myLegend,0.055)
+        self.utils.setup_legend(myLegend,0.055, sep=0.)
         
         self.h_main_pp.SetMarkerSize(1.5)
         self.h_main_pp.SetMarkerStyle(self.markers[0])
@@ -398,18 +398,18 @@ class PlotRAA(common_base.CommonBase):
                 myBlankHisto2.GetYaxis().SetRangeUser(0., 2.7)
                 
                 ratio_legend = ROOT.TLegend(0.29,0.72,0.43,0.975)
-                self.utils.setup_legend(ratio_legend,0.06)
+                self.utils.setup_legend(ratio_legend, 0.06, sep=-0.2)
                 ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.975)
-                self.utils.setup_legend(ratio_legend2,0.06)
+                self.utils.setup_legend(ratio_legend2, 0.06, sep=-0.2)
                 
             elif self.centrality[0] == 30:
           
                 myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.2)
                 
                 ratio_legend = ROOT.TLegend(0.54,0.65,0.7,0.92)
-                self.utils.setup_legend(ratio_legend,0.06)
+                self.utils.setup_legend(ratio_legend, 0.06, sep=-0.2)
                 ratio_legend2 = ROOT.TLegend(0.54,0.65,0.7,0.92)
-                self.utils.setup_legend(ratio_legend2,0.06)
+                self.utils.setup_legend(ratio_legend2, 0.06, sep=-0.2)
             
         else:
         
@@ -425,19 +425,19 @@ class PlotRAA(common_base.CommonBase):
 
             if self.centrality[0] == 0 and self.jetR == 0.4:
                 ratio_legend = ROOT.TLegend(0.23,0.7,0.38,0.95)
-                self.utils.setup_legend(ratio_legend,0.07)
+                self.utils.setup_legend(ratio_legend, 0.07, sep=-0.4)
                 ratio_legend2 = ROOT.TLegend(0.43,0.72,0.58,0.95)
-                self.utils.setup_legend(ratio_legend2,0.07)
+                self.utils.setup_legend(ratio_legend2, 0.07, sep=-0.2)
             elif self.centrality[0] == 30:
                 ratio_legend = ROOT.TLegend(0.3,0.74,0.45,0.91)
-                self.utils.setup_legend(ratio_legend,0.07)
+                self.utils.setup_legend(ratio_legend, 0.07, sep=-0.4)
                 ratio_legend2 = ROOT.TLegend(0.5,0.72,0.65,0.95)
-                self.utils.setup_legend(ratio_legend2,0.07)
+                self.utils.setup_legend(ratio_legend2, 0.07, sep=-0.4)
             else:
                 ratio_legend = ROOT.TLegend(0.3,0.7,0.45,0.95)
-                self.utils.setup_legend(ratio_legend,0.07)
+                self.utils.setup_legend(ratio_legend, 0.07, sep=-0.4)
                 ratio_legend2 = ROOT.TLegend(0.5,0.72,0.65,0.95)
-                self.utils.setup_legend(ratio_legend2,0.07)
+                self.utils.setup_legend(ratio_legend2, 0.07, sep=-0.2)
 
         myBlankHisto2.Draw('')
           
