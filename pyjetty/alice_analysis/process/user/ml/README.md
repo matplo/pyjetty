@@ -7,6 +7,7 @@ The events are located on hiccup at:
 - PYTHIA/JEWEL (no UE): `/rstorage/ml/egml/data/no_ue/files.txt`
 - (The initial events, now superceded, are located at `/rstorage/ml/egml/data/v1/files.txt`)
 
+The analysis workflow is as follows:
 
 1. Skim the events into numpy arrays of four-vectors and labels
    ```
