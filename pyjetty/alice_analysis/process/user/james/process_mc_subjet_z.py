@@ -150,6 +150,15 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
             h.GetYaxis().SetTitle('#it{z_{r}}')
             h.GetZaxis().SetTitle('#DeltaR')
             setattr(self, name, h)
+            
+          # Plot fraction of det-level subjets without a unique match, as a function of z
+          if 'inclusive' in observable:
+              name = 'h_match_fraction_{}_R{}_{}'.format(observable, jetR, subjetR)
+              h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0, 1.0, 2, 0., 2.)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#it{z_{r}}')
+              h.GetZaxis().SetTitle('match')
+              setattr(self, name, h)
 
       # Residuals and responses
       for subjetR in self.obs_settings[observable]:
@@ -271,18 +280,25 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
       if 'inclusive' in observable:
 
         for subjet_det in subjets_det:
+        
+          z_det = subjet_det.pt() / jet_det.pt()
+          
+          # If z=1, it will be default be placed in overflow bin -- prevent this
+          if np.isclose(z_det, 1.):
+            z_det = 0.999
+          
+          successful_match = False
 
           if subjet_det.has_user_info():
             subjet_truth = subjet_det.python_info().match
           
             if subjet_truth:
+            
+              successful_match = True
               
-              z_det = subjet_det.pt() / jet_det.pt()
               z_truth = subjet_truth.pt() / jet_truth.pt()
               
               # If z=1, it will be default be placed in overflow bin -- prevent this
-              if np.isclose(z_det, 1.):
-                z_det = 0.999
               if np.isclose(z_truth, 1.):
                 z_truth = 0.999
               
@@ -298,6 +314,11 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
               # meaningful for leading subjets
               self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
                                  z_det, z_truth, obs_label, R_max, prong_match=False)
+                                 
+          # Fill number of subjets with/without unique match, as a function of zr
+          if self.is_pp:
+            name = 'h_match_fraction_{}_R{}_{}'.format(observable, jetR, subjetR)
+            getattr(self, name).Fill(jet_truth.pt(), z_det, successful_match)
                                
       # Get leading subjet and fill histograms
       if 'leading' in observable:
