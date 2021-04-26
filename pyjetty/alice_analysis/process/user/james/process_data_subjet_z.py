@@ -72,6 +72,13 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
               h.GetYaxis().SetTitle('z_{r}')
               setattr(self, name, h)
               
+              if 'leading' in observable:
+                  name = 'h_{}_zconst_R{}_{}_z099_1'.format(observable, jetR, subjetR)
+                  h = ROOT.TH2F(name, name, 20, 0, 200, 100, 0, 1.)
+                  h.GetXaxis().SetTitle('p_{T,ch jet}')
+                  h.GetYaxis().SetTitle('z')
+                  setattr(self, name, h)
+              
           else:
           
               for R_max in self.max_distance:
@@ -80,6 +87,12 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
                   h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.)
                   h.GetXaxis().SetTitle('p_{T,ch jet}')
                   h.GetYaxis().SetTitle('z_{r}')
+                  setattr(self, name, h)
+                  
+                  name = 'h_{}_zconst_R{}_{}_z099_1_Rmax{}'.format(observable, jetR, subjetR, R_max)
+                  h = ROOT.TH2F(name, name, 20, 0, 200, 100, 0, 1.)
+                  h.GetXaxis().SetTitle('p_{T,ch jet}')
+                  h.GetYaxis().SetTitle('z')
                   setattr(self, name, h)
       
   #---------------------------------------------------------------
@@ -118,6 +131,15 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
             z_leading = 0.999
             
         getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z_leading)
+        
+        # Fill z of subjet constituents for z~1 subjets
+        if z_leading > 0.99:
+            name = 'h_{}_zconst_R{}_{}_z099_1{}'.format(observable, jetR, obs_setting, suffix)
+            for p in leading_subjet.constituents():
+                z = p.pt() / leading_subjet.pt()
+                if np.isclose(z, 1.):
+                    z = 0.999
+                getattr(self, name).Fill(jet.pt(), z)
 
 ##################################################################
 if __name__ == '__main__':
