@@ -17,6 +17,7 @@ import argparse
 # Data analysis and plotting
 import ROOT
 import yaml
+import numpy as np
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -90,7 +91,7 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
     if (jetR - obs_setting) < 1e-3:
       return
     
-    # For a given jet, find inclusive subjets of a given subjet radius
+    # For a given jet, find all inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
     
@@ -100,12 +101,22 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
       if 'inclusive' in observable:
         for subjet in subjets:
           z = subjet.pt() / jet.pt()
+          
+          # If z=1, it will be default be placed in overflow bin -- prevent this
+          if np.isclose(z, 1.):
+            z = 0.999
+          
           getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z)
           
       # Fill leading subjets
       if 'leading' in observable:
         leading_subjet = self.utils.leading_jet(subjets)
         z_leading = leading_subjet.pt() / jet.pt()
+        
+        # If z=1, it will be default be placed in overflow bin -- prevent this
+        if np.isclose(z_leading, 1.):
+            z_leading = 0.999
+            
         getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z_leading)
 
 ##################################################################

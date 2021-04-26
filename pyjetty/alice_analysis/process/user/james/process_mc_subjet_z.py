@@ -238,7 +238,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
         holes_in_det_jet = kwargs['holes_in_det_jet']
         holes_in_truth_jet = kwargs['holes_in_truth_jet']
        
-    # Find subjets
+    # Find all subjets
     subjetR = obs_setting
     cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
     subjets_det = fj.sorted_by_pt(cs_subjet_det.inclusive_jets())
@@ -280,6 +280,12 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
               z_det = subjet_det.pt() / jet_det.pt()
               z_truth = subjet_truth.pt() / jet_truth.pt()
               
+              # If z=1, it will be default be placed in overflow bin -- prevent this
+              if np.isclose(z_det, 1.):
+                z_det = 0.999
+              if np.isclose(z_truth, 1.):
+                z_truth = 0.999
+              
               # In Pb-Pb case, fill matched pt fraction
               if not self.is_pp:
                 self.fill_subjet_matched_pt_histograms(observable,
@@ -305,6 +311,12 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           
           z_leading_det = leading_subjet_det.pt() / jet_det.pt()
           z_leading_truth = leading_subjet_truth.pt() / jet_truth.pt()
+          
+          # If z=1, it will be default be placed in overflow bin -- prevent this
+          if np.isclose(z_leading_det, 1.):
+            z_leading_det = 0.999
+          if np.isclose(z_leading_truth, 1.):
+            z_leading_truth = 0.999
           
           # In Pb-Pb case, fill matched pt fraction
           if not self.is_pp:
