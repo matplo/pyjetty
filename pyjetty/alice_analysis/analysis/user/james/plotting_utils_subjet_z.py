@@ -271,7 +271,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     self.setup_legend(leg_ratio, 0.1)
 
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
-    ytitle = 'Ratio'
+    ytitle = 'match / total'
     myBlankHisto2.SetYTitle(ytitle)
     myBlankHisto2.SetXTitle(xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
@@ -382,8 +382,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     line.SetLineStyle(2)
     line.Draw('same')
 
-    output_filename = os.path.join(output_dir, '{}/{}/money_plot_{}-{}.pdf'.format(jetR, obs_setting,
-                                          min_pt, max_pt))
+    output_filename = os.path.join(output_dir, f'money_plot_{min_pt}-{max_pt}_R{jetR}_r{obs_setting}.pdf')
     c.SaveAs(output_filename)
     c.Close()
     

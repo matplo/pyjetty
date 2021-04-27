@@ -178,7 +178,7 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
             self.create_output_subdir(output_dir_money, os.path.join(str(jetR), str(obs_setting)))
             self.plotting_utils.plot_subjet_money_plot(self.observable, jetR, R_max, self.prong_match_threshold,
                                                        obs_setting, self.pt_bins_reported,
-                                                       output_dir_money, self.ytitle, thermal=True)
+                                                       output_dir_money, self.ytitle, thermal=False)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
