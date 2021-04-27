@@ -497,10 +497,10 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         print(f'integral, leading_subjet_z, {obs_label}: {integral}')
       if self.observable == 'inclusive_subjet_z':
         integral = h.Integral(h.FindBin(0.71), h.GetNbinsX()+1, 'width')
-        print(f'integral, inclusive_subjet_z, {obs_label}: {integral}')
+        #print(f'integral, inclusive_subjet_z, {obs_label}: {integral}')
         
         if np.isclose(float(obs_label), 0.1):
-            integral_leading_subjet = 0.7764822604248643 # R=0.4, r=0.2
+            integral_leading_subjet = 0.7764822604248643 # R=0.4, r=0.1
         elif np.isclose(float(obs_label), 0.2):
             integral_leading_subjet = 0.9257835945755017 # R=0.4, r=0.2
 
@@ -509,6 +509,10 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         h.Scale(normalization)
         h_sys.Scale(normalization)
         hPythia.Scale(normalization)
+        
+      # Compute <N_subjets>
+      n_subjets = h.Integral(1, h.GetNbinsX()+1, 'width')
+      print(f'<N_subjets>, {obs_label}: {n_subjets}')
         
       # Compute z_loss for leading subjets
       # Should come up with a better way to decide bin center
@@ -553,14 +557,24 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         text += self.utils.formatted_grooming_label(grooming_setting, verbose=True)
       myLegend.AddEntry(h, '{}'.format(text), 'pe')
       
-      pad1.cd()
-      text_latex = ROOT.TLatex()
-      text_latex.SetNDC()
-      text_latex.SetTextSize(0.05)
-      x = 0.3
-      y = 0.3 - 0.7*float(obs_setting)
-      text = f'< #it{{z}}_{{loss}}^{{{subobs_label} = {obs_setting}}} > = {np.round(z_loss,2)}'
-      text_latex.DrawLatex(x, y, text)
+      if self.observable == 'leading_subjet_z':
+          pad1.cd()
+          text_latex = ROOT.TLatex()
+          text_latex.SetNDC()
+          text_latex.SetTextSize(0.05)
+          x = 0.3
+          y = 0.3 - 0.7*float(obs_setting)
+          text = f'< #it{{z}}_{{loss}}^{{{subobs_label} = {obs_setting}}} > = {np.round(z_loss,2)}'
+          text_latex.DrawLatex(x, y, text)
+      elif self.observable == 'inclusive_subjet_z':
+          pad1.cd()
+          text_latex = ROOT.TLatex()
+          text_latex.SetNDC()
+          text_latex.SetTextSize(0.05)
+          x = 0.67
+          y = 0.85 - 0.7*float(obs_setting)
+          text = f'< #it{{N}}_{{subjets}}^{{{subobs_label} = {obs_setting}}} > = {np.round(n_subjets,2)}'
+          text_latex.DrawLatex(x, y, text)
         
     pad1.cd()
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
