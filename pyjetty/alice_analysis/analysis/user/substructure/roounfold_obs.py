@@ -299,6 +299,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
             'Test_ShapeClosure{}'.format(self.utils.remove_periods(self.shape_variation_parameter1)),
             'Test_ShapeClosure{}'.format(self.utils.remove_periods(self.shape_variation_parameter2)),
             'Test_Refolding', 'Correlation_Coefficients']
+    if not self.use_max_reg_param:
+      dirs.append('Unfolded_ratio_to_final')
     if self.thermal_model:
       dirs.append('Test_ThermalClosure')
       
@@ -408,22 +410,32 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    self.plot_unfolded_observable(jetR, obs_label, obs_setting, grooming_setting)
+    self.plot_unfolded_observable(jetR, obs_label, obs_setting, grooming_setting, reg_param_final)
     self.plot_unfolded_pt(jetR, obs_label, obs_setting, grooming_setting)
 
   #################################################################################################
   # Plot unfolded observable for various pt slices
   #################################################################################################
-  def plot_unfolded_observable(self, jetR, obs_label, obs_setting, grooming_setting):
+  def plot_unfolded_observable(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final):
 
     for bin in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[bin]
       max_pt_truth = self.pt_bins_reported[bin+1]
 
+      # Plot unfolded distribution for each successive iteration
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth)
+                           
+      # Plot ratio of unfolded result for each successive iteration
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, option = 'ratio')
+                           
+      # Plot ratio of each iteration to final iteration (only if manual reg param)
+      if not self.use_max_reg_param:
+          self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
+                               min_pt_truth, max_pt_truth, option = 'ratio_to_final', reg_param_final=reg_param_final)
+                               
+      # Plot statistical uncertainties for each iteration
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, option = 'stat_uncert')
 
@@ -431,7 +443,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   # Plot observable for a single pt slicee
   #################################################################################################
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
-                      min_pt_truth, max_pt_truth, option = ''):
+                      min_pt_truth, max_pt_truth, option = '', reg_param_final=None):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -474,6 +486,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           h.Divide(h_previous)
         else:
           continue
+          
+      elif option == 'ratio_to_final':
+          print(reg_param_final)
+          h_final = self.get_unfolded_result(jetR, obs_label, reg_param_final, min_pt_truth,
+                                             max_pt_truth, option)
+          h.Divide(h_final)
 
       elif option == 'stat_uncert':
         h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth,
@@ -532,6 +550,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           myBlankHisto.SetMaximum(1.2)
           myBlankHisto.SetMinimum(0.9)
           myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter}-1)}')
+        if option == 'ratio_to_final':
+          myBlankHisto.SetMaximum(1.2)
+          myBlankHisto.SetMinimum(0.9)
+          myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter,final})}')
         if option == 'stat_uncert':
           myBlankHisto.SetMaximum(40)
           myBlankHisto.SetMinimum(0.)
@@ -539,7 +561,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         myBlankHisto.Draw("E")
 
       # Plot the current calculation on the superimposed plot
-      if option == 'ratio':
+      if 'ratio' in option:
         h.DrawCopy('P hist X0 same')
       else:
         h.DrawCopy('PE X0 same')
@@ -550,7 +572,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg.Draw()
 
     # Draw horizontal line at y = 1
-    if option == 'ratio':
+    if 'ratio' in option:
       line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
       line.SetLineColor(920+2)
       line.SetLineStyle(2)
