@@ -92,6 +92,12 @@ class RunAnalysis(common_base.CommonBase):
     self.force_rebin_response=config['force_rebin']
     self.do_plot_performance = config['do_plot_performance']
     
+    # Flag for whether to do kinematic efficiency correction in RM, or by hand
+    if 'use_miss_fake' in config:
+        self.use_miss_fake = config['use_miss_fake']
+    else:
+        self.use_miss_fake = False
+    
     # Set whether pp or PbPb
     if 'constituent_subtractor' in config:
         self.is_pp = False
@@ -310,7 +316,7 @@ class RunAnalysis(common_base.CommonBase):
         self.observable, data, response, self.config_file, output_dir, self.file_format,
         rebin_response=rebin_response, prior_variation_parameter=prior_variation_parameter,
         truncation=truncation, binning=binning, R_max=R_max,
-        prong_matching_response=prong_matching_response)
+        prong_matching_response=prong_matching_response, use_miss_fake=self.use_miss_fake)
       analysis.roounfold_obs()
       
     # Unfold thermal closure test
@@ -321,7 +327,8 @@ class RunAnalysis(common_base.CommonBase):
       
       analysis = roounfold_obs.Roounfold_Obs(
         self.observable, self.fThermal, self.fThermal, self.config_file, output_dir,
-        self.file_format, rebin_response=rebin_response, R_max=R_max, thermal_model = True)
+        self.file_format, rebin_response=rebin_response, R_max=R_max, thermal_model = True,
+        use_miss_fake=self.use_miss_fake)
       analysis.roounfold_obs()
 
   #----------------------------------------------------------------------

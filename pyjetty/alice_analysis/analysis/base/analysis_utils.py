@@ -95,7 +95,7 @@ class AnalysisUtils(common_utils.CommonUtils):
                      n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array,
                      n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array,
                      observable, prior_variation_parameter=0., use_underflow=False,
-                     do_roounfoldresponse=True):
+                     do_roounfoldresponse=True, use_miss_fake=False):
   
     # Create empty THn with specified binnings
     thn_rebinned = self.create_empty_thn(name_thn_rebinned, n_pt_bins_det, det_pt_bin_array, 
@@ -119,7 +119,10 @@ class AnalysisUtils(common_utils.CommonUtils):
     
     # Loop through THn and fill rebinned THn
     self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, 
-                           observable, prior_variation_parameter, use_underflow=use_underflow)
+                           observable, det_pt_bin_array, det_obs_bin_array, truth_pt_bin_array, truth_obs_bin_array,
+                           prior_variation_parameter, use_underflow=use_underflow, use_miss_fake=use_miss_fake)
+                           
+                               
   
   #---------------------------------------------------------------
   # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
@@ -128,7 +131,8 @@ class AnalysisUtils(common_utils.CommonUtils):
   #     (from original THn) into first bin (of rebinned THn)
   #---------------------------------------------------------------
   def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, 
-                        observable, prior_variation_parameter=0., use_underflow=False):
+                        observable, det_pt_bin_array, det_obs_bin_array, truth_pt_bin_array, truth_obs_bin_array,
+                        prior_variation_parameter=0., use_underflow=False, use_miss_fake=False):
                             
     # I don't find any global bin index implementation, so I manually loop through axes
     for bin_0 in range(1, thn.GetAxis(0).GetNbins() + 1):
@@ -186,9 +190,28 @@ class AnalysisUtils(common_utils.CommonUtils):
             thn_rebinned.Fill(x, content)
             #print('Fill ({}, {}, {}, {}) to response'.format(pt_det, pt_true, obs_det, obs_true))
             
+            # RooUnfoldResponse should be filled (pt_det, obs_det, pt_true, obs_true)
             if roounfold_response:
-              # RooUnfoldResponse should be filled (pt_det, obs_det, pt_true, obs_true)
-              roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
+            
+              if use_miss_fake:
+              
+                pt_in_det_range = det_pt_bin_array[0] < pt_det < det_pt_bin_array[-1]
+                obs_in_det_range = det_obs_bin_array[0] < obs_det < det_obs_bin_array[-1]
+                pt_in_true_range = truth_pt_bin_array[0] < pt_true < truth_pt_bin_array[-1]
+                obs_in_true_range = truth_obs_bin_array[0] < obs_true < truth_obs_bin_array[-1]
+                
+                in_det_range = pt_in_det_range and obs_in_det_range
+                in_true_range = pt_in_true_range and obs_in_true_range
+
+                if in_det_range and in_true_range:
+                    roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
+                elif in_true_range:
+                    roounfold_response.Miss(pt_true, obs_true, content)
+                elif in_det_range:
+                    roounfold_response.Fake(pt_det, obs_det, content)
+
+              else:
+                roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
 
     print('writing response...')
     f = ROOT.TFile(response_file_name, 'UPDATE')

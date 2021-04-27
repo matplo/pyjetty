@@ -31,7 +31,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   def __init__(self, observable='', input_file_data='', input_file_response='', config_file='',
                output_dir='', file_format='', rebin_response=False, truncation=False,
                binning=False, prior_variation_parameter=0., R_max = None,
-               prong_matching_response = False, thermal_model = False, suffix='', **kwargs):
+               prong_matching_response = False, thermal_model = False,
+               use_miss_fake = False, suffix='', **kwargs):
 
     super(Roounfold_Obs, self).__init__(input_file_data, input_file_response, config_file,
                                         output_dir, file_format, **kwargs)
@@ -46,6 +47,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.R_max = R_max
     self.prong_matching_response = prong_matching_response
     self.thermal_model = thermal_model
+    self.use_miss_fake = use_miss_fake
     self.suffix = suffix
 
     self.initialize_config()
@@ -262,7 +264,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                       label, n_pt_bins_det, det_pt_bin_array, n_bins_det,
                                       det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
                                       n_bins_truth, truth_bin_array, self.observable,
-                                      self.prior_variation_parameter, use_underflow=use_underflow)
+                                      self.prior_variation_parameter, use_underflow=use_underflow,
+                                      use_miss_fake=self.use_miss_fake)
 
         # Get data histogram
         hData = self.fData.Get(name_data)
@@ -396,9 +399,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       setattr(self, name, hUnfolded)
       hUnfolded.SetDirectory(0)
 
-      # Correct by kinematic efficiency
-      hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
-      hUnfolded.Divide(hKinematicEfficiency)
+      # Correct by kinematic efficiency (not needed if we use miss/fake in response matrix)
+      if not self.use_miss_fake:
+          hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
+          hUnfolded.Divide(hKinematicEfficiency)
 
       # Write result to file
       # Note that in the case of SD, the first bin is the untagged splittings
