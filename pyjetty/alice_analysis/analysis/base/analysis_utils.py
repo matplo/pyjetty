@@ -203,10 +203,17 @@ class AnalysisUtils(common_utils.CommonUtils):
                 in_det_range = pt_in_det_range and obs_in_det_range
                 in_true_range = pt_in_true_range and obs_in_true_range
 
+                # Fill if both det, true are in domain of RM
                 if in_det_range and in_true_range:
                     roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
+                # If input is not in det-range (this is our usual kinematic efficiency correction), Miss
+                # Note that Jakub saw some modest reduction of statistical uncertainties when using this
+                #   approach rather than manually correcting the kinematic efficiency afterwards --
+                #   I don't see any effect however.
                 elif in_true_range:
                     roounfold_response.Miss(pt_true, obs_true, content)
+                # If truth-level is outside RM range (e.g. jet pt range is technically not [0,\infty]), Fake
+                # This is usually a negligible correction for us
                 elif in_det_range:
                     roounfold_response.Fake(pt_det, obs_det, content)
 
