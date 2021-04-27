@@ -264,9 +264,15 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                       n_bins_truth, truth_bin_array, self.observable,
                                       self.prior_variation_parameter, use_underflow=use_underflow)
 
-        # Also re-bin the data histogram
+        # Get data histogram
         hData = self.fData.Get(name_data)
         
+        # If thermal model, smear input spectrum
+        if self.thermal_model:
+            measuredErrors = self.getMeasuredErrors(hData)
+            self.smearSpectrum(hData, measuredErrors)
+        
+        # Re-bin the data histogram
         if use_histutils:
           h = self.histutils.rebin_th2(hData, name_data, det_pt_bin_array, n_pt_bins_det,
                                        det_bin_array, n_bins_det, use_underflow)
