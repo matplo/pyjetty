@@ -36,15 +36,15 @@ class AnalysisUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   # Rebin 2D (pt, my_observable) histogram according to specified binnings
   #   Don't include underflow/overflow by default
-  #   If use_underflow = True, then fill underflow content of the observable
+  #   If move_underflow = True, then fill underflow content of the observable
   #     (from original TH2) into first bin (of rebinned TH2)
   #---------------------------------------------------------------
   def rebin_data(self, hData, name_data, n_pt_bins, pt_bin_array, n_obs_bins,
-                 obs_bin_array, use_underflow=False):
+                 obs_bin_array, move_underflow=False):
 
     # Use rebinning function implemented in C++ side
     #return fjtools.rebin_th2(hData, name_data, pt_bin_array, n_pt_bins, 
-    #                         obs_bin_array, n_obs_bins, use_underflow)
+    #                         obs_bin_array, n_obs_bins, move_underflow)
 
     # Create empty TH2 with appropriate binning
     name = "%s_rebinned" % name_data
@@ -63,10 +63,10 @@ class AnalysisUtils(common_utils.CommonUtils):
         y = hData.GetYaxis().GetBinCenter(bin_y)
         content = hData.GetBinContent(bin_x, bin_y)
 
-        # If underflow bin of observable, and if use_underflow is activated,
+        # If underflow bin of observable, and if move_underflow is activated,
         #   put the contents of the underflow bin into the first bin of the rebinned TH2
         if bin_y == 0:
-          if use_underflow:
+          if move_underflow:
             y = h.GetYaxis().GetBinCenter(1)
           else:
             continue
@@ -94,7 +94,7 @@ class AnalysisUtils(common_utils.CommonUtils):
   def rebin_response(self, response_file_name, thn, name_thn_rebinned, name_roounfold, label,
                      n_pt_bins_det, det_pt_bin_array, n_obs_bins_det, det_obs_bin_array,
                      n_pt_bins_truth, truth_pt_bin_array, n_obs_bins_truth, truth_obs_bin_array,
-                     observable, prior_variation_parameter=0., use_underflow=False,
+                     observable, prior_variation_parameter=0., move_underflow=False,
                      do_roounfoldresponse=True, use_miss_fake=False):
   
     # Create empty THn with specified binnings
@@ -116,33 +116,31 @@ class AnalysisUtils(common_utils.CommonUtils):
     
     # Note: Using overflow bins doesn't work for 2D unfolding in RooUnfold -- we have to do it manually
     #roounfold_response.UseOverflow(True)
-    
+        
     # Loop through THn and fill rebinned THn
     self.fill_new_response(response_file_name, thn, thn_rebinned, roounfold_response, 
                            observable, det_pt_bin_array, det_obs_bin_array, truth_pt_bin_array, truth_obs_bin_array,
-                           prior_variation_parameter, use_underflow=use_underflow, use_miss_fake=use_miss_fake)
+                           prior_variation_parameter, move_underflow=move_underflow, use_miss_fake=use_miss_fake)
                            
-                               
-  
   #---------------------------------------------------------------
   # Loop through original THn, and fill new response (THn and RooUnfoldResponse)
   #   Don't include underflow/overflow by default
-  #   If use_underflow = True, then fill underflow content of the observable
+  #   If move_underflow = True, then fill underflow content of the observable
   #     (from original THn) into first bin (of rebinned THn)
   #---------------------------------------------------------------
   def fill_new_response(self, response_file_name, thn, thn_rebinned, roounfold_response, 
                         observable, det_pt_bin_array, det_obs_bin_array, truth_pt_bin_array, truth_obs_bin_array,
-                        prior_variation_parameter=0., use_underflow=False, use_miss_fake=False):
-                            
+                        prior_variation_parameter=0., move_underflow=False, use_miss_fake=False):
+                        
     # I don't find any global bin index implementation, so I manually loop through axes
-    for bin_0 in range(1, thn.GetAxis(0).GetNbins() + 1):
+    for bin_0 in range(0, thn.GetAxis(0).GetNbins() + 2):
       if bin_0 % 5 == 0:
-        print('{} / {}'.format(bin_0, thn.GetAxis(0).GetNbins() + 1))
+        print('{} / {}'.format(bin_0, thn.GetAxis(0).GetNbins()))
       pt_det = thn.GetAxis(0).GetBinCenter(bin_0)
-      for bin_1 in range(1, thn.GetAxis(1).GetNbins() + 1):
+      for bin_1 in range(0, thn.GetAxis(1).GetNbins() + 2):
         pt_true = thn.GetAxis(1).GetBinCenter(bin_1)
-        for bin_2 in range(0, thn.GetAxis(2).GetNbins() + 1):
-          for bin_3 in range(0, thn.GetAxis(3).GetNbins() + 1):
+        for bin_2 in range(0, thn.GetAxis(2).GetNbins() + 2):
+          for bin_3 in range(0, thn.GetAxis(3).GetNbins() + 2):
             obs_det = thn.GetAxis(2).GetBinCenter(bin_2)
             obs_true = thn.GetAxis(3).GetBinCenter(bin_3)
             
@@ -151,7 +149,7 @@ class AnalysisUtils(common_utils.CommonUtils):
             x = array('d', x_list)
             global_bin = thn.GetBin(x)
             content = thn.GetBinContent(global_bin)
-              
+
             # Impose a custom prior, if desired
             if math.fabs(prior_variation_parameter) > 1e-3 :
               #print('Scaling prior by prior_variation_parameter={}'.format(prior_variation_parameter))
@@ -165,11 +163,11 @@ class AnalysisUtils(common_utils.CommonUtils):
 
                 content = content*scale_factor
           
-            # If underflow bin of observable, and if use_underflow is activated,
+            # If underflow bin of observable, and if move_underflow is activated,
             #   put the contents of the underflow bin into the first bin of the rebinned THn
             if bin_2 == 0 or bin_3 == 0:
             
-              if use_underflow:
+              if move_underflow:
               
                 if bin_2 == 0:
                   obs_det = thn_rebinned.GetAxis(2).GetBinCenter(1)
@@ -182,9 +180,6 @@ class AnalysisUtils(common_utils.CommonUtils):
                       content=0
                 x_list = (pt_det, pt_true, obs_det, obs_true)
                 x = array('d', x_list)
-
-              else:
-                continue
             
             # THn is filled as (pt_det, pt_true, obs_det, obs_true)
             thn_rebinned.Fill(x, content)
@@ -193,8 +188,6 @@ class AnalysisUtils(common_utils.CommonUtils):
             # RooUnfoldResponse should be filled (pt_det, obs_det, pt_true, obs_true)
             if roounfold_response:
             
-              if use_miss_fake:
-              
                 pt_in_det_range = det_pt_bin_array[0] < pt_det < det_pt_bin_array[-1]
                 obs_in_det_range = det_obs_bin_array[0] < obs_det < det_obs_bin_array[-1]
                 pt_in_true_range = truth_pt_bin_array[0] < pt_true < truth_pt_bin_array[-1]
@@ -202,23 +195,20 @@ class AnalysisUtils(common_utils.CommonUtils):
                 
                 in_det_range = pt_in_det_range and obs_in_det_range
                 in_true_range = pt_in_true_range and obs_in_true_range
-
+                
                 # Fill if both det, true are in domain of RM
                 if in_det_range and in_true_range:
                     roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
-                # If input is not in det-range (this is our usual kinematic efficiency correction), Miss
-                # Note that Jakub saw some modest reduction of statistical uncertainties when using this
-                #   approach rather than manually correcting the kinematic efficiency afterwards --
-                #   I don't see any effect however.
-                elif in_true_range:
-                    roounfold_response.Miss(pt_true, obs_true, content)
-                # If truth-level is outside RM range (e.g. jet pt range is technically not [0,\infty]), Fake
-                # This is usually a negligible correction for us
-                elif in_det_range:
-                    roounfold_response.Fake(pt_det, obs_det, content)
+            
+                if use_miss_fake:
 
-              else:
-                roounfold_response.Fill(pt_det, obs_det, pt_true, obs_true, content)
+                    # If input is not in det-range (this is our usual kinematic efficiency correction), Miss
+                    if not in_det_range and in_true_range:
+                        roounfold_response.Miss(pt_true, obs_true, content)
+                    # If truth-level is outside RM range (e.g. jet pt range is technically not [0,\infty]), Fake
+                    # This is usually a negligible correction for us
+                    elif in_det_range and not in_true_range:
+                        roounfold_response.Fake(pt_det, obs_det, content)
 
     print('writing response...')
     f = ROOT.TFile(response_file_name, 'UPDATE')

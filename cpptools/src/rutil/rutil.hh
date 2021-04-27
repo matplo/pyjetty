@@ -81,6 +81,7 @@ namespace RUtil
                         const double & prior_variation_parameter=0.,
                         const int & prior_option=1,
                         const bool move_underflow=false,
+                        const bool use_miss_fake=false,
                         const bool do_roounfoldresponse=true);
 
 		//------------------------------------------------------
@@ -112,8 +113,17 @@ namespace RUtil
                                const prior_scale_func prior_scale_f,
                                const bool do_roounfoldresponse=true,
                                RooUnfoldResponse* roounfold_response=nullptr,
+                               const float min_det_pt=0.,
+                               const float min_truth_pt=0.,
+                               const float min_det=0.,
+                               const float min_truth=0.,
+                               const float max_det_pt=0.,
+                               const float max_truth_pt=0.,
+                               const float max_det=0.,
+                               const float max_truth=0.,
                                const double & prior_variation_parameter=0.,
-                               const bool move_underflow=false);
+                               const bool move_underflow=false,
+                               const bool use_miss_fake=false);
 
         // Set scaling of prior
         prior_scale_func prior_scale_factor_obs(const int & option);

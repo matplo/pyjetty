@@ -234,11 +234,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         # For SD, fill underflow bin to include untagged fraction in the unfolding
         # If underflow is activated, create a new underflow bin for the observable
         if grooming_setting:
-          use_underflow = 'sd' in grooming_setting
+          move_underflow = 'sd' in grooming_setting
         else:
-          use_underflow = False
+          move_underflow = False
         if self.prong_matching_response:
-          use_underflow = False
+          move_underflow = False
 
         # Rebin if requested, and write to file
         use_histutils = True
@@ -251,6 +251,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           label = 'R{}_{}'.format(jetR, obs_label)
           if use_histutils:
             n_dim = 4
+            # If use_histutils, we use the Miss/Fake functionality of RooUnfold to
+            # perform kinematic efficiency corrections
             self.histutils.rebin_thn(response_file_name, thn,
                                      name_thn_rebinned, name_roounfold, n_dim,
                                      n_pt_bins_det, det_pt_bin_array,
@@ -258,13 +260,16 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                      n_pt_bins_truth, truth_pt_bin_array,
                                      n_bins_truth, truth_bin_array,
                                      label, self.prior_variation_parameter,
-                                     self.prior_variation_option, use_underflow)
+                                     self.prior_variation_option, move_underflow,
+                                     self.use_miss_fake)
           else:
+            # If not use_histutils, we apply a kinematic efficiency correction by hand
+            # after unfolding.
             self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold,
                                       label, n_pt_bins_det, det_pt_bin_array, n_bins_det,
                                       det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
                                       n_bins_truth, truth_bin_array, self.observable,
-                                      self.prior_variation_parameter, use_underflow=use_underflow,
+                                      self.prior_variation_parameter, move_underflow=move_underflow,
                                       use_miss_fake=self.use_miss_fake)
 
         # Get data histogram
@@ -278,10 +283,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         # Re-bin the data histogram
         if use_histutils:
           h = self.histutils.rebin_th2(hData, name_data, det_pt_bin_array, n_pt_bins_det,
-                                       det_bin_array, n_bins_det, use_underflow)
+                                       det_bin_array, n_bins_det, move_underflow)
         else:
           h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array,
-                                    n_bins_det, det_bin_array, use_underflow=use_underflow)
+                                    n_bins_det, det_bin_array, move_underflow=move_underflow)
                               
         h.SetDirectory(0)
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
@@ -401,8 +406,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       # Correct by kinematic efficiency (not needed if we use miss/fake in response matrix)
       if not self.use_miss_fake:
-          hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
-          hUnfolded.Divide(hKinematicEfficiency)
+        hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
+        hUnfolded.Divide(hKinematicEfficiency)
 
       # Write result to file
       # Note that in the case of SD, the first bin is the untagged splittings

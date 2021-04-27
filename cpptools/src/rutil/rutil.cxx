@@ -150,6 +150,7 @@ namespace RUtil
                                const double & prior_variation_parameter/*=0.*/,
                                const int & prior_option/*=1*/,
                                const bool move_underflow/*=false*/,
+                               const bool use_miss_fake/*=false*/,
                                const bool do_roounfoldresponse/*=true*/) {
  
         // ------------------------------------------------------
@@ -173,14 +174,24 @@ namespace RUtil
         const prior_scale_func f = this->prior_scale_factor_obs(prior_option);
         
         // Loop through THn and fill rebinned THn and RooUnfoldResponse
+        float min_det_pt = det_pt_bin_array[0];
+        float min_truth_pt = truth_pt_bin_array[0];
+        float min_det = det_bin_array[0];
+        float min_truth = truth_bin_array[0];
+        float max_det_pt = det_pt_bin_array[n_pt_bins_det];
+        float max_truth_pt = truth_pt_bin_array[n_pt_bins_truth];
+        float max_det = det_bin_array[n_obs_bins_det];
+        float max_truth = truth_bin_array[n_obs_bins_truth];
+        
         this->fill_rebinned_thn(response_file_name, thn, thn_rebinned, n_dim, f,
                                 do_roounfoldresponse, roounfold_response,
-                                prior_variation_parameter, move_underflow);
+                                min_det_pt, min_truth_pt, min_det, min_truth,
+                                max_det_pt, max_truth_pt, max_det, max_truth, 
+                                prior_variation_parameter, move_underflow, use_miss_fake);
 
         return thn_rebinned;
 
     }  // rebin_thn
-
 
     //---------------------------------------------------------------
     // Create an empty THn according to specified binnings
@@ -267,7 +278,10 @@ namespace RUtil
         const std::string & response_file_name, const THnF* thn, THnF* thn_rebinned, const unsigned int & n_dim,
         const prior_scale_func prior_scale_f, const bool do_roounfoldresponse/*=true*/,
         RooUnfoldResponse* roounfold_response/*=nullptr*/,
-        const double & prior_variation_parameter/*=0.*/, const bool move_underflow/*=false*/) {
+        const float min_det_pt, const float min_truth_pt, const float min_det, const float min_truth,
+        const float max_det_pt, const float max_truth_pt, const float max_det, const float max_truth,
+        const double & prior_variation_parameter/*=0.*/, const bool move_underflow/*=false*/,
+        const bool use_miss_fake/*=false*/) {
 
         // Only working for n_dim == 4 at the moment; generalizing to N dimensions
         // will require some sort of recursive implementation
@@ -286,22 +300,22 @@ namespace RUtil
         // I don't find any global bin index implementation, so I manually loop through axes
         int* global_bin = new int[n_dim];
         double* x = new double[n_dim];
-        for (unsigned int bin_0 = 1; bin_0 < n_bins_0+1; bin_0++) {
+        for (unsigned int bin_0 = 0; bin_0 < n_bins_0+2; bin_0++) {
             global_bin[0] = bin_0;
             x[0] = thn->GetAxis(0)->GetBinCenter(bin_0);
 
             // print helpful message while waiting
             std::cout << bin_0 << " / " << n_bins_0 << '\r' << std::flush;
 
-            for (unsigned int bin_1 = 1; bin_1 < n_bins_1+1; bin_1++) {
+            for (unsigned int bin_1 = 0; bin_1 < n_bins_1+2; bin_1++) {
                 global_bin[1] = bin_1;
                 x[1] = thn->GetAxis(1)->GetBinCenter(bin_1);
 
-                for (unsigned int bin_2 = 0; bin_2 < n_bins_2+1; bin_2++) {
+                for (unsigned int bin_2 = 0; bin_2 < n_bins_2+2; bin_2++) {
                     global_bin[2] = bin_2;
                     x[2] = thn->GetAxis(2)->GetBinCenter(bin_2);
 
-                    for (unsigned int bin_3 = 0; bin_3 < n_bins_3+1; bin_3++) {
+                    for (unsigned int bin_3 = 0; bin_3 < n_bins_3+2; bin_3++) {
                         global_bin[3] = bin_3;
                         x[3] = thn->GetAxis(3)->GetBinCenter(bin_3);
 
@@ -337,7 +351,7 @@ namespace RUtil
                                         else { content = 0; }
                                     }
                                 }  // bin_3 == 0
-                            } else { continue; }  // move_underflow
+                            }
                         }  // underflow bins
 
                         // THn is filled as (x[0], x[1], x[2], x[3])
@@ -351,10 +365,33 @@ namespace RUtil
                         // RooUnfoldResponse should be filled as (x[0], x[2], x[1], x[3])
                         // corresponding e.g. to (pt_det, obs_det, pt_true, obs_true)
                         if (do_roounfoldresponse) {
-                            roounfold_response->FillContentError(
-                                x[0], x[2], x[1], x[3], content, error);
-                        }
+                            
+                            bool pt_in_det_range = x[0] > min_det_pt && x[0] < max_det_pt;
+                            bool obs_in_det_range = x[2] > min_det && x[2] < max_det;
+                            bool pt_in_true_range = x[1] > min_truth_pt && x[1] < max_truth_pt;
+                            bool obs_in_true_range = x[3] > min_truth && x[3] < max_truth;
 
+                            bool in_det_range = pt_in_det_range && obs_in_det_range;
+                            bool in_true_range = pt_in_true_range && obs_in_true_range;
+                            
+                            // Fill if both det, true are in domain of RM
+                            if (in_det_range and in_true_range) {
+                                roounfold_response->FillContentError(x[0], x[2], x[1], x[3], content, error);
+                            }
+                        
+                            if (use_miss_fake) {
+
+                                // If input is not in det-range (this is our usual kinematic efficiency correction), Miss
+                                if (!in_det_range && in_true_range) {
+                                    roounfold_response->Miss(x[1], x[3], content);
+                                }
+                                // If truth-level is outside RM range (e.g. jet pt range is technically not [0,\infty]), Fake
+                                // This is usually a negligible correction for us
+                                else if (in_det_range && !in_true_range) {
+                                    roounfold_response->Fake(x[0], x[2], content);
+                                }
+                            }
+                        }
                     }  // bin_3 loop
                 }  // bin_2 loop
             }  // bin_1 loop
@@ -372,9 +409,8 @@ namespace RUtil
         delete[] x;
 
         return;
-
+            
     }  // fill_rebinned_thn
-
 
     //---------------------------------------------------------------
     // Compute scale factor to vary prior of observable

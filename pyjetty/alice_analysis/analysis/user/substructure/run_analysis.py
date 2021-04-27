@@ -96,7 +96,7 @@ class RunAnalysis(common_base.CommonBase):
     if 'use_miss_fake' in config:
         self.use_miss_fake = config['use_miss_fake']
     else:
-        self.use_miss_fake = False
+        self.use_miss_fake = True
     
     # Set whether pp or PbPb
     if 'constituent_subtractor' in config:
