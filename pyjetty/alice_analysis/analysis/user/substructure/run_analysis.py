@@ -890,11 +890,15 @@ class RunAnalysis(common_base.CommonBase):
         
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
     
+    # First scale by bin width -- then normalize by integral
+    # (where integral weights by bin width)
+    h.Scale(1., 'width')
+
     if grooming_setting and 'sd' in grooming_setting:
     
       # If SD, the untagged jets are in the first bin
-      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1)
-      n_jets_tagged = h.Integral(2, h.GetNbinsX()+1)
+      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1, 'width')
+      n_jets_tagged = h.Integral(2, h.GetNbinsX()+1, 'width')
       
       if store_tagging_fraction:
         f_tagging = n_jets_tagged/n_jets_inclusive
@@ -903,9 +907,9 @@ class RunAnalysis(common_base.CommonBase):
         setattr(self, f_tagging_name, f_tagging)
       
     else:
-      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1)
+      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1, 'width')
     
-    h.Scale(1./n_jets_inclusive, 'width')
+    h.Scale(1./n_jets_inclusive)
     
     setattr(self, name1D, h)
     

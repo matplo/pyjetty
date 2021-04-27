@@ -624,8 +624,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     h.SetName('{}_{}'.format(h.GetName(), option))
 
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
-    n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1)
-    h.Scale(1./n_jets_inclusive, scaling_option)
+    # First scale by bin width -- then normalize by integral
+    # (where integral weights by bin width)
+    h.Scale(1., scaling_option)
+    n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1, scaling_option)
+    h.Scale(1./n_jets_inclusive)
 
     return h
 
@@ -670,6 +673,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     myPad.SetBottomMargin(0.13)
     myPad.Draw()
     myPad.cd()
+    myPad.SetLogy()
 
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
@@ -680,7 +684,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     myBlankHisto.GetYaxis().SetTitleOffset(2.2)
     myBlankHisto.SetYTitle('#frac{dN}{d#it{p}_{T, ch jet}}')
     myBlankHisto.SetMaximum(5000)
-    myBlankHisto.SetMinimum(0.)
+    myBlankHisto.SetMinimum(1)
     myBlankHisto.Draw("E")
 
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
@@ -714,6 +718,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h.SetMarkerSize(1.5)
       h.SetLineStyle(1)
       h.SetLineWidth(2)
+      
+      myBlankHisto.SetMaximum(10*h.GetMaximum())
+      myBlankHisto.SetMinimum(0.1*h.GetMinimum())
 
       h.DrawCopy('PE X0 same')
 
@@ -1400,11 +1407,14 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     h.SetLineWidth(2)
     h.SetLineStyle(1)
 
-    integral = h.Integral()
+    # First scale by bin width -- then normalize by integral
+    # (where integral weights by bin width)
+    h.Scale(1., scalingOptions)
+    integral = h.Integral(1, h.GetNbinsX()+1, 'width')
     if integral < 1e-10:
       print("Warning: scaling skipped for histogram {} since integral is {}".format(h.GetName(), integral))
     else:
-      h.Scale(1./integral, scalingOptions)
+      h.Scale(1./integral)
 
     if '_pt_' in outputFilename:
       h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{p}_{T}}')
@@ -1425,7 +1435,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     h2.SetLineColor(4)
     h2.SetLineWidth(2)
     h2.SetLineStyle(1)
-    h2.Scale(1./h2.Integral(), scalingOptions)
+    
+    # First scale by bin width -- then normalize by integral
+    # (where integral weights by bin width)
+    h2.Scale(1., scalingOptions)
+    integral = h2.Integral(1, h2.GetNbinsX()+1, 'width')
+    h2.Scale(1./integral)
 
     h.Draw("hist same E")
     h2.Draw("hist same E")
@@ -1434,7 +1449,13 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h3.SetLineColor(2)
       h3.SetLineWidth(2)
       h3.SetLineStyle(1)
-      h3.Scale(1./h3.Integral(), scalingOptions)
+      
+      # First scale by bin width -- then normalize by integral
+      # (where integral weights by bin width)
+      h3.Scale(1., scalingOptions)
+      integral = h3.Integral(1, h3.GetNbinsX()+1, 'width')
+      h3.Scale(1./integral)
+
       h3.Draw("hist same")
 
     c.cd()
