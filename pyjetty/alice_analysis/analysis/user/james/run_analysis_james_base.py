@@ -206,11 +206,11 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       if grooming_setting and 'sd' in grooming_setting:
       
         # If SD, the untagged jets are in the first bin
-        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX()+1)
+        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX())
         n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX()+1)
         
       else:
-        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX()+1)
+        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX())
         n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
 
     elif plot_pythia_from_mateusz:
@@ -220,7 +220,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       print(fPythia.ls())
       hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_label, int(min_pt_truth), int(max_pt_truth))
       hPythia = fPythia.Get(hname)
-      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX())
       n_jets_tagged = hPythia.Integral(hPythia2.FindBin(self.truth_bin_array(obs_label)[0]), hPythia2.GetNbinsX())
       
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
@@ -493,10 +493,10 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       
       # Scale inclusive subjets to N_jets rather than N_subjets -- fill in by hand for now
       if self.observable == 'leading_subjet_z':
-        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX()+1, 'width')
+        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX(), 'width')
         print(f'integral, leading_subjet_z, {obs_label}: {integral}')
       if self.observable == 'inclusive_subjet_z':
-        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX()+1, 'width')
+        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX(), 'width')
         #print(f'integral, inclusive_subjet_z, {obs_label}: {integral}')
         
         if np.isclose(float(obs_label), 0.1):
@@ -511,7 +511,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         hPythia.Scale(normalization)
         
       # Compute <N_subjets>
-      n_subjets = h.Integral(1, h.GetNbinsX()+1, 'width')
+      n_subjets = h.Integral(1, h.GetNbinsX(), 'width')
       print(f'<N_subjets>, {obs_label}: {n_subjets}')
         
       # Compute z_loss for leading subjets

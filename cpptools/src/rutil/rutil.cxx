@@ -430,6 +430,8 @@ namespace RUtil
                 return prior_scale_func_2;
             case 3:
                 return prior_scale_func_3;
+            case 4:
+                return prior_scale_func_4;
             default:
                 return prior_scale_func_def;
         }
@@ -459,6 +461,16 @@ namespace RUtil
     double prior_scale_func_3(const double & obs_true, const double & content,
                               const double & prior_variation_parameter) {
         return (1 + obs_true);
+    }
+
+    double prior_scale_func_4(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter) {
+        
+        // Ax+B, where A=slope, B=offset at z=0
+        // For 0.7<z<1.0, dz = 0.3 --> A = 1/dz, B = 1-(1-dz/2)*A
+        float dz = 0.3;
+        float A = prior_variation_parameter*1./dz;
+        return (A*obs_true + 1 - (1-dz/2.)*A);
     }
 
     double prior_scale_func_def(const double & obs_true, const double & content,

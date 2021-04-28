@@ -113,12 +113,12 @@ class PlotRAA(common_base.CommonBase):
         self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
         
         # Normalize to the integral over the reported range
-        integral_AA = self.h_main_AA.Integral(1, self.h_main_AA.GetNbinsX()+1, 'width')
+        integral_AA = self.h_main_AA.Integral(1, self.h_main_AA.GetNbinsX(), 'width')
         self.h_main_AA.Scale(1./integral_AA)
         self.h_sys_AA.Scale(1./integral_AA)
         print(f'integral AA: {integral_AA}')
     
-        integral_pp = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX()+1, 'width')
+        integral_pp = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX(), 'width')
         self.h_main_pp.Scale(1./integral_pp)
         self.h_sys_pp.Scale(1./integral_pp)
         print(f'integral pp: {integral_pp}')

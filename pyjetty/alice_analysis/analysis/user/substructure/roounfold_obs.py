@@ -525,7 +525,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         # First scale by bin width -- then normalize by integral
         # (where integral weights by bin width)
         h_data.Scale(1., 'width')
-        n_jets_inclusive = h_data.Integral(0, h_data.GetNbinsX()+1, 'width')
+        n_jets_inclusive = h_data.Integral(0, h_data.GetNbinsX(), 'width')
         h_data.Scale(1./n_jets_inclusive)
 
       # Save the histogram to the result ROOT file for future access
@@ -666,7 +666,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     # First scale by bin width -- then normalize by integral
     # (where integral weights by bin width)
     h.Scale(1., scaling_option)
-    n_jets_inclusive = h.Integral(0, h.GetNbinsX()+1, scaling_option)
+    n_jets_inclusive = h.Integral(0, h.GetNbinsX(), scaling_option)
     h.Scale(1./n_jets_inclusive)
 
     return h
@@ -1449,7 +1449,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     # First scale by bin width -- then normalize by integral
     # (where integral weights by bin width)
     h.Scale(1., scalingOptions)
-    integral = h.Integral(1, h.GetNbinsX()+1, 'width')
+    integral = h.Integral(1, h.GetNbinsX(), 'width')
     if integral < 1e-10:
       print("Warning: scaling skipped for histogram {} since integral is {}".format(h.GetName(), integral))
     else:
@@ -1478,7 +1478,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     # First scale by bin width -- then normalize by integral
     # (where integral weights by bin width)
     h2.Scale(1., scalingOptions)
-    integral = h2.Integral(1, h2.GetNbinsX()+1, 'width')
+    integral = h2.Integral(1, h2.GetNbinsX(), 'width')
     h2.Scale(1./integral)
 
     h.Draw("hist same E")
@@ -1492,7 +1492,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       # First scale by bin width -- then normalize by integral
       # (where integral weights by bin width)
       h3.Scale(1., scalingOptions)
-      integral = h3.Integral(1, h3.GetNbinsX()+1, 'width')
+      integral = h3.Integral(1, h3.GetNbinsX(), 'width')
       h3.Scale(1./integral)
 
       h3.Draw("hist same")

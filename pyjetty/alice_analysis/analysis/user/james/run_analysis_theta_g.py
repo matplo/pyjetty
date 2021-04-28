@@ -227,14 +227,14 @@ class RunAnalysisThetaG(run_analysis_james_base.RunAnalysisJamesBase):
       print('NP prediction does not exist for {}'.format(obs_label))
       return
     hNumerator.SetDirectory(0)
-    n_jets_inclusive = hNumerator.Integral(0, hNumerator.GetNbinsX()+1)
+    n_jets_inclusive = hNumerator.Integral(0, hNumerator.GetNbinsX())
     n_jets_tagged = hNumerator.Integral(hNumerator.FindBin(self.truth_bin_array(obs_label)[0]), hNumerator.GetNbinsX())
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
     hNumerator.Scale(1./n_jets_inclusive, 'width')
       
     hDenominator = fDenominator.Get(hname)
     hDenominator.SetDirectory(0)
-    n_jets_inclusive = hDenominator.Integral(0, hDenominator.GetNbinsX()+1)
+    n_jets_inclusive = hDenominator.Integral(0, hDenominator.GetNbinsX())
     n_jets_tagged = hDenominator.Integral(hDenominator.FindBin(self.truth_bin_array(obs_label)[0]), hDenominator.GetNbinsX())
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
     hDenominator.Scale(1./n_jets_inclusive, 'width')

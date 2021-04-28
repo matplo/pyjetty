@@ -65,7 +65,11 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     elif self.observable == 'theta_g':
       return (1 + prior_variation_parameter*(2*obs_true - 1))
     elif 'subjet_z' in self.observable:
-      return (1 + obs_true)
+      # Ax+B, where A=slope, B=offset at z=0
+      # For 0.7<z<1.0, dz = 0.3 --> A = 1/dz, B = 1-(1-dz/2)*A
+      dz = 0.3
+      A = prior_variation_parameter*1./dz
+      return (A*obs_true + 1 - (1-dz/2.)*A)
     elif self.observable == 'jet_axis':
       return (1 + obs_true)
     elif self.observable == 'ang':
@@ -195,21 +199,21 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
 
     hData2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hData = hData2D.ProjectionY()
-    n_jets_inclusive = hData.Integral(0, hData.GetNbinsX()+1)
+    n_jets_inclusive = hData.Integral(0, hData.GetNbinsX())
     n_jets_tagged = hData.Integral(1, hData.GetNbinsX())
     fraction_tagged_data =  n_jets_tagged/n_jets_inclusive
     #print('fraction_tagged_data: {}'.format(fraction_tagged_data))
 
     hMC_Det2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hMC_Det = hMC_Det2D.ProjectionY()
-    n_jets_inclusive = hMC_Det.Integral(0, hMC_Det.GetNbinsX()+1)
+    n_jets_inclusive = hMC_Det.Integral(0, hMC_Det.GetNbinsX())
     n_jets_tagged = hMC_Det.Integral(1, hMC_Det.GetNbinsX())
     fraction_tagged_mc_det =  n_jets_tagged/n_jets_inclusive
     #print('fraction_tagged_mc_det: {}'.format(fraction_tagged_mc_det))
     
     hMC_Truth2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hMC_Truth = hMC_Truth2D.ProjectionY()
-    n_jets_inclusive = hMC_Truth.Integral(0, hMC_Truth.GetNbinsX()+1)
+    n_jets_inclusive = hMC_Truth.Integral(0, hMC_Truth.GetNbinsX())
     n_jets_tagged = hMC_Truth.Integral(1, hMC_Truth.GetNbinsX())
     fraction_tagged_mc_truth =  n_jets_tagged/n_jets_inclusive
     #print('fraction_tagged_mc_truth: {}'.format(fraction_tagged_mc_truth))

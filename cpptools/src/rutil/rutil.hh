@@ -39,6 +39,8 @@ namespace RUtil
                               const double & prior_variation_parameter);
     double prior_scale_func_3(const double & obs_true, const double & content,
                               const double & prior_variation_parameter);
+    double prior_scale_func_4(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter);
     double prior_scale_func_def(const double & obs_true, const double & content,
                                 const double & prior_variation_parameter);
 
