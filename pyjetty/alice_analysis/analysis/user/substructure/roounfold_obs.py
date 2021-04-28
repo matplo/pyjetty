@@ -479,7 +479,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     n_bins_truth = getattr(self, 'n_bins_truth_{}'.format(obs_label))
     truth_bin_array = getattr(self, 'truth_bin_array_{}'.format(obs_label))
 
-    leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
+    leg = ROOT.TLegend(0.75,0.5,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
     # Select final regularization parameter
@@ -490,6 +490,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         self.obs_settings, self.grooming_settings, self.obs_subconfig_list,
         self.obs_config_dict, obs_label, jetR)
 
+    h_data = None
     for i in range(1, reg_param_final + 3):
 
       h = self.get_unfolded_result(jetR, obs_label, i, min_pt_truth, max_pt_truth, option)
@@ -511,6 +512,21 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       elif option == 'stat_uncert':
         h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth,
                                                    max_pt_truth, option)
+                                                   
+      elif option == '':
+        # Get input distribution
+        name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
+        hData2D = getattr(self, name)
+        hData2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+        h_data = hData2D.ProjectionY()
+        h_data.SetName('{}_{}'.format(h_data.GetName(), option))
+
+        # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
+        # First scale by bin width -- then normalize by integral
+        # (where integral weights by bin width)
+        h_data.Scale(1., 'width')
+        n_jets_inclusive = h_data.Integral(0, h_data.GetNbinsX()+1, 'width')
+        h_data.Scale(1./n_jets_inclusive)
 
       # Save the histogram to the result ROOT file for future access
       if len(option):
@@ -583,6 +599,14 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       label = '{} = {}'.format(self.reg_param_name, i)
       leg.AddEntry(h, label, 'Pe')
+      
+      # Plot input spectrum
+      if h_data and i == reg_param_final + 2:
+        h_data.SetLineColor(1)
+        h_data.SetLineColorAlpha(1, 0.5)
+        h_data.SetLineWidth(4)
+        h_data.Draw('L hist same')
+        leg.AddEntry(h_data, 'input data', 'L')
 
     leg.Draw()
 
