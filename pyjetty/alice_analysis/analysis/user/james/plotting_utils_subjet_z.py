@@ -577,3 +577,91 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     output_filename = os.path.join(self.output_dir, 'jet/{}.pdf'.format(self.remove_periods(name)))
     c.SaveAs(output_filename)
     c.Close()
+
+  #---------------------------------------------------------------
+  def plot_z1_crosscheck(self, jetR, obs_label, obs_setting, grooming_setting,
+                         xtitle, pt_bins):
+            
+    name = 'h_{}_zconst_R{}_{}_z099_1{}'.format(self.observable, jetR, obs_label, self.suffix)
+    h2D = self.fData.Get(name)
+    
+    for i in range(0, len(pt_bins) - 1):
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      self.plot_z1_projection(h2D, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth)
+    
+  #---------------------------------------------------------------
+  def plot_z1_projection(self, h2D, jetR, obs_label, obs_setting,
+                            grooming_setting, xtitle, min_pt, max_pt):
+    
+    ytitle = '#frac{dN}{dz}'
+
+    # Get histogram of theta_g in data, for given pt-det cut
+    h2D.GetXaxis().SetRangeUser(min_pt, max_pt)
+    hObs_truth = h2D.ProjectionY()
+    hObs_truth.SetMarkerStyle(21)
+    hObs_truth.SetMarkerSize(1)
+    #hObs_truth.Rebin(5)
+    #hObs_truth.Scale(1., 'width')
+    if grooming_setting and 'sd' in grooming_setting:
+      hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
+
+    # Draw histogram
+    c = ROOT.TCanvas('c','c: hist',600,450)
+    c.cd()
+
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    leg = ROOT.TLegend(0.7,0.75,0.85,0.85, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    hObs_truth.GetYaxis().SetTitle(ytitle)
+    hObs_truth.GetYaxis().SetTitleOffset(1.5)
+    hObs_truth.SetMaximum(2.5*hObs_truth.GetMaximum())
+    hObs_truth.SetMinimum(0.)
+
+    hObs_truth.Draw('hist')
+    leg.AddEntry(hObs_truth, "Data", "L")
+    leg.Draw("same")
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.3, 0.85, text)
+    
+    if self.is_pp:
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    else:
+      text = 'Pb-Pb #sqrt{#it{s_{NN}}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.3, 0.79, text)
+
+    text = str(min_pt) + ' < #it{p}_{T, ch jet} < ' + str(max_pt) + ' GeV/#it{c}'
+    text_latex.DrawLatex(0.3, 0.73, text)
+
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
+    text_latex.DrawLatex(0.3, 0.67, text)
+    
+    subobs_label = self.formatted_subobs_label(self.observable)
+    delta = 0.
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.3, 0.61, text)
+      delta = 0.07
+      
+    text = f'0.99 < {xtitle} < 1.0'
+    text_latex.DrawLatex(0.5, 0.5, text)
+      
+    output_filename = os.path.join(self.output_dir, 'z1_crosscheck/h_{}_z1_crosscheck_R{}_{}_{}-{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
+    c.SaveAs(output_filename)
+    c.Close()
