@@ -692,6 +692,9 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     h_ratio.SetName(f'h_ratio_{h_numerator.GetName()}')
     h_ratio.Divide(h_denominator)
     
+    h_ratio.GetYaxis().SetRangeUser(0, 1.5)
+    h_ratio.SetMarkerStyle(21)
+    h_ratio.SetMarkerSize(1)
     h_ratio.GetYaxis().SetTitle('Matching fraction')
     text=f'Inclusive subjets R={jetR},r={obs_setting}, 80.<p_{{T,jet}}<120.'
 
