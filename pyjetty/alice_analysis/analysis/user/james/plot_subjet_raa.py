@@ -42,23 +42,22 @@ class PlotRAA(common_base.CommonBase):
         self.config_results = [config[name] for name in config if 'result' in name ]
 
         self.plot_data = True
-        self.plot_theory = False
+        self.plot_theory = True
 
         self.colors = [600-6, 632-4]
         self.ratio_color = ROOT.kGray+3
         self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12')
         
-        self.theory_colors_james = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
+        self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
         
-        self.line_style_james = [1, 1, 1, 1, 1, 1, 11, 1, 1]
-        self.line_width_james = [4, 4, 4, 4, 4, 4, 6, 4, 4]
+        self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
+        self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
          
-        self.figure_approval_status = 'prel. candidate'
+        self.figure_approval_status = 'Preliminary'
         
         self.xtitle = '#it{z}_{r}'
         self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{#it{{z}}_{{r}} > 0.7}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
-        #self.ytitle = '#frac{{1}}{{#it{{N}}}} #frac{{d#it{{N}}}}{{d{}}}'.format(self.xtitle)
 
         self.debug_level = 0
         
@@ -85,9 +84,9 @@ class PlotRAA(common_base.CommonBase):
         self.max_pt = result['max_pt']
         self.file_pp_name = result['file_pp']
         self.file_AA_name = result['file_AA']
-        self.theory_colors = self.theory_colors_james
-        self.line_style = self.line_style_james
-        self.line_width = self.line_width_james
+        self.theory_colors = self.theory_colors
+        self.line_style = self.line_style
+        self.line_width = self.line_width
         
         # Get binning to plot
         self.bins = np.array(result['bins'])
@@ -113,11 +112,15 @@ class PlotRAA(common_base.CommonBase):
         self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
         
         # Normalize to the integral over the reported range
+        #self.h_main_AA.Scale(1., 'width')
+        #self.h_sys_AA.Scale(1., 'width')
         integral_AA = self.h_main_AA.Integral(1, self.h_main_AA.GetNbinsX(), 'width')
         self.h_main_AA.Scale(1./integral_AA)
         self.h_sys_AA.Scale(1./integral_AA)
         print(f'integral AA: {integral_AA}')
     
+        #self.h_main_pp.Scale(1., 'width')
+        #self.h_sys_pp.Scale(1., 'width')
         integral_pp = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX(), 'width')
         self.h_main_pp.Scale(1./integral_pp)
         self.h_sys_pp.Scale(1./integral_pp)
@@ -132,7 +135,7 @@ class PlotRAA(common_base.CommonBase):
         
         # Load theory predictions
         if self.plot_theory:
-            self.init_theory()
+            self.init_theory(result)
         
     #---------------------------------------------------------------
     # This function is called once for each subconfiguration
@@ -166,7 +169,7 @@ class PlotRAA(common_base.CommonBase):
         else:
             name = 'h_{}_{}-{}_R{}_r{}.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.obs_label))
         self.output_filename = os.path.join(self.output_dir, name)
-        print(self.output_filename)
+
         self.utils.set_plotting_options()
         ROOT.gROOT.ForceStyle()
 
@@ -255,10 +258,8 @@ class PlotRAA(common_base.CommonBase):
         
         myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
 
-        ratio_legend = ROOT.TLegend(0.23,0.75,0.4,0.97)
-        self.utils.setup_legend(ratio_legend,0.054)
-        ratio_legend2 = ROOT.TLegend(0.65,0.75,0.8,0.97)
-        self.utils.setup_legend(ratio_legend2,0.054)
+        ratio_legend = ROOT.TLegend(0.43,0.75,0.6,0.97)
+        self.utils.setup_legend(ratio_legend,0.07)
 
         myBlankHisto2.Draw('')
           
@@ -281,63 +282,32 @@ class PlotRAA(common_base.CommonBase):
 
         if self.plot_theory:
 
-            for i, g in enumerate(self.prediction_g_list):
+            for i, prediction in enumerate(self.prediction_list):
                   
                 label = self.label_list[i]
                 sublabel = self.sublabel_list[i]
-
                 color = self.theory_colors[i]
-                g.SetLineColor(color)
-                g.SetFillColor(color)
-                if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
-                    g.SetLineColor(0)
-                    if self.observable in ['rg', 'theta_g']:
-                        if self.jetR == 0.4:
-                            if 'Pablos' in label or 'JETSCAPE' in label:
-                                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
-                            else:
-                                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
-                        elif self.jetR == 0.2:
-                            if 'Yuan' in label:
-                                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
-                            else:
-                                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
-                    elif self.observable == 'zg':
-                        if 'Pablos' in label:
-                            ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
-                        else:
-                            ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
-                elif type(g) == ROOT.TGraph:
-                    g.SetLineStyle(self.line_style[i])
-                    g.SetLineWidth(4)
-                    if self.observable in ['rg', 'theta_g']:
-                        if self.jetR == 0.4:
-                            if 'Pablos' in label or 'JETSCAPE' in label:
-                                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
-                            else:
-                                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
-                        if self.jetR == 0.2:
-                            if 'Yuan' in label:
-                                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
-                            else:
-                                ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
-                    elif self.observable == 'zg':
-                        if 'Pablos' in label:
-                            ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
-                        else:
-                            ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+                
+                print(type(prediction))
+                if type(prediction) in [ROOT.TH1F]:
 
-        # Draw curves in specified order
-        if self.plot_theory:
-            for i in self.draw_order:
-                g = self.prediction_g_list[i]
-                if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
-                    g.Draw("3 same")
-                elif type(g) == ROOT.TGraph:
-                    g.Draw("same")
+                    prediction.SetLineColor(0)
+                    prediction.SetMarkerSize(0)
+                    prediction.SetMarkerStyle(0)
+                    prediction.SetFillColor(color)
+                    
+                    prediction.Draw('E3 same')
+                    ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'F')
+
+                if type(prediction) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                
+                    prediction.SetFillColor(color)
+                    prediction.SetLineColor(0)
+                    
+                    prediction.Draw("3 same")
+                    ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'F')
           
         ratio_legend.Draw()
-        ratio_legend2.Draw()
         line = ROOT.TLine(self.bins[0], 1, self.bins[-1], 1)
         line.SetLineColor(920+2)
         line.SetLineStyle(2)
@@ -384,136 +354,50 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Initialize theory predictions
     #---------------------------------------------------------------
-    def init_theory(self):
+    def init_theory(self, result):
     
-        # Get theory predictions
-        if self.plot_theory:
-            if self.observable == 'theta_g':
-                config_file = 'theory_predictions_rg.yaml'
-            if self.observable == 'zg':
-                config_file = 'theory_predictions_zg.yaml'
-        
-        # Get binning, for re-binning
-        bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[1:]
-        self.bin_array = array('d', bin_edges)
-
-        with open(config_file, 'r') as stream:
-            config = yaml.safe_load(stream)
-              
         self.label_list = []
         self.sublabel_list = []
-        self.prediction_g_list = []
-      
-        self.prediction_types = [name for name in list(config.keys())]
-        for type in self.prediction_types:
-      
-            theory = config[type]
-            configs = [name for name in list(theory.keys()) if 'config' in name ]
-            for prediction in configs:
-                theory_prediction = theory[prediction]
-                config_jetR = theory_prediction['jetR']
-                if config_jetR == self.jetR:
-                
-                    plot_list = theory['plot_list']
-                
-                    if type == 'lbnl':
-                    
-                        x = np.array(theory_prediction['x'])
-                        y_pp = np.array(theory_prediction['y_pp'])
-
-                        n = len(x)
-                        xerr = np.zeros(n)
-
-                        if 'f_q' in theory_prediction:
-                            f_q = theory_prediction['f_q']
-                            f_q_min = theory_prediction['f_q_min']
-                            f_q_max = theory_prediction['f_q_max']
-                            y_AA_quark = np.array(theory_prediction['y_AA_quark'])
-                            y_AA_gluon = np.array(theory_prediction['y_AA_gluon'])
-
-                            y_AA = f_q*y_AA_quark + (1-f_q)*y_AA_gluon
-                            y_AA_min = f_q_min*y_AA_quark + (1-f_q_min)*y_AA_gluon
-                            y_AA_max = f_q_max*y_AA_quark + (1-f_q_max)*y_AA_gluon
-
-                            ratio = np.divide(y_AA, y_pp)
-                            ratio_lower = np.divide(y_AA_min, y_pp)
-                            ratio_upper = np.divide(y_AA_max, y_pp)
-                            g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
-
-                        else:
-                            y_AA = np.array(theory_prediction['y_AA'])
-                            ratio = np.divide(y_AA, y_pp)
-                            g = ROOT.TGraph(n, x, ratio)
-
-                    elif type == 'caucal':
-                                
-                        x = np.array(theory_prediction['x'])
-                        ratio = np.array(theory_prediction['ratio'])
-                        ratio_neg_unc_tot = np.array(theory_prediction['ratio_neg_unc_tot'])
-                        ratio_pos_unc_tot = np.array(theory_prediction['ratio_pos_unc_tot'])
-
-                        n = len(x)
-                        xerr = np.zeros(n)
-                        g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio_neg_unc_tot, ratio_pos_unc_tot)
-                    
-                    elif type == 'guangyou':
-                    
-                        x = np.array(theory_prediction['x'])
-                        ratio = np.array(theory_prediction['ratio'])
-
-                        n = len(x)
-                        g = ROOT.TGraph(n, x, ratio)
-                    
-                    elif type in ['hybrid_model', 'yang_ting']:
-                    
-                        x = np.array(theory_prediction['x'])
-                        ratio_lower = np.array(theory_prediction['ratio_lower'])
-                        ratio_upper = np.array(theory_prediction['ratio_upper'])
-                        ratio = (ratio_lower + ratio_upper) / 2.
-
-                        n = len(x)
-                        xerr = np.zeros(n)
-                        g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
-                    
-                    elif type == 'jetscape':
-
-                        plot_ratio_directly = True
-                        if plot_ratio_directly:
-                            x = np.array(theory_prediction['x_ratio'])
-                            ratio = np.array(theory_prediction['ratio'])
-                            ratio_err = np.array(theory_prediction['ratio_err'])
-                        else:
-                            # Get distributions
-                            xbins = np.array(theory_prediction['xbins'])
-                            y_pp = np.array(theory_prediction['y_pp'])
-                            y_pp_err = np.array(theory_prediction['y_pp_err'])
-                            y_AA = np.array(theory_prediction['y_AA'])
-                            y_AA_err = np.array(theory_prediction['y_AA_err'])
-                            
-                            # Rebin distributions
-                            x, y_pp, y_pp_err = self.rebin_arrays(xbins, y_pp, y_pp_err)
-                            _, y_AA, y_AA_err = self.rebin_arrays(xbins, y_AA, y_AA_err)
-
-                            # Form ratio and propagate uncertainty
-                            y_pp_err_fraction = np.divide(y_pp_err, y_pp)
-                            y_AA_err_fraction = np.divide(y_AA_err, y_AA)
-                            
-                            ratio = np.divide(y_AA, y_pp)
-                            ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
-                            ratio_err = np.multiply(ratio, ratio_err_fraction)
-              
-                        n = len(x)
-                        xerr = np.zeros(n)
-                        g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
+        self.prediction_list = []
     
-                    # Option: Translate R_g to theta_g
-                    if self.observable == 'theta_g' and self.plot_axis_rg:
-                        g = self.translate_rg_theta_g(g, 'rg', tgraph=True, ratio=True)
-    
-                    if prediction in plot_list:
-                        self.prediction_g_list.append(g)
-                        self.label_list.append(theory['label'])
-                        self.sublabel_list.append(theory_prediction['sublabel'])
+        #----------------------------------------------------------
+        # JETSCAPE
+        f_pp = ROOT.TFile(result['jetscape_pp'], 'READ')
+        f_AA = ROOT.TFile(result['jetscape_AA'], 'READ')
+        
+        #h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
+        h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}Scaled'
+        h_pp = f_pp.Get(h_name)
+        h_pp.SetDirectory(0)
+        f_pp.Close()
+        
+        h_AA = f_AA.Get(h_name)
+        h_AA.SetDirectory(0)
+        f_AA.Close()
+
+        # Rebin to data binning
+        bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[0:]
+        h_pp = h_pp.Rebin(bin_edges.size-1, f'{h_pp.GetName()}_rebinned', bin_edges)
+        h_AA = h_AA.Rebin(bin_edges.size-1, f'{h_AA.GetName()}_rebinned', bin_edges)
+        
+        # Normalization
+        h_pp.Scale(1., 'width')
+        h_AA.Scale(1., 'width')
+        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
+        h_AA.Scale(1./h_AA.Integral(1, h_AA.GetNbinsX()))
+
+        # Form ratio
+        hRatio = h_AA.Clone()
+        hRatio.SetName(f'hRatio_{h_AA.GetName()}')
+        hRatio.Divide(h_pp)
+      
+        # Add to theory list
+        self.prediction_list.append(hRatio)
+        self.label_list.append('JETSCAPE')
+        self.sublabel_list.append('')
+      
+        #----------------------------------------------------------
+        
 
     #---------------------------------------------------------------
     # Rebin numpy arrays (xbins,y) representing a histogram,
