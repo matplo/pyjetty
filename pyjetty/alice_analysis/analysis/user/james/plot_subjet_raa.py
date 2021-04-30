@@ -49,7 +49,7 @@ class PlotRAA(common_base.CommonBase):
         self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12')
         
-        self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
+        self.theory_colors = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kAzure-4, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
         
         self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
         self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
@@ -57,7 +57,6 @@ class PlotRAA(common_base.CommonBase):
         self.figure_approval_status = 'Preliminary'
         
         self.xtitle = '#it{z}_{r}'
-        self.ytitle = '#frac{{1}}{{#it{{#sigma}}_{{#it{{z}}_{{r}} > 0.7}}}} #frac{{d#it{{#sigma}}}}{{d{}}}'.format(self.xtitle)
 
         self.debug_level = 0
         
@@ -111,14 +110,22 @@ class PlotRAA(common_base.CommonBase):
         self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
         self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
         
-        # Normalize to the integral over the reported range
+        # Normalize to the integral over the reported range except for the last bin,
+        # which is nonperturbative
         # Note that histograms are already scaled for bin width in run_analysis.get_obs_distribution()
-        integral_AA = self.h_main_AA.Integral(1, self.h_main_AA.GetNbinsX(), 'width')
+        n_bins = self.h_main_AA.GetNbinsX()
+        n_max = n_bins - 1
+        lower_limit = self.h_main_AA.GetXaxis().GetBinLowEdge(1)
+        upper_limit = self.h_main_AA.GetXaxis().GetBinUpEdge(n_max)
+        self.ytitle = f'#frac{{1}}{{ #it{{#sigma}}_{{ {lower_limit} < #it{{z}}_{{r}} < {upper_limit} }} }} #frac{{d#it{{#sigma}}}}{{d{self.xtitle}}}'
+        
+        print(f'Scaling data over {lower_limit} < z < {upper_limit}')
+        integral_AA = self.h_main_AA.Integral(1, n_max, 'width')
         self.h_main_AA.Scale(1./integral_AA)
         self.h_sys_AA.Scale(1./integral_AA)
         print(f'integral AA: {integral_AA}')
     
-        integral_pp = self.h_main_pp.Integral(1, self.h_main_pp.GetNbinsX(), 'width')
+        integral_pp = self.h_main_pp.Integral(1, n_max, 'width')
         self.h_main_pp.Scale(1./integral_pp)
         self.h_sys_pp.Scale(1./integral_pp)
         print(f'integral pp: {integral_pp}')
@@ -184,7 +191,7 @@ class PlotRAA(common_base.CommonBase):
         pad1.cd()
 
         myLegend = ROOT.TLegend(0.65,0.65,0.8,0.85)
-        self.utils.setup_legend(myLegend,0.055)
+        self.utils.setup_legend(myLegend, 0.055, sep=-0.1)
         
         self.h_main_pp.SetMarkerSize(1.5)
         self.h_main_pp.SetMarkerStyle(self.markers[0])
@@ -256,7 +263,7 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
 
         ratio_legend = ROOT.TLegend(0.43,0.75,0.6,0.97)
-        self.utils.setup_legend(ratio_legend,0.07)
+        self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
 
         myBlankHisto2.Draw('')
           
@@ -285,24 +292,26 @@ class PlotRAA(common_base.CommonBase):
                 sublabel = self.sublabel_list[i]
                 color = self.theory_colors[i]
                 
-                print(type(prediction))
                 if type(prediction) in [ROOT.TH1F]:
 
                     prediction.SetLineColor(0)
                     prediction.SetMarkerSize(0)
                     prediction.SetMarkerStyle(0)
                     prediction.SetFillColor(color)
+                    prediction.SetLineColor(color)
+                    prediction.SetLineWidth(6)
                     
                     prediction.Draw('E3 same')
-                    ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'F')
+                    ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'L')
 
-                if type(prediction) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                elif type(prediction) in [ROOT.TGraph]:
                 
                     prediction.SetFillColor(color)
-                    prediction.SetLineColor(0)
+                    prediction.SetLineColor(color)
+                    prediction.SetLineWidth(6)
                     
-                    prediction.Draw("3 same")
-                    ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'F')
+                    prediction.Draw('same')
+                    ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'L')
           
         ratio_legend.Draw()
         line = ROOT.TLine(self.bins[0], 1, self.bins[-1], 1)
@@ -325,7 +334,7 @@ class PlotRAA(common_base.CommonBase):
         
         x = 0.25
         text_latex.SetTextSize(0.065)
-        text = 'ALICE {}'.format(self.figure_approval_status)
+        text = '#bf{{ALICE}} {}'.format(self.figure_approval_status)
         text_latex.DrawLatex(x, 0.83, text)
         
         text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -380,8 +389,14 @@ class PlotRAA(common_base.CommonBase):
         # Normalization
         h_pp.Scale(1., 'width')
         h_AA.Scale(1., 'width')
-        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
-        h_AA.Scale(1./h_AA.Integral(1, h_AA.GetNbinsX()))
+        
+        n_bins = h_pp.GetNbinsX()
+        n_max = n_bins - 1
+        lower_limit = self.h_main_AA.GetXaxis().GetBinLowEdge(1)
+        upper_limit = self.h_main_AA.GetXaxis().GetBinUpEdge(n_max)
+        print(f'Scaling JETSCAPE over {lower_limit} < z < {upper_limit}')
+        h_pp.Scale(1./h_pp.Integral(1, n_max))
+        h_AA.Scale(1./h_AA.Integral(1, n_max))
 
         # Form ratio
         hRatio = h_AA.Clone()
@@ -394,7 +409,22 @@ class PlotRAA(common_base.CommonBase):
         self.sublabel_list.append('')
       
         #----------------------------------------------------------
-        
+        # Factorization (Ringer, Sato)
+        if 'factorization' in result:
+            zr = np.array(result['factorization']['zr'])
+            ratio = np.array(result['factorization']['ratio'])
+            uncertainty = np.array(result['factorization']['uncertainty'])
+                  
+            # Draw as a line, since the uncertainties are too small
+            n = len(zr)
+            xerr = np.zeros(n)
+            g = ROOT.TGraph(n, zr, ratio)
+            #g = ROOT.TGraphErrors(n, zr, ratio, xerr, uncertainty)
+            
+            # Add to theory list
+            self.prediction_list.append(g)
+            self.label_list.append('Medium jet functions')
+            self.sublabel_list.append('')
 
     #---------------------------------------------------------------
     # Rebin numpy arrays (xbins,y) representing a histogram,

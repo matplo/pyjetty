@@ -1,0 +1,49 @@
+# Theory predictions for z_r, 0-10%
+
+#result1:
+#  observable: 'leading_subjet_z'
+#  jetR: 0.2
+#  obs_label: 0.1
+#  min_pt: 60
+#  max_pt: 80
+#  file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/432533-02/leading_subjet_z/final_results/fFinalResults.root'
+#  file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/449697-02/leading_subjet_z/final_results/fFinalResults.root'
+#
+result2:
+  observable: 'leading_subjet_z'
+  jetR: 0.4
+  obs_label: 0.1
+  min_pt: 80
+  max_pt: 120
+  file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/432533-04/leading_subjet_z/final_results/fFinalResults.root'
+  file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/449697-04/leading_subjet_z/final_results/fFinalResults.root'
+  bins: [0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
+  
+  jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/492018/5020_PP/AnalysisResultsFinal.root'
+  jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/492018/OutputFile_Type5_qhatA10_B100_5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+
+result3:
+  observable: 'leading_subjet_z'
+  jetR: 0.4
+  obs_label: 0.2
+  min_pt: 80
+  max_pt: 120
+  file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/432533-04/leading_subjet_z/final_results/fFinalResults.root'
+  file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/449697-04/leading_subjet_z/final_results/fFinalResults.root'
+  bins: [0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
+    
+  jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/492018/5020_PP/AnalysisResultsFinal.root'
+  jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/492018/OutputFile_Type5_qhatA10_B100_5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+
+  # Please find below results for the subjet R_AA including some uncertainties. As I mentioned before, there are several limitations and we had to make some approximations that we cannot really quantify at this point. So the uncertainties don’t really represent the actual uncertainty of the calculation. Nevertheless, it still represents a rough estimate assuming universality + factorization in QCD.
+  # We also had to leave out the last bin 0.98-1 since it is nonperturbative (latest) for z=1. We normalized our results over the remaining bins.
+  # But in the future we plan to do a global fit and we can then check universality of the jet functions and so on.
+  factorization:
+    #zr: [0.7, 0.8,  0.8, 0.86, 0.86, 0.9, 0.9, 0.94, 0.94, 0.98]
+    #ratio: [0.8535124111866775, 0.8535124111866775, 0.893598144580025, 0.893598144580025, 0.9321469568800401, 0.9321469568800401, 0.9808024054984383, 0.9808024054984383, 1.1199678429429485, 1.1199678429429485]
+    #uncertainty: [0.014694528009061231, 0.014694528009061231, 0.009941774859060507, 0.009941774859060507, 0.00588644921871969, 0.00588644921871969, 0.0011806044097186254, 0.0011806044097186254, 0.01111838686064225, 0.01111838686064225]
+    zr: [0.75, 0.83, 0.88, 0.92, 0.96]
+    ratio: [0.8535124111866775, 0.893598144580025, 0.9321469568800401, 0.9808024054984383, 1.1199678429429485]
+    uncertainty: [0.014694528009061231, 0.009941774859060507, 0.00588644921871969, 0.0011806044097186254, 0.01111838686064225]
+
+
