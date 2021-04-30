@@ -112,6 +112,8 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
     self.create_output_subdir(output_dir_performance, 'data')
     if 'leading' in self.observable:
         self.create_output_subdir(output_dir_performance, 'z1_crosscheck')
+    if self.is_pp and 'inclusive' in self.observable:
+        self.create_output_subdir(output_dir_performance, 'subjet_matching_pp')
     if not self.is_pp:
       self.create_output_subdir(output_dir_performance, 'delta_pt')
     
@@ -146,6 +148,8 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
         self.plotting_utils.plot_obs_truth(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         if 'leading' in self.observable:
             self.plotting_utils.plot_z1_crosscheck(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+        if self.is_pp and 'inclusive' in self.observable:
+            self.plotting_utils.plot_subjet_matching_pp(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         
       if not self.is_pp:
       

@@ -665,3 +665,35 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     output_filename = os.path.join(self.output_dir, 'z1_crosscheck/h_{}_z1_crosscheck_R{}_{}_{}-{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
     c.SaveAs(output_filename)
     c.Close()
+
+  #---------------------------------------------------------------
+  # Plot fraction of det-level subjets without a unique match
+  # (e.g. for pt=80-120), as a function of z
+  def plot_subjet_matching_pp(self, jetR, obs_label, obs_setting, grooming_setting,
+                              xtitle, pt_bins_reported):
+    
+    # (jet_truth.pt(), z_det, successful_match)
+    name = f'h_match_fraction_{self.observable}_R{jetR}_{obs_label}{self.scaled_suffix}'
+    h3D = self.fMC.Get(name)
+
+    # Select pt range
+    h3D.GetXaxis().SetRangeUser(80., 120.)
+    
+    # Make projection for successful_match = True or False
+    h3D_denominator = h3D.Clone(f'h_denominator_{h3D.GetName()}')
+    h_denominator = h3D_denominator.Project3D('y')
+    
+    # Make successful_match=True projection
+    h3D_numerator = h3D.Clone(f'h_numerator_{h3D.GetName()}')
+    h3D_numerator.GetZaxis().SetRange(2, 2)
+    h_numerator = h3D_numerator.Project3D('y')
+
+    h_ratio = h_numerator.Clone()
+    h_ratio.SetName(f'h_ratio_{h_numerator.GetName()}')
+    h_ratio.Divide(h_denominator)
+    
+    h_ratio.GetYaxis().SetTitle('Matching fraction')
+    text=f'Inclusive subjets R={jetR},r={obs_setting}, 80.<p_{{T,jet}}<120.'
+
+    output_filename = os.path.join(self.output_dir, f'subjet_matching_pp/h_match_fraction_{self.observable}_R{jetR}_{obs_label}{self.suffix}.pdf')
+    self.plot_hist(h_ratio, output_filename, text=text)
