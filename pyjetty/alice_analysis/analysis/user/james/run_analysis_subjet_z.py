@@ -110,7 +110,8 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
     self.create_output_subdir(output_dir_performance, 'mc_projections_truth')
     self.create_output_subdir(output_dir_performance, 'truth')
     self.create_output_subdir(output_dir_performance, 'data')
-    self.create_output_subdir(output_dir_performance, 'z1_crosscheck')
+    if 'leading' in self.observable:
+        self.create_output_subdir(output_dir_performance, 'z1_crosscheck')
     if not self.is_pp:
       self.create_output_subdir(output_dir_performance, 'delta_pt')
     
@@ -143,8 +144,8 @@ class RunAnalysisSubjetZ(run_analysis_james_base.RunAnalysisJamesBase):
         self.plotting_utils.plot_obs_residual_obs(jetR, obs_label, self.xtitle)
         self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_truth(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_z1_crosscheck(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
-
+        if 'leading' in self.observable:
+            self.plotting_utils.plot_z1_crosscheck(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         
       if not self.is_pp:
       
