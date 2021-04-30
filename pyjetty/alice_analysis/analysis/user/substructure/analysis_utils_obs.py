@@ -57,14 +57,19 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   # and is typically taken to be +/- 0.5.
   #
   # This function overrides the virtual function in analysis_utils.py
+  #
+  # Note that at present the setup is a little janky -- this function
+  # is used to do the shape closure variations, but duplicate
+  # functions in cpptools/src/rutil perform the prior reweighting
+  # TO DO: unify this
   #---------------------------------------------------------------
   def prior_scale_factor_obs(self, obs_true, content, prior_variation_parameter):
 
     if self.observable == 'zg':
       return math.pow(obs_true, prior_variation_parameter)
-    elif self.observable == 'theta_g':
+    elif self.observable in ['theta_g', 'inclusive_subjet_z']:
       return (1 + prior_variation_parameter*(2*obs_true - 1))
-    elif 'subjet_z' in self.observable:
+    elif self.observable == 'leading_subjet_z':
       # Ax+B, where A=slope, B=offset at z=0
       # For 0.7<z<1.0, dz = 0.3 --> A = 1/dz, B = 1-(1-dz/2)*A
       dz = 0.3
