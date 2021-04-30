@@ -2,8 +2,8 @@
 
 #SBATCH --job-name=mergepthat
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=5
-#SBATCH --partition=std
-#SBATCH --time=24:00:00
+#SBATCH --partition=quick
+#SBATCH --time=2:00:00
 #SBATCH --array=1-66
 #SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
