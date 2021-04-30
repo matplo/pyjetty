@@ -15,8 +15,8 @@ result2:
   obs_label: 0.1
   min_pt: 80
   max_pt: 120
-  file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/432533-04/leading_subjet_z/final_results/fFinalResults.root'
-  file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/449697-04/leading_subjet_z/final_results/fFinalResults.root'
+  file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04/leading_subjet_z/final_results/fFinalResults.root'
+  file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04/leading_subjet_z/final_results/fFinalResults.root'
   bins: [0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
   
   jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/492018/5020_PP/AnalysisResultsFinal.root'
@@ -28,8 +28,8 @@ result3:
   obs_label: 0.2
   min_pt: 80
   max_pt: 120
-  file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/432533-04/leading_subjet_z/final_results/fFinalResults.root'
-  file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/449697-04/leading_subjet_z/final_results/fFinalResults.root'
+  file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04/leading_subjet_z/final_results/fFinalResults.root'
+  file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04/leading_subjet_z/final_results/fFinalResults.root'
   bins: [0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
     
   jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/492018/5020_PP/AnalysisResultsFinal.root'

@@ -297,7 +297,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     ymin = 2e-4
     ymax_ratio = 1.99
     if self.observable == 'leading_subjet_z':
-        ymax = 12.
+        ymax = 16.99
         ymin = 1e-1
         ymax_ratio = 2.19
     if self.observable == 'inclusive_subjet_z':
