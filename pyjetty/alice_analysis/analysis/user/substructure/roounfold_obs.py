@@ -513,7 +513,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth,
                                                    max_pt_truth, option)
                                                    
-      elif option == '':
+      elif option == '' and i == reg_param_final + 2:
         # Get input distribution
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
         hData2D = getattr(self, name)
@@ -607,7 +607,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         h_data.SetLineWidth(4)
         h_data.Draw('L hist same')
         leg.AddEntry(h_data, 'input data', 'L')
-
+            
     leg.Draw()
 
     # Draw horizontal line at y = 1
@@ -1092,8 +1092,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hUnfolded.SetName('hUnfolded_{}_R{}_{}_{}-clone'.format(self.observable, jetR, obs_label, i))
     
     # Undo the kinematic efficiency correction -- we don't want to apply it for the refolding test
-    hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
-    hUnfolded.Multiply(hKinematicEfficiency)
+    if not self.use_miss_fake:
+        hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
+        hUnfolded.Multiply(hKinematicEfficiency)
 
     hFoldedTruth = response.ApplyToTruth(hUnfolded) # Produces folded distribution PerBin
     # (unfolded spectrum is also PerBin at this point)
