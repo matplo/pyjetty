@@ -39,10 +39,14 @@ class PlotRAA(common_base.CommonBase):
         config_file = './subjet_z/plot.yaml'
         with open(config_file, 'r') as stream:
             config = yaml.safe_load(stream)
+            self.file_pp_name = config['file_pp']
+            self.file_AA_name = config['file_AA']
+            self.file_jetscape_pp_name = config['jetscape_pp']
+            self.file_jetscape_AA_name = config['jetscape_AA']
         self.config_results = [config[name] for name in config if 'result' in name ]
 
         self.plot_data = True
-        self.plot_theory = True
+        self.plot_theory = False
 
         self.colors = [600-6, 632-4]
         self.ratio_color = ROOT.kGray+3
@@ -81,8 +85,6 @@ class PlotRAA(common_base.CommonBase):
         self.obs_label = result['obs_label']
         self.min_pt = result['min_pt']
         self.max_pt = result['max_pt']
-        self.file_pp_name = result['file_pp']
-        self.file_AA_name = result['file_AA']
         self.theory_colors = self.theory_colors
         self.line_style = self.line_style
         self.line_width = self.line_width
@@ -262,7 +264,7 @@ class PlotRAA(common_base.CommonBase):
         
         myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
 
-        ratio_legend = ROOT.TLegend(0.43,0.75,0.6,0.97)
+        ratio_legend = ROOT.TLegend(0.33,0.75,0.5,0.97)
         self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
 
         myBlankHisto2.Draw('')
@@ -343,7 +345,7 @@ class PlotRAA(common_base.CommonBase):
         text = 'Charged jets   anti-#it{k}_{T}'
         text_latex.DrawLatex(x, 0.67, text)
         
-        text = '#it{R} = ' + str(self.jetR) + '   #it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
+        text = '#it{R} = ' + str(self.jetR) + '   |#it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
         text_latex.DrawLatex(x, 0.6, text)
         
         text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
@@ -368,8 +370,8 @@ class PlotRAA(common_base.CommonBase):
     
         #----------------------------------------------------------
         # JETSCAPE
-        f_pp = ROOT.TFile(result['jetscape_pp'], 'READ')
-        f_AA = ROOT.TFile(result['jetscape_AA'], 'READ')
+        f_pp = ROOT.TFile(self.file_jetscape_pp_name, 'READ')
+        f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
         
         #h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
         h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}Scaled'
@@ -410,10 +412,10 @@ class PlotRAA(common_base.CommonBase):
       
         #----------------------------------------------------------
         # Factorization (Ringer, Sato)
-        if 'factorization' in result:
-            zr = np.array(result['factorization']['zr'])
-            ratio = np.array(result['factorization']['ratio'])
-            uncertainty = np.array(result['factorization']['uncertainty'])
+        if 'medium_jet_functions' in result:
+            zr = np.array(result['medium_jet_functions']['zr'])
+            ratio = np.array(result['medium_jet_functions']['ratio'])
+            uncertainty = np.array(result['medium_jet_functions']['uncertainty'])
                   
             # Draw as a line, since the uncertainties are too small
             n = len(zr)

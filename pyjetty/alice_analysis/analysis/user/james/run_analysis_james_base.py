@@ -298,13 +298,13 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     ymax_ratio = 1.99
     if self.observable == 'leading_subjet_z':
         ymax = 16.99
-        ymin = 1e-1
-        ymax_ratio = 2.19
+        ymin = 1e-3
+        ymax_ratio = 1.99
     if self.observable == 'inclusive_subjet_z':
         ymax = 2e3
         ymin = 2e-1
         pad1.SetLogy()
-        ymax_ratio = 2.19
+        ymax_ratio = 1.99
     
     # Get xmin and xmax over all hists
     xmin = 1
@@ -455,7 +455,66 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         g.SetLineWidth(4)
         g.SetFillColor(color)
         g.SetFillColorAlpha(color, 0.5)
-      
+
+      # Scale inclusive subjets to N_jets rather than N_subjets -- fill in by hand for now
+      z_min = 0.71
+      if self.observable == 'leading_subjet_z':
+        
+        integral_total = h.Integral(1, h.GetNbinsX(), 'width')
+        print(f'integral_total, leading_subjet_z, {obs_label}: {integral_total}')
+        h.Scale(1./integral_total)
+        h_sys.Scale(1./integral_total)
+        
+        integral_total_pythia = hPythia.Integral(1, hPythia.GetNbinsX(), 'width')
+        print(f'integral_total_pythia, leading_subjet_z, {obs_label}: {integral_total_pythia}')
+        hPythia.Scale(1./integral_total_pythia)
+        
+        integral = h.Integral(h.FindBin(z_min), h.GetNbinsX(), 'width')
+        print(f'integral, leading_subjet_z, {obs_label}: {integral}')
+        
+        integral_pythia = hPythia.Integral(hPythia.FindBin(z_min), hPythia.GetNbinsX(), 'width')
+        print(f'integral_pythia, leading_subjet_z, {obs_label}: {integral_pythia}')
+        
+      if self.observable == 'inclusive_subjet_z':
+        
+        if np.isclose(float(obs_label), 0.1):
+            integral_leading_subjet = 0.7865922387180659 # R=0.4, r=0.1
+            integral_leading_subjet_pythia = 0.7441921938539977
+        elif np.isclose(float(obs_label), 0.2):
+            integral_leading_subjet = 0.9365660517984986 # R=0.4, r=0.2
+            integral_leading_subjet_pythia = 0.9296991675820692
+
+        integral = h.Integral(h.FindBin(z_min), h.GetNbinsX(), 'width')
+        print(f'integral, inclusive_subjet_z, {obs_label}: {integral}')
+        normalization = integral_leading_subjet / integral
+        print(f'normalization: {normalization}')
+        h.Scale(normalization)
+        h_sys.Scale(normalization)
+
+        integral_pythia = hPythia.Integral(hPythia.FindBin(z_min), hPythia.GetNbinsX(), 'width')
+        print(f'integral_pythia, inclusive_subjet_z, {obs_label}: {integral_pythia}')
+        normalization_pythia = integral_leading_subjet_pythia / integral_pythia
+        print(f'normalization_pythia: {normalization_pythia}')
+        hPythia.Scale(normalization_pythia)
+        
+      # Compute <N_subjets>
+      n_subjets = h.Integral(1, h.GetNbinsX(), 'width')
+      print(f'<N_subjets>, {obs_label}: {n_subjets}')
+        
+      # Compute z_loss for leading subjets
+      # Should come up with a better way to decide bin center
+      z_moment = 0.
+      if self.observable == 'leading_subjet_z':
+        for i in range(1, h.GetNbinsX()+1):
+            zr = h.GetBinCenter(i)
+            content = h.GetBinContent(i)
+            width =  h.GetXaxis().GetBinWidth(i)
+            z_moment += zr*content*width
+            #print(f'bin: {i} (zr = {zr}, width = {width}): content = {content} -- {zr*content*width}')
+        z_loss = 1 - z_moment
+        #print(z_moment)
+        #print(f'z_loss for r={obs_label}: {1-z_moment}')
+
       if plot_ratio:
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
@@ -490,43 +549,6 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         hRatioStat.SetLineColor(color)
 
       pad1.cd()
-      
-      # Scale inclusive subjets to N_jets rather than N_subjets -- fill in by hand for now
-      if self.observable == 'leading_subjet_z':
-        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX(), 'width')
-        print(f'integral, leading_subjet_z, {obs_label}: {integral}')
-      if self.observable == 'inclusive_subjet_z':
-        integral = h.Integral(h.FindBin(0.71), h.GetNbinsX(), 'width')
-        #print(f'integral, inclusive_subjet_z, {obs_label}: {integral}')
-        
-        if np.isclose(float(obs_label), 0.1):
-            integral_leading_subjet = 0.7764822604248643 # R=0.4, r=0.1
-        elif np.isclose(float(obs_label), 0.2):
-            integral_leading_subjet = 0.9257835945755017 # R=0.4, r=0.2
-
-        normalization = integral_leading_subjet / integral
-        print(f'normalization: {normalization}')
-        h.Scale(normalization)
-        h_sys.Scale(normalization)
-        hPythia.Scale(normalization)
-        
-      # Compute <N_subjets>
-      n_subjets = h.Integral(1, h.GetNbinsX(), 'width')
-      print(f'<N_subjets>, {obs_label}: {n_subjets}')
-        
-      # Compute z_loss for leading subjets
-      # Should come up with a better way to decide bin center
-      z_moment = 0.
-      if self.observable == 'leading_subjet_z':
-        for i in range(1, h.GetNbinsX()+1):
-            zr = h.GetBinCenter(i)
-            content = h.GetBinContent(i)
-            width =  h.GetXaxis().GetBinWidth(i)
-            z_moment += zr*content*width
-            #print(f'bin: {i} (zr = {zr}, width = {width}): content = {content} -- {zr*content*width}')
-        z_loss = 1 - z_moment
-        #print(z_moment)
-        #print(f'z_loss for r={obs_label}: {1-z_moment}')
 
       if plot_pythia:
         plot_errors = False
@@ -564,7 +586,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           text_latex.SetTextSize(0.05)
           x = 0.3
           y = 0.3 - 0.7*float(obs_setting)
-          text = f'< #it{{z}}_{{loss}}^{{{subobs_label} = {obs_setting}}} > = {np.round(z_loss,2)}'
+          text = f'< #it{{z}}_{{loss}}^{{{subobs_label} = {obs_setting}}} > = {np.round(z_loss,2):.2f}'
           text_latex.DrawLatex(x, y, text)
       elif self.observable == 'inclusive_subjet_z':
           pad1.cd()
@@ -573,7 +595,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           text_latex.SetTextSize(0.05)
           x = 0.67
           y = 0.85 - 0.7*float(obs_setting)
-          text = f'< #it{{N}}_{{subjets}}^{{{subobs_label} = {obs_setting}}} > = {np.round(n_subjets,2)}'
+          text = f'< #it{{N}}_{{subjets}}^{{{subobs_label} = {obs_setting}}} > = {np.round(n_subjets,2):.1f}'
           text_latex.DrawLatex(x, y, text)
         
     pad1.cd()
@@ -586,10 +608,10 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     
-    text_latex.SetTextSize(0.07)
+    text_latex.SetTextSize(0.06)
     x = 0.25
     y = 0.86
-    text = 'ALICE {}'.format(self.figure_approval_status)
+    text = '#bf{{ALICE}} {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(x, y, text)
     
     text_latex.SetTextSize(0.055)

@@ -33,21 +33,21 @@ inclusive_subjet_z:
   # RM binnings from processing:
   #   pt-truth: 10 GeV
   #   pt-det: 5 GeV
-  #   z-truth: 0.02
+  #   z-truth: 0.01
   #   z-det: 0.01
 
   config1:
     subjet_R: 0.1
-    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 300]
+    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    obs_bins_truth: [0., 0.02, 0.04, 0.1, 0.3, 0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
-    obs_bins_det: [0., 0.02, 0.04, 0.1, 0.3, 0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
+    obs_bins_truth: [0., 0.02, 0.04, 0.1, 0.3, 0.6, 0.7, 0.77, 0.83, 0.89, 0.95, 1.0]
+    obs_bins_det: [0., 0.02, 0.04, 0.1, 0.3, 0.6, 0.7, 0.77, 0.83, 0.89, 0.95, 1.0]
     obs_bins_det_sys_binning: [0., 0.01, 0.02, 0.03, 0.04, 0.06, 0.12, 0.18, 0.24, 0.3, 0.36, 0.42, 0.48, 0.54, 0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 0.99, 1.0]
 
   config2:
     subjet_R: 0.2
-    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 300]
+    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     obs_bins_truth: [0., 0.02, 0.04, 0.1, 0.3, 0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
@@ -68,21 +68,21 @@ leading_subjet_z:
   # RM binnings from processing:
   #   pt-truth: 10 GeV
   #   pt-det: 5 GeV
-  #   z-truth: 0.02
+  #   z-truth: 0.01
   #   z-det: 0.01
 
   config1:
     subjet_R: 0.1
-    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 300]
+    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
-    obs_bins_truth: [0., 0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
-    obs_bins_det: [0., 0.7, 0.78, 0.86, 0.94, 0.98, 1.0]
+    obs_bins_truth: [0., 0.6, 0.7, 0.77, 0.83, 0.89, 0.95, 1.0]
+    obs_bins_det: [0., 0.6, 0.7, 0.77, 0.83, 0.89, 0.95, 1.0]
     obs_bins_det_sys_binning: [0., 0.5, 0.6, 0.7, 0.8, 0.9, 0.93, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0]
-
+    
   config2:
     subjet_R: 0.2
-    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 300]
+    pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
     obs_bins_truth: [0., 0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
@@ -93,19 +93,18 @@ leading_subjet_z:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/432533-04'
+output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04'
 roounfold_path: '/Users/jamesmulligan/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.dylib'
 
-analysis_observable: 'leading_subjet_z'
+analysis_observable: 'inclusive_subjet_z'
 do_unfolding: False
 force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Prel. candidate'
+figure_approval_status: 'Preliminary'
 
 # List of which systematics to perform
-# Options: [main, trkeff, prior1, prior2, truncation, binning]
 systematics_list:
   - main
   - trkeff
@@ -117,14 +116,15 @@ systematics_list:
   - fastsim_generator1
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC17pq/432533/AnalysisResultsFinal.root'
-main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8/432534/AnalysisResultsFinal.root'
-trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_trkeff/432535/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC17pq/493677/AnalysisResultsFinal.root'
+main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8/493678/AnalysisResultsFinal.root'
+trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_trkeff/493679/AnalysisResultsFinal.root'
 fastsim_response:
- - '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_fastsim_pythia/432536/AnalysisResultsFinal.root'
- - '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_fastsim_herwig/432537/AnalysisResultsFinal.root'
+ - '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_fastsim_pythia/493680/AnalysisResultsFinal.root'
+ - '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_fastsim_herwig/493681/AnalysisResultsFinal.root'
 
 # Prior variation parameters
-prior_variation_option: 0
-prior1_variation_parameter: 1.
-prior2_variation_parameter: -1.
+#prior_variation_option: 4              # Leading subjets
+prior_variation_option: 1             # Inclusive subjets
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5
