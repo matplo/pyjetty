@@ -46,14 +46,14 @@ class PlotRAA(common_base.CommonBase):
         self.config_results = [config[name] for name in config if 'result' in name ]
 
         self.plot_data = True
-        self.plot_theory = False
+        self.plot_theory = True
 
         self.colors = [600-6, 632-4]
         self.ratio_color = ROOT.kGray+3
         self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12')
         
-        self.theory_colors = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kAzure-4, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
+        self.theory_colors = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kPink+1,ROOT.kBlue-10, ROOT.kAzure-4, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kCyan-2]
         
         self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
         self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
@@ -310,7 +310,7 @@ class PlotRAA(common_base.CommonBase):
                 
                     prediction.SetFillColor(color)
                     prediction.SetLineColor(color)
-                    prediction.SetLineWidth(6)
+                    prediction.SetLineWidth(8)
                     
                     prediction.Draw('same')
                     ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'L')
@@ -373,8 +373,7 @@ class PlotRAA(common_base.CommonBase):
         f_pp = ROOT.TFile(self.file_jetscape_pp_name, 'READ')
         f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
         
-        #h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
-        h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}Scaled'
+        h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
         h_pp = f_pp.Get(h_name)
         h_pp.SetDirectory(0)
         f_pp.Close()
