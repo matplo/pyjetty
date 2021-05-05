@@ -33,7 +33,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         #------------------------------------------------------
         
-        self.jetR = 0.4
+        self.jetR = 0.2
 
         self.base_dir = '/Users/jamesmulligan/Analysis_Angularity/plot-angularity/v2'
         self.file = 'fFinalResults.root'
@@ -60,10 +60,10 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.scale_factor_ungroomed_beta2_highpt = 0.5
         self.scale_factor_ungroomed_beta15_highpt = 0.7
 
-        self.xtitle =  '#it{#lambda}_{#it{#beta}}'
-        self.ytitle = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}}'
-        self.xtitle_groomed =  '#it{#lambda}_{#it{#beta},g}'
-        self.ytitle_groomed = '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta},g}}'
+        self.xtitle =  '#it{#lambda}_{#it{#alpha}}'
+        self.ytitle = '#frac{1}{#it{#sigma}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}}'
+        self.xtitle_groomed =  '#it{#lambda}_{#it{#alpha},g}'
+        self.ytitle_groomed = '#frac{1}{#it{#sigma}_{inc}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha},g}}'
 
         self.left_offset = 0.2
         self.bottom_offset = 0.15
@@ -391,12 +391,12 @@ class PlotAngularityFigures(common_base.CommonBase):
             scale_label = self.scale_histogram_for_visualization(self.h_herwig_list[i], i, minpt, groomed)
             self.h_herwig_list[i].Draw('L hist same')
 
-            leg.AddEntry(self.h_list[i],'#beta = {}{}'.format(beta, scale_label),'P')
+            leg.AddEntry(self.h_list[i],'#it{{#alpha}} = {}{}'.format(beta, scale_label),'P')
             
             if i == 2:
                 leg2.AddEntry(self.h_sys_list[i], 'Sys. uncertainty', 'f')
                 leg2.AddEntry(self.h_pythia_list[i], 'PYTHIA8 Monash 2013', 'l')
-                leg2.AddEntry(self.h_herwig_list[i], 'HERWIG7', 'l')
+                leg2.AddEntry(self.h_herwig_list[i], 'Herwig7', 'l')
 
         for i,beta in enumerate(self.beta_list):
             self.h_list[i].Draw('PE X0 same')
@@ -432,7 +432,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             system2.SetTextSize(size*scale_factor)
             system2.Draw()
 
-            system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    | #it{{#eta}}_{{jet}}| = {}'.format(R, 0.9-R))
+            system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    |#it{{#eta}}_{{jet}}| = {}'.format(R, 0.9-R))
             system3.SetNDC()
             system3.SetTextSize(size*scale_factor)
             system3.Draw()
@@ -459,7 +459,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.plot_list.append(system4)
 
         if groomed and pad == 1:
-            system5 = ROOT.TLatex(x, ymax-4.2*dy, 'Soft Drop #it{z}_{cut} = 0.2 #beta_{SD} = 0')
+            system5 = ROOT.TLatex(x, ymax-4.2*dy, 'Soft Drop #it{z}_{cut} = 0.2 #beta = 0')
             system5.SetNDC()
             system5.SetTextSize(size*scale_factor)
             system5.Draw()
@@ -530,7 +530,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             myBlankHisto3.SetXTitle(self.xtitle_groomed)
         else:
             myBlankHisto3.SetXTitle(self.xtitle)
-        myBlankHisto3.SetYTitle('#frac{Data}{HERWIG7}')
+        myBlankHisto3.SetYTitle('#frac{Data}{Herwig7}')
         if pad in [1,2]:
             myBlankHisto3.GetYaxis().SetTitleSize(0.2)
             myBlankHisto3.GetYaxis().SetTitleOffset(0.4)
