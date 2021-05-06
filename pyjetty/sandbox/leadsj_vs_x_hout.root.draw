@@ -1,0 +1,256 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+##normalize index=0
+#scale index=0 fout=./qgratio.root
+leadsj_vs_x_bias_hout.root 		:h_jpt :p  : title=j_pt
+leadsj_vs_x_bias_hout.root 		:h_jpt_quark :p  : title=quark
+leadsj_vs_x_bias_hout.root 		:h_jpt_glue :p  : title=glue
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+##normalize index=0
+#scale index=0 fout=./qgratio_s.root
+leadsj_vs_x_bias_hout.root 		:h_cut_jpt :p  : title=j_pt
+leadsj_vs_x_bias_hout.root 		:h_cut_jpt_quark :p  : title=quark
+leadsj_vs_x_bias_hout.root 		:h_cut_jpt_glue :p  : title=glue
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=anti-k_{T} R=0.4 |#eta^{jet}|<1 jets from ch. part.
+
+#x p_{T}^{ch. p. jet} (GeV/c)
+#y fraction
+#maxy 1.1
+#miny 0
+
+qgratio.root : o_0 : p : title=quark fraction
+qgratio_s.root : o_0 : hist +f1001 +a20 -k noleg: title=quark fraction
+
+qgratio.root : o_1 : p : title=glue fraction
+qgratio_s.root : o_1 : hist +f1001 +a20 -k noleg: title=glue fraction
+
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title inclusive
+
+#x z_{g}
+#y z_{lead. subjet}
+
+#2dxrange 0, 0.5
+#2dyrange 0, 1.0
+#logz 1
+#normalize self
+leadsj_vs_x_bias80_hout.root : hs_zg_sjz01 : colz : title=x
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title quarks
+
+#x z_{g}
+#y z_{lead. subjet}
+
+#2dxrange 0, 0.5
+#2dyrange 0, 1.0
+#logz 1
+#normalize self
+leadsj_vs_x_bias80_hout.root : hs_zg_sjz01_quark : colz : title=x
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title gluons
+
+#x z_{g}
+#y z_{lead. subjet}
+
+#2dxrange 0, 0.5
+#2dyrange 0, 1.0
+#logz 1
+#normalize self
+leadsj_vs_x_bias80_hout.root : hs_zg_sjz01_glue : colz : title=x
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title inclusive
+
+#x #theta_{g}
+#y z_{lead. subjet}
+#logz 1
+
+#2dxrange 0, 1.0
+#2dyrange 0, 1.0
+#logz 1
+#normalize self
+leadsj_vs_x_bias80_hout.root : hs_thg_sjz01 : colz : title=x
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title quarks
+
+#x #theta_{g}
+#y z_{lead. subjet}
+#logz 1
+
+#2dxrange 0, 1.0
+#2dyrange 0, 1.0
+#logz 1
+#normalize self
+leadsj_vs_x_bias80_hout.root : hs_thg_sjz01_quark : colz : title=x
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title gluons
+
+#x #theta_{g}
+#y z_{lead. subjet}
+#logz 1
+
+#2dxrange 0, 1.0
+#2dyrange 0, 1.0
+#logz 1
+#normalize self
+leadsj_vs_x_bias80_hout.root : hs_thg_sjz01_glue : colz : title=x
+
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5 TeV
+
+#x z_{subjet}
+#y counts
+#logy 1
+
+#legend 0.436,0.620,0.834,0.864, title=anti-k_{T} R=0.4 |#eta^{jet}|<1 jets from ch. part.; subjet r=0.1
+#normalize index=2
+#miny 1e-2
+#y dN/dz
+#logy 1
+#xrange 0, 1.0
+
+
+leadsj_vs_x_bias80_hout.root : hs_isjz01 : hist l +l1 +p20 +k1: title=inclusive subjets
+leadsj_vs_x_bias80_hout.root : hs_sjz01 : p -k +p24 +k1: title=leading subjets
+
+leadsj_vs_x_bias80_hout.root : hs_isjz01_quark : hist l +l1 +p21 +k2: title=inclusive subjets - quark
+leadsj_vs_x_bias80_hout.root : hs_sjz01_quark : p -k +p25 +k2: title=leading subjets - quark
+
+leadsj_vs_x_bias80_hout.root : hs_isjz01_glue : hist l +l1 +p34 +k4: title=inclusive subjets - gluon
+leadsj_vs_x_bias80_hout.root : hs_sjz01_glue : p -k +p28 +k4: title=leading subjets - gluon
+
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5 TeV
+
+#x z_{subjet}
+#y counts
+#logy 1
+
+#legend pos=up title=anti-k_{T} R=0.4 |#eta^{jet}|<1 jets from ch. part.; subjet r=0.1
+
+leadsj_vs_x_bias80_hout.root : hs_isjz01 : hist : title=inclusive subjets
+leadsj_vs_x_bias80_hout.root : hs_isjz01_quark : hist : title=inclusive subjets - quark
+leadsj_vs_x_bias80_hout.root : hs_isjz01_glue : hist : title=inclusive subjets - gluon
+
+#scale index=0 fout=./qgratio_isjz.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5 TeV
+
+#x z_{subjet}
+#y counts
+#logy 1
+
+#legend pos=up title=anti-k_{T} R=0.4 |#eta^{jet}|<1 jets from ch. part.; subjet r=0.1
+
+leadsj_vs_x_bias80_hout.root : hs_sjz01 : hist : title=leading subjets
+leadsj_vs_x_bias80_hout.root : hs_sjz01_quark : hist : title=leading subjets - quark
+leadsj_vs_x_bias80_hout.root : hs_sjz01_glue : hist : title=leading subjets - gluon
+
+#scale index=0 fout=./qgratio_lsjz.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5 TeV
+#legend pos=ur
+
+#legend 0.436,0.664,0.834,0.864, title=anti-k_{T} R=0.4 |#eta^{jet}|<1 jets from ch. part.; subjet r=0.1
+#normalize index=0
+#y ratio
+#miny 0
+#maxy 1.6
+#xrange -0.0, 1.0
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qgratio_isjz.root 		:o_0 : hist l +l1 +p21 +k2  : title=inclusive subjets - quark / inclusive subjets
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qgratio_isjz.root 		:o_1 : hist l +l1 +p34 +k4  : title=inclusive subjets - gluon / inclusive subjets
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qgratio_lsjz.root 		:o_0 : p -k +p25 +k2  : title=leading subjets - quark / leading subjets
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qgratio_lsjz.root 		:o_1 : p -k +p28 +k4  : title=leading subjets - gluon / leading subjets
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5 TeV
+
+#x #theta_{g}
+#y counts
+#logy 1
+
+#legend pos=up title=anti-k_{T} R=0.4 |#eta^{jet}|<1 jets from ch. part.; subjet r=0.1
+
+leadsj_vs_x_bias80_hout.root : hs_thg : hist : title=leading subjets
+leadsj_vs_x_bias80_hout.root : hs_thg_quark : hist : title=leading subjets - quark
+leadsj_vs_x_bias80_hout.root : hs_thg_glue : hist : title=leading subjets - gluon
+
+#scale index=0 fout=./qgratio_thg.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title PYTHIA8 pp #sqrt{s} = 5 TeV
+#legend pos=ur
+
+#legend 0.436,0.664,0.834,0.864, title=anti-k_{T} R=0.4 |#eta^{jet}|<1 jets from ch. part.; subjet r=0.1 
+#comment 0.677,0.691,0.998,0.776, item=Soft Drop item=#beta=0, z_{cut}>0.2 tx_size=0.035
+#normalize index=0
+#y ratio
+#miny 0
+#maxy 1.6
+#xrange -0.0, 1.0
+
+./qgratio_thg.root 		:o_0 : p -k +p25 +k2  : title= quark / inclusive
+./qgratio_thg.root 		:o_1 : p -k +p28 +k4  : title= gluon / inclusive
