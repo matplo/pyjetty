@@ -91,6 +91,7 @@ class PlotRAA(common_base.CommonBase):
         
         # Get binning to plot
         self.bins = np.array(result['bins'])
+        self.bin_widths = np.diff(self.bins)
         self.n_bins = len(self.bins) - 1
 
         # Get hists from ROOT file
@@ -112,26 +113,28 @@ class PlotRAA(common_base.CommonBase):
         self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
         self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
         
-        # Normalize to the integral over the reported range except for the last bin,
-        # which is nonperturbative
-        # Note that histograms are already scaled for bin width in run_analysis.get_obs_distribution()
-        n_bins = self.h_main_AA.GetNbinsX()
-        n_max = n_bins - 1
-        lower_limit = self.h_main_AA.GetXaxis().GetBinLowEdge(1)
-        upper_limit = self.h_main_AA.GetXaxis().GetBinUpEdge(n_max)
-        self.ytitle = f'#frac{{1}}{{ #it{{#sigma}}_{{ {lower_limit} < #it{{z}}_{{r}} < {upper_limit} }} }} #frac{{d#it{{#sigma}}}}{{d{self.xtitle}}}'
+        self.ytitle = f'#frac{{1}}{{ #it{{#sigma}}_{{#it{{z}}_{{r}} > {self.bins[0]} }} }} #frac{{d#it{{#sigma}}}}{{d{self.xtitle}}}'
         
-        print(f'Scaling data over {lower_limit} < z < {upper_limit}')
-        integral_AA = self.h_main_AA.Integral(1, n_max, 'width')
+        # Normalize to the integral over the reported range except for the last bin,
+        # Note that histograms are already scaled for bin width in run_analysis.get_obs_distribution()
+        integral_AA = self.h_main_AA.Integral(1, self.n_bins, 'width')
         self.h_main_AA.Scale(1./integral_AA)
         self.h_sys_AA.Scale(1./integral_AA)
-        print(f'integral AA: {integral_AA}')
     
-        integral_pp = self.h_main_pp.Integral(1, n_max, 'width')
+        integral_pp = self.h_main_pp.Integral(1, self.n_bins, 'width')
         self.h_main_pp.Scale(1./integral_pp)
         self.h_sys_pp.Scale(1./integral_pp)
-        print(f'integral pp: {integral_pp}')
         
+        # Also store the integral over the reported range except for the last bin,
+        # in order to normalize in-medium jet function prediction
+        self.integral_AA_truncated = self.h_main_AA.Integral(1, self.n_bins-1, 'width')
+        self.integral_pp_truncated = self.h_main_pp.Integral(1, self.n_bins-1, 'width')
+        print(f'Integral over full range (AA): {integral_AA}')
+        print(f'Integral over truncated range (AA): {self.integral_AA_truncated}')
+        print(f'Integral over full range (pp): {integral_pp}')
+        print(f'Integral over truncated range (pp): {self.integral_pp_truncated}')
+        
+        # Form ratio
         self.h_ratio = self.h_main_AA.Clone()
         self.h_ratio.Divide(self.h_main_pp)
         self.h_ratio_sys = self.h_sys_AA.Clone()
@@ -351,8 +354,8 @@ class PlotRAA(common_base.CommonBase):
         text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
         text_latex.DrawLatex(x, 0.51, text)
         
-        text = 'Leading subjets' + '   #it{r} = ' + str(self.obs_label)
-        text_latex.DrawLatex(x, 0.42, text)
+        text = 'anti-#it{k}_{T} subjets' + '   #it{r} = ' + str(self.obs_label)
+        text_latex.DrawLatex(x, 0.41, text)
         
         myLegend.Draw()
 
@@ -390,14 +393,8 @@ class PlotRAA(common_base.CommonBase):
         # Normalization
         h_pp.Scale(1., 'width')
         h_AA.Scale(1., 'width')
-        
-        n_bins = h_pp.GetNbinsX()
-        n_max = n_bins - 1
-        lower_limit = self.h_main_AA.GetXaxis().GetBinLowEdge(1)
-        upper_limit = self.h_main_AA.GetXaxis().GetBinUpEdge(n_max)
-        print(f'Scaling JETSCAPE over {lower_limit} < z < {upper_limit}')
-        h_pp.Scale(1./h_pp.Integral(1, n_max))
-        h_AA.Scale(1./h_AA.Integral(1, n_max))
+        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
+        h_AA.Scale(1./h_AA.Integral(1, h_pp.GetNbinsX()))
 
         # Form ratio
         hRatio = h_AA.Clone()
@@ -413,14 +410,26 @@ class PlotRAA(common_base.CommonBase):
         # Factorization (Ringer, Sato)
         if 'medium_jet_functions' in result:
             zr = np.array(result['medium_jet_functions']['zr'])
-            ratio = np.array(result['medium_jet_functions']['ratio'])
-            uncertainty = np.array(result['medium_jet_functions']['uncertainty'])
+            y_vac = np.array(result['medium_jet_functions']['y_vac'])
+            y_med = np.array(result['medium_jet_functions']['y_med'])
+            
+            # Compute integral (excluding the last measurement bin)
+            # Note: already normalized by bin widths
+            integral_medium_jet_functions_vac = np.sum(y_vac)
+            integral_medium_jet_functions_med = np.sum(y_med)
+            
+            # Normalize to integral of data (excluding the last measurement bin)
+            scale_factor_pp = self.integral_pp_truncated / integral_medium_jet_functions_vac
+            scale_factor_AA = self.integral_AA_truncated / integral_medium_jet_functions_med
+            y_med_normalized = scale_factor_AA*y_med
+            y_vac_normalized = scale_factor_pp*y_vac
+
+            # Form ratio
+            ratio = np.divide(y_med_normalized, y_vac_normalized)
                   
             # Draw as a line, since the uncertainties are too small
             n = len(zr)
-            xerr = np.zeros(n)
             g = ROOT.TGraph(n, zr, ratio)
-            #g = ROOT.TGraphErrors(n, zr, ratio, xerr, uncertainty)
             
             # Add to theory list
             self.prediction_list.append(g)
