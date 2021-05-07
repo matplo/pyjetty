@@ -24,14 +24,27 @@ def skim(input_file, output_dir):
 
         # Change format: jet, particle, 4-vector
         dataset = np.transpose(np.array(dataset0),(0,2,1)) 
-            
+
         # Reorder 4-vector from (px,py,pz,E) to (E,px,py,pz)
         dataset[:,:,[0,1,2,3]] = dataset[:,:,[3,0,1,2]]
             
         # Replace nan with zero
         where_are_nan = np.isnan(dataset)
         dataset[where_are_nan] = 0.
-            
+
+        # Compute jet E
+        threshold = 60.
+        jet_E = [np.sum([particle[0] for particle in jet]) for jet in dataset]
+        print(f'jet_E: {jet_E}')
+        jet_E_mask = [E > threshold for E in jet_E]
+        print(f'jet_E > {threshold}: {jet_E_mask}')
+        dataset = dataset[jet_E_mask]
+                    
+        # Apply jet pt cut
+        #hard_ghost = (dataset * np.expand_dims(np.logical_and(hdf['jetsubs_cons_kt_ghost'][:] == 1, hdf['jetsubs_cons_hard_ue'][:] == 1), axis = 2).astype(float))
+        #hard_pt = np.sqrt(np.sum(np.sum(hard_ghost, axis = 1)[:,1:3]**2, axis = 1)) * 2.**30
+        #dataset = dataset[hard_pt >= 60.]
+
         # Zero pad such that they all have the same shape (.., 800, 4)
         data_final = np.pad(dataset,((0,0),(0,800-dataset.shape[1]),(0,0)),'constant',constant_values=(0))
         print(f'final data shape: {data_final.shape}')
