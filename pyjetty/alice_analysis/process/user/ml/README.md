@@ -3,8 +3,10 @@
 ## pp-AA
 
 The events are located on hiccup at:
-- PYTHIA/JEWEL + HYDJET: `/rstorage/ml/egml/data/with_hydjet/files.txt`
-- PYTHIA/JEWEL (no UE): `/rstorage/ml/egml/data/no_ue/files.txt`
+- PYTHIA/JEWEL + HYDJET, full events: `/rstorage/ml/egml/data/files.txt`
+There are also earlier versions of events where only the jets are included:
+- PYTHIA/JEWEL + HYDJET, jets: `/rstorage/ml/egml/data/v2/with_hydjet/files.txt`
+- PYTHIA/JEWEL (no UE), jets: `/rstorage/ml/egml/data/v2/no_ue/files.txt`
 - (The initial events, now superceded, are located at `/rstorage/ml/egml/data/v1/files.txt`)
 
 The analysis workflow is as follows:
