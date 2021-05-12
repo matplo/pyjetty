@@ -1,78 +1,83 @@
-# This file takes the data generated from Yue Shi (many h5 files) and reformats it such that it can be used in the ML code
-# The format at the end is similar to the quark/gluon test data set
-# The data set at the end containes labeled pp and AA jets
-# There will be an equal number of pp and AA jets and the data set is shuffled already
-# The final format is (jets, particles, 4-vectors), where the 4-vector format is (px,py,pz,E)
-
-# Yue Shi's files contain 5988 Pythia h5 files and 2176 Jewel h5 files
-# Note: The number of jets in each file is different and there are generally more jets in Pythia files
+'''
+This script takes a hdf5 file generated from Yue Shi (containing all particles in event)
+and writes out dataframes of particle four-vectors per event,
+for both the hard process and the background
+'''
 
 import os
 import argparse
 import h5py
 import numpy as np
+import pandas as pd
+import pickle
 
+# ---------------------------------------------------------
+# Main
+# ---------------------------------------------------------
 def skim(input_file, output_dir):
 
-    # ---------------------------------------------------------
-    # First: read in Pythia data files and do some reformatting
-    # ---------------------------------------------------------
+    # Read in Pythia/Jewel data files and do some reformatting
     with h5py.File(input_file, 'r') as hdf:
-            
-        # jetsubs_cons are the 4-vectors of particles inside the jets
-        dataset0 = hdf.get('jetsubs_cons')
-
-        # Change format: jet, particle, 4-vector
-        dataset = np.transpose(np.array(dataset0),(0,2,1)) 
-
-        # Reorder 4-vector from (px,py,pz,E) to (E,px,py,pz)
-        dataset[:,:,[0,1,2,3]] = dataset[:,:,[3,0,1,2]]
-            
-        # Replace nan with zero
-        where_are_nan = np.isnan(dataset)
-        dataset[where_are_nan] = 0.
-
-        # Compute jet E
-        threshold = 60.
-        jet_E = [np.sum([particle[0] for particle in jet]) for jet in dataset]
-        print(f'jet_E: {jet_E}')
-        jet_E_mask = [E > threshold for E in jet_E]
-        print(f'jet_E > {threshold}: {jet_E_mask}')
-        dataset = dataset[jet_E_mask]
-                    
-        # Apply jet pt cut
-        #hard_ghost = (dataset * np.expand_dims(np.logical_and(hdf['jetsubs_cons_kt_ghost'][:] == 1, hdf['jetsubs_cons_hard_ue'][:] == 1), axis = 2).astype(float))
-        #hard_pt = np.sqrt(np.sum(np.sum(hard_ghost, axis = 1)[:,1:3]**2, axis = 1)) * 2.**30
-        #dataset = dataset[hard_pt >= 60.]
-
-        # Zero pad such that they all have the same shape (.., 800, 4)
-        data_final = np.pad(dataset,((0,0),(0,800-dataset.shape[1]),(0,0)),'constant',constant_values=(0))
-        print(f'final data shape: {data_final.shape}')
-
-    # Create labels: Pythia 0, Jewel 1
-    if 'pythia8' in input_file:
-        y = np.zeros(data_final.shape[0])
-    elif 'jewel' in input_file:
-        y = np.ones(data_final.shape[0])
-    print(f'label shape: {y.shape[0]}, value: {y[0]}')
-
-    # -----------------------------------------------------------------------------
-    # Write labeled, shuffled and equal sample size data to a single h5 file
-    # -----------------------------------------------------------------------------
-
-    # Shuffle data set # check again!
-    idx = np.random.permutation(len(y))
-    data_ppAA_jets = data_final[idx]
+        
+        # Get four-vectors from file
+        particles_hard = np.array(hdf.get('event_hard_p'))
+        particles_background = np.array(hdf.get('event_ue_p'))
+        status = np.array(hdf.get('event_hard_status_hepevt'))
+        
+        # Write 4-vectors into a dataframe
+        df_particles_hard = construct_dataframe(particles_hard, is_hard=True, status=status)
+        df_particles_background = construct_dataframe(particles_background)
+        print(f'df_particles_hard: {df_particles_hard.describe()}')
+        print(f'df_particles_background: {df_particles_background.describe()}')
 
     # Write result to a new hdf5 file
-    input_filename = input_file.rsplit('/', 1)[-1]
-    output_filename = os.path.join(output_dir, f'skim_{input_filename}')
+    input_filename = input_file.rsplit('/', 1)[-1].replace('.h5', '')
+    output_filename = os.path.join(output_dir, f'skim_{input_filename}.pkl')
     print(f'writing to new file: {output_filename}')
-    with h5py.File(output_filename,'w') as hdf:
-        hdf.create_dataset('data',data = data_ppAA_jets)
-        hdf.create_dataset('labels',data = y)
-    
+    with open(output_filename, 'wb') as f:
+        pickle.dump(df_particles_hard, f)
+        pickle.dump(df_particles_background, f)
     print('done.')
+ 
+# ---------------------------------------------------------
+# Construct dataframe of particles from ndarray and status
+# ---------------------------------------------------------
+def construct_dataframe(particles, is_hard=False, status=None):
+
+    # particles has format: (event, px/py/pz/E, particle index)
+    #print(particles)
+    
+    # Change format: event, particle, 4-vector
+    dataset = np.transpose(np.array(particles),(0,2,1))
+    #print(dataset)
+    
+    # Reorder 4-vector from (px,py,pz,E) to (E,px,py,pz)
+    dataset[:,:,[0,1,2,3]] = dataset[:,:,[3,0,1,2]]
+    #print(dataset.shape)
+    
+    # Replace nan with zero
+    where_are_nan = np.isnan(dataset)
+    #print(f'where_are_nan: {where_are_nan}')
+    #print(dataset)
+    
+    # Translate 3D numpy array into a dataframe
+    # Define a unique index for each jet
+    columns = ['E', 'px', 'py', 'pz']
+    df_particles = pd.DataFrame(dataset.reshape(-1, 4), columns=columns)
+    df_particles.index = np.repeat(np.arange(dataset.shape[0]), dataset.shape[1]) + 1
+    df_particles.index.name = 'event_id'
+    #print(df_particles)
+    
+    # For the hard particles, we need to select the final-state particles
+    if is_hard:
+        #print(status)
+        #print(status.flatten())
+        df_particles['status'] = status.flatten()
+        df_particles = df_particles.query('status == 1')
+        df_particles = df_particles.drop(columns=['status'])
+        #print(df_particles)
+        
+    return df_particles
 
 ##################################################################
 if __name__ == '__main__':
@@ -99,6 +104,10 @@ if __name__ == '__main__':
     if not os.path.exists(args.inputFile):
         print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
         sys.exit(0)
+        
+    # If output dir does not exist, create it
+    if not os.path.exists(args.outputDir):
+        os.makedirs(args.outputDir)
 
     skim(input_file=args.inputFile, output_dir=args.outputDir)
 
