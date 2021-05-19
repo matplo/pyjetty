@@ -240,6 +240,8 @@ class PlotAngularityFigures(common_base.CommonBase):
             min_bin = self.h.FindBin(self.lambda_np[min_pt][R]) + 1
             #if self.h.GetBinCenter(min_bin) <= self.lambda_np[min_pt][R]:
             #    min_bin += 1
+        if min_bin > n:
+            min_bin = n
         integral_perturbative = self.h.Integral(min_bin, n, 'width')
         self.h.Scale(1./integral_perturbative)
         self.h_sys.Scale(1./integral_perturbative)
@@ -306,7 +308,6 @@ class PlotAngularityFigures(common_base.CommonBase):
                 name_max = 'theory_max_ang_R{}_{}_ch_PtBin{}-{}_{}'.format(
                     self.remove_periods(str(R)), beta_label, min_pt, max_pt, i)
 
-
             h_theory_cent = f.Get(name_cent)
             h_theory_min = f.Get(name_min)
             h_theory_max = f.Get(name_max)
@@ -334,6 +335,9 @@ class PlotAngularityFigures(common_base.CommonBase):
                 min_bin = h_theory_cent_rebinned.FindBin(self.lambda_np[min_pt][R]) + 1
                 #if self.h.GetBinCenter(min_bin) <= self.lambda_np[min_pt][R]:
                 #    min_bin += 1
+            if min_bin > n:
+                # At least normalize by one bin (the last bin)
+                min_bin = n
             integral_perturbative_theory =  h_theory_cent_rebinned.Integral(min_bin, n, 'width')
             integral_total =  h_theory_cent_rebinned.Integral(1, n, 'width')
 
@@ -556,7 +560,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             
             if Fnp:
                 leg.AddEntry(self.g_theory_dict[beta][i],
-                             'NLL\' #otimes F_{NP}^{#Omega=%s} #otimes PYTHIA8' % folding_label, 'lf')
+                             'NLL\' #otimes F_{NP}^{#Omega=%.1f} #otimes PYTHIA8' % folding_label, 'lf')
             else:
                 leg.AddEntry(self.g_theory_dict[beta][i], 'NLL\' #otimes '+folding_label, 'lf')
             
@@ -609,7 +613,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             system2.Draw()
 
             system3 = ROOT.TLatex(x,ymax-3*dy,
-                                  '#it{{R}} = {}    | #it{{#eta}}_{{jet}}| < {}'.format(R, 0.9-R))
+                                  '#it{{R}} = {}    |#it{{#eta}}_{{jet}}| < {}'.format(R, 0.9-R))
             system3.SetNDC()
             system3.SetTextSize(size*scale_factor)
             system3.Draw()
@@ -627,8 +631,10 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.plot_list.append(system3)
             self.plot_list.append(system4)
 
-        system5y = ymax-6.*dy if pad == 1 else ymax-4.6*dy
-        if not groomed and pad == 3:
+        #system5y = ymax-6.*dy if pad == 1 else ymax-4.6*dy
+        system5y = ymax-6.*dy
+        #if not groomed and pad == 3:
+        if pad == 3 and min_pt == 80 and not groomed and R == 0.2:
             system5y = ymax-3.5*dy
         if pad == 2:
             system5y = ymax-(2+len(self.Omega_list))*dy
@@ -647,7 +653,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             system5 = ROOT.TLatex(0.2+shift, ymax-3.1*dy,
                                   'Soft Drop: #it{z}_{cut} = 0.2, #it{#beta} = 0')
             system5.SetNDC()
-            system5.SetTextSize(size*scale_factor)
+            system5.SetTextSize(beta_size)#size*scale_factor)
             system5.Draw()
             self.plot_list.append(system5)
 
@@ -838,7 +844,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             if R == 0.2:
                 if min_pt == 20:
                     if beta == '2':
-                        scale_factor = 0.35
+                        scale_factor = 0.25
                     elif beta == '3':
                         scale_factor = 0.02
                 elif min_pt == 40:
