@@ -53,12 +53,8 @@ def construct_dataframe(particles, is_hard=False, status=None):
     
     # Reorder 4-vector from (px,py,pz,E) to (E,px,py,pz)
     dataset[:,:,[0,1,2,3]] = dataset[:,:,[3,0,1,2]]
-    #print(dataset.shape)
-    
-    # Replace nan with zero
-    where_are_nan = np.isnan(dataset)
-    #print(f'where_are_nan: {where_are_nan}')
     #print(dataset)
+    #print(dataset.shape)
     
     # Translate 3D numpy array into a dataframe
     # Define a unique index for each jet
@@ -67,7 +63,7 @@ def construct_dataframe(particles, is_hard=False, status=None):
     df_particles.index = np.repeat(np.arange(dataset.shape[0]), dataset.shape[1]) + 1
     df_particles.index.name = 'event_id'
     #print(df_particles)
-    
+
     # For the hard particles, we need to select the final-state particles
     if is_hard:
         #print(status)
@@ -76,6 +72,10 @@ def construct_dataframe(particles, is_hard=False, status=None):
         df_particles = df_particles.query('status == 1')
         df_particles = df_particles.drop(columns=['status'])
         #print(df_particles)
+        
+    # Drop entries with nan
+    df_particles = df_particles[df_particles['E'].notna()]
+    #print(df_particles)
         
     return df_particles
 
