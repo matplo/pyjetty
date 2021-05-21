@@ -1,32 +1,25 @@
 # Running the code
 
-## pp-AA
+## pp-AA (full events)
 
 The events are located on hiccup at:
 - PYTHIA/JEWEL + HYDJET, full events: `/rstorage/ml/egml/data/files.txt`
-
-There are also earlier versions of events where only the jets are included:
-- PYTHIA/JEWEL + HYDJET, jets: `/rstorage/ml/egml/data/v2/with_hydjet/files.txt`
-- PYTHIA/JEWEL (no UE), jets: `/rstorage/ml/egml/data/v2/no_ue/files.txt`
-- (The initial events, now superceded, are located at `/rstorage/ml/egml/data/v1/files.txt`)
 
 The analysis workflow is as follows:
 
 1. Skim the events into numpy arrays of four-vectors and labels
    ```
    cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_skim.sh                                # (for PYTHIA/JEWEL + HYDJET)
-   sbatch slurm_skim_no_ue.sh                          # (for no UE)
+   sbatch slurm_skim.sh
    ```
-   This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL).
+   This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL, and both hard event + background).
    
    This step likely does not have to be repeated, unless we get new event samples.
 
 2. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
    ```
    cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_compute_nsubjettiness.sh               # (for PYTHIA/JEWEL + HYDJET)
-   sbatch slurm_compute_nsubjettiness_no_ue.sh         # (for no UE)
+   sbatch slurm_compute_nsubjettiness.sh
    ```
    You should update the skimmed filelist in `slurm_compute_nsubjettiness.sh` if necessary (if step 1 is repeated).
    
@@ -51,7 +44,30 @@ The analysis workflow is as follows:
    The `-o` path should point to the directory containing `nsubjettiness.h5` from Step 3. This is the location that the output plots will be written to. 
    
    This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
+   
+## pp-AA (jets only)
 
+There are also earlier versions of events where only the jets are included:
+- PYTHIA/JEWEL + HYDJET, jets: `/rstorage/ml/egml/data/v2/with_hydjet/files.txt`
+- PYTHIA/JEWEL (no UE), jets: `/rstorage/ml/egml/data/v2/no_ue/files.txt`
+- (The initial events, now superceded, are located at `/rstorage/ml/egml/data/v1/files.txt`)
+
+You would need to check out an earlier version of the code (c. April 2021) to use this. I dont' foresee this will be used, but for completeness I keep the documentation here:
+
+1. Skim the events into numpy arrays of four-vectors and labels
+   ```
+   cd pyjetty/alice_analysis/process/user/ml/slurm
+   sbatch slurm_skim.sh                                # (for PYTHIA/JEWEL + HYDJET)
+   sbatch slurm_skim_no_ue.sh                          # (for no UE)
+   ```
+   This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL).
+
+2. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
+   ```
+   cd pyjetty/alice_analysis/process/user/ml/slurm
+   sbatch slurm_compute_nsubjettiness.sh               # (for PYTHIA/JEWEL + HYDJET)
+   sbatch slurm_compute_nsubjettiness_no_ue.sh         # (for no UE)
+   ```
 ## Quark-gluon
 
 The analysis consists of two steps:
