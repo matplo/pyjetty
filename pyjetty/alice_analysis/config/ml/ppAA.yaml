@@ -16,6 +16,23 @@ n_test: 3000
 K: [6]
 
 #------------------------------------------------------------------------------
+# These parameters are used only in the process script
+#------------------------------------------------------------------------------
+
+jetR: [0.2, 0.4, 0.6]
+min_jet_pt: 50.
+eta_max: 0.9
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+
+constituent_subtractor:
+  max_distance: [0, 0.05, 0.25, 0.7]
+  alpha: 0
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+#------------------------------------------------------------------------------
 # All parameters below are only used in the analysis script
 #------------------------------------------------------------------------------
 
