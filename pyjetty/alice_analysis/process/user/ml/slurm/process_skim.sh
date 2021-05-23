@@ -49,4 +49,4 @@ pipenv run python process/user/ml/skim_ppAA_data.py -f $INPUT_FILE -o $OUTPUT_DI
 mv /rstorage/ml/egml/skim/slurm-${JOB_ID}_${TASK_ID}.out $LOG_DIR
 
 # Create file list
-find "$OUTPUT_DIR" -name "*.h5" >"$PREFIX/files.txt"
+find "$OUTPUT_DIR" -name "*.pkl" >"$PREFIX/files.txt"

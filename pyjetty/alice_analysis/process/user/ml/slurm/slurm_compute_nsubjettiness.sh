@@ -7,7 +7,7 @@
 #SBATCH --array=1-160
 #SBATCH --output=/rstorage/ml/egml/nsubjettiness/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/ml/egml/skim/484462/files.txt'
+FILE_PATHS='/rstorage/ml/egml/skim/513736/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
