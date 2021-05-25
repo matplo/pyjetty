@@ -60,7 +60,7 @@ class PlotRAA(common_base.CommonBase):
          
         self.figure_approval_status = 'Preliminary'
         
-        self.xtitle = '#it{z}_{r}'
+        self.xtitle = '#it{z}_{#it{r}}'
 
         self.debug_level = 0
         
@@ -113,7 +113,7 @@ class PlotRAA(common_base.CommonBase):
         self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
         self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
         
-        self.ytitle = f'#frac{{1}}{{ #it{{#sigma}}_{{#it{{z}}_{{r}} > {self.bins[0]} }} }} #frac{{d#it{{#sigma}}}}{{d{self.xtitle}}}'
+        self.ytitle = f'#frac{{1}}{{ #it{{#sigma}}_{{#it{{z}}_{{#it{{r}}}} > {self.bins[0]} }} }} #frac{{d#it{{#sigma}}}}{{d{self.xtitle}}}'
         
         # Normalize to the integral over the reported range except for the last bin,
         # Note that histograms are already scaled for bin width in run_analysis.get_obs_distribution()

@@ -585,8 +585,8 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           text_latex.SetNDC()
           text_latex.SetTextSize(0.05)
           x = 0.3
-          y = 0.3 - 0.7*float(obs_setting)
-          text = f'< #it{{z}}_{{loss}}^{{{subobs_label} = {obs_setting}}} > = {np.round(z_loss,2):.2f}'
+          y = 0.35 - 0.9*float(obs_setting)
+          text = f'#LT#it{{z}}^{{loss}}_{{{subobs_label} = {obs_setting} }}#GT = {np.round(z_loss,2):.2f}'
           text_latex.DrawLatex(x, y, text)
       elif self.observable == 'inclusive_subjet_z':
           pad1.cd()
@@ -594,8 +594,8 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           text_latex.SetNDC()
           text_latex.SetTextSize(0.05)
           x = 0.67
-          y = 0.85 - 0.7*float(obs_setting)
-          text = f'< #it{{N}}_{{subjets}}^{{{subobs_label} = {obs_setting}}} > = {np.round(n_subjets,2):.1f}'
+          y = 0.92 - 0.95*float(obs_setting)
+          text = f'#LT#it{{N}}^{{subjets }}_{{{subobs_label} = {obs_setting}}}#GT = {np.round(n_subjets,2):.1f}'
           text_latex.DrawLatex(x, y, text)
         
     pad1.cd()
