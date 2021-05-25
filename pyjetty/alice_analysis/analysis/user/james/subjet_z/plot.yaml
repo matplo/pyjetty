@@ -5,8 +5,8 @@ file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04/le
 file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04/leading_subjet_z/final_results/fFinalResults.root'
 
 # JETSCAPE
-jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/499531/5020_PP_Colorless/AnalysisResultsFinal.root'
-jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/499531/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
+jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/501204/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
 
 # In-medium jet functions
 # From Felix: Please find below results for the subjet R_AA including some uncertainties. As I mentioned before, there are
