@@ -345,7 +345,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             shift = -0.08
             shift2 = -0.08 - shift
         
-        leg = ROOT.TLegend(0.7+shift,0.9-0.072*scale_factor*4,0.85,0.96)
+        leg = ROOT.TLegend(0.68+shift,0.9-0.072*scale_factor*4,0.83,0.96)
         if pad in [1,2]:
             self.setupLegend(leg,0.07)
         else:
@@ -379,13 +379,13 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.h_sys_list[i].Draw('E2 same')
 
             self.h_pythia_list[i].SetLineColor(self.colors[i])
-            self.h_pythia_list[i].SetLineColorAlpha(self.colors[i], 0.5)
+            self.h_pythia_list[i].SetLineColorAlpha(self.colors[i], 0.7)
             self.h_pythia_list[i].SetLineWidth(3)
             scale_label = self.scale_histogram_for_visualization(self.h_pythia_list[i], i, minpt, groomed)
             self.h_pythia_list[i].Draw('L hist same')
             
             self.h_herwig_list[i].SetLineColor(self.colors[i])
-            self.h_herwig_list[i].SetLineColorAlpha(self.colors[i], 0.5)
+            self.h_herwig_list[i].SetLineColorAlpha(self.colors[i], 0.7)
             self.h_herwig_list[i].SetLineWidth(3)
             self.h_herwig_list[i].SetLineStyle(2)
             scale_label = self.scale_histogram_for_visualization(self.h_herwig_list[i], i, minpt, groomed)
@@ -410,11 +410,11 @@ class PlotAngularityFigures(common_base.CommonBase):
         # # # # # # # # # # # # # # # # # # # # # # # #
         ymax = 0.9
         dy = 0.09
-        x = 0.25 + shift + shift2
+        x = 0.24 + shift + shift2
         if pad in [1,2]:
             size = 0.08
         else:
-            size = 0.09
+            size = 0.093
     
         if pad == 1:
             system0 = ROOT.TLatex(x,ymax,'ALICE')
@@ -451,7 +451,7 @@ class PlotAngularityFigures(common_base.CommonBase):
                 y_pt = ymax-9.*dy
         else:
             x_pt = x+0.2
-            y_pt = ymax-5.*dy
+            y_pt = ymax-4.5*dy
         system4 = ROOT.TLatex(x_pt, y_pt, str(minpt) + ' < #it{p}_{T}^{ch jet} < ' + str(maxpt) + ' GeV/#it{c}')
         system4.SetNDC()
         system4.SetTextSize(size*scale_factor)
