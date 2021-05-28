@@ -56,7 +56,7 @@ class PlotResults(common_base.CommonBase):
         self.marker_size = 1.5
         self.line_width = 2
         self.line_style = 1
-        self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kRed-7]
+        self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kRed-7, ROOT.kPink+1]
                             # ROOT.kBlue-10, ROOT.kPink+1, ROOT.kOrange+6, ROOT.kCyan-2
         
         print(self)
@@ -76,7 +76,7 @@ class PlotResults(common_base.CommonBase):
         self.plot_girth()
         
         # Charged jet mass
-        #self.plot_chjet_mass()
+        self.plot_mass()
         
         # Charged Soft Drop zg
         #self.plot_chjet_zg()
@@ -103,7 +103,21 @@ class PlotResults(common_base.CommonBase):
         pp_label = 'PYTHIA6'
         self.ytitle = f'#frac{{1}}{{#it{{#sigma}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
         self.plot_distribution_and_ratio(self_normalize=True, pp_label=pp_label)
-        
+
+    #-------------------------------------------------------------------------------------------
+    def plot_mass(self):
+    
+        # Initialize data and theory info
+        self.observable = 'mass'
+        self.init_result(self_normalize=True)
+             
+        # Plot distribution + ratio
+        self.y_max = 0.3
+        self.y_ratio_max = 2.49
+        pp_label = 'PYTHIA6'
+        self.ytitle = f'#frac{{1}}{{#it{{#sigma}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
+        self.plot_distribution_and_ratio(self_normalize=True, pp_label=pp_label, plot_ratio=False)
+
     #---------------------------------------------------------------
     # Initialize a given observable
     #---------------------------------------------------------------
@@ -113,8 +127,10 @@ class PlotResults(common_base.CommonBase):
         self.observable_settings = {}
         
         # Store theoretical predictions and labels in list
-        self.observable_settings['prediction_list'] = []
-        self.observable_settings['prediction_labels'] = []
+        self.observable_settings['prediction_distribution_list'] = []
+        self.observable_settings['prediction_distribution_labels'] = []
+        self.observable_settings['prediction_ratio_list'] = []
+        self.observable_settings['prediction_ratio_labels'] = []
     
         # Load config file
         with open(self.config_file, 'r') as stream:
@@ -134,7 +150,7 @@ class PlotResults(common_base.CommonBase):
             self.obs_label = result['obs_label']
 
         # Data -- distribution
-        if self.observable == 'girth':
+        if self.observable in ['girth', 'mass']:
             file = ROOT.TFile(result['file'], 'READ')
             self.observable_settings['g_pp'] = file.Get(result['name_pp'])
             self.observable_settings['h_AA_stat'] = file.Get(result['name_AA_stat'])
@@ -208,26 +224,43 @@ class PlotResults(common_base.CommonBase):
             # Form ratio
             h_ratio_jetscape = h_jetscape_AA
             h_ratio_jetscape.Divide(h_jetscape_pp)
-            self.observable_settings['prediction_list'].append(h_ratio_jetscape)
-            self.observable_settings['prediction_labels'].append('JETSCAPE')
+            self.observable_settings['prediction_ratio_list'].append(h_ratio_jetscape)
+            self.observable_settings['prediction_ratio_labels'].append('JETSCAPE')
+            
+            if self.observable == 'mass':
+                self.observable_settings['prediction_distribution_list'].append(h_jetscape_AA)
+                self.observable_settings['prediction_distribution_labels'].append('JETSCAPE')
         
         # Theory -- Hybrid
         if self.observable == 'girth':
-            self.observable_settings['prediction_list'].append(file.Get(result['name_ratio_hybrid_wake0_lres0']))
-            self.observable_settings['prediction_labels'].append('Hybrid Model, #it{L}_{res} = 0, wake off')
+            self.observable_settings['prediction_ratio_list'].append(file.Get(result['name_ratio_hybrid_wake0_lres0']))
+            self.observable_settings['prediction_ratio_labels'].append('Hybrid Model, #it{L}_{res} = 0, wake off')
             
-            self.observable_settings['prediction_list'].append(file.Get(result['name_ratio_hybrid_wake1_lres0']))
-            self.observable_settings['prediction_labels'].append('Hybrid Model, #it{L}_{res} = 0, wake on')
+            self.observable_settings['prediction_ratio_list'].append(file.Get(result['name_ratio_hybrid_wake1_lres0']))
+            self.observable_settings['prediction_ratio_labels'].append('Hybrid Model, #it{L}_{res} = 0, wake on')
 
-            #self.observable_settings['prediction_list'].append(file.Get(result['name_ratio_hybrid_wake0_lres2']))
-            #self.observable_settings['prediction_labels'].append('Hybrid Model, #it{L}_{res} = 2#pi/T, wake off')
+            #self.observable_settings['prediction_ratio_list'].append(file.Get(result['name_ratio_hybrid_wake0_lres2']))
+            #self.observable_settings['prediction_ratio_labels'].append('Hybrid Model, #it{L}_{res} = 2#pi/T, wake off')
 
-            self.observable_settings['prediction_list'].append(file.Get(result['name_ratio_hybrid_wake0_lresinf']))
-            self.observable_settings['prediction_labels'].append('Hybrid Model, #it{L}_{res} = #infty, wake off')
+            self.observable_settings['prediction_ratio_list'].append(file.Get(result['name_ratio_hybrid_wake0_lresinf']))
+            self.observable_settings['prediction_ratio_labels'].append('Hybrid Model, #it{L}_{res} = #infty, wake off')
             file.Close()
-        
+            
+        if self.observable == 'mass':
+            self.observable_settings['prediction_distribution_list'].append(file.Get(result['name_hybrid_wake0_lres0']))
+            self.observable_settings['prediction_distribution_labels'].append('Hybrid Model, #it{L}_{res} = 0, wake off')
+            
+            self.observable_settings['prediction_distribution_list'].append(file.Get(result['name_hybrid_wake1_lres0']))
+            self.observable_settings['prediction_distribution_labels'].append('Hybrid Model, #it{L}_{res} = 0, wake on')
+
         # Theory -- JEWEL
-        
+        if self.observable == 'mass':
+            self.observable_settings['prediction_distribution_list'].append(file.Get(result['name_jewel_rec']))
+            self.observable_settings['prediction_distribution_labels'].append('JEWEL, recoils on')
+            
+            self.observable_settings['prediction_distribution_list'].append(file.Get(result['name_jewel_norec']))
+            self.observable_settings['prediction_distribution_labels'].append('JEWEL, recoils off')
+
         # Get binning to plot
         #self.bins = np.array(result['bins'])
         #self.bin_widths = np.diff(self.bins)
@@ -279,7 +312,8 @@ class PlotResults(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     # Plot distributions in upper panel, and ratio in lower panel
     #-------------------------------------------------------------------------------------------
-    def plot_distribution_and_ratio(self, self_normalize=False, eta_cut=None, pp_label=None, logy = False):
+    def plot_distribution_and_ratio(self, self_normalize=False, plot_ratio=True,
+                                    pp_label=None, logy = False):
     
         # Output filename
         output_filename = os.path.join(self.output_dir, f'h_{self.observable}.pdf')
@@ -369,34 +403,30 @@ class PlotResults(common_base.CommonBase):
         
         myBlankHisto2.GetYaxis().SetRangeUser(0., self.y_ratio_max)
 
-        ratio_legend = ROOT.TLegend(0.45,0.65,0.6,0.95)
+        if self.observable == 'girth':
+            ratio_legend = ROOT.TLegend(0.45,0.65,0.6,0.95)
+        elif self.observable == 'mass':
+            ratio_legend = ROOT.TLegend(0.25,0.65,0.4,0.95)
         self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
 
         myBlankHisto2.Draw('')
         
-        self.observable_settings['h_ratio_stat'].SetMarkerSize(1.5)
-        self.observable_settings['h_ratio_stat'].SetMarkerStyle(self.data_markers[1])
-        self.observable_settings['h_ratio_stat'].SetMarkerColor(self.data_color)
-        self.observable_settings['h_ratio_stat'].SetLineColor(self.data_color)
-        self.observable_settings['h_ratio_stat'].SetLineWidth(self.line_width)
+        if plot_ratio:
+            self.observable_settings['h_ratio_stat'].SetMarkerSize(1.5)
+            self.observable_settings['h_ratio_stat'].SetMarkerStyle(self.data_markers[1])
+            self.observable_settings['h_ratio_stat'].SetMarkerColor(self.data_color)
+            self.observable_settings['h_ratio_stat'].SetLineColor(self.data_color)
+            self.observable_settings['h_ratio_stat'].SetLineWidth(self.line_width)
 
-        self.observable_settings['g_ratio_sys'].SetFillColor(self.data_color)
-        self.observable_settings['g_ratio_sys'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['g_ratio_sys'].SetFillColor(self.data_color)
+            self.observable_settings['g_ratio_sys'].SetFillColorAlpha(self.data_color, 0.3)
 
         pad1.cd()
-        #self.h_sys_pp.Draw('E2 same')
-        self.observable_settings['g_AA_sys'].Draw('E2 same')
-        if 'g_pp' in self.observable_settings:
-            if type(self.observable_settings['g_pp']) == ROOT.TGraph:
-                self.observable_settings['g_pp'].Draw('P same')
-        self.observable_settings['h_AA_stat'].DrawCopy('PE X0 same')
         
-        pad2.cd()
-
-        # Draw theory predictions for ratio
-        for i, prediction in enumerate(self.observable_settings['prediction_list']):
+        # Draw theory predictions for distribution
+        for i, prediction in enumerate(self.observable_settings['prediction_distribution_list']):
         
-            label = self.observable_settings['prediction_labels'][i]
+            label = self.observable_settings['prediction_distribution_labels'][i]
             color = self.theory_colors[i]
             
             prediction.SetFillColor(color)
@@ -419,10 +449,48 @@ class PlotResults(common_base.CommonBase):
                     prediction.Draw('same')
 
                 ratio_legend.AddEntry(prediction, label, 'L')
+           
+        # Draw distribution
+        #self.h_sys_pp.Draw('E2 same')
+        self.observable_settings['g_AA_sys'].Draw('E2 same')
+        if 'g_pp' in self.observable_settings:
+            if type(self.observable_settings['g_pp']) == ROOT.TGraph:
+                self.observable_settings['g_pp'].Draw('P same')
+        self.observable_settings['h_AA_stat'].DrawCopy('PE X0 same')
+        
+        pad2.cd()
+
+        # Draw theory predictions for ratio
+        for i, prediction in enumerate(self.observable_settings['prediction_ratio_list']):
+        
+            label = self.observable_settings['prediction_ratio_labels'][i]
+            color = self.theory_colors[i]
+            
+            prediction.SetFillColor(color)
+            prediction.SetFillColorAlpha(color, self.alpha)
+            prediction.SetLineColor(color)
+            prediction.SetLineWidth(8)
+            prediction.SetMarkerSize(0)
+            prediction.SetMarkerStyle(0)
+        
+            if type(prediction) in [ROOT.TH1F]:
+            
+                prediction.Draw('E3 same')
+                if plot_ratio:
+                    ratio_legend.AddEntry(prediction, label, 'L')
+
+            elif type(prediction) in [ROOT.TGraph, ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                 
+                if type(prediction) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                    prediction.Draw('3 same')
+                elif type(prediction) == ROOT.TGraph:
+                    prediction.Draw('same')
+
+                ratio_legend.AddEntry(prediction, label, 'L')
                 
         # Re-draw some curves
         if self.observable in ['girth']:
-            self.observable_settings['prediction_list'][0].Draw('E3 same')
+            self.observable_settings['prediction_ratio_list'][0].Draw('E3 same')
           
         ratio_legend.Draw()
         line = ROOT.TLine(self.bins[0], 1, self.bins[-1], 1)
@@ -430,9 +498,10 @@ class PlotResults(common_base.CommonBase):
         line.SetLineStyle(2)
         line.SetLineWidth(2)
         line.Draw()
-         
-        self.observable_settings['g_ratio_sys'].Draw('E2 same')
-        self.observable_settings['h_ratio_stat'].Draw('PE X0 same')
+        
+        if plot_ratio:
+            self.observable_settings['g_ratio_sys'].Draw('E2 same')
+            self.observable_settings['h_ratio_stat'].Draw('PE X0 same')
        
         pad1.cd()
         if not pp_label:
@@ -452,7 +521,7 @@ class PlotResults(common_base.CommonBase):
         text = f'#bf{{ALICE}} #sqrt{{#it{{s_{{#it{{NN}}}}}}}} = {self.sqrts/1000.} TeV'
         text_latex.DrawLatex(x, 0.83, text)
 
-        text = 'Charged particle jets'
+        text = 'Charged-particle jets'
         text_latex.DrawLatex(x, 0.75, text)
         
         text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {0.9-self.jetR}'
@@ -460,8 +529,8 @@ class PlotResults(common_base.CommonBase):
         
         # pt bin label
         pt_label = None
-        if self.observable in ['girth']:
-            pt_label = f'{self.pt[0]} < p_{{T, ch jet}} < {self.pt[1]} GeV/c'
+        if self.observable in ['girth', 'mass']:
+            pt_label = f'{self.pt[0]} < #it{{p}}_{{T, ch jet}} < {self.pt[1]} GeV/#it{{c}}'
             text_latex.DrawLatex(x, 0.57, pt_label)
         
         myLegend.Draw()
@@ -574,45 +643,6 @@ class PlotResults(common_base.CommonBase):
     #---------------------------------------------------------------
     def init_theory(self, result):
     
-        self.label_list = []
-        self.sublabel_list = []
-        self.prediction_list = []
-    
-        #----------------------------------------------------------
-        # JETSCAPE
-        f_pp = ROOT.TFile(self.file_jetscape_pp_name, 'READ')
-        f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
-        
-        h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
-        h_pp = f_pp.Get(h_name)
-        h_pp.SetDirectory(0)
-        f_pp.Close()
-        
-        h_AA = f_AA.Get(h_name)
-        h_AA.SetDirectory(0)
-        f_AA.Close()
-
-        # Rebin to data binning
-        bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[0:]
-        h_pp = h_pp.Rebin(bin_edges.size-1, f'{h_pp.GetName()}_rebinned', bin_edges)
-        h_AA = h_AA.Rebin(bin_edges.size-1, f'{h_AA.GetName()}_rebinned', bin_edges)
-        
-        # Normalization
-        h_pp.Scale(1., 'width')
-        h_AA.Scale(1., 'width')
-        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
-        h_AA.Scale(1./h_AA.Integral(1, h_pp.GetNbinsX()))
-
-        # Form ratio
-        hRatio = h_AA.Clone()
-        hRatio.SetName(f'hRatio_{h_AA.GetName()}')
-        hRatio.Divide(h_pp)
-      
-        # Add to theory list
-        self.prediction_list.append(hRatio)
-        self.label_list.append('JETSCAPE')
-        self.sublabel_list.append('')
-      
         #----------------------------------------------------------
         # Factorization (Ringer, Sato)
         if 'medium_jet_functions' in result:
@@ -697,41 +727,6 @@ class PlotResults(common_base.CommonBase):
                           ymax=1.8,
                           outputfilename=f'h_jet_RAA_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
                           R=R)
-                      
-    #-------------------------------------------------------------------------------------------
-    def plot_chjet_mass(self):
-        
-        # Get experimental data
-        h_data_list = []
-        
-        f_AA = ROOT.TFile(self.inclusive_chjet_observables['mass_alice']['hepdata_AA'], 'READ')
-        dir = f_AA.Get('Table 4')
-        h_data_PbPb = dir.Get('Graph1D_y1')
-        
-        f_pp = ROOT.TFile(self.inclusive_chjet_observables['mass_alice']['hepdata_pp'], 'READ')
-        dir = f_pp.Get('Table 1')
-        h_data_pp = dir.Get('Graph1D_y1')
-                
-        h_data_list.append([h_data_PbPb, '0-10%'])
-        f_AA.Close()
-        f_pp.Close()
-        
-        # Plot
-        R = 0.4
-        xtitle="#it{m}"
-        self.plot_raa(raa_type='chjet_mass',
-                      hname = f'h_chjet_mass_alice_R{R}{self.suffix}Scaled',
-                      h_data_list=None,
-                      h_data_list_ratio=None,
-                      eta_cut=np.round(self.inclusive_chjet_observables['eta_cut_alice_R']-R, decimals=1),
-                      data_centralities=['0-10'],
-                      mc_centralities=[f'{self.min_cent}-{self.max_cent}'],
-                      xtitle=xtitle,
-                      ytitle = f'#frac{{1}}{{#sigma}} #frac{{d#sigma}}{{d#it{{{xtitle}}}}}',
-                      ymax=2.8,
-                      outputfilename=f'h_chjet_mass_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
-                      R=R,
-                      self_normalize=True)
                               
     #-------------------------------------------------------------------------------------------
     def plot_chjet_zg(self):

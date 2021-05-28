@@ -86,36 +86,46 @@ girth:
   name_ratio_hybrid_wake0_lresinf: 'g_ratio_hyb_wake0_lresinf' # Hybrid model, Lres=inf, w/o wake
 
 #------------------------------------------------------------------
-# ALICE, https://www.hepdata.net/record/ins1512107 (tgraph...no binning)
-#   sqrts: 2.76  TeV
-#   Centrality: 0-10
-#   Jets:
-#       - R = 0.4
-#       - 60 < pt_ch < 80
-#   Cuts / Notes:
-#       - |eta_jet| < 0.9 - R
-# Plot ratio of Pb-Pb to pPb? 
+# https://www.hepdata.net/record/ins1512107 (tgraph...no binning)
+# Plot ratio of Pb-Pb to pPb? We need the theory vacuum distributions...
+# See also README_laura.txt
 mass:
-  bins: [0., 2, 4, 6, 8, 10, 12, 14, 16, 18]
-  hepdata_AA: 'data/TG3/m/HEPData-ins1512107-v1-Table_4.root'
-  hepdata_pp: 'data/TG3/m/HEPData-ins1512107-v1-Table_1.root'
-  #bins: []
-  #medium_jet_functions:
-  #  zr: []
-  #  y_med: []
-  #  y_vac: []
-  #  ratio: []
-  #  uncertainty: []
+  xtitle: '#it{m}'
+  sqrts: 5020
+  centrality: [0., 10.]
+  jetR: 0.4
+  pt: [60, 80]
+  eta_R: 0.9
   
-#Pb-Pb data points+stat errors: (TH1D*)h
-#Pb-Pb data points+sys errors: (TGraphAsymmErrors*)g
-#PYTHIA Perugia 2011: (TGraph*)g_pyt11
-#Hybrid model, Lres=0, w/o wake:  (TGraphAsymmErrors*)g_hyb_wake0_lres0
-#Hybrid model, Lres=0, w/ wake:  (TGraphAsymmErrors*)g_hyb_wake1_lres0
-#Hybrid model, Lres=inf, w/o wake:  (TGraphAsymmErrors*)g_hyb_wake0_lresinf
-#Hybrid model, Lres=inf, w/ wake:  (TGraphAsymmErrors*)g_hyb_wake1_lresinf
-#JEWEL, with recoils:  (TGraphAsymmErrors*)g_jewel_rec
-#JEWEL, no recoils:  (TGraphAsymmErrors*)g_jewel_norec
+  # Data -- distributions
+  #bins: [0., 2, 4, 6, 8, 10, 12, 14, 16, 18]
+  #hepdata_AA: 'data/TG3/m/HEPData-ins1512107-v1-Table_4.root'
+  #hepdata_pp: 'data/TG3/m/HEPData-ins1512107-v1-Table_1.root'
+  file: 'mass/JetMass_TG3_May11.root'     # Contains PbPb, pythia, hybrid model, JEWEL
+  name_pp: 'g_pyt11'                       # PYTHIA Perugia 2011
+  name_AA_stat: 'h'                        # TH1D*
+  name_AA_sys: 'g'                         # TGraphAsymmErrors*
+  
+  # Data -- ratio (to pythia)
+  #hepdata_ratio: 'data/TG3/g/HEPData-ins1682990-v1-Table_11.root'
+  name_ratio_stat: 'h_ratio_pyt11'         # TH1D*
+  name_ratio_sys: 'g_ratio_pyt11'          # TGraphAsymmErrors*
+
+  # JETSCAPE
+  file_jetscape_pp: 'jetscape/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/501204/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  hname_jetscape: 'h_chjet_mass_alice_R0.4_pt0.0Scaled'
+  # TODO: Confirm what is constituent threshold in measurement
+
+  # Hybrid model (TGraphAsymmErrors*)
+  name_hybrid_wake0_lres0: 'g_hyb_wake0_lres0'     # Hybrid model, Lres=0, w/o wake
+  name_hybrid_wake1_lres0: 'g_hyb_wake1_lres0'     # Hybrid model, Lres=0, w/ wake
+  name_hybrid_wake0_lresinf: 'g_hyb_wake0_lresinf' # Hybrid model, Lres=inf, w/o wake
+  name_hybrid_wake1_lresinf: 'g_hyb_wake1_lresinf' # Hybrid model, Lres=inf, w wake
+  
+  # JEWEL (TGraphAsymmErrors*)
+  name_jewel_rec: 'g_jewel_rec'
+  name_jewel_norec: 'g_jewel_norec'
  
 #------------------------------------------------------------------
 # ALICE, ALICE-PUBLIC-2020-006 (no hepdata)
@@ -132,6 +142,14 @@ softdrop_alice:
   soft_drop_beta: 0.
   bins_zg: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
   bins_tg: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
+  
+    #bins: []
+  #medium_jet_functions:
+  #  zr: []
+  #  y_med: []
+  #  y_vac: []
+  #  ratio: []
+  #  uncertainty: []
   
 #------------------------------------------------------------------
 # Jet correlation observables
