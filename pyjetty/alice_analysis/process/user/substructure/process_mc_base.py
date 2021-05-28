@@ -694,13 +694,13 @@ class ProcessMCBase(process_base.ProcessBase):
             gshop_det = fjcontrib.GroomerShop(jet_det, jetR, self.reclustering_algorithm)
             jet_det_groomed_lund = self.utils.groom(gshop_det, grooming_setting, jetR)
             if not jet_det_groomed_lund:
-              return
+              continue
 
             # Groom truth jet
             gshop_truth = fjcontrib.GroomerShop(jet_truth, jetR, self.reclustering_algorithm)
             jet_truth_groomed_lund = self.utils.groom(gshop_truth, grooming_setting, jetR)
             if not jet_truth_groomed_lund:
-              return
+              continue
               
           else:
           
