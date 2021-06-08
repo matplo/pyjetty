@@ -56,8 +56,8 @@ class PlotResults(common_base.CommonBase):
         self.marker_size = 1.5
         self.line_width = 2
         self.line_style = 1
-        self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kRed-7, ROOT.kPink+1]
-                            # ROOT.kBlue-10, ROOT.kPink+1, ROOT.kOrange+6, ROOT.kCyan-2
+        self.theory_colors = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kRed-7, ROOT.kPink+1, ROOT.kBlue-10]
+                            # ROOT.kBlue-10, ROOT.kOrange+6, ROOT.kCyan-2
         
         print(self)
         
@@ -79,10 +79,10 @@ class PlotResults(common_base.CommonBase):
         self.plot_mass()
         
         # Charged Soft Drop zg
-        #self.plot_chjet_zg()
+        self.plot_zg()
         
         # Charged Soft Drop theta_g
-        #self.plot_chjet_tg()
+        self.plot_tg()
         
         # h-jet
         #self.plot_semi_inclusive_chjet_IAA()
@@ -99,10 +99,11 @@ class PlotResults(common_base.CommonBase):
              
         # Plot distribution + ratio
         self.y_max = 37
+        self.y_ratio_min = 0.
         self.y_ratio_max = 2.49
         pp_label = 'PYTHIA6'
         self.ytitle = f'#frac{{1}}{{#it{{#sigma}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
-        self.plot_distribution_and_ratio(self_normalize=True, pp_label=pp_label)
+        self.plot_distribution_and_ratio(pp_label=pp_label)
 
     #-------------------------------------------------------------------------------------------
     def plot_mass(self):
@@ -113,10 +114,42 @@ class PlotResults(common_base.CommonBase):
              
         # Plot distribution + ratio
         self.y_max = 0.3
+        self.y_ratio_min = 0.
         self.y_ratio_max = 2.49
         pp_label = 'PYTHIA6'
         self.ytitle = f'#frac{{1}}{{#it{{#sigma}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
-        self.plot_distribution_and_ratio(self_normalize=True, pp_label=pp_label, plot_ratio=False)
+        self.plot_distribution_and_ratio(pp_label=pp_label, plot_ratio=False)
+        
+        
+    #-------------------------------------------------------------------------------------------
+    def plot_zg(self):
+        
+        # Initialize data and theory info
+        self.observable = 'zg'
+        self.init_result()
+             
+        # Plot distribution + ratio
+        self.y_max = 10.
+        self.y_ratio_min = 0.6
+        self.y_ratio_max = 1.59
+        self.ytitle = f'#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
+        self.plot_distribution_and_ratio()
+        #hname = f'h_chjet_zg_alice_R{R}{self.suffix}Scaled')
+
+    #-------------------------------------------------------------------------------------------
+    def plot_tg(self):
+        
+        # Initialize data and theory info
+        self.observable = 'theta_g'
+        self.init_result()
+             
+        # Plot distribution + ratio
+        self.y_max = 4.1
+        self.y_ratio_min = 0.
+        self.y_ratio_max = 2.69
+        self.ytitle = f'#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
+        self.plot_distribution_and_ratio()
+        #hname = f'h_chjet_tg_alice_R{R}{self.suffix}Scaled')
 
     #---------------------------------------------------------------
     # Initialize a given observable
@@ -148,6 +181,10 @@ class PlotResults(common_base.CommonBase):
             self.eta_cut = np.round(self.eta_R - self.jetR, decimals=1)
         if 'obs_label' in result:
             self.obs_label = result['obs_label']
+        if 'zcut' in result:
+            self.zcut = result['zcut']
+        if 'theory_config' in result:
+            self.theory_config = result['theory_config']
 
         # Data -- distribution
         if self.observable in ['girth', 'mass']:
@@ -156,9 +193,32 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['h_AA_stat'] = file.Get(result['name_AA_stat'])
             self.observable_settings['g_AA_sys'] = file.Get(result['name_AA_sys'])
             self.observable_settings['h_AA_stat'].SetDirectory(0)
-            
             self.bins = np.array(self.observable_settings['h_AA_stat'].GetXaxis().GetXbins())
+        elif self.observable in ['zg', 'theta_g']:
+            self.file_pp_name = result['file_pp']
+            self.file_AA_name = result['file_AA']
+            self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
+            self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
+            main_result_name = f'hmain_{self.observable}_R{self.jetR}_{self.obs_label}_{self.pt[0]}-{self.pt[1]}'
+            sys_total_name = f'hResult_{self.observable}_systotal_R{self.jetR}_{self.obs_label}_{self.pt[0]}-{self.pt[1]}'
+            self.observable_settings['h_pp'] = self.file_pp.Get(main_result_name)
+            self.observable_settings['h_pp_sys'] = self.file_pp.Get(sys_total_name)
+            self.observable_settings['h_AA_stat'] = self.file_AA.Get(main_result_name)
+            self.observable_settings['h_AA_sys'] = self.file_AA.Get(sys_total_name)
+            self.observable_settings['h_pp'].SetDirectory(0)
+            self.observable_settings['h_pp_sys'].SetDirectory(0)
+            self.observable_settings['h_AA_stat'].SetDirectory(0)
+            self.observable_settings['h_AA_sys'].SetDirectory(0)
+            self.bins = np.array(self.observable_settings['h_AA_stat'].GetXaxis().GetXbins())[1:]
 
+            h_tagging_fraction_name = f'h_tagging_fraction_R{self.jetR}_{self.obs_label}'
+            self.h_tagging_fraction_pp = self.file_pp.Get(h_tagging_fraction_name)
+            self.h_tagging_fraction_AA = self.file_AA.Get(h_tagging_fraction_name)
+            bin = self.h_tagging_fraction_pp.GetXaxis().FindBin((self.pt[0] + self.pt[1])/2)
+            self.f_tagging_pp = self.h_tagging_fraction_pp.GetBinContent(bin)
+            bin = self.h_tagging_fraction_AA.GetXaxis().FindBin((self.pt[0] + self.pt[1])/2)
+            self.f_tagging_AA = self.h_tagging_fraction_AA.GetBinContent(bin)
+            
         # Data -- ratio
         if self.observable == 'girth':
             #self.observable_settings['hepdata_ratio'] = result['hepdata_ratio']
@@ -170,6 +230,11 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['h_ratio_stat'] = file.Get(result['name_ratio_stat'])
             self.observable_settings['g_ratio_sys'] = file.Get(result['name_ratio_sys'])
             self.observable_settings['h_ratio_stat'].SetDirectory(0)
+        elif self.observable in ['zg', 'theta_g']:
+            self.observable_settings['h_ratio_stat'] = self.observable_settings['h_AA_stat'].Clone()
+            self.observable_settings['h_ratio_stat'].Divide(self.observable_settings['h_pp'])
+            self.observable_settings['h_ratio_sys'] = self.observable_settings['h_AA_sys'].Clone()
+            self.observable_settings['h_ratio_sys'].Divide(self.observable_settings['h_pp_sys'])
         
         # Theory -- JETSCAPE
         if 'file_jetscape_pp' in result:
@@ -214,7 +279,7 @@ class PlotResults(common_base.CommonBase):
             h_jetscape_pp.Scale(1., 'width')
             h_jetscape_AA.Scale(1., 'width')
             if self_normalize:
-                if self.observable in ['chjet_zg', 'chjet_tg']:
+                if self.observable in ['zg', 'theta_g']:
                     min_bin = 0
                 else:
                     min_bin = 1
@@ -260,60 +325,136 @@ class PlotResults(common_base.CommonBase):
             
             self.observable_settings['prediction_distribution_list'].append(file.Get(result['name_jewel_norec']))
             self.observable_settings['prediction_distribution_labels'].append('JEWEL, recoils off')
+            
+        # Theory -- zg/tg
+        if self.observable in ['zg', 'theta_g']:
+            self.bin_array = np.array(self.observable_settings['h_pp'].GetXaxis().GetXbins())[1:]
 
-        # Get binning to plot
-        #self.bins = np.array(result['bins'])
-        #self.bin_widths = np.diff(self.bins)
-        #self.n_bins = len(self.bins) - 1
-        
-        #self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
-        #self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
-        
-        #self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
-        #self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
+            with open(self.theory_config, 'r') as stream:
+                config = yaml.safe_load(stream)
+                  
+            self.label_list = []
+            self.sublabel_list = []
+            self.prediction_g_list = []
+          
+            self.prediction_types = [name for name in list(config.keys())]
+            for type in self.prediction_types:
+          
+                theory = config[type]
+                configs = [name for name in list(theory.keys()) if 'config' in name ]
+                for prediction in configs:
+                    theory_prediction = theory[prediction]
+                    config_jetR = theory_prediction['jetR']
+                    if config_jetR == self.jetR:
+                    
+                        plot_list = theory['plot_list']
+                        
+                        if type in ['yang_ting', 'guangyou']:
+                            continue
+                    
+                        if type == 'lbnl':
+                        
+                            if not 'med q/g' in theory_prediction['sublabel']:
+                                continue
+                        
+                            x = np.array(theory_prediction['x'])
+                            y_pp = np.array(theory_prediction['y_pp'])
 
-        #h_main_AA = self.file_AA.Get(self.main_result_name)
-        #h_sys_AA = self.file_AA.Get(self.sys_total_name)
-        #print(bins)
-        #print([h_main_AA.GetXaxis().GetXbins().GetArray()[i] for i in range(n_bins+1)])
-        #self.h_main_AA = h_main_AA.Rebin(self.n_bins, f'{h_main_AA.GetName()}_rebinned', self.bins)
-        #self.h_sys_AA = h_sys_AA.Rebin(self.n_bins, f'{h_sys_AA.GetName()}_rebinned', self.bins)
+                            n = len(x)
+                            xerr = np.zeros(n)
 
-        #h_main_pp = self.file_pp.Get(self.main_result_name)
-        #h_sys_pp = self.file_pp.Get(self.sys_total_name)
-        #self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
-        #self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
+                            if 'f_q' in theory_prediction:
+                                f_q = theory_prediction['f_q']
+                                f_q_min = theory_prediction['f_q_min']
+                                f_q_max = theory_prediction['f_q_max']
+                                y_AA_quark = np.array(theory_prediction['y_AA_quark'])
+                                y_AA_gluon = np.array(theory_prediction['y_AA_gluon'])
+
+                                y_AA = f_q*y_AA_quark + (1-f_q)*y_AA_gluon
+                                y_AA_min = f_q_min*y_AA_quark + (1-f_q_min)*y_AA_gluon
+                                y_AA_max = f_q_max*y_AA_quark + (1-f_q_max)*y_AA_gluon
+
+                                ratio = np.divide(y_AA, y_pp)
+                                ratio_lower = np.divide(y_AA_min, y_pp)
+                                ratio_upper = np.divide(y_AA_max, y_pp)
+                                g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+
+                            else:
+                                y_AA = np.array(theory_prediction['y_AA'])
+                                ratio = np.divide(y_AA, y_pp)
+                                g = ROOT.TGraph(n, x, ratio)
+
+                        elif type == 'caucal':
+                                    
+                            x = np.array(theory_prediction['x'])
+                            ratio = np.array(theory_prediction['ratio'])
+                            ratio_neg_unc_tot = np.array(theory_prediction['ratio_neg_unc_tot'])
+                            ratio_pos_unc_tot = np.array(theory_prediction['ratio_pos_unc_tot'])
+
+                            n = len(x)
+                            xerr = np.zeros(n)
+                            g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio_neg_unc_tot, ratio_pos_unc_tot)
+                        
+                        elif type == 'guangyou':
+                        
+                            x = np.array(theory_prediction['x'])
+                            ratio = np.array(theory_prediction['ratio'])
+
+                            n = len(x)
+                            g = ROOT.TGraph(n, x, ratio)
+                        
+                        elif type in ['hybrid_model', 'yang_ting']:
+                        
+                            x = np.array(theory_prediction['x'])
+                            ratio_lower = np.array(theory_prediction['ratio_lower'])
+                            ratio_upper = np.array(theory_prediction['ratio_upper'])
+                            ratio = (ratio_lower + ratio_upper) / 2.
+
+                            n = len(x)
+                            xerr = np.zeros(n)
+                            g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+                        
+                        elif type == 'jetscape':
+
+                            plot_ratio_directly = True
+                            if plot_ratio_directly:
+                                x = np.array(theory_prediction['x_ratio'])
+                                ratio = np.array(theory_prediction['ratio'])
+                                ratio_err = np.array(theory_prediction['ratio_err'])
+                            else:
+                                # Get distributions
+                                xbins = np.array(theory_prediction['xbins'])
+                                y_pp = np.array(theory_prediction['y_pp'])
+                                y_pp_err = np.array(theory_prediction['y_pp_err'])
+                                y_AA = np.array(theory_prediction['y_AA'])
+                                y_AA_err = np.array(theory_prediction['y_AA_err'])
+                                
+                                # Rebin distributions
+                                x, y_pp, y_pp_err = self.rebin_arrays(xbins, y_pp, y_pp_err)
+                                _, y_AA, y_AA_err = self.rebin_arrays(xbins, y_AA, y_AA_err)
+
+                                # Form ratio and propagate uncertainty
+                                y_pp_err_fraction = np.divide(y_pp_err, y_pp)
+                                y_AA_err_fraction = np.divide(y_AA_err, y_AA)
+                                
+                                ratio = np.divide(y_AA, y_pp)
+                                ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
+                                ratio_err = np.multiply(ratio, ratio_err_fraction)
+                  
+                            n = len(x)
+                            xerr = np.zeros(n)
+                            g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
         
-        # Normalize to the integral over the reported range except for the last bin,
-        # Note that histograms are already scaled for bin width in run_analysis.get_obs_distribution()
-        #integral_AA = self.h_main_AA.Integral(1, self.n_bins, 'width')
-        #self.h_main_AA.Scale(1./integral_AA)
-        #self.h_sys_AA.Scale(1./integral_AA)
-    
-        #integral_pp = self.h_main_pp.Integral(1, self.n_bins, 'width')
-        #self.h_main_pp.Scale(1./integral_pp)
-        #self.h_sys_pp.Scale(1./integral_pp)
-        #
-        ## Also store the integral over the reported range except for the last bin,
-        ## in order to normalize in-medium jet function prediction
-        #self.integral_AA_truncated = self.h_main_AA.Integral(1, self.n_bins-1, 'width')
-        #self.integral_pp_truncated = self.h_main_pp.Integral(1, self.n_bins-1, 'width')
-        #print(f'Integral over full range (AA): {integral_AA}')
-        #print(f'Integral over truncated range (AA): {self.integral_AA_truncated}')
-        #print(f'Integral over full range (pp): {integral_pp}')
-        #print(f'Integral over truncated range (pp): {self.integral_pp_truncated}')
-        #
-        ## Form ratio
-        #self.h_ratio = self.h_main_AA.Clone()
-        #self.h_ratio.Divide(self.h_main_pp)
-        #self.h_ratio_sys = self.h_sys_AA.Clone()
-        #self.h_ratio_sys.Divide(self.h_sys_pp)
+                        if prediction in plot_list:
+                            self.observable_settings['prediction_ratio_list'].append(g)
+                            label = theory['label']
+                            sublabel = theory_prediction['sublabel']
+                            self.observable_settings['prediction_ratio_labels'].append(f'{label}{sublabel}')
 
     #-------------------------------------------------------------------------------------------
     # Plot distributions in upper panel, and ratio in lower panel
     #-------------------------------------------------------------------------------------------
-    def plot_distribution_and_ratio(self, self_normalize=False, plot_ratio=True,
-                                    pp_label=None, logy = False):
+    def plot_distribution_and_ratio(self, plot_ratio=True, pp_label=None, logy = False):
     
         # Output filename
         output_filename = os.path.join(self.output_dir, f'h_{self.observable}.pdf')
@@ -328,27 +469,41 @@ class PlotResults(common_base.CommonBase):
         pad1.SetTopMargin(0.08)
         pad1.SetRightMargin(0.04)
         pad1.SetBottomMargin(0.)
+        pad1.SetTicks(0,1)
         pad1.Draw()
         if logy:
             pad1.SetLogy()
         pad1.cd()
         
-        myLegend = ROOT.TLegend(0.68,0.65,0.85,0.88)
+        if self.observable in ['theta_g']:
+            myLegend = ROOT.TLegend(0.24,0.65,0.4,0.88)
+        else:
+            myLegend = ROOT.TLegend(0.68,0.65,0.85,0.88)
         self.utils.setup_legend(myLegend, 0.055, sep=-0.1)
         
         # pp distribution
-        self.observable_settings['g_pp'].SetMarkerSize(self.marker_size)
-        self.observable_settings['g_pp'].SetMarkerStyle(self.data_markers[0])
-        self.observable_settings['g_pp'].SetMarkerColor(self.data_color)
-        self.observable_settings['g_pp'].SetLineStyle(self.line_style)
-        self.observable_settings['g_pp'].SetLineWidth(self.line_width)
-        self.observable_settings['g_pp'].SetLineColor(self.data_color)
-          
-        #h_sys_pp.SetLineColor(0)
-        #h_sys_pp.SetFillColor(self.colors[0])
-        #h_sys_pp.SetFillColorAlpha(self.colors[0], 0.3)
-        #h_sys_pp.SetFillStyle(1001)
-        #h_sys_pp.SetLineWidth(0)
+        if 'h_pp_sys' in self.observable_settings:
+            self.observable_settings['h_pp_sys'].SetLineColor(0)
+            self.observable_settings['h_pp_sys'].SetFillColor(self.data_color)
+            #self.observable_settings['h_pp_sys'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['h_pp_sys'].SetFillStyle(3004)
+            self.observable_settings['h_pp_sys'].SetLineWidth(0)
+            self.observable_settings['h_pp_sys'].SetMarkerStyle(0)
+        
+        if 'g_pp' in self.observable_settings:
+            self.observable_settings['g_pp'].SetMarkerSize(self.marker_size)
+            self.observable_settings['g_pp'].SetMarkerStyle(self.data_markers[0])
+            self.observable_settings['g_pp'].SetMarkerColor(self.data_color)
+            self.observable_settings['g_pp'].SetLineStyle(self.line_style)
+            self.observable_settings['g_pp'].SetLineWidth(self.line_width)
+            self.observable_settings['g_pp'].SetLineColor(self.data_color)
+        elif 'h_pp' in self.observable_settings:
+            self.observable_settings['h_pp'].SetMarkerSize(self.marker_size)
+            self.observable_settings['h_pp'].SetMarkerStyle(self.data_markers[0])
+            self.observable_settings['h_pp'].SetMarkerColor(self.data_color)
+            self.observable_settings['h_pp'].SetLineStyle(self.line_style)
+            self.observable_settings['h_pp'].SetLineWidth(self.line_width)
+            self.observable_settings['h_pp'].SetLineColor(self.data_color)
         
         # AA distribution
         self.observable_settings['h_AA_stat'].SetMarkerSize(self.marker_size)
@@ -358,11 +513,18 @@ class PlotResults(common_base.CommonBase):
         self.observable_settings['h_AA_stat'].SetLineWidth(self.line_width)
         self.observable_settings['h_AA_stat'].SetLineColor(self.data_color)
           
-        self.observable_settings['g_AA_sys'].SetLineColor(0)
-        self.observable_settings['g_AA_sys'].SetFillColor(self.data_color)
-        self.observable_settings['g_AA_sys'].SetFillColorAlpha(self.data_color, 0.3)
-        self.observable_settings['g_AA_sys'].SetFillStyle(1001)
-        self.observable_settings['g_AA_sys'].SetLineWidth(0)
+        if 'g_AA_sys' in self.observable_settings:
+            self.observable_settings['g_AA_sys'].SetLineColor(0)
+            self.observable_settings['g_AA_sys'].SetFillColor(self.data_color)
+            self.observable_settings['g_AA_sys'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['g_AA_sys'].SetFillStyle(1001)
+            self.observable_settings['g_AA_sys'].SetLineWidth(0)
+        if 'h_AA_sys' in self.observable_settings:
+            self.observable_settings['h_AA_sys'].SetLineColor(0)
+            self.observable_settings['h_AA_sys'].SetFillColor(self.data_color)
+            self.observable_settings['h_AA_sys'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['h_AA_sys'].SetFillStyle(1001)
+            self.observable_settings['h_AA_sys'].SetLineWidth(0)
              
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, self.bins[0], self.bins[-1])
         myBlankHisto.SetNdivisions(505)
@@ -401,13 +563,24 @@ class PlotResults(common_base.CommonBase):
         myBlankHisto2.GetYaxis().SetLabelSize(25)
         myBlankHisto2.GetYaxis().SetNdivisions(505)
         
-        myBlankHisto2.GetYaxis().SetRangeUser(0., self.y_ratio_max)
+        myBlankHisto2.GetYaxis().SetRangeUser(self.y_ratio_min, self.y_ratio_max)
 
         if self.observable == 'girth':
             ratio_legend = ROOT.TLegend(0.45,0.65,0.6,0.95)
         elif self.observable == 'mass':
             ratio_legend = ROOT.TLegend(0.25,0.65,0.4,0.95)
+        if self.observable == 'zg':
+            ratio_legend = ROOT.TLegend(0.29,0.75,0.4,0.95)
+        if self.observable == 'theta_g':
+            ratio_legend = ROOT.TLegend(0.34,0.7,0.52,0.95)
         self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
+        
+        if self.observable == 'zg':
+            ratio_legend2 = ROOT.TLegend(0.5,0.72,0.7,0.975)
+            self.utils.setup_legend(ratio_legend2, 0.07, sep=0.2)
+        elif self.observable == 'theta_g':
+            ratio_legend2 = ROOT.TLegend(0.6,0.7,0.8,0.95)
+            self.utils.setup_legend(ratio_legend2, 0.07, sep=0.2)
 
         myBlankHisto2.Draw('')
         
@@ -418,8 +591,12 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['h_ratio_stat'].SetLineColor(self.data_color)
             self.observable_settings['h_ratio_stat'].SetLineWidth(self.line_width)
 
-            self.observable_settings['g_ratio_sys'].SetFillColor(self.data_color)
-            self.observable_settings['g_ratio_sys'].SetFillColorAlpha(self.data_color, 0.3)
+            if 'g_ratio_sys' in self.observable_settings:
+                self.observable_settings['g_ratio_sys'].SetFillColor(self.data_color)
+                self.observable_settings['g_ratio_sys'].SetFillColorAlpha(self.data_color, 0.3)
+            elif 'h_ratio_sys' in self.observable_settings:
+                self.observable_settings['h_ratio_sys'].SetFillColor(self.data_color)
+                self.observable_settings['h_ratio_sys'].SetFillColorAlpha(self.data_color, 0.3)
 
         pad1.cd()
         
@@ -451,11 +628,17 @@ class PlotResults(common_base.CommonBase):
                 ratio_legend.AddEntry(prediction, label, 'L')
            
         # Draw distribution
-        #self.h_sys_pp.Draw('E2 same')
-        self.observable_settings['g_AA_sys'].Draw('E2 same')
+        if 'h_pp_sys' in self.observable_settings:
+            self.observable_settings['h_pp_sys'].Draw('E2 same')
         if 'g_pp' in self.observable_settings:
-            if type(self.observable_settings['g_pp']) == ROOT.TGraph:
-                self.observable_settings['g_pp'].Draw('P same')
+            self.observable_settings['g_pp'].Draw('P same')
+        elif 'h_pp' in self.observable_settings:
+            self.observable_settings['h_pp'].Draw('PE X0 same')
+            
+        if 'g_AA_sys' in self.observable_settings:
+            self.observable_settings['g_AA_sys'].Draw('E2 same')
+        elif 'h_AA_sys' in self.observable_settings:
+            self.observable_settings['h_AA_sys'].Draw('E2 same')
         self.observable_settings['h_AA_stat'].DrawCopy('PE X0 same')
         
         pad2.cd()
@@ -486,13 +669,18 @@ class PlotResults(common_base.CommonBase):
                 elif type(prediction) == ROOT.TGraph:
                     prediction.Draw('same')
 
-                ratio_legend.AddEntry(prediction, label, 'L')
-                
+                if self.observable in ['zg', 'theta_g'] and 'Pablos' in label:
+                    ratio_legend2.AddEntry(prediction, label, 'L')
+                else:
+                    ratio_legend.AddEntry(prediction, label, 'L')
+                    
         # Re-draw some curves
         if self.observable in ['girth']:
             self.observable_settings['prediction_ratio_list'][0].Draw('E3 same')
           
         ratio_legend.Draw()
+        if self.observable in ['zg', 'theta_g']:
+            ratio_legend2.Draw()
         line = ROOT.TLine(self.bins[0], 1, self.bins[-1], 1)
         line.SetLineColor(920+2)
         line.SetLineStyle(2)
@@ -500,23 +688,32 @@ class PlotResults(common_base.CommonBase):
         line.Draw()
         
         if plot_ratio:
-            self.observable_settings['g_ratio_sys'].Draw('E2 same')
+            if 'g_ratio_sys' in self.observable_settings:
+                self.observable_settings['g_ratio_sys'].Draw('E2 same')
+            if 'h_ratio_sys' in self.observable_settings:
+                self.observable_settings['h_ratio_sys'].Draw('E2 same')
             self.observable_settings['h_ratio_stat'].Draw('PE X0 same')
        
         pad1.cd()
         if not pp_label:
             pp_label = 'pp'
-        if type(self.observable_settings['g_pp']) == ROOT.TGraph:
+        if 'g_pp' in self.observable_settings:
             myLegend.AddEntry(self.observable_settings['g_pp'], pp_label, 'P')
         else:
-            myLegend.AddEntry(self.observable_settings['g_pp'], pp_label, 'PE')
+            myLegend.AddEntry(self.observable_settings['h_pp'], pp_label, 'PE')
         myLegend.AddEntry(self.observable_settings['h_AA_stat'], 'Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(int(self.centrality[0]), int(self.centrality[1])), 'PE')
-        myLegend.AddEntry(self.observable_settings['g_AA_sys'], 'Sys. uncertainty', 'f')
-        
+        if 'g_AA_sys' in self.observable_settings:
+            myLegend.AddEntry(self.observable_settings['g_AA_sys'], 'Sys. uncertainty', 'f')
+        elif 'h_AA_sys' in self.observable_settings:
+            myLegend.AddEntry(self.observable_settings['h_AA_sys'], 'Sys. uncertainty', 'f')
+       
         text_latex = ROOT.TLatex()
         text_latex.SetNDC()
         
-        x = 0.25
+        if self.observable in ['theta_g']:
+            x = 0.52
+        else:
+            x = 0.25
         text_latex.SetTextSize(0.065)
         text = f'#bf{{ALICE}} #sqrt{{#it{{s_{{#it{{NN}}}}}}}} = {self.sqrts/1000.} TeV'
         text_latex.DrawLatex(x, 0.83, text)
@@ -529,9 +726,13 @@ class PlotResults(common_base.CommonBase):
         
         # pt bin label
         pt_label = None
-        if self.observable in ['girth', 'mass']:
+        if self.observable in ['girth', 'mass', 'zg', 'theta_g']:
             pt_label = f'{self.pt[0]} < #it{{p}}_{{T, ch jet}} < {self.pt[1]} GeV/#it{{c}}'
             text_latex.DrawLatex(x, 0.57, pt_label)
+            
+        if self.observable in ['zg', 'theta_g']:
+            grooming_label = f'Soft Drop #it{{z}}_{{cut}}={self.zcut}, #it{{#beta}}=0'
+            text_latex.DrawLatex(x, 0.47, grooming_label)
         
         myLegend.Draw()
 
@@ -727,44 +928,6 @@ class PlotResults(common_base.CommonBase):
                           ymax=1.8,
                           outputfilename=f'h_jet_RAA_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
                           R=R)
-                              
-    #-------------------------------------------------------------------------------------------
-    def plot_chjet_zg(self):
-        
-        # Plot
-        R = 0.4
-        xtitle="#it{z}_{g}"
-        self.plot_raa(raa_type='chjet_zg',
-                      hname = f'h_chjet_zg_alice_R{R}{self.suffix}Scaled',
-                      h_data_list=None,
-                      eta_cut=np.round(self.inclusive_chjet_observables['eta_cut_alice_R']-R, decimals=1),
-                      data_centralities=['0-10'],
-                      mc_centralities=[f'{self.min_cent}-{self.max_cent}'],
-                      xtitle=xtitle,
-                      ytitle = f'#frac{{1}}{{#sigma}} #frac{{d#sigma}}{{d#it{{{xtitle}}}}}',
-                      ymax=2.8,
-                      outputfilename=f'h_chjet_zg_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
-                      R=R,
-                      self_normalize=True)
-                      
-    #-------------------------------------------------------------------------------------------
-    def plot_chjet_tg(self):
-        
-        # Plot
-        R = 0.4
-        xtitle="#it{#theta}_{g}"
-        self.plot_raa(raa_type='chjet_tg',
-                      hname = f'h_chjet_tg_alice_R{R}{self.suffix}Scaled',
-                      h_data_list=None,
-                      eta_cut=np.round(self.inclusive_chjet_observables['eta_cut_alice_R']-R, decimals=1),
-                      data_centralities=['0-10'],
-                      mc_centralities=[f'{self.min_cent}-{self.max_cent}'],
-                      xtitle=xtitle,
-                      ytitle = f'#frac{{1}}{{#sigma}} #frac{{d#sigma}}{{d#it{{{xtitle}}}}}',
-                      ymax=2.8,
-                      outputfilename=f'h_chjet_tg_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
-                      R=R,
-                      self_normalize=True)
                       
     #-------------------------------------------------------------------------------------------
     def plot_semi_inclusive_chjet_IAA(self):
@@ -969,6 +1132,33 @@ class PlotResults(common_base.CommonBase):
                             ymax=0.1,
                             outputfilename=f'h_semi_inclusive_chjet_dphi_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
                             R=R)
+                            
+    #---------------------------------------------------------------
+    # Rebin numpy arrays (xbins,y) representing a histogram,
+    # where x represents the bin edges, and y the bin content
+    #
+    # Return (x_rebinned, y_rebinned) where x_rebinned is the bin centers
+    #
+    # I don't find any easy way to do this...so I
+    #        construct TH1, rebin, and then extract array)
+    #----------------------------------------------------------------------
+    def rebin_arrays(self, x, y, yerr):
+
+        x_array = array('d', x)
+        h = ROOT.TH1F('h', 'h', len(x)-1, x_array)
+        for i, content in enumerate(y):
+            h.SetBinContent(i+1, y[i])
+            h.SetBinError(i+1, yerr[i])
+        h_rebinned = h.Rebin(len(self.bin_array)-1, 'h_rebinned', self.bin_array)
+        x_rebinned = []
+        y_rebinned = []
+        y_err_rebinned = []
+        for i in range(len(self.bin_array)-1):
+            x_rebinned.append(h_rebinned.GetBinCenter(i+1))
+            y_rebinned.append(h_rebinned.GetBinContent(i+1))
+            y_err_rebinned.append(h_rebinned.GetBinError(i+1))
+          
+        return (np.array(x_rebinned), np.array(y_rebinned), np.array(y_err_rebinned))
   
 #-------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------

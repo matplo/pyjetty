@@ -126,30 +126,49 @@ mass:
   # JEWEL (TGraphAsymmErrors*)
   name_jewel_rec: 'g_jewel_rec'
   name_jewel_norec: 'g_jewel_norec'
- 
+
 #------------------------------------------------------------------
 # ALICE, ALICE-PUBLIC-2020-006 (no hepdata)
-#   sqrts: 5.02 TeV
-#   Centrality: 0-10, 30-50
-#   Jets:
-#       - R = 0.2, 0.4 in 0-10, 0.4 in 30-50
-#       - 60 < pt_ch < 80
-#   Cuts / Notes:
-#       - |eta_jet| < 0.9 - R
-#       - z_cut = 0.2, beta = 0
-softdrop_alice:
-  soft_drop_zcut: 0.2
-  soft_drop_beta: 0.
-  bins_zg: [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-  bins_tg: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
+zg:
+  xtitle: '#it{z}_{g}'
+  sqrts: 5020
+  centrality: [0., 10.]
+  jetR: 0.2
+  pt: [60, 80]
+  eta_R: 0.9
+  zcut: 0.2
+  beta: 0.
   
-    #bins: []
-  #medium_jet_functions:
-  #  zr: []
-  #  y_med: []
-  #  y_vac: []
-  #  ratio: []
-  #  uncertainty: []
+  # Data -- distributions
+  file_pp: '../PRL_results/james/pp_ref/217440-02/zg/final_results/fFinalResults.root'
+  file_AA: '../PRL_results/james/PbPb/334797-02/zg/final_results/fFinalResults.root'
+  obs_label: 'SD_zcut02_B0'
+  
+  # Theory
+  theory_config: '../theory_predictions_zg.yaml'
+  #file_jetscape_pp: 'jetscape/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
+  #file_jetscape_AA: 'jetscape/501204/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  #hname_jetscape: 'h_chjet_mass_alice_R0.4_pt0.0Scaled'
+  
+#------------------------------------------------------------------
+# ALICE, ALICE-PUBLIC-2020-006 (no hepdata)
+theta_g:
+  xtitle: '#it{#theta}_{g}'
+  sqrts: 5020
+  centrality: [0., 10.]
+  jetR: 0.2
+  pt: [60, 80]
+  eta_R: 0.9
+  zcut: 0.2
+  beta: 0.
+  
+  # Data -- distributions
+  file_pp: '../PRL_results/james/pp_ref/217440-02/theta_g/final_results/fFinalResults.root'
+  file_AA: '../PRL_results/james/PbPb/334797-02/theta_g/final_results/fFinalResults.root'
+  obs_label: 'SD_zcut02_B0'
+  
+  # Theory
+  theory_config: '../theory_predictions_rg.yaml'
   
 #------------------------------------------------------------------
 # Jet correlation observables

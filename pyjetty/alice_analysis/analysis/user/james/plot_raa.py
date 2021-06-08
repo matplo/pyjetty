@@ -544,7 +544,7 @@ class PlotRAA(common_base.CommonBase):
         text = f'#bf{{ALICE}} {self.figure_approval_status} #sqrt{{#it{{s_{{#it{{NN}}}}}}}} = 5.02 TeV'
         text_latex.DrawLatex(0.55, 0.83, text)
         
-        text = 'Charged particle jets'#, anti-#it{k}_{T}'
+        text = 'Charged-particle jets'#, anti-#it{k}_{T}'
         text_latex.DrawLatex(0.55, 0.75, text)
         
         text = '#it{R} = ' + str(self.jetR) + ',   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
