@@ -191,6 +191,9 @@ class ProcessPHBase(process_base.ProcessBase):
     
     # ------------------------------------------------------------------------
 
+    print("Scale histograms by appropriate weighting...")
+    self.scale_objects()
+
     print('Save thn...')
     process_base.ProcessBase.save_thn_th3_objects(self)
 
@@ -610,6 +613,23 @@ class ProcessPHBase(process_base.ProcessBase):
             jetR, obs_setting, grooming_setting, obs_label, jet_p, jet_p_groomed_lund,
             jet_h, jet_h_groomed_lund, jet_ch, jet_ch_groomed_lund,
             jet_pt_p_ungroomed, jet_pt_h_ungroomed, jet_pt_ch_ungroomed, suffix)
+
+  #---------------------------------------------------------------
+  # Apply appropriate scaling for pT-hat bin
+  #---------------------------------------------------------------
+  def scale_objects(self):
+
+    for attr in dir(self):
+      obj = getattr(self, attr)
+      types = (ROOT.TH1, ROOT.TH2, ROOT.TH3, ROOT.THnBase)
+      if isinstance(obj, types):
+        name = obj.GetName()
+        if "Nevents" not in name:
+          if "MPIon" in name:
+            obj.Scale(self.xsec_MPIon / self.nEvents_MPIon)
+          else:  # "MPIoff" in name
+            obj.Scale(self.xsec_MPIoff / self.nEvents_MPIoff)
+          obj.SetNameTitle(name+"Scaled", name+"Scaled")
 
   #---------------------------------------------------------------
   # Initialize MPI scaling histograms -- common utility function

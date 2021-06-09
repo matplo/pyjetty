@@ -34,11 +34,15 @@ class ProcessIO(common_base.CommonBase):
   # - level is either 'p' or 'h' (parton or hadron)
   # - MPI is either 'on' or 'off'
   #---------------------------------------------------------------
-  def __init__(self, input_file='', tree_name_base='tree_Particle_gen', level='p', MPI='on' **kwargs):
+  def __init__(self, input_file='', tree_name_base='tree_Particle_gen',
+               level='p', MPI='on', **kwargs):
+
     super(ProcessIO, self).__init__(**kwargs)
 
     # Input ROOT files containing generated events with jet observables
     self.input_file = input_file
+
+    self.level = level
 
     if MPI not in ['on', 'off']:
       raise ValueError("MPI must either be 'on' or 'off'")
@@ -92,7 +96,7 @@ class ProcessIO(common_base.CommonBase):
     self.reset_dataframes()
 
     print('    tree_name = {}'.format(self.tree_name))
-    self.track_df = self.load_dataframe(self.tree_name, self.columns)
+    self.track_df = self.load_dataframe()
 
     return self.group_fjparticles(group_by_evid, ch_cut)
 
@@ -108,7 +112,7 @@ class ProcessIO(common_base.CommonBase):
     with uproot.open(self.input_file)[self.tree_name] as tree:
       if not tree:
         raise ValueError('Tree {} not found in file {}'.format(self.tree_name, self.input_file))
-      df = tree.pandas.df(self.columns)
+      df = uproot.concatenate(tree, self.columns, library="pd")
 
     return df
 
@@ -124,7 +128,7 @@ class ProcessIO(common_base.CommonBase):
       if self.level == 'p':
         raise ValueError("ch_cut cannot be set for parton-level tree")
       else:  # self.level == 'h'
-        track_df = track_df[track_df.is_charged]
+        track_df = track_df.loc[track_df["is_charged"] == True]
 
     df_fjparticles = None
 
