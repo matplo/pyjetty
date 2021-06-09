@@ -4,6 +4,30 @@
 #------------------------------------------------------------------
 
 #------------------------------------------------------------------
+# ALICE jet RAA, https://www.hepdata.net/record/ins1755387
+# ATLAS jet RAA, https://www.hepdata.net/record/ins1673184
+# ALICE hadron RAA, https://www.hepdata.net/record/ins1657384
+# CMS hadron RAA, https://www.hepdata.net/record/ins1496050
+combined_raa:
+  file: 'raa/HadronJetRAA.root'
+
+  xtitle: '#it{p}_{T} (GeV/#it{c})'
+  sqrts: 5020
+  centrality: [0., 10.]
+  jetR: 0.4
+  
+  hadron_raa_ALICE_name: 'grALICEHad'
+  hadron_raa_sys_ALICE_name: 'grALICEHadSys'
+  hadron_raa_CMS_name: 'grCMSHad'
+  hadron_raa_sys_CMS_name: 'grCMSHadSys'
+  jet_raa_ALICE_name: 'grALICEJet'
+  jet_raa_corr_ALICE_name: 'grALICEJetCorr'
+  jet_raa_shape_ALICE_name: 'grALICEJetShape'
+  jet_raa_ATLAS_name: 'grATLASJet'
+  jet_raa_sys_ATLAS_name: 'grATLASJetSys'
+
+#------------------------------------------------------------------
+#1, jetscape hadron Raa, JEWEL hadron Raa
 hadron_raa:
 
   # ALICE, https://www.hepdata.net/record/ins1657384
@@ -25,6 +49,7 @@ hadron_raa:
     hepdata_30_50: 'data/PHYS_RAA/data_hadron/CMS/30_50/HEPData-ins1496050-v2-Table_11.root'
 
 #------------------------------------------------------------------
+# ALICE R = 0.2 full jet Raa (ie. not #3), JEWEL w/ and w/out recoils, Hybrid model Lres = 0, 2/(pi T) (these aren't included in this message), jetscape jet Raa
 jet_raa:
 
   # ATLAS, https://www.hepdata.net/record/ins1673184
