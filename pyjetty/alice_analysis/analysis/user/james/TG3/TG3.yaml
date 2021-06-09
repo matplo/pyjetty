@@ -52,33 +52,42 @@ hadron_raa:
   jewel_RAA: [0.1926189, 0.24277280000000001, 0.27756973333333335, 0.29159270000000004, 0.32021950000000005, 0.34528896666666670, 0.37722546666666662, 0.40926899999999994, 0.44030436666666667, 0.48391966666666669, 0.49535560000000006, 0.52023156666666670, 0.53894266666666668, 0.58663703333333339, 0.63023540000000000, 0.64838103333333341, 0.67231433333333335, 0.67452436666666660, 0.70571573333333326, 0.74013626666666665, 0.79349943333333339, 0.85476946666666664, 0.90743686666666667, 1.0013766000000002, 1.0554370666666666, 1.1286383333333332, 1.1846926666666666, 1.3506786666666668, 1.5403039999999999, 1.8610579999999999]
  
 #------------------------------------------------------------------
-# ALICE R = 0.2 full jet Raa (ie. not #3), JEWEL w/ and w/out recoils, Hybrid model Lres = 0, 2/(pi T) (these aren't included in this message), jetscape jet Raa
+# ALICE R = 0.2 full jet Raa, https://www.hepdata.net/record/ins1755387
+# jetscape jet Raa
+# JEWEL w/ and w/out recoils
+# Hybrid model Lres = 0, 2/(pi T)
 jet_raa:
 
-  # ATLAS, https://www.hepdata.net/record/ins1673184
-  # Centrality: 0-10, 30-40, 40-50
-  # Cuts:
-  #   - |y_jet|<2.8
-  #   - Two charged tracks with pt>4 GeV are required in Pb-Pb
-  #     (they argue this is small...unclear if they correct for it...we will ignore it here)
-  pt_atlas:
-    y_cut: 2.8
-    hepdata_0_10: 'data/PHYS_RAA/data_jet/ATLAS/0_10/HEPData-ins1673184-v1-Table_19.root'
-    hepdata_30_40: 'data/PHYS_RAA/data_jet/ATLAS/30_40/HEPData-ins1673184-v1-Table_22.root'
-    hepdata_40_50: 'data/PHYS_RAA/data_jet/ATLAS/40_50/HEPData-ins1673184-v1-Table_23.root'
+  xtitle: '#it{p}_{T} (GeV/#it{c})'
+  sqrts: 5020
+  centrality: [0., 10.]
+  jetR: 0.2
+  eta_R: 0.7
   
-  # ALICE, https://www.hepdata.net/record/ins1755387
-  # Centrality: 0-10
-  # Cuts:
-  #   - pT^{ch lead} > 5,7 GeV (for R=0.2,0.4)
-  #   - |eta_jet|<0.3,0.5
-  # Note that results are reported both with and without the pT,lead cut on the pp jet cross-section
+  # ALICE data
   # Here, we use the result where the cut is applied on both PbPb and pp
-  pt_alice:
-    eta_cut_R: 0.7
-    hepdata_0_10_R02: 'data/PHYS_RAA/data_jet/ALICE/0_10_R02/HEPData-ins1755387-v1-Table_30.root'
-    hepdata_0_10_R04: 'data/PHYS_RAA/data_jet/ALICE/0_10_R04/HEPData-ins1755387-v1-Table_31.root'
-    hepdata_0_10_R02_biasratio: 'data/PHYS_RAA/data_jet/ALICE/0_10_R02/HEPData-ins1755387-v1-Table_26.root'
+  #   - pT^{ch lead} > 5 GeV
+  hepdata: 'raa/HEPData-ins1755387-v1-Table_30.root'
+  
+  # JETSCAPE
+  file_jetscape_pp: 'jetscape/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/501204/5020_PbPb_0-5_0.30_2.0_1/AnalysisResultsFinal.root'
+  hname_jetscape: 'h_jet_pt_alice_R0.2_pt0.0Scaled'
+  
+  # JEWEL
+  # https://github.com/jdmulligan/alice-yale-dev/blob/master/analyses/inclusiveJetSpectra/plotFinalSpectra.py
+  jewel_x: [45., 55., 65., 75., 85., 95., 110., 130.]
+  jewel_recoils_on_RAA: [0.2970918, 0.302211, 0.3067398, 0.3173252, 0.3321927, 0.3491199, 0.3657786, 0.3808306]
+  jewel_recoils_on_RAA_stat: [0.009252538, 0.007658302, 0.005487402, 0.00575345, 0.005644318, 0.006420785, 0.00447488, 0.004586529]
+  jewel_recoils_off_RAA: [0.2770742, 0.2835349, 0.3028194, 0.320016, 0.3253438, 0.3486229, 0.3704634, 0.387779]
+  jewel_recoils_off_RAA_stat: [0.007368163, 0.005881844, 0.006844141, 0.006381311, 0.006293701, 0.006896316, 0.005492511, 0.005487527]
+  
+  # Hybrid model
+  hybrid_x: [37.5, 42.5, 47.5, 52.5, 57.5, 62.5, 67.5, 72.5, 77.5, 82.5, 87.5, 92.5, 97.5, 105., 115., 125., 135., 145.]
+  hybrid_lres0_upper: [0.277710271344705, 0.2961617473034224, 0.30650318067048016, 0.3241589773658112, 0.3383619407789051, 0.347980990388123, 0.35950838183015255, 0.36676194459052525, 0.3773111349886052, 0.3937314154598581, 0.410005974462365, 0.4044853503664839, 0.4176713434991355, 0.42429253660778843, 0.43842442707258367, 0.4501613284039023, 0.46060518517599813, 0.47870277635761826]
+  hybrid_lres0_lower: [0.24940508713377404, 0.26699478959357764, 0.27903632803092754, 0.29183805943592295, 0.30532611216679045, 0.31328782104749126, 0.32591993370944455, 0.33302878040792244, 0.34675277890853984, 0.3566622897372853, 0.3698389453898428, 0.3684050208641034, 0.3822527986586299, 0.3870170222174438, 0.40038619194945524, 0.41226268095599583, 0.42397474554495723, 0.4353892760962439]
+  hybrid_lres2piT_upper: [0.28026214177718595, 0.2997299157178971, 0.3134290119182044, 0.32982257713499846, 0.34292349419159684, 0.3530092314197882, 0.3651790720662336, 0.3768891349833852, 0.38922978784809015, 0.4036374878989719, 0.41698832255877893, 0.422543148867439, 0.43068721153950035, 0.4377512674288672, 0.45560069392401653, 0.46670134545475866, 0.4835155533943265, 0.49210679977451094]
+  hybrid_lres2piT_lower: [0.2552876618330194, 0.27242714020884673, 0.2846809183485315, 0.30002333051461083, 0.3117607015451216, 0.32260587261376494, 0.33437210580362076, 0.3410198880373287, 0.3556623412236122, 0.36913549805107043, 0.3837071740037796, 0.3831029498406481, 0.39430504070431616, 0.4023619872790242, 0.41654932298940245, 0.4295884441578776, 0.4460794281574676, 0.45393967490661724]
 
 #------------------------------------------------------------------
 # https://www.hepdata.net/record/ins1682990

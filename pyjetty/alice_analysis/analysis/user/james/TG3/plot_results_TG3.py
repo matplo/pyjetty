@@ -24,6 +24,7 @@ import argparse
 # Data analysis and plotting
 import ROOT
 import numpy as np
+import root_numpy
 
 # Base class
 sys.path.append('.')
@@ -73,7 +74,7 @@ class PlotResults(common_base.CommonBase):
         self.plot_hadron_raa()
 
         # Inclusive full jet RAA
-        #self.plot_jet_raa()
+        self.plot_jet_raa()
         
         # Charged jet g
         self.plot_girth()
@@ -124,33 +125,18 @@ class PlotResults(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     def plot_jet_raa(self):
 
-        for R in [0.2, 0.4]:
-        
-            # Get experimental data
-            h_data_list = []
-            if R==0.2:
-                f = ROOT.TFile(self.inclusive_jet_observables['pt_alice']['hepdata_0_10_R02'], 'READ')
-                dir = f.Get('Table 30')
-            elif R==0.4:
-                f = ROOT.TFile(self.inclusive_jet_observables['pt_alice']['hepdata_0_10_R04'], 'READ')
-                dir = f.Get('Table 31')
-            h_data = dir.Get('Graph1D_y1')
-            h_data_list.append([h_data, '0-10%'])
-            f.Close()
-            
-            # Plot
-            self.plot_raa(raa_type='jet',
-                          hname = f'h_jet_pt_alice_R{R}{self.suffix}Scaled',
-                          h_data_list=h_data_list,
-                          eta_cut=np.round(self.inclusive_jet_observables['pt_alice']['eta_cut_R']-R, decimals=1),
-                          data_centralities=['0-10'],
-                          mc_centralities=[f'{self.min_cent}-{self.max_cent}'],
-                          xtitle="#it{p}_{T,jet} (GeV/#it{c})",
-                          ytitle = '#frac{d^{2}N}{d#it{p}_{T}d#it{#eta}} #left[(GeV/c)^{-1}#right]',
-                          ymax=1.8,
-                          outputfilename=f'h_jet_RAA_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
-                          R=R)
-        
+        # Initialize data and theory info
+        self.observable = 'jet_raa'
+        self.init_result()
+             
+        # Plot ratio
+        self.x_min = 40.
+        self.x_max = 140.
+        self.y_ratio_min = 0.
+        self.y_ratio_max = 1.4
+        self.ytitle = '#it{R}_{AA}'
+        self.plot_ratio()
+
     #-------------------------------------------------------------------------------------------
     def plot_girth(self):
     
@@ -265,6 +251,25 @@ class PlotResults(common_base.CommonBase):
             file = ROOT.TFile(result['file'], 'READ')
             self.observable_settings['g_hadron_raa_ALICE'] = file.Get(result['hadron_raa_ALICE_name'])
             self.observable_settings['g_hadron_raa_sys_ALICE'] = file.Get(result['hadron_raa_sys_ALICE_name'])
+        if self.observable == 'jet_raa':
+            f = ROOT.TFile(result['hepdata'], 'READ')
+            dir = f.Get('Table 30')
+            h = dir.Get('Hist1D_y1')
+            y = np.asarray(root_numpy.hist2array(h), dtype=np.float64)
+            stat = np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e1')), dtype=np.float64)
+            sys_corr = np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e2')), dtype=np.float64)
+            sys_shape = np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e3')), dtype=np.float64)
+            
+            bins = np.array(h.GetXaxis().GetXbins())
+            x = (bins[1:] + bins[:-1]) / 2
+            x_err = np.ediff1d(bins)/2
+            n = len(x)
+            f.Close()
+
+            self.observable_settings['g_jet_raa_ALICE'] = ROOT.TGraphErrors(n, x, y, np.zeros(n), stat)
+            self.observable_settings['g_jet_raa_sys_corr_ALICE']  = ROOT.TGraphErrors(n, x, y, x_err, sys_corr)
+            self.observable_settings['g_jet_raa_sys_shape_ALICE']  = ROOT.TGraphErrors(n, x, y, x_err, sys_shape)
+
         if self.observable in ['girth', 'mass']:
             file = ROOT.TFile(result['file'], 'READ')
             self.observable_settings['g_pp'] = file.Get(result['name_pp'])
@@ -328,7 +333,7 @@ class PlotResults(common_base.CommonBase):
             f_jetscape_AA = ROOT.TFile(result['file_jetscape_AA'], 'READ')
             h_jetscape_AA = f_jetscape_AA.Get(hname)
             h_jetscape_AA.SetDirectory(0)
-            #if self.observable == 'jet':
+            #if self.observable == 'jet_raa':
             #    h_jetscape_AA.Scale(0.5) # Since we hadd [0,5] and [5,10]
             f_jetscape_AA.Close()
 
@@ -394,6 +399,21 @@ class PlotResults(common_base.CommonBase):
             
             self.observable_settings['prediction_distribution_list'].append(file.Get(result['name_hybrid_wake1_lres0']))
             self.observable_settings['prediction_distribution_labels'].append('Hybrid Model, #it{L}_{res} = 0, wake on')
+            
+        if self.observable == 'jet_raa':
+            hybrid_x = np.array(result['hybrid_x'])
+            n = len(hybrid_x)
+            hybrid_lres0_upper = np.array(result['hybrid_lres0_upper'])
+            hybrid_lres0_lower = np.array(result['hybrid_lres0_lower'])
+            g_hybrid_lres0 = ROOT.TGraphAsymmErrors(n, hybrid_x, hybrid_lres0_upper, np.zeros(n), np.zeros(n), hybrid_lres0_upper-hybrid_lres0_lower, np.zeros(n))
+            self.observable_settings['prediction_ratio_list'].append(g_hybrid_lres0)
+            self.observable_settings['prediction_ratio_labels'].append('Hybrid model, #it{L}_{res}=0')
+            
+            hybrid_lres2piT_upper = np.array(result['hybrid_lres2piT_upper'])
+            hybrid_lres2piT_lower = np.array(result['hybrid_lres2piT_lower'])
+            g_hybrid_lres2piT = ROOT.TGraphAsymmErrors(n, hybrid_x, hybrid_lres2piT_upper, np.zeros(n), np.zeros(n), hybrid_lres2piT_upper-hybrid_lres2piT_lower, np.zeros(n))
+            self.observable_settings['prediction_ratio_list'].append(g_hybrid_lres2piT)
+            self.observable_settings['prediction_ratio_labels'].append('Hybrid model, #it{L}_{res}=2#pi/#it{T}')
 
         # Theory -- JEWEL
         if self.observable == 'mass':
@@ -410,6 +430,19 @@ class PlotResults(common_base.CommonBase):
             g = ROOT.TGraph(n, jewel_x, jewel_RAA)
             self.observable_settings['prediction_ratio_list'].append(g)
             self.observable_settings['prediction_ratio_labels'].append('JEWEL, recoils on?')
+            
+        if self.observable == 'jet_raa':
+            jewel_x = np.array(result['jewel_x'])
+            n = len(jewel_x)
+            jewel_recoils_on_RAA = np.array(result['jewel_recoils_on_RAA'])
+            g_recoils_on = ROOT.TGraph(n, jewel_x, jewel_recoils_on_RAA)
+            self.observable_settings['prediction_ratio_list'].append(g_recoils_on)
+            self.observable_settings['prediction_ratio_labels'].append('JEWEL, recoils on')
+            
+            jewel_recoils_off_RAA = np.array(result['jewel_recoils_off_RAA'])
+            g_recoils_off = ROOT.TGraph(n, jewel_x, jewel_recoils_off_RAA)
+            self.observable_settings['prediction_ratio_list'].append(g_recoils_off)
+            self.observable_settings['prediction_ratio_labels'].append('JEWEL, recoils off')
             
         # Theory -- zg/tg
         if self.observable in ['zg', 'theta_g']:
@@ -540,14 +573,15 @@ class PlotResults(common_base.CommonBase):
     # Plot ratio in single panel
     #-------------------------------------------------------------------------------------------
     def plot_ratio(self):
-          
+              
         # Draw RAA
         cname = 'c'
         c = ROOT.TCanvas(cname, cname, 600, 450)
-        c.SetRightMargin(0.05);
-        c.SetLeftMargin(0.15);
-        c.SetTopMargin(0.05);
-        c.SetBottomMargin(0.17);
+        c.SetRightMargin(0.05)
+        c.SetLeftMargin(0.15)
+        c.SetTopMargin(0.05)
+        c.SetBottomMargin(0.17)
+        c.SetTicks(0,1)
         if self.observable == 'combined_raa':
             c.SetLogx()
         c.cd()
@@ -567,15 +601,18 @@ class PlotResults(common_base.CommonBase):
         
         if self.observable == 'combined_raa':
             y_leg = 0.62
-        elif self.observable == 'hadron_raa':
+        elif self.observable in ['hadron_raa', 'jet_raa']:
             y_leg = 0.67
         leg = ROOT.TLegend(0.2,y_leg,0.4,y_leg+0.11)
         self.utils.setup_legend(leg, 0.04, sep=-0.1)
         
-        leg2 = ROOT.TLegend(0.6,y_leg,0.8,y_leg+0.11)
+        if self.observable == 'jet_raa':
+            leg2 = ROOT.TLegend(0.58,y_leg-0.09,0.78,y_leg+0.11)
+        else:
+            leg2 = ROOT.TLegend(0.6,y_leg,0.8,y_leg+0.11)
         self.utils.setup_legend(leg2, 0.04, sep=-0.1)
         
-        # Draw theory predictions for distribution
+        # Draw theory predictions
         for i, prediction in enumerate(self.observable_settings['prediction_ratio_list']):
         
             label = self.observable_settings['prediction_ratio_labels'][i]
@@ -584,6 +621,7 @@ class PlotResults(common_base.CommonBase):
             prediction.SetFillColor(color)
             prediction.SetFillColorAlpha(color, self.alpha)
             prediction.SetLineColor(color)
+            prediction.SetLineColorAlpha(color, self.alpha)
             prediction.SetLineWidth(8)
             prediction.SetMarkerSize(0)
             prediction.SetMarkerStyle(0)
@@ -682,8 +720,6 @@ class PlotResults(common_base.CommonBase):
                 yerr = self.observable_settings['g_hadron_raa_ALICE'].GetErrorY(i)
                 if type(self.observable_settings['g_hadron_raa_ALICE']) == ROOT.TGraphAsymmErrors:
                     self.observable_settings['g_hadron_raa_ALICE'].SetPointError(i, 0, 0, yerr, yerr)
-                elif type(self.observable_settings['g_hadron_raa_ALICE']) == ROOT.TGraphErrors:
-                    self.observable_settings['g_hadron_raa_ALICE'].SetPointError(i, 0, yerr)
 
             self.observable_settings['g_hadron_raa_ALICE'].SetMarkerStyle(21)
             self.observable_settings['g_hadron_raa_ALICE'].Draw('PE Z same')
@@ -691,14 +727,45 @@ class PlotResults(common_base.CommonBase):
 
             leg.AddEntry(self.observable_settings['g_hadron_raa_ALICE'], '0-10%','PE')
             leg.AddEntry(self.observable_settings['g_hadron_raa_sys_ALICE'], 'Sys. uncertainty','f')
-                
+            
+        elif self.observable == 'jet_raa':
+                    
+            self.observable_settings['g_jet_raa_sys_shape_ALICE'].SetFillColor(self.data_color)
+            self.observable_settings['g_jet_raa_sys_shape_ALICE'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['g_jet_raa_sys_shape_ALICE'].SetMarkerStyle(0)
+            self.observable_settings['g_jet_raa_sys_shape_ALICE'].SetFillStyle(1001)
+            self.observable_settings['g_jet_raa_sys_shape_ALICE'].SetLineWidth(0)
+            self.observable_settings['g_jet_raa_sys_shape_ALICE'].SetLineColor(0)
+            
+            self.observable_settings['g_jet_raa_sys_corr_ALICE'].SetFillColor(self.data_color)
+            self.observable_settings['g_jet_raa_sys_corr_ALICE'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['g_jet_raa_sys_corr_ALICE'].SetMarkerStyle(0)
+            self.observable_settings['g_jet_raa_sys_corr_ALICE'].SetFillStyle(0)
+            self.observable_settings['g_jet_raa_sys_corr_ALICE'].SetLineWidth(1)
+            self.observable_settings['g_jet_raa_sys_corr_ALICE'].SetLineColor(self.data_color)
+            
+            self.observable_settings['g_jet_raa_ALICE'].SetMarkerColor(self.data_color)
+            self.observable_settings['g_jet_raa_ALICE'].SetLineColor(self.data_color)
+            self.observable_settings['g_jet_raa_ALICE'].SetLineWidth(1)
+            self.observable_settings['g_jet_raa_ALICE'].SetMarkerSize(1.3)
+            
+            self.observable_settings['g_jet_raa_ALICE'].SetMarkerStyle(21)
+            self.observable_settings['g_jet_raa_ALICE'].Draw('PE Z same')
+            self.observable_settings['g_jet_raa_sys_corr_ALICE'].Draw('E2 same')
+            self.observable_settings['g_jet_raa_sys_shape_ALICE'].Draw('E2 same')
+
+            leg.AddEntry(self.observable_settings['g_jet_raa_ALICE'], '0-10%','PE')
+            leg.AddEntry(self.observable_settings['g_jet_raa_sys_corr_ALICE'], 'Corr. uncertainty','f')
+            leg.AddEntry(self.observable_settings['g_jet_raa_sys_shape_ALICE'], 'Shape uncertainty','f')
+            
         leg.Draw('same')
         leg2.Draw('same')
 
-        line = ROOT.TLine(myBlankHisto.GetXaxis().GetXmin(),1,myBlankHisto.GetXaxis().GetXmax(),1)
-        line.SetLineColor(1)
-        line.SetLineStyle(2)
-        line.Draw('same')
+        if self.observable in ['combined_raa', 'hadron_raa']:
+            line = ROOT.TLine(myBlankHisto.GetXaxis().GetXmin(),1,myBlankHisto.GetXaxis().GetXmax(),1)
+            line.SetLineColor(1)
+            line.SetLineStyle(2)
+            line.Draw('same')
 
         # # # # # # # # # # # # # # # # # # # # # # # #
         # text
@@ -727,10 +794,8 @@ class PlotResults(common_base.CommonBase):
             text = f'Charged particles  |#eta| < {self.eta_cut}'
             text_latex.DrawLatex(x,y-dy, text)
         elif self.observable == 'jet_raa':
-            text = 'jets'
-            text_latex.DrawLatex(x,y-dy, text)
-            text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {0.9-self.jetR}'
-            text_latex.DrawLatex(x, y-2*dy, text)
+            text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {self.eta_cut}'
+            text_latex.DrawLatex(x, y-dy, text)
         
         output_filename = os.path.join(self.output_dir, f'h_{self.observable}.pdf')
         c.SaveAs(output_filename)
@@ -1023,41 +1088,6 @@ class PlotResults(common_base.CommonBase):
 
         c.SaveAs(output_filename)
         c.Close()
-
-    #---------------------------------------------------------------
-    # Initialize theory predictions
-    #---------------------------------------------------------------
-    def init_theory(self, result):
-    
-        #----------------------------------------------------------
-        # Factorization (Ringer, Sato)
-        if 'medium_jet_functions' in result:
-            zr = np.array(result['medium_jet_functions']['zr'])
-            y_vac = np.array(result['medium_jet_functions']['y_vac'])
-            y_med = np.array(result['medium_jet_functions']['y_med'])
-            
-            # Compute integral (excluding the last measurement bin)
-            # Note: already normalized by bin widths
-            integral_medium_jet_functions_vac = np.sum(y_vac)
-            integral_medium_jet_functions_med = np.sum(y_med)
-            
-            # Normalize to integral of data (excluding the last measurement bin)
-            scale_factor_pp = self.integral_pp_truncated / integral_medium_jet_functions_vac
-            scale_factor_AA = self.integral_AA_truncated / integral_medium_jet_functions_med
-            y_med_normalized = scale_factor_AA*y_med
-            y_vac_normalized = scale_factor_pp*y_vac
-
-            # Form ratio
-            ratio = np.divide(y_med_normalized, y_vac_normalized)
-                  
-            # Draw as a line, since the uncertainties are too small
-            n = len(zr)
-            g = ROOT.TGraph(n, zr, ratio)
-            
-            # Add to theory list
-            self.prediction_list.append(g)
-            self.label_list.append('Medium jet functions')
-            self.sublabel_list.append('')
                       
     #-------------------------------------------------------------------------------------------
     def plot_semi_inclusive_chjet_IAA(self):
