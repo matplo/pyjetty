@@ -500,18 +500,19 @@ class PlotAngularityFigures(common_base.CommonBase):
         else:
             shift = -0.08
             shift2 = -0.15 - shift
-        
-        leg = ROOT.TLegend(0.2+(shift * (1 + int(Fnp))),0.96-0.072*scale_factor*(1+len(self.Omega_list)),0.6,0.96)
-        if pad in [1,2]:
-            self.setupLegend(leg,0.07)
-        else:
-            self.setupLegend(leg,0.08)
-        self.setupLegend(leg,0.07)
+
+        # Legend for the center pad (2)
+        leg = ROOT.TLegend(0.2+(shift * (1 + int(Fnp))),
+                           0.98-0.072*scale_factor*(1+len(self.Omega_list)),0.6,0.98)
+        size = 0.073 if Fnp else 0.08
+        self.setupLegend(leg, size)
+            
         self.plot_list.append(leg)
 
-        leg3 = ROOT.TLegend(0.2+shift, 0.95-0.072*scale_factor*2.5, 0.55, 0.95)
+        leg3 = ROOT.TLegend(0.2+(shift * (1 + int(not Fnp)/2)),
+                            0.97-0.072*scale_factor*2.5, 0.55, 0.97)
         if pad == 3:
-            self.setupLegend(leg3,0.07)
+            self.setupLegend(leg3, size)
             self.plot_list.append(leg3)
 
         line_lambda_np = None; line_lambda_np_groomed = None
@@ -582,7 +583,9 @@ class PlotAngularityFigures(common_base.CommonBase):
                               '#it{#lambda}_{#it{#alpha}}^{NP} #leq #Lambda / ' + \
                               '(#it{p}_{T}^{ch jet} #it{R})', 'lf')
             else:  # groomed case
-                leg3.AddEntry(line_lambda_np_groomed, '#it{#lambda}_{#it{#alpha},g}^{NP}', 'lf')
+                leg3.AddEntry(line_lambda_np_groomed, '#it{#lambda}_{#it{#alpha},g}^{NP} #leq ' + \
+                              '#it{z}_{cut}^{1-#it{#alpha}} (#it{#lambda}_{#it{#alpha}}^{NP})' + \
+                              '^{#it{#alpha}}', 'lf')
             leg3.AddEntry(self.h_sys, 'Sys. uncertainty', 'f')
 
         # Reset for ratio plot
@@ -594,35 +597,34 @@ class PlotAngularityFigures(common_base.CommonBase):
         ymax = 0.93
         dy = 0.07
         x = 0.45 + shift + shift2
-        size = 0.06
     
         if pad == 1:
             system0 = ROOT.TLatex(x,ymax,'ALICE')
             system0.SetNDC()
-            system0.SetTextSize(size*scale_factor)
+            system0.SetTextSize(size / 1.2)#*scale_factor)
             system0.Draw()
 
             system1 = ROOT.TLatex(x,ymax-dy,'pp  #sqrt{#it{s}} = 5.02 TeV')
             system1.SetNDC()
-            system1.SetTextSize(size*scale_factor)
+            system1.SetTextSize(size / 1.2)#*scale_factor)
             system1.Draw()
 
             system2 = ROOT.TLatex(x,ymax-2*dy,'charged jets   anti-#it{k}_{T}')
             system2.SetNDC()
-            system2.SetTextSize(size*scale_factor)
+            system2.SetTextSize(size / 1.2)#*scale_factor)
             system2.Draw()
 
             system3 = ROOT.TLatex(x,ymax-3*dy,
                                   '#it{{R}} = {}    |#it{{#eta}}_{{jet}}| < {}'.format(R, 0.9-R))
             system3.SetNDC()
-            system3.SetTextSize(size*scale_factor)
+            system3.SetTextSize(size / 1.2)#*scale_factor)
             system3.Draw()
             
             system4 = ROOT.TLatex(x,ymax-4.*dy-0.02,
                                   str(min_pt) + ' < #it{p}_{T}^{ch jet} < ' + \
                                   str(max_pt) + ' GeV/#it{c}')
             system4.SetNDC()
-            system4.SetTextSize(size*scale_factor)
+            system4.SetTextSize(size / 1.2)#*scale_factor)
             system4.Draw()
 
             self.plot_list.append(system0)
@@ -642,18 +644,18 @@ class PlotAngularityFigures(common_base.CommonBase):
                               '#it{{#alpha}} = {}{}'.format(beta,self.scale_label))
         system5.SetNDC()
         if pad in [1]:
-            beta_size = size
+            beta_size = size / 1.3
         else:
-            beta_size = 1.3*size
+            beta_size = size
         system5.SetTextSize(beta_size)
         system5.Draw()
         self.plot_list.append(system5)
 
         if groomed and pad == 3:
-            system5 = ROOT.TLatex(0.2+shift, ymax-3.1*dy,
+            system5 = ROOT.TLatex(0.2+(shift * (1 + int(not Fnp)/2)), ymax-3*dy,
                                   'Soft Drop: #it{z}_{cut} = 0.2, #it{#beta} = 0')
             system5.SetNDC()
-            system5.SetTextSize(beta_size)#size*scale_factor)
+            system5.SetTextSize(size)
             system5.Draw()
             self.plot_list.append(system5)
 
