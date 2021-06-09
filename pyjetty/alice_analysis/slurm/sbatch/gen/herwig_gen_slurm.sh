@@ -5,7 +5,7 @@
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-3000
-#SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/sim/herwig_gen/slurm-%A_%a.out
 
 # Number of events per pT-hat bin (for statistics)
 NEV_DESIRED=15000000
@@ -37,7 +37,7 @@ HERWIG_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/gen/herwig
 HERWIG_SCRIPT_MPI="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/gen/herwig_infiles/$BIN/LHC_5020_MPI.run"
 PYTHON_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/gen/herwig_parton_hadron.py"
 TEMP_OUTDIR="/storage/u/alice/AnalysisResults/ang/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
-OUTDIR="/rstorage/alice/data/herwig_gen/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
+OUTDIR="/rstorage/alice/sim/herwig_gen/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 mkdir -p $TEMP_OUTDIR
 mkdir -p $OUTDIR
 

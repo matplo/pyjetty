@@ -5,7 +5,7 @@
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-2240
-#SBATCH --output=/rstorage/alice/data/pythia_gen/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/sim/pythia_gen/slurm-%A_%a.out
 
 # Center of mass energy in GeV
 ECM=5020
@@ -39,7 +39,7 @@ fi
 SEED=$(( ($CORE_IN_BIN - 1) * NEV_PER_JOB + 1111 ))
 
 # Do the PYTHIA simulation & matching
-OUTDIR="/rstorage/alice/data/pythia_gen/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
+OUTDIR="/rstorage/alice/sim/pythia_gen/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 mkdir -p $OUTDIR
 module use ~/heppy/modules
 module load heppy/1.0
