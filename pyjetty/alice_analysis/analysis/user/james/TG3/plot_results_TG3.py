@@ -70,7 +70,7 @@ class PlotResults(common_base.CommonBase):
         self.plot_combined_raa()
         
         # Charged particle RAA
-        #self.plot_hadron_raa()
+        self.plot_hadron_raa()
 
         # Inclusive full jet RAA
         #self.plot_jet_raa()
@@ -98,7 +98,7 @@ class PlotResults(common_base.CommonBase):
         self.observable = 'combined_raa'
         self.init_result()
              
-        # Plot distribution + ratio
+        # Plot ratio
         self.x_min = 5.
         self.x_max = 1e3
         self.y_ratio_min = 0.
@@ -109,27 +109,17 @@ class PlotResults(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     def plot_hadron_raa(self):
     
-        # Get experimental data
-        h_data_list = []
-        f = ROOT.TFile(self.hadron_observables['pt_alice']['hepdata'], 'READ')
-        dir = f.Get('Table 8')
-        h_data_0_5 = dir.Get('Graph1D_y1')
-        h_data_5_10 = dir.Get('Graph1D_y2')
-        h_data_list.append([h_data_0_5, '0-5%'])
-        #h_data_list.append([h_data_5_10, '5-10%'])
-        f.Close()
-
-        # Plot
-        self.plot_raa(raa_type='hadron',
-                      hname = 'h_hadron_pt_aliceScaled',
-                      h_data_list=h_data_list,
-                      eta_cut=np.round(self.hadron_observables['pt_alice']['eta_cut'], decimals=1),
-                      data_centralities=['0-5%'],
-                      mc_centralities=[f'{self.min_cent}-{self.max_cent}'],
-                      xtitle="#it{p}_{T} (GeV/#it{c})",
-                      ytitle = '#frac{d^{2}N}{d#it{p}_{T}d#it{#eta}} #left[(GeV/c)^{-1}#right]',
-                      ymax=1.8,
-                      outputfilename=f'h_hadron_RAA_alice_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}')
+        # Initialize data and theory info
+        self.observable = 'hadron_raa'
+        self.init_result()
+             
+        # Plot ratio
+        self.x_min = 5.
+        self.x_max = 50.
+        self.y_ratio_min = 0.
+        self.y_ratio_max = 1.
+        self.ytitle = '#it{R}_{AA}'
+        self.plot_ratio()
 
     #-------------------------------------------------------------------------------------------
     def plot_jet_raa(self):
@@ -250,6 +240,8 @@ class PlotResults(common_base.CommonBase):
         if 'eta_R' in result:
             self.eta_R = result['eta_R']
             self.eta_cut = np.round(self.eta_R - self.jetR, decimals=1)
+        if 'eta_cut' in result:
+            self.eta_cut = result['eta_cut']
         if 'obs_label' in result:
             self.obs_label = result['obs_label']
         if 'zcut' in result:
@@ -269,6 +261,10 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['g_jet_raa_sys_shape_ALICE'] = file.Get(result['jet_raa_shape_ALICE_name'])
             self.observable_settings['g_jet_raa_ATLAS'] = file.Get(result['jet_raa_ATLAS_name'])
             self.observable_settings['g_jet_raa_sys_ATLAS'] = file.Get(result['jet_raa_sys_ATLAS_name'])
+        if self.observable in ['hadron_raa']:
+            file = ROOT.TFile(result['file'], 'READ')
+            self.observable_settings['g_hadron_raa_ALICE'] = file.Get(result['hadron_raa_ALICE_name'])
+            self.observable_settings['g_hadron_raa_sys_ALICE'] = file.Get(result['hadron_raa_sys_ALICE_name'])
         if self.observable in ['girth', 'mass']:
             file = ROOT.TFile(result['file'], 'READ')
             self.observable_settings['g_pp'] = file.Get(result['name_pp'])
@@ -322,40 +318,39 @@ class PlotResults(common_base.CommonBase):
         if 'file_jetscape_pp' in result:
             
             # pp
+            hname = result['hname_jetscape']
             f_jetscape_pp = ROOT.TFile(result['file_jetscape_pp'], 'READ')
-            h_jetscape_pp = f_jetscape_pp.Get(result['hname_jetscape'])
+            h_jetscape_pp = f_jetscape_pp.Get(hname)
             h_jetscape_pp.SetDirectory(0)
             f_jetscape_pp.Close()
             
             # AA
             f_jetscape_AA = ROOT.TFile(result['file_jetscape_AA'], 'READ')
-            h_jetscape_AA = f_jetscape_AA.Get(result['hname_jetscape'])
+            h_jetscape_AA = f_jetscape_AA.Get(hname)
             h_jetscape_AA.SetDirectory(0)
             #if self.observable == 'jet':
             #    h_jetscape_AA.Scale(0.5) # Since we hadd [0,5] and [5,10]
             f_jetscape_AA.Close()
 
             ## For hadrons, impose a 1 GeV minimum, and subtract the recoil hadrons
-            #if raa_type == 'hadron':
-            #    # Impose 1 Gev minimum
-            #    h_pp_xbins = np.array(h_pp.GetXaxis().GetXbins())
-            #    h_pp_xbins = h_pp_xbins[(h_pp_xbins>=8.)]
-            #    h_pp = h_pp.Rebin(h_pp_xbins.size-1, f'{hname}_pp_rebinned', h_pp_xbins)
+            if self.observable == 'hadron_raa':
+                # Impose 1 Gev minimum
+                h_jetscape_pp_xbins = np.array(h_jetscape_pp.GetXaxis().GetXbins())
+                h_jetscape_pp_xbins = h_jetscape_pp_xbins[(h_jetscape_pp_xbins>=8.)]
+                h_jetscape_pp = h_jetscape_pp.Rebin(h_jetscape_pp_xbins.size-1, f'{hname}_pp_rebinned', h_jetscape_pp_xbins)
 
-            #    h_AA_xbins = np.array(h_AA.GetXaxis().GetXbins())
-            #    h_AA_xbins = h_AA_xbins[(h_AA_xbins>=8.)]
-            #    h_AA = h_AA.Rebin(h_AA_xbins.size-1, f'{hname}_{self.dir_AA}rebinned', h_AA_xbins)
-            #
-            #    # Subtract holes
-            #    filename = os.path.join(self.output_dir, f'{self.dir_AA}/AnalysisResultsFinal.root')
-            #    f_AA = ROOT.TFile(filename, 'READ')
-            #    h_recoil_name = 'h_hadron_pt_alice_holesScaled'
-            #    h_recoil = f_AA.Get(h_recoil_name)
-            #    h_recoil.SetDirectory(0)
-            #    h_recoil_rebinned = h_recoil.Rebin(h_AA_xbins.size-1, f'{h_recoil_name}_{self.dir_AA}', h_AA_xbins)
-            #    h_AA.Add(h_recoil_rebinned, -1)
-            #    h_AA.SetDirectory(0)
-            #    f_AA.Close()
+                h_jetscape_AA_xbins = np.array(h_jetscape_AA.GetXaxis().GetXbins())
+                h_jetscape_AA_xbins = h_jetscape_AA_xbins[(h_jetscape_AA_xbins>=8.)]
+                h_jetscape_AA = h_jetscape_AA.Rebin(h_jetscape_AA_xbins.size-1, f'{hname}_AA_rebinned', h_jetscape_AA_xbins)
+
+                # Subtract holes
+                f_jetscape_AA = ROOT.TFile(result['file_jetscape_AA'], 'READ')
+                h_recoil_name = 'h_hadron_pt_alice_holesScaled'
+                h_recoil = f_jetscape_AA.Get(h_recoil_name)
+                h_recoil.SetDirectory(0)
+                h_recoil_rebinned = h_recoil.Rebin(h_jetscape_AA_xbins.size-1, f'{h_recoil_name}_AA', h_jetscape_AA_xbins)
+                h_jetscape_AA.Add(h_recoil_rebinned, -1)
+                f_jetscape_AA.Close()
             
             # Normalization
             h_jetscape_pp.Scale(1., 'width')
@@ -407,6 +402,14 @@ class PlotResults(common_base.CommonBase):
             
             self.observable_settings['prediction_distribution_list'].append(file.Get(result['name_jewel_norec']))
             self.observable_settings['prediction_distribution_labels'].append('JEWEL, recoils off')
+            
+        if self.observable == 'hadron_raa':
+            jewel_x = np.array(result['jewel_x'])
+            jewel_RAA = np.array(result['jewel_RAA'])
+            n = len(jewel_x)
+            g = ROOT.TGraph(n, jewel_x, jewel_RAA)
+            self.observable_settings['prediction_ratio_list'].append(g)
+            self.observable_settings['prediction_ratio_labels'].append('JEWEL, recoils on?')
             
         # Theory -- zg/tg
         if self.observable in ['zg', 'theta_g']:
@@ -562,16 +565,20 @@ class PlotResults(common_base.CommonBase):
         myBlankHisto.GetYaxis().SetLabelSize(0.05)
         myBlankHisto.Draw('E')
         
-        leg = ROOT.TLegend(0.2,0.62,0.4,0.73)
+        if self.observable == 'combined_raa':
+            y_leg = 0.62
+        elif self.observable == 'hadron_raa':
+            y_leg = 0.67
+        leg = ROOT.TLegend(0.2,y_leg,0.4,y_leg+0.11)
         self.utils.setup_legend(leg, 0.04, sep=-0.1)
         
-        leg2 = ROOT.TLegend(0.6,0.62,0.8,0.73)
+        leg2 = ROOT.TLegend(0.6,y_leg,0.8,y_leg+0.11)
         self.utils.setup_legend(leg2, 0.04, sep=-0.1)
         
         # Draw theory predictions for distribution
-        for i, prediction in enumerate(self.observable_settings['prediction_distribution_list']):
+        for i, prediction in enumerate(self.observable_settings['prediction_ratio_list']):
         
-            label = self.observable_settings['prediction_distribution_labels'][i]
+            label = self.observable_settings['prediction_ratio_labels'][i]
             color = self.theory_colors[i]
             
             prediction.SetFillColor(color)
@@ -584,7 +591,7 @@ class PlotResults(common_base.CommonBase):
             if type(prediction) in [ROOT.TH1F]:
             
                 prediction.Draw('E3 same')
-                ratio_legend.AddEntry(prediction, label, 'L')
+                leg2.AddEntry(prediction, label, 'L')
 
             elif type(prediction) in [ROOT.TGraph, ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
                  
@@ -593,7 +600,7 @@ class PlotResults(common_base.CommonBase):
                 elif type(prediction) == ROOT.TGraph:
                     prediction.Draw('same')
 
-                leg.AddEntry(prediction, label, 'L')
+                leg2.AddEntry(prediction, label, 'L')
            
         # Draw experimental data
         if self.observable == 'combined_raa':
@@ -656,6 +663,34 @@ class PlotResults(common_base.CommonBase):
             leg.AddEntry(self.observable_settings['g_hadron_raa_CMS'], 'CMS','PE')
             leg2.AddEntry(self.observable_settings['g_jet_raa_ALICE'], 'ALICE','PE')
             leg2.AddEntry(self.observable_settings['g_jet_raa_ATLAS'], 'ATLAS','PE')
+            
+        elif self.observable == 'hadron_raa':
+
+            self.observable_settings['g_hadron_raa_sys_ALICE'].SetFillColor(self.data_color)
+            self.observable_settings['g_hadron_raa_sys_ALICE'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['g_hadron_raa_sys_ALICE'].SetMarkerStyle(0)
+            self.observable_settings['g_hadron_raa_sys_ALICE'].SetFillStyle(1001)
+            self.observable_settings['g_hadron_raa_sys_ALICE'].SetLineWidth(0)
+            self.observable_settings['g_hadron_raa_sys_ALICE'].SetLineColor(0)
+            
+            self.observable_settings['g_hadron_raa_ALICE'].SetMarkerColor(self.data_color)
+            self.observable_settings['g_hadron_raa_ALICE'].SetLineColor(self.data_color)
+            self.observable_settings['g_hadron_raa_ALICE'].SetLineWidth(1)
+            self.observable_settings['g_hadron_raa_ALICE'].SetMarkerSize(1.3)
+            # Need to set xerrors to 0...
+            for i in range(self.observable_settings['g_hadron_raa_ALICE'].GetN()):
+                yerr = self.observable_settings['g_hadron_raa_ALICE'].GetErrorY(i)
+                if type(self.observable_settings['g_hadron_raa_ALICE']) == ROOT.TGraphAsymmErrors:
+                    self.observable_settings['g_hadron_raa_ALICE'].SetPointError(i, 0, 0, yerr, yerr)
+                elif type(self.observable_settings['g_hadron_raa_ALICE']) == ROOT.TGraphErrors:
+                    self.observable_settings['g_hadron_raa_ALICE'].SetPointError(i, 0, yerr)
+
+            self.observable_settings['g_hadron_raa_ALICE'].SetMarkerStyle(21)
+            self.observable_settings['g_hadron_raa_ALICE'].Draw('PE Z same')
+            self.observable_settings['g_hadron_raa_sys_ALICE'].Draw('E2 same')
+
+            leg.AddEntry(self.observable_settings['g_hadron_raa_ALICE'], '0-10%','PE')
+            leg.AddEntry(self.observable_settings['g_hadron_raa_sys_ALICE'], 'Sys. uncertainty','f')
                 
         leg.Draw('same')
         leg2.Draw('same')
@@ -689,7 +724,7 @@ class PlotResults(common_base.CommonBase):
             text_latex.DrawLatex(x+dx, y-2*dy, text)
         
         elif self.observable == 'hadron_raa':
-            text = f'Charged particles  |#eta| < {eta_cut}'
+            text = f'Charged particles  |#eta| < {self.eta_cut}'
             text_latex.DrawLatex(x,y-dy, text)
         elif self.observable == 'jet_raa':
             text = 'jets'

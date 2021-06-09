@@ -27,27 +27,30 @@ combined_raa:
   jet_raa_sys_ATLAS_name: 'grATLASJetSys'
 
 #------------------------------------------------------------------
-#1, jetscape hadron Raa, JEWEL hadron Raa
+# ALICE hadron RAA, https://www.hepdata.net/record/ins1657384
+# jetscape hadron Raa
+# JEWEL hadron Raa
 hadron_raa:
+  file: 'raa/HadronJetRAA.root'
 
-  # ALICE, https://www.hepdata.net/record/ins1657384
-  # Centrality: 0-5, 5-10, 30-40, 40-50
-  # Cuts:
-  #   - |eta|<0.8
-  pt_alice:
-    eta_cut: 0.8
-    hepdata: 'data/PHYS_RAA/data_hadron/ALICE/HEPData-ins1657384-v1-Table_8.root'
-
-  # CMS, https://www.hepdata.net/record/ins1496050
-  # Centrality: 0-5, 5-10, 30-50
-  # Cuts:
-  #   - |eta|<1
-  pt_cms:
-    eta_cut: 1.0
-    hepdata_0_5: 'data/PHYS_RAA/data_hadron/CMS/0_5/HEPData-ins1496050-v2-Table_8.root'
-    hepdata_5_10: 'data/PHYS_RAA/data_hadron/CMS/5_10/HEPData-ins1496050-v2-Table_9.root'
-    hepdata_30_50: 'data/PHYS_RAA/data_hadron/CMS/30_50/HEPData-ins1496050-v2-Table_11.root'
-
+  xtitle: '#it{p}_{T} (GeV/#it{c})'
+  sqrts: 5020
+  centrality: [0., 5.]
+  jetR: 0.4
+  eta_cut: 0.8
+  
+  hadron_raa_ALICE_name: 'grALICEHad'
+  hadron_raa_sys_ALICE_name: 'grALICEHadSys'
+  
+  # JETSCAPE
+  file_jetscape_pp: 'jetscape/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/501204/5020_PbPb_0-5_0.30_2.0_1/AnalysisResultsFinal.root'
+  hname_jetscape: 'h_hadron_pt_aliceScaled'
+  
+  # JEWEL (from RAA_jewel_lhc.txt)
+  jewel_x: [10.00000, 14.00000, 18.00000, 22.00000, 26.00000, 30.00000, 34.00000, 38.00000, 42.00000, 46.00000, 50.00000, 56.00000, 64.00000, 72.00000, 80.00000, 88.00000, 96.00000, 104.00000, 116.00000, 132.00000, 175.0000, 225.0000, 275.0000, 325.0000, 375.0000, 450.0000, 550.0000, 650.0000, 750.0000, 850.0000]
+  jewel_RAA: [0.1926189, 0.24277280000000001, 0.27756973333333335, 0.29159270000000004, 0.32021950000000005, 0.34528896666666670, 0.37722546666666662, 0.40926899999999994, 0.44030436666666667, 0.48391966666666669, 0.49535560000000006, 0.52023156666666670, 0.53894266666666668, 0.58663703333333339, 0.63023540000000000, 0.64838103333333341, 0.67231433333333335, 0.67452436666666660, 0.70571573333333326, 0.74013626666666665, 0.79349943333333339, 0.85476946666666664, 0.90743686666666667, 1.0013766000000002, 1.0554370666666666, 1.1286383333333332, 1.1846926666666666, 1.3506786666666668, 1.5403039999999999, 1.8610579999999999]
+ 
 #------------------------------------------------------------------
 # ALICE R = 0.2 full jet Raa (ie. not #3), JEWEL w/ and w/out recoils, Hybrid model Lres = 0, 2/(pi T) (these aren't included in this message), jetscape jet Raa
 jet_raa:
