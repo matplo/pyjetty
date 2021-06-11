@@ -569,4 +569,18 @@ namespace RUtil
 		return (4. * k) / (sb * sb) * std::exp(-2. * k / sb);
     }  // FnpUtils::F_np
 
+
+	/////////////////////////////////////////////////////////////////////////////////
+	// Iterate through sorted lists and return list of bools for items of a in b
+	bool* sorted_match(const int* a, const int a_len, const int* b, const int b_len) {
+		bool* isin = new bool[a_len]();
+		if (!(b_len)) { return isin; }
+		int j = 0;  // index in b
+		for(int i = 0; i < a_len; i++) {
+			while (b[j] < a[i]) if (++j > b_len) return isin;
+			if (a[i] == b[j]) isin[i] = true;
+		} // for (i)
+		return isin;
+	} // sorted_match
+
 }  // namespace RUtil

@@ -26,6 +26,7 @@ from __future__ import print_function
 
 # General
 import time  # for timing code
+import sys
 import gc    # garbage collection for cleaning memory
 
 # Data analysis and plotting
@@ -35,6 +36,9 @@ from array import *
 import ROOT
 import yaml
 import random
+
+# Load pyjetty ROOT utils
+ROOT.gSystem.Load('libpyjetty_rutil')
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -69,6 +73,11 @@ class ProcessPHBase(process_base.ProcessBase):
     
     # Call base class initialization
     process_base.ProcessBase.initialize_config(self)
+
+    # C++ histogram rebinning functions
+    # Don't actually need any of these, but have to init to get other 
+    #     RUtil functions for some reason... 
+    self.histutils = ROOT.RUtil.HistUtils()
     
     # Read config file
     config = None
@@ -125,62 +134,18 @@ class ProcessPHBase(process_base.ProcessBase):
     # SeriesGroupBy objects of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
 
-    # Load MPI-off trees into Pandas DataFrames
-    io_p_MPIoff = process_io_parton_hadron.ProcessIO(input_file=self.input_file, level='p', MPI='off')
-    io_h_MPIoff = process_io_parton_hadron.ProcessIO(input_file=self.input_file, level='h', MPI='off')
+    for MPI in ["on", "off"]:
+      print("Load TTrees with MPI %s ..." % MPI)
+      self.load_trees_to_dict(MPI)
+      print('--- {} seconds ---'.format(time.time() - self.start_time))
 
-    df_fjparticles_p_MPIoff = io_p_MPIoff.load_data()
-    df_fjparticles_h_MPIoff = io_h_MPIoff.load_data()
-    df_fjparticles_ch_MPIoff = io_h_MPIoff.group_fjparticles(ch_cut=True)
-
-    # Save number of events and cross section information for proper scaling
-    self.nEvents_MPIoff = io_p_MPIoff.Nev
-    self.xsec_MPIoff = io_p_MPIoff.xsec
-
-    # Explicitly clean up memory since files can be pretty large
-    del io_p_MPIoff
-    del io_h_MPIoff
-    gc.collect()
-
-    # Repeat for MPI-on trees
-    io_p_MPIon = process_io_parton_hadron.ProcessIO(input_file=self.input_file, level='p', MPI='on')
-    io_h_MPIon = process_io_parton_hadron.ProcessIO(input_file=self.input_file, level='h', MPI='on')
-
-    df_fjparticles_p_MPIon = io_p_MPIon.load_data()
-    df_fjparticles_h_MPIon = io_h_MPIon.load_data()
-    df_fjparticles_ch_MPIon = io_h_MPIon.group_fjparticles(ch_cut=True)
-
-    self.nEvents_MPIon = io_p_MPIon.Nev
-    self.xsec_MPIon = io_p_MPIon.xsec
-
-    del io_p_MPIon
-    del io_h_MPIon
-    gc.collect()
-
-    print('--- {} seconds ---'.format(time.time() - self.start_time))
-    
-    # ------------------------------------------------------------------------
-
-    # Now merge the SeriesGroupBy to create a groupby df with [ev_id, run_number, fj_p, fj_h, fj_ch]
-    # (Need a structure such that we can iterate event-by-event through both fj_p, fj_h, fj_ch simultaneously)
-    print('Merge parton-, hadron-, and charged-level into a single dataframe grouped by event...')
-
-    self.df_fjparticles_MPIoff = pandas.concat(
-      [df_fjparticles_p_MPIoff, df_fjparticles_h_MPIoff, df_fjparticles_ch_MPIoff], axis=1)
-    self.df_fjparticles_MPIon = pandas.concat(
-      [df_fjparticles_p_MPIon, df_fjparticles_h_MPIon, df_fjparticles_ch_MPIon], axis=1)
-
-    self.df_fjparticles_MPIoff.columns = ['fj_particles_p', 'fj_particles_h', 'fj_particles_ch']
-    self.df_fjparticles_MPIon.columns = ['fj_particles_p', 'fj_particles_h', 'fj_particles_ch']
-
-    print('--- {} seconds ---'.format(time.time() - self.start_time))
-    
     # ------------------------------------------------------------------------
 
     # Initialize histograms
     self.initialize_output_objects()
-    
-    print(self)
+
+    if self.debug_level > 0:
+      print(self)
     
     # Find jets and fill histograms
     for MPI in ["off", "on"]:
@@ -232,6 +197,164 @@ class ProcessPHBase(process_base.ProcessBase):
     for jetR in self.jetR_list:
       # Call user-specific initialization
       self.initialize_user_output_objects_R(jetR)
+
+  #---------------------------------------------------------------
+  # Open ROOT TTrees, load to dictionaries, and merge
+  #---------------------------------------------------------------
+  def load_trees_to_dict(self, MPI):
+
+    # Load ROOT TTrees into Python objects
+    io_p = process_io_parton_hadron.ProcessIO(input_file=self.input_file, level='p', MPI=MPI)
+    df_fjparticles_p = io_p.load_data()
+
+    # Save this information for later trimming
+    run_numbers_p = io_p.run_numbers[0]
+    unique_ev_ids_per_run_p = io_p.unique_ev_ids_per_run
+
+    # Save number of events and cross section information for proper scaling
+    setattr(self, "nEvents_MPI"+MPI, io_p.Nev)
+    setattr(self, "xsec_MPI"+MPI, io_p.xsec)
+
+    # Explicitly clean up memory since files can be pretty large
+    del io_p
+    gc.collect()
+
+    # Repeat for hadron-level tree
+    io_h = process_io_parton_hadron.ProcessIO(input_file=self.input_file, level='h', MPI=MPI)
+    df_fjparticles_h = io_h.load_data()
+    run_numbers_h = io_h.run_numbers[0]
+    unique_ev_ids_per_run_h = io_h.unique_ev_ids_per_run
+    df_fjparticles_ch = io_h.group_fjparticles(ch_cut=True)
+    run_numbers_ch = io_h.run_numbers[0]
+    unique_ev_ids_per_run_ch = io_h.unique_ev_ids_per_run
+    del io_h
+    gc.collect()
+
+    print('--- {} seconds ---'.format(time.time() - self.start_time))
+    # ------------------------------------------------------------------------
+
+    # Now merge the SeriesGroupBy to create a groupby df with [ev_id, run_number, fj_p, fj_h, fj_ch]
+    # (Need a structure such that we can iterate event-by-event through both fj_p, fj_h, fj_ch simultaneously)
+    print('Merge parton-, hadron-, and charged-level into a single object grouped by event...')
+
+    ''' Pandas implementation
+    self.df_fjparticles_MPIoff = pandas.concat(
+      [df_fjparticles_p_MPIoff, df_fjparticles_h_MPIoff, df_fjparticles_ch_MPIoff], axis=1)
+    self.df_fjparticles_MPIon = pandas.concat(
+      [df_fjparticles_p_MPIon, df_fjparticles_h_MPIon, df_fjparticles_ch_MPIon], axis=1)
+
+    self.df_fjparticles_MPIoff.columns = ['fj_particles_p', 'fj_particles_h', 'fj_particles_ch']
+    self.df_fjparticles_MPIon.columns = ['fj_particles_p', 'fj_particles_h', 'fj_particles_ch']
+    '''
+    setattr(self, "df_fjparticles_MPI"+MPI, self.pair_dictionary(
+      run_numbers_p, run_numbers_h, run_numbers_ch,
+      unique_ev_ids_per_run_p, unique_ev_ids_per_run_h, unique_ev_ids_per_run_ch,
+      df_fjparticles_p, df_fjparticles_h, df_fjparticles_ch) )
+
+  #---------------------------------------------------------------
+  # Pair NumPy dictionaries at p, h, and ch levels
+  #---------------------------------------------------------------
+  def pair_dictionary(self, run_numbers_p, run_numbers_h, run_numbers_ch,
+      unique_ev_ids_per_run_p, unique_ev_ids_per_run_h, unique_ev_ids_per_run_ch,
+      df_fjparticles_p, df_fjparticles_h, df_fjparticles_ch):
+
+    # Need to figure out which ev_id to save. 
+    # For some reason, it can be the case that the ev_id does not exist 
+    #    at one level (e.g. parton), while it does at another (e.g. hadron). 
+    # Deal with this by simply removing these bad run_numbers / ev_ids.
+    # First, check if there are any bad run_numbers
+    bad_index_p = None
+    bad_runs_p = np.setdiff1d(run_numbers_p, run_numbers_ch)
+    if len(bad_runs_p):
+      # This is what we want, but can get it more trivially using available info
+      #bad_index_p = np.isin(df_fjparticles_p_MPIoff["run_number"], bad_runs_p)
+      bad_index_p = np.concatenate([
+        [run_numbers_p[i] in bad_runs_p]*len(unique_ev_ids_per_run_p[i][0]) \
+        for i in range(len(run_numbers_p))])
+    else:
+      bad_index_p = np.concatenate([[False] * len(unique_ev_ids_per_run_p[i][0]) \
+                              for i in range(len(run_numbers_p))])
+
+    bad_index_h = None
+    bad_runs_h = np.concatenate((np.setdiff1d(run_numbers_h, run_numbers_p),
+                                 np.setdiff1d(run_numbers_h, run_numbers_ch)))
+    if len(bad_runs_h):
+      bad_index_h = np.concatenate([
+        [run_numbers_h[i] in bad_runs_h]*len(unique_ev_ids_per_run_h[i][0]) \
+        for i in range(len(run_numbers_h))])
+    else:
+      bad_index_h = np.concatenate([[False] * len(unique_ev_ids_per_run_h[i][0]) \
+                              for i in range(len(run_numbers_h))])
+
+    bad_index_ch = None
+    bad_runs_ch = np.setdiff1d(run_numbers_ch, run_numbers_p)
+    if len(bad_runs_ch):
+      bad_index_ch = np.concatenate([
+        [run_numbers_ch[i] in bad_runs_ch]*len(unique_ev_ids_per_run_ch[i][0]) \
+        for i in range(len(run_numbers_ch))])
+    else:
+      bad_index_ch = np.concatenate([[False] * len(unique_ev_ids_per_run_ch[i][0]) \
+                              for i in range(len(run_numbers_ch))])
+
+    # Now check for bad ev_ids for each run.
+    overall_index_p = 0
+    run_index_p = 0
+    overall_index_h = 0
+    run_index_h = 0
+    overall_index_ch = 0
+    run_index_ch = 0
+    while run_index_p < len(run_numbers_p):
+      ev_ids_p = unique_ev_ids_per_run_p[run_index_p][0]
+      if run_numbers_p[run_index_p] in bad_runs_p:
+        overall_index_p += len(ev_ids_p)
+        run_index_p += 1
+        continue
+      ev_ids_h = unique_ev_ids_per_run_h[run_index_h][0]
+      if run_numbers_h[run_index_h] in bad_runs_h:
+        overall_index_h += len(ev_ids_h)
+        run_index_h += 1
+        continue
+      ev_ids_ch = unique_ev_ids_per_run_ch[run_index_ch][0]
+      if run_numbers_ch[run_index_ch] in bad_runs_ch:
+        overall_index_ch += len(ev_ids_ch)
+        run_index_ch += 1
+        continue
+
+      # Use the fact that ev_ids are sorted for efficiency improvement
+      good_ev_id_index_1 = ROOT.RUtil.sorted_match(
+        ev_ids_p, len(ev_ids_p), ev_ids_ch, len(ev_ids_ch))
+      bad_ev_id_index = np.array([not good_ev_id_index_1[i] for i in range(len(ev_ids_p))])
+      bad_index_p[overall_index_p:overall_index_p+len(bad_ev_id_index)] = bad_index_p[
+        overall_index_p:overall_index_p+len(bad_ev_id_index)] | bad_ev_id_index
+
+      good_ev_id_index_1 = ROOT.RUtil.sorted_match(
+        ev_ids_h, len(ev_ids_h), ev_ids_p, len(ev_ids_p))
+      good_ev_id_index_2 = ROOT.RUtil.sorted_match(
+        ev_ids_h, len(ev_ids_h), ev_ids_ch, len(ev_ids_ch))
+      bad_ev_id_index = np.array(
+        [not (good_ev_id_index_1[i] and good_ev_id_index_2[i]) for i in range(len(ev_ids_h))])
+      bad_index_h[overall_index_h:overall_index_h+len(bad_ev_id_index)] = bad_index_h[
+        overall_index_h:overall_index_h+len(bad_ev_id_index)] | bad_ev_id_index
+
+      good_ev_id_index_1 = ROOT.RUtil.sorted_match(
+        ev_ids_ch, len(ev_ids_ch), ev_ids_p, len(ev_ids_p))
+      bad_ev_id_index = np.array([not good_ev_id_index_1[i] for i in range(len(ev_ids_ch))])
+      bad_index_ch[overall_index_ch:overall_index_ch+len(bad_ev_id_index)] = bad_index_ch[
+        overall_index_ch:overall_index_ch+len(bad_ev_id_index)] | bad_ev_id_index
+
+      overall_index_p += len(ev_ids_p)
+      run_index_p += 1
+      overall_index_h += len(ev_ids_h)
+      run_index_h += 1
+      overall_index_ch += len(ev_ids_ch)
+      run_index_ch += 1
+
+    return {
+      "run_number": np.delete(df_fjparticles_p["run_number"], bad_index_p),
+      "ev_id": np.delete(df_fjparticles_p["ev_id"], bad_index_p),
+      "fj_particles_p": np.delete(df_fjparticles_p["fj_particle"], bad_index_p),
+      "fj_particles_h": np.delete(df_fjparticles_h["fj_particle"], bad_index_h),
+      "fj_particles_ch": np.delete(df_fjparticles_ch["fj_particle"], bad_index_ch) }
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -337,10 +460,10 @@ class ProcessPHBase(process_base.ProcessBase):
 
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
-    if type(fj_particles_p) != fj.vectorPJ or type(fj_particles_h) != fj.vectorPJ or \
-       type(fj_particles_ch) != fj.vectorPJ:
-      print('fj_particles type mismatch -- skipping event')
-      return
+    #if type(fj_particles_p) != fj.vectorPJ or type(fj_particles_h) != fj.vectorPJ or \
+    #   type(fj_particles_ch) != fj.vectorPJ:
+    #  print('fj_particles type mismatch -- skipping event')
+    #  return
 
     if self.debug_level > 0 and len(fj_particles_h) > 1:
       if np.abs(fj_particles_h[0].pt() - fj_particles_h[1].pt()) <  1e-10:
