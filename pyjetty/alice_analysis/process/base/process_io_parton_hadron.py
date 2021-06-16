@@ -114,9 +114,9 @@ class ProcessIO(common_base.CommonBase):
     with uproot.open(self.input_file)[self.tree_name] as tree:
       if not tree:
         raise ValueError('Tree {} not found in file {}'.format(self.tree_name, self.input_file))
-      # Pandas DataFrame implementation
-      #df = uproot.concatenate(tree, self.columns, library="pd")
-
+      ''' Pandas DataFrame implementation
+      df = uproot.concatenate(tree, self.columns, library="pd")
+      '''
       # Try saving memory with numpy implementation
       df = uproot.concatenate(tree, self.columns, library="np")
       # Each value is a 2D array for some reason, so fix that
@@ -139,7 +139,7 @@ class ProcessIO(common_base.CommonBase):
     if ch_cut:
       if self.level == 'p':
         raise ValueError("ch_cut cannot be set for parton-level tree")
-      else:  # self.level == 'h'
+      #else:  # self.level == 'h'
         #track_df = track_df.loc[track_df["is_charged"] == True]
         for key, value in track_df.items():
           if key == "is_charged":
@@ -160,6 +160,9 @@ class ProcessIO(common_base.CommonBase):
     
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
       df_fjparticles = track_df_grouped.apply(self.get_fjparticles)
+      
+      # These are only useful for numpy implementation
+      self.run_numbers = self.unique_ev_ids_per_run = None
       '''
       # First split by run_number, then by ev_id
       self.run_numbers = np.unique(track_df["run_number"], return_index=True)

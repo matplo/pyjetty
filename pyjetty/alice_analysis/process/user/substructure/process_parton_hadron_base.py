@@ -96,6 +96,8 @@ class ProcessPHBase(process_base.ProcessBase):
     if 'theory_obs_bins' in config:
       self.obs_bins = config['theory_obs_bins']
 
+    self.make_th3s = False if 'make_th3s' not in config else config['make_th3s']
+
     # Create dictionaries to store grooming settings and observable settings for each observable
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores the observable setting, e.g. subjetR
@@ -238,14 +240,13 @@ class ProcessPHBase(process_base.ProcessBase):
     print('Merge parton-, hadron-, and charged-level into a single object grouped by event...')
 
     ''' Pandas implementation
-    self.df_fjparticles_MPIoff = pandas.concat(
-      [df_fjparticles_p_MPIoff, df_fjparticles_h_MPIoff, df_fjparticles_ch_MPIoff], axis=1)
-    self.df_fjparticles_MPIon = pandas.concat(
-      [df_fjparticles_p_MPIon, df_fjparticles_h_MPIon, df_fjparticles_ch_MPIon], axis=1)
+    setattr(self, "df_fjparticles_MPI"+MPI, pandas.concat(
+      [df_fjparticles_p, df_fjparticles_h, df_fjparticles_ch], axis=1) )
 
-    self.df_fjparticles_MPIoff.columns = ['fj_particles_p', 'fj_particles_h', 'fj_particles_ch']
-    self.df_fjparticles_MPIon.columns = ['fj_particles_p', 'fj_particles_h', 'fj_particles_ch']
+    getattr(self, "df_fjparticles_MPI"+MPI).columns = \
+      ['fj_particles_p', 'fj_particles_h', 'fj_particles_ch']
     '''
+
     setattr(self, "df_fjparticles_MPI"+MPI, self.pair_dictionary(
       run_numbers_p, run_numbers_h, run_numbers_ch,
       unique_ev_ids_per_run_p, unique_ev_ids_per_run_h, unique_ev_ids_per_run_ch,
@@ -349,6 +350,13 @@ class ProcessPHBase(process_base.ProcessBase):
       overall_index_ch += len(ev_ids_ch)
       run_index_ch += 1
 
+    ''' DEBUGGING CODE ONLY
+    # Test random pairing rate by pairing incorrect events
+    bad_index_p[0] = bad_index_p[1] = True
+    bad_index_h[-1] = bad_index_h[0] = True
+    bad_index_ch[-2] = bad_index_ch[-1] = True
+    '''
+
     return {
       "run_number": np.delete(df_fjparticles_p["run_number"], bad_index_p),
       "ev_id": np.delete(df_fjparticles_p["ev_id"], bad_index_p),
@@ -438,8 +446,8 @@ class ProcessPHBase(process_base.ProcessBase):
 
     # Check that the entries exist appropriately
     # (need to check if indeed this happens for MC, and how...)
-    if type(fj_particles) != fj.vectorPJ:
-      return
+    #if type(fj_particles) != fj.vectorPJ:
+    #  return
 
     for track in fj_particles:
       getattr(self, "hTrackEtaPhi_%s_MPI%s" % (level, MPI)).Fill(track.eta(), track.phi())
@@ -519,7 +527,7 @@ class ProcessPHBase(process_base.ProcessBase):
       self.fill_level_before_matching(jet_p, jetR, 'p', MPI)
     for jet_h in jets_h_selected:
       self.fill_level_before_matching(jet_h, jetR, 'h', MPI)
-    for jet_ch in jets_h_selected:
+    for jet_ch in jets_ch_selected:
       self.fill_level_before_matching(jet_ch, jetR, 'ch', MPI)
   
     # Loop through jets and set jet matching candidates for each jet in user_info
@@ -527,8 +535,10 @@ class ProcessPHBase(process_base.ProcessBase):
     for jet_p in jets_p_selected:
       for jet_h in jets_h_selected:
         self.set_matching_candidates(jet_p, 'p', jet_h, 'h', jetR, MPI)
-        for jet_ch in jets_ch_selected:
-          self.set_matching_candidates(jet_h, 'h', jet_ch, 'ch', jetR, MPI)
+
+    for jet_h in jets_h_selected:
+      for jet_ch in jets_ch_selected:
+        self.set_matching_candidates(jet_h, 'h', jet_ch, 'ch', jetR, MPI)
 
     # Loop through jets and set accepted matches
     for jet_h in jets_h_selected:
@@ -807,13 +817,14 @@ class ProcessPHBase(process_base.ProcessBase):
     h.Sumw2()
     setattr(self, name, h)
 
-    name = "hResidual_JetPt_%s" % label
-    h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0., 1., 200, -2., 2.)
-    h.GetXaxis().SetTitle("p_{T, truth}^{%s jet}" % level_1)
-    h.GetYaxis().SetTitle("%s_{%s}^{%s}" % (obs_name, obs_label, level_1))
-    h.GetZaxis().SetTitle("#frac{%s^{%s}-%s^{%s}}{%s^{%s}}" % \
-                          (obs_name, level_2, obs_name, level_1, obs_name, level_1))
-    setattr(self, name, h)
+    if self.make_th3s:
+      name = "hResidual_JetPt_%s" % label
+      h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0., 1., 200, -2., 2.)
+      h.GetXaxis().SetTitle("p_{T, truth}^{%s jet}" % level_1)
+      h.GetYaxis().SetTitle("%s_{%s}^{%s}" % (obs_name, obs_label, level_1))
+      h.GetZaxis().SetTitle("#frac{%s^{%s}-%s^{%s}}{%s^{%s}}" % \
+                            (obs_name, level_2, obs_name, level_1, obs_name, level_1))
+      setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Fill response histograms -- common utility function
@@ -826,7 +837,7 @@ class ProcessPHBase(process_base.ProcessBase):
     x_array = array('d', [jet_pt_level_2, jet_pt_level_1, obs_level_2, obs_level_1])
     getattr(self, "hResponse_JetPt_"+label).Fill(x_array)
       
-    if obs_level_1 > 0:
+    if self.make_th3s and obs_level_1 > 0:
       obs_resolution = (obs_level_2 - obs_level_1) / obs_level_1
       getattr(self, "hResidual_JetPt_"+label).Fill(jet_pt_level_1, obs_level_1, obs_resolution)
 
