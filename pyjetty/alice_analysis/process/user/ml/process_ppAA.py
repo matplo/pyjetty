@@ -26,6 +26,7 @@ import energyflow
 
 # Analysis utilities
 from pyjetty.mputils import CEventSubtractor
+from pyjetty.alice_analysis.process.base import thermal_generator
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
@@ -54,12 +55,26 @@ class ProcessppAA(common_base.CommonBase):
         print('Loading particle dataframes')
         with open(self.input_file, 'rb') as f:
             df_particles_hard = pickle.load(f)
-            df_particles_background = pickle.load(f)
+            if not self.thermal_model:
+                df_particles_background = pickle.load(f)
         print('Done.')
         print()
         
-        # Construct a dataframe of the combined hard+background particles
-        df_particles_combined = pd.concat([df_particles_hard, df_particles_background])
+        # Apply eta cut
+        #print(f'df_particles_hard (before filtering pseudorapidity): {df_particles_hard.describe()}')
+        df_particles_hard = self.apply_eta_cut(df_particles_hard)
+        print(f'df_particles_hard (after filtering pseudorapidity): {df_particles_hard.describe()}')
+        
+        if self.thermal_model:
+            # Construct dummy combined event -- we will add thermal particles in event loop
+            df_particles_combined = df_particles_hard
+        else:
+            #print(f'df_particles_background (before filtering pseudorapidity): {df_particles_background.describe()}')
+            df_particles_background = self.apply_eta_cut(df_particles_background)
+            print(f'df_particles_background (after filtering pseudorapidity): {df_particles_background.describe()}')
+        
+            # Construct a dataframe of the combined hard+background particles
+            df_particles_combined = pd.concat([df_particles_hard, df_particles_background])
 
         # Next, we will transform these into fastjet::PseudoJet objects.
         # This allows us to do jet finding and use the fastjet contrib to compute Nsubjettiness
@@ -103,7 +118,7 @@ class ProcessppAA(common_base.CommonBase):
         
         print(self)
         print()
-        
+
     #---------------------------------------------------------------
     # Initialize config file into class members
     #---------------------------------------------------------------
@@ -121,6 +136,16 @@ class ProcessppAA(common_base.CommonBase):
         self.jet_matching_distance = config['jet_matching_distance']
         self.mc_fraction_threshold = config['mc_fraction_threshold']
         
+        # Initialize thermal model
+        if 'thermal_model' in config:
+          self.thermal_model = True
+          self.thermal_generator = thermal_generator.ThermalGenerator(N_avg=config['thermal_model']['N_avg'],
+                                                                      sigma_N=config['thermal_model']['sigma_N'],
+                                                                      beta=config['thermal_model']['beta'],
+                                                                      eta_max=self.eta_max)
+        else:
+            self.thermal_model = False
+                    
         # Initialize constituent subtractor
         constituent_subtractor = config['constituent_subtractor']
         self.max_distance = constituent_subtractor['max_distance']
@@ -128,6 +153,34 @@ class ProcessppAA(common_base.CommonBase):
         self.bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
         self.max_pt_correct = constituent_subtractor['max_pt_correct']
         self.ghost_area = constituent_subtractor['ghost_area']
+
+    #---------------------------------------------------------------
+    # Compute pseudorapidity from four-vector
+    #---------------------------------------------------------------
+    def apply_eta_cut(self, df):
+   
+        df['eta'] = df.apply(self.eta, axis=1)
+        df = df[np.abs(df['eta']) < self.eta_max].drop(['eta'],axis=1)
+        return df
+
+    #---------------------------------------------------------------
+    # Compute pseudorapidity from four-vector
+    #---------------------------------------------------------------
+    def eta(self, df):
+            
+        p = np.sqrt(df['px']*df['px'] + df['py']*df['py'] + df['pz']*df['pz'])
+        numerator = p + df['pz']
+        denominator = p - df['pz']
+        
+        if not np.isclose(numerator, 0.) and not np.isclose(denominator, 0.):
+            eta = 0.5*np.log( (p + df['pz']) / (p - df['pz']) )
+        else:
+            eta = 1000
+            
+        if np.abs(eta) < 1. and df['E'] > 1000.:
+            print(df)
+            
+        return eta
 
     #---------------------------------------------------------------
     # Main processing function
@@ -186,9 +239,21 @@ class ProcessppAA(common_base.CommonBase):
     def analyze_event(self, fj_particles_hard, fj_particles_combined_beforeCS):
     
         # Check that the entries exist appropriately
-        if type(fj_particles_hard) != fj.vectorPJ or type(fj_particles_combined_beforeCS) != fj.vectorPJ:
+        if type(fj_particles_hard) != fj.vectorPJ:
             print('fj_particles type mismatch -- skipping event')
             return
+        if not self.thermal_model and type(fj_particles_combined_beforeCS) != fj.vectorPJ:
+            print('fj_particles type mismatch -- skipping event')
+            return
+            
+        # If thermal model, generate a thermal event and add it to the combined particle list
+        if self.thermal_model:
+          fj_particles_background = self.thermal_generator.load_event()
+          
+          # Form the combined event
+          # The hard event tracks are each stored with a unique user_index >= 0
+          # The thermal tracks are each stored with a unique user_index < 0
+          [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_background]
             
         # Perform constituent subtraction for each R_max
         fj_particles_combined = []

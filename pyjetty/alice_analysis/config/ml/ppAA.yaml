@@ -4,11 +4,6 @@
 # These parameters are used in both the process script and the analysis script
 #------------------------------------------------------------------------------
 
-# Load labeled data -- max currently 62532
-n_train: 15000
-n_val: 2000
-n_test: 3000
-
 # Define Nsubjettiness observables to compute
 # (The processing script will compute and store the maximum K provided)
 # The K-body phase space is (3K-4)-dimensional
@@ -21,9 +16,14 @@ K: [6]
 
 jetR: [0.2, 0.4, 0.6]
 min_jet_pt: 50.
-eta_max: 0.9
+eta_max: 2.0
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
+
+thermal_model: 
+  beta: 0.4      # R02: 0.4, R04: 0.5
+  N_avg: 5600    # R02: 1400 per eta, R04: 1700 per eta
+  sigma_N: 1000  # 500 for |eta|<0.9
 
 constituent_subtractor:
   max_distance: [0, 0.05, 0.25, 0.7]
@@ -35,6 +35,11 @@ constituent_subtractor:
 #------------------------------------------------------------------------------
 # All parameters below are only used in the analysis script
 #------------------------------------------------------------------------------
+
+# Load labeled data -- max currently 62532
+n_train: 15000
+n_val: 2000
+n_test: 3000
 
 # Select model: linear, random_forest, neural_network, pfn
 models: [lasso]
@@ -85,6 +90,3 @@ lasso:
 
     # Network architecture parameters
     alpha: 0.01                 # Constant multiplying the L1 term. 0 corresponds to the standard regression
-    
-
-
