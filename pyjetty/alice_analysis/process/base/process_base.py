@@ -199,21 +199,23 @@ class ProcessBase(common_base.CommonBase):
   def set_matches_pp(self, jet_det, hname):
 
     # Create pp matching QA histogram, if not already created
-    if not hasattr(self, hname):
+    if hname and not hasattr(self, hname):
       bin_labels = ['all', 'has_matching_candidate', 'unique_match']
       nbins = len(bin_labels)
       h = ROOT.TH2F(hname, hname, nbins, 0, nbins, 30, 0., 300.)
       for i in range(1, nbins+1):
         h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
       setattr(self, hname, h)
-      
-    h = getattr(self, hname)
-    h.Fill('all', jet_det.pt(), 1)
+    
+    if hname:
+        h = getattr(self, hname)
+        h.Fill('all', jet_det.pt(), 1)
   
     if jet_det.has_user_info():
         
       jet_info_det = jet_det.python_info()
-      h.Fill('has_matching_candidate', jet_det.pt(), 1)
+      if hname:
+          h.Fill('has_matching_candidate', jet_det.pt(), 1)
       
       if len(jet_info_det.matching_candidates) == 1:
         jet_truth = jet_info_det.closest_jet
@@ -226,7 +228,8 @@ class ProcessBase(common_base.CommonBase):
             # Set accepted match
             jet_info_det.match = jet_truth
             jet_det.set_python_info(jet_info_det)
-            h.Fill('unique_match', jet_det.pt(), 1)
+            if hname:
+                h.Fill('unique_match', jet_det.pt(), 1)
 
   #---------------------------------------------------------------
   # Set accepted jet matches for Pb-Pb case

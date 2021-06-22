@@ -18,7 +18,6 @@ jetR: [0.2, 0.4, 0.6]
 min_jet_pt: 50.
 eta_max: 2.0
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
-mc_fraction_threshold: 0.5
 
 thermal_model: 
   beta: 0.4      # R02: 0.4, R04: 0.5

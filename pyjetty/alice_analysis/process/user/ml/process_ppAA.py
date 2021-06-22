@@ -27,6 +27,7 @@ import energyflow
 # Analysis utilities
 from pyjetty.mputils import CEventSubtractor
 from pyjetty.alice_analysis.process.base import thermal_generator
+from pyjetty.alice_analysis.process.base import process_base
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
@@ -104,18 +105,25 @@ class ProcessppAA(common_base.CommonBase):
         
         # Construct dictionary to store all jet quantities of interest
         self.jet_variables = {'hard': {}, 'combined': {}}
+        self.jet_qa_variables = {'hard': {}, 'combined': {}}
         for label in self.jet_variables.keys():
             for jetR in self.jetR_list:
                 self.jet_variables[label][f'R{jetR}'] = {}
+                self.jet_qa_variables[label][f'R{jetR}'] = {}
                 for R_max in self.max_distance:
                     self.jet_variables[label][f'R{jetR}'][f'Rmax{R_max}'] = {}
+                    self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}'] = {}
                     for i,N in enumerate(self.N_list):
                         beta = self.beta_list[i]
                         self.jet_variables[label][f'R{jetR}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'] = []
+                        
+                    # Some QA
+                    self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['jet_pt'] = []
+                    self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['delta_pt'] = []
 
         # Create constituent subtractors
         self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.eta_max, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) for R_max in self.max_distance]
-        
+                
         print(self)
         print()
 
@@ -134,7 +142,6 @@ class ProcessppAA(common_base.CommonBase):
         self.min_jet_pt = config['min_jet_pt']
         self.eta_max = config['eta_max']
         self.jet_matching_distance = config['jet_matching_distance']
-        self.mc_fraction_threshold = config['mc_fraction_threshold']
         
         # Initialize thermal model
         if 'thermal_model' in config:
@@ -195,6 +202,7 @@ class ProcessppAA(common_base.CommonBase):
         
         # Transform the dictionary of lists into a dictionary of numpy arrays
         self.jet_variables_numpy = self.transform_to_numpy(self.jet_variables)
+        self.jet_qa_variables_numpy = self.transform_to_numpy(self.jet_qa_variables)
         print()
         
         # Reformat output for ML algorithms (array with 1 array per jet which contain all N-subjettiness values)
@@ -223,15 +231,18 @@ class ProcessppAA(common_base.CommonBase):
 
                         hf.create_dataset(f'y_{label}_R{jetR}_Rmax{R_max}', data=y)
                         
+                        hf.create_dataset(f'pt_{label}_R{jetR}_Rmax{R_max}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'Rmax{R_max}']['jet_pt'])
+                        hf.create_dataset(f'delta_pt_{label}_R{jetR}_Rmax{R_max}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'Rmax{R_max}']['delta_pt'])
+                        
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
                         
         # Plot jet quantities
-        if self.K <= 6:
-            for label in X_Nsub.keys():
-                for jetR in self.jetR_list:
-                    for R_max in self.max_distance:
-                        self.plot_nsubjettiness(jetR, R_max, label)
+        #if self.K <= 6:
+        #    for label in X_Nsub.keys():
+        #        for jetR in self.jetR_list:
+        #            for R_max in self.max_distance:
+        #                self.plot_nsubjettiness(jetR, R_max, label)
             
     #---------------------------------------------------------------
     # Process an event (in this case, just a single jet per event)
@@ -298,7 +309,43 @@ class ProcessppAA(common_base.CommonBase):
         # Fill hard jet info
         for jet_hard in jets_hard_selected:
             self.fill_nsubjettiness(jet_hard, jetR, R_max, 'hard')
+            
+        #----------------------------------
+        # Match jets
 
+        # Loop through jets and set jet matching candidates for each jet in user_info
+        for jet_combined in jets_combined_selected:
+            for jet_hard in jets_hard_selected:
+                
+                # Add a matching candidate to the list if it is within the geometrical cut
+                deltaR = jet_combined.delta_R(jet_hard)
+                if deltaR < self.jet_matching_distance*jetR:
+                    process_base.ProcessBase.set_jet_info(None, jet_combined, jet_hard, deltaR)
+                    process_base.ProcessBase.set_jet_info(None, jet_hard, jet_combined, deltaR)
+        
+        # Loop through jets and set accepted matches
+        for jet_combined in jets_combined_selected:
+            process_base.ProcessBase.set_matches_pp(None, jet_combined, None)
+              
+        # Loop through jets and fill response histograms if both det and truth jets are unique match
+        result = [self.fill_jet_matches(jet_combined, jetR, R_max, 'combined') for jet_combined in jets_combined_selected]
+                
+    #---------------------------------------------------------------
+    # Analyze jets of a given event.
+    #---------------------------------------------------------------
+    def fill_jet_matches(self, jet_combined, jetR, R_max, label):
+    
+        # Get matched pp jet
+        if jet_combined.has_user_info():
+          jet_pp = jet_combined.python_info().match
+          
+          if jet_pp:
+            jet_pt_combined = jet_combined.pt()
+            jet_pt_pp = jet_pp.pt()
+            
+            delta_pt = (jet_pt_combined - jet_pt_pp)
+            self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['delta_pt'].append(delta_pt)
+    
     #---------------------------------------------------------------
     # Analyze jets of a given event.
     #---------------------------------------------------------------
@@ -313,6 +360,9 @@ class ProcessppAA(common_base.CommonBase):
             n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
             n_subjettiness = n_subjettiness_calculator.result(jet)/jet.pt()
             self.jet_variables[label][f'R{jetR}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'].append(n_subjettiness)
+            
+        # Fill some jet QA
+        self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['jet_pt'].append(jet.pt())
 
     #---------------------------------------------------------------
     # Plot N-subjettiness
