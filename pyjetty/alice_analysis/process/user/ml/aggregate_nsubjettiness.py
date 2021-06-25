@@ -93,15 +93,17 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
         for jetR in jetR_list:
             for R_max in max_distance_list:
                 
-                output_key_X = f'X_{event_type}_R{jetR}_Rmax{R_max}'
-                output_aggregated_X = output[output_key_X]
+                if include_four_vector:
+                    output_key_X = f'X_{event_type}_R{jetR}_Rmax{R_max}'
+                    output_aggregated_X = output[output_key_X]
                 output_key_X_Nsub = f'X_Nsub_{event_type}_R{jetR}_Rmax{R_max}'
                 output_aggregated_X_Nsub = output[output_key_X_Nsub]
                 output_key_y = f'y_{event_type}_R{jetR}_Rmax{R_max}'
                 output_aggregated_y = output[output_key_y]
 
                 idx = np.random.permutation(len(output_aggregated_y))
-                output[output_key_X] = output_aggregated_X[idx]
+                if include_four_vector:
+                    output[output_key_X] = output_aggregated_X[idx]
                 output[output_key_X_Nsub] = output_aggregated_X_Nsub[idx]
                 output[output_key_y] = output_aggregated_y[idx]
                 print(f'shuffled {output_key_X_Nsub}: {output[output_key_X_Nsub].shape}')
