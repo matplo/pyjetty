@@ -3,7 +3,7 @@
 ## pp-AA (full events)
 
 The events are located on hiccup at:
-- PYTHIA/JEWEL + HYDJET, full events: `/rstorage/ml/egml/data/files.txt`
+- PYTHIA/JEWEL + HYDJET, full events: `/rstorage/ml/egml/data/files_hydjet.txt`
 
 The analysis workflow is as follows:
 
