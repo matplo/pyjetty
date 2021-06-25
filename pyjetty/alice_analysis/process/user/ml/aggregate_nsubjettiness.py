@@ -2,6 +2,8 @@
 # into a single file.
 
 import os
+import sys
+import yaml
 import argparse
 import h5py
 import numpy as np
@@ -9,14 +11,14 @@ import numpy as np
 def aggregate(config_file, filelist, output_dir, include_four_vector):
 
     # Read config file
-    with open(self.config_file, 'r') as stream:
+    with open(config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     jetR_list = config['jetR']
     max_distance_list = config['constituent_subtractor']['max_distance']
     event_types = ['hard', 'combined']
 
     # List of arrays to aggregate
-    observables = ['X', 'X_Nsub', 'y', 'pt', 'delta_pt']
+    observables = ['X_Nsub', 'y', 'pt', 'delta_pt']
 
     # We have separate training data for:
     # - the hard-event and the combined-event
@@ -25,6 +27,7 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
     
     # Create a flat dict of empty objects for each combination
     # We use keys equal to the keys in the input file
+    output = {}
     for event_type in event_types:
         for jetR in jetR_list:
             for R_max in max_distance_list:
@@ -54,6 +57,11 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
                     for R_max in max_distance_list:
                         for observable in observables:
 
+                            # Skip R_max for hard event
+                            if event_type == 'hard':
+                                if not np.isclose(R_max, max_distance_list[0]):
+                                    continue
+
                             # Get arrays from file
                             output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
                             if observable == 'X':
@@ -67,17 +75,17 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
                             if output_aggregated.any():
                                 if observable == 'X':
                                     if include_four_vector:
-                                        output_aggregated = np.concatenate((output_aggregated, output_i),axis=0)
+                                        output[output_key] = np.concatenate((output_aggregated, output_i),axis=0)
                                 else:
-                                    output_aggregated = np.concatenate((output_aggregated, output_i),axis=0)
+                                    output[output_key] = np.concatenate((output_aggregated, output_i),axis=0)
                             else:
                                 if observable == 'X':
                                     if include_four_vector:
-                                        output_aggregated = output_i
+                                        output[output_key] = output_i
                                 else:
-                                    output_aggregated = output_i
+                                    output[output_key] = output_i
 
-                            if i%100 == 0:
+                            if i%100 == 0 and observable == 'X_Nsub':
                                 print(f'{output_key} -- {output_aggregated.shape}')
 
     #  Shuffle data set
@@ -105,6 +113,11 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
                 for R_max in max_distance_list:
                     for observable in observables:
                     
+                        # Skip R_max for hard event
+                        if event_type == 'hard':
+                            if not np.isclose(R_max, max_distance_list[0]):
+                                continue
+
                         output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
                         output_aggregated = output[output_key]
                         if observable == 'X':
@@ -122,7 +135,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Aggregate pp AA')
     parser.add_argument('-c', '--configFile', action='store',
                         type=str, metavar='configFile',
-                        default='./config/ml/ppAA.yaml',
+                        default='../../../config/ml/ppAA.yaml',
                         help='Path of config file for analysis')
     parser.add_argument('-o', '--outputDir', action='store',
                         type=str, metavar='outputDir',
