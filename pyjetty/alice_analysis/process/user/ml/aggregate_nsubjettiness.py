@@ -5,63 +5,113 @@ import os
 import argparse
 import h5py
 import numpy as np
-from numba import jit
 
-def aggregate(filelist, output_dir, include_four_vector):
+def aggregate(config_file, filelist, output_dir, include_four_vector):
 
-    # Loop through file list
-    if include_four_vector:
-        X_total = None
-    X_Nsub_total = None
-    y = None
+    # Read config file
+    with open(self.config_file, 'r') as stream:
+      config = yaml.safe_load(stream)
+    jetR_list = config['jetR']
+    max_distance_list = config['constituent_subtractor']['max_distance']
+    event_types = ['hard', 'combined']
+
+    # List of arrays to aggregate
+    observables = ['X', 'X_Nsub', 'y', 'pt', 'delta_pt']
+
+    # We have separate training data for:
+    # - the hard-event and the combined-event
+    # - different jet R
+    # - different constituent subtraction R_max
+    
+    # Create a flat dict of empty objects for each combination
+    # We use keys equal to the keys in the input file
+    for event_type in event_types:
+        for jetR in jetR_list:
+            for R_max in max_distance_list:
+                for observable in observables:
+                    output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
+                    output[output_key] = np.array([])
     N_list = None
     beta_list = None
+
+    # Loop through file list
     with open(filelist) as f:
         files = [line.rstrip() for line in f]
         n_files = len(files)
-
     for i,filename in enumerate(files):
+    
+        if i%100 == 0:
+            print(f'{i}/{n_files}')
 
         with h5py.File(filename,'r') as hdf:
-
-            if include_four_vector:
-                X = hdf['X'][:]
-            X_Nsub = hdf['X_Nsub'][:]
-            y = hdf['y'][:]
-
+        
             if not N_list:
-                if include_four_vector:
-                    X_total = X
-                X_Nsub_total = X_Nsub
-                y_total = y
                 N_list = list(hdf['N_list'][:])
                 beta_list = list(hdf['beta_list'][:])
-            else:
-                if include_four_vector:                
-                    X_total = np.concatenate((X_total, X),axis=0)
-                X_Nsub_total = np.concatenate((X_Nsub_total, X_Nsub),axis=0)
-                y_total = np.concatenate((y_total, y),axis=0)
+        
+            for event_type in event_types:
+                for jetR in jetR_list:
+                    for R_max in max_distance_list:
+                        for observable in observables:
 
-        if i%100 == 0:
-            if include_four_vector:
-                print(f'{i}/{n_files} -- {X_total.shape} -- {X_Nsub_total.shape} -- {y_total.shape[0]}')
-            else:
-                print(f'{i}/{n_files} -- {X_Nsub_total.shape} -- {y_total.shape[0]}')
+                            # Get arrays from file
+                            output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
+                            if observable == 'X':
+                                if include_four_vector:
+                                    output_i = hdf[output_key][:]
+                            else:
+                                output_i = hdf[output_key][:]
 
-    #  Shuffle data set # check again!
-    idx = np.random.permutation(len(y_total))
-    if include_four_vector:
-        X_shuffled = X_total[idx] 
-    X_Nsub_shuffled, y_shuffled = X_Nsub_total[idx], y_total[idx]
-    print(f'shuffled: {X_Nsub_shuffled.shape} -- {y_shuffled.shape}')
+                            # Concatenate to master array
+                            output_aggregated = output[output_key]
+                            if output_aggregated.any():
+                                if observable == 'X':
+                                    if include_four_vector:
+                                        output_aggregated = np.concatenate((output_aggregated, output_i),axis=0)
+                                else:
+                                    output_aggregated = np.concatenate((output_aggregated, output_i),axis=0)
+                            else:
+                                if observable == 'X':
+                                    if include_four_vector:
+                                        output_aggregated = output_i
+                                else:
+                                    output_aggregated = output_i
+
+                            if i%100 == 0:
+                                print(f'{output_key} -- {output_aggregated.shape}')
+
+    #  Shuffle data set
+    for event_type in event_types:
+        for jetR in jetR_list:
+            for R_max in max_distance_list:
+                for observable in observables:
+                    
+                    output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
+                    output_aggregated = output[output_key]
+                
+                    if observable in ['X', 'X_Nsub', 'y']:
+                        idx = np.random.permutation(len(output_aggregated))
+                        output[output_key] = output_aggregated[idx]
+                        print(f'shuffled {output_key}: {output[output_key].shape}')
+        
     # Write jet arrays to file
     with h5py.File(os.path.join(output_dir, 'nsubjettiness.h5'), 'w') as hf:
-        hf.create_dataset('y', data=y_shuffled)
-        if include_four_vector:
-            hf.create_dataset('X', data=X_shuffled)
-        hf.create_dataset('X_Nsub', data=X_Nsub_shuffled)
+    
         hf.create_dataset('N_list', data=np.array(N_list))
         hf.create_dataset('beta_list', data=np.array(beta_list))
+        
+        for event_type in event_types:
+            for jetR in jetR_list:
+                for R_max in max_distance_list:
+                    for observable in observables:
+                    
+                        output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
+                        output_aggregated = output[output_key]
+                        if observable == 'X':
+                            if include_four_vector:
+                                hf.create_dataset(output_key, data=output_aggregated)
+                        else:
+                            hf.create_dataset(output_key, data=output_aggregated)
     
     print('done.')
 
@@ -70,6 +120,10 @@ if __name__ == '__main__':
 
     # Define arguments
     parser = argparse.ArgumentParser(description='Aggregate pp AA')
+    parser.add_argument('-c', '--configFile', action='store',
+                        type=str, metavar='configFile',
+                        default='./config/ml/ppAA.yaml',
+                        help='Path of config file for analysis')
     parser.add_argument('-o', '--outputDir', action='store',
                         type=str, metavar='outputDir',
                         default='./TestOutput',
@@ -80,13 +134,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print('Configuring...')
+    print('configFile: \'{0}\''.format(args.configFile))
     print('ouputDir: \'{0}\"'.format(args.outputDir))
     print(f'aggregate four-vectors: {args.include_four_vector}')
 
     # If invalid configFile is given, exit
+    if not os.path.exists(args.configFile):
+        print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
+        sys.exit(0)
+
+    # If invalid outputdir is given, exit
     fileList = os.path.join(args.outputDir, 'files.txt')
     if not os.path.exists(fileList):
         print('File \"{0}\" does not exist! Exiting!'.format(fileList))
         sys.exit(0)
 
-    aggregate(filelist=fileList, output_dir=args.outputDir, include_four_vector=args.include_four_vector)
+    aggregate(config_file=args.configFile, filelist=fileList, output_dir=args.outputDir, include_four_vector=args.include_four_vector)
