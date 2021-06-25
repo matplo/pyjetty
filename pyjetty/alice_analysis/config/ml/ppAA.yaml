@@ -40,8 +40,8 @@ n_train: 15000
 n_val: 2000
 n_test: 3000
 
-# Select model: linear, random_forest, neural_network, pfn
-models: [lasso]
+# Select model: linear, random_forest, neural_network, pfn, lasso
+models: [linear, random_forest, neural_network]
 
 linear:
 
