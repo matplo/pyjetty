@@ -23,7 +23,7 @@ The analysis workflow is as follows:
    ```
    You should update the skimmed filelist in `slurm_compute_nsubjettiness.sh` if necessary (if step 1 is repeated).
    
-   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`. Note however that since we process single files here, the maximum number of jets (`n_train`, etc) does not apply, but rather all jets will be processed.
+   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
    
    This writes output to `/rstorage/ml/egml/nsubjettiness/<job_id>/files.txt`
 
@@ -33,8 +33,6 @@ The analysis workflow is as follows:
    python aggregate_nsubjettiness.py -o /rstorage/ml/egml/nsubjettiness/<process_job_id>
    ```
    The `-o` path should point to the directory containing `files.txt` from Step 2. This is the location that the output file, `nsubjettiness.h5`, will be written to. 
-   
-   Note that aggregating the four-vectors is rather slow for the full dataset; to include this, add the optional flag `--include_four_vectors` in the command above. 
    
 4. Fit model and make plots:
    ```
