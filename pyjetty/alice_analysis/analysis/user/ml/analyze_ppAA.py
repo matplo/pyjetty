@@ -49,48 +49,13 @@ class AnalyzePPAA(common_base.CommonBase):
         # Initialize config file
         self.initialize_config()
         
+        with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
+            self.N_list = hf['N_list'][:]
+            self.beta_list = hf['beta_list'][:]
+        
         print(self)
         print()
         
-        # Read input variables
-        with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
-            self.y = hf['y'][:]
-            if 'X' in hf:
-                self.X_particles = hf['X'][:]
-            self.X_Nsub = hf['X_Nsub'][:]
-            self.N_list = hf['N_list'][:]
-            self.beta_list = hf['beta_list'][:]
-
-        # Define formatted labels for features
-        self.feature_labels = []
-        for i,N in enumerate(self.N_list):
-            beta = self.beta_list[i]
-            self.feature_labels.append(r'$\tau_{}^{{{}}}$'.format(N,beta))
-
-        # Split into training and test sets
-        # We will split into validatation sets (for tuning hyperparameters) separately for each model
-        X_Nsub_train, X_Nsub_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.X_Nsub, self.y, test_size=self.test_frac)
-               
-        # Construct training/test sets for each K
-        self.training_data = {}
-        for K in self.K_list:
-            n = 3*K-4
-            self.training_data[K] = {}
-            self.training_data[K]['X_Nsub_train'] = X_Nsub_train[:,:n]
-            self.training_data[K]['X_Nsub_test'] = X_Nsub_test[:,:n]
-            self.training_data[K]['N_list'] = self.N_list[:n]
-            self.training_data[K]['beta_list'] = self.beta_list[:n]
-            self.training_data[K]['feature_labels'] = self.feature_labels[:n]
-            
-        # Set up dict to store roc curves
-        self.roc_curve_dict = {}
-        if 'linear' in self.models:
-            self.roc_curve_dict['SGDClassifier'] = {}
-        if 'random_forest' in self.models:
-            self.roc_curve_dict['RandomForest'] = {}
-        if 'neural_network' in self.models:
-            self.roc_curve_dict['DNN'] = {}
-                    
     #---------------------------------------------------------------
     # Initialize config file into class members
     #---------------------------------------------------------------
@@ -99,6 +64,10 @@ class AnalyzePPAA(common_base.CommonBase):
         # Read config file
         with open(self.config_file, 'r') as stream:
           config = yaml.safe_load(stream)
+          
+        self.jetR_list = config['jetR']
+        self.max_distance_list = config['constituent_subtractor']['max_distance']
+        self.event_types = ['hard', 'combined']
           
         self.n_train = config['n_train']
         self.n_val = config['n_val']
@@ -151,8 +120,177 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def analyze_pp_aa(self):
     
-        # Plot the input data
-        [self.plot_training_data(K) for K in self.K_list]
+        # Loop through combinations of event type, jetR, and R_max
+        for event_type in self.event_types:
+            for jetR in self.jetR_list:
+                for R_max in self.max_distance_list:
+                
+                    # For hard event, skip constituent subtraction variations
+                    if event_type=='hard' and not np.isclose(R_max, self.max_distance_list[0]):
+                        continue
+                
+                    # Clear variables
+                    self.y = None
+                    self.y_train = None
+                    self.y_test = None
+                    self.X_particles = None
+                    self.X_Nsub = None
+                    self.pt = None
+                    self.delta_pt = None
+                    
+                    # Create output dir
+                    self.output_dir_i = os.path.join(self.output_dir, f'{event_type}_R{jetR}_Rmax{R_max}')
+                    if not os.path.exists(self.output_dir_i):
+                        os.makedirs(self.output_dir_i)
+                
+                    # Read input variables
+                    key_suffix = f'_{event_type}_R{jetR}_Rmax{R_max}'
+                    with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
+                        self.y = hf[f'y{key_suffix}'][:self.n_total]
+                        if f'X{key_suffix}' in hf:
+                            self.X_particles = hf[f'X{key_suffix}'][:]
+                        self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
+                        
+                        # Also get some QA info
+                        self.pt = hf[f'pt{key_suffix}'][:self.n_total]
+                        self.delta_pt = hf[f'delta_pt{key_suffix}'][:]
+
+                    # Define formatted labels for features
+                    self.feature_labels = []
+                    for i,N in enumerate(self.N_list):
+                        beta = self.beta_list[i]
+                        self.feature_labels.append(r'$\tau_{}^{{{}}}$'.format(N,beta))
+
+                    # Split into training and test sets
+                    # We will split into validatation sets (for tuning hyperparameters) separately for each model
+                    X_Nsub_train, X_Nsub_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.X_Nsub, self.y, test_size=self.test_frac)
+                           
+                    # Construct training/test sets for each K
+                    self.training_data = {}
+                    for K in self.K_list:
+                        n = 3*K-4
+                        self.training_data[K] = {}
+                        self.training_data[K]['X_Nsub_train'] = X_Nsub_train[:,:n]
+                        self.training_data[K]['X_Nsub_test'] = X_Nsub_test[:,:n]
+                        self.training_data[K]['N_list'] = self.N_list[:n]
+                        self.training_data[K]['beta_list'] = self.beta_list[:n]
+                        self.training_data[K]['feature_labels'] = self.feature_labels[:n]
+                        
+                    # Set up dict to store roc curves
+                    self.roc_curve_dict = {}
+                    if 'linear' in self.models:
+                        self.roc_curve_dict['SGDClassifier'] = {}
+                    if 'random_forest' in self.models:
+                        self.roc_curve_dict['RandomForest'] = {}
+                    if 'neural_network' in self.models:
+                        self.roc_curve_dict['DNN'] = {}
+                        
+                    # Plot the input data
+                    self.plot_QA(event_type, jetR, R_max)
+                    [self.plot_training_data(K) for K in self.K_list]
+                       
+                    # Train models
+                    self.train_models(event_type, jetR, R_max)
+
+    #---------------------------------------------------------------
+    # Plot QA
+    #---------------------------------------------------------------
+    def plot_QA(self, event_type, jetR, R_max):
+    
+        # pt
+        jewel_indices = self.y
+        pythia_indices = 1 - self.y
+        pt_jewel = self.pt[jewel_indices.astype(bool)]
+        pt_pythia = self.pt[pythia_indices.astype(bool)]
+        
+        bins = np.linspace(0, 1000, 100)
+        plt.hist(pt_jewel,
+                 bins,
+                 histtype='step',
+                 label = 'JEWEL',
+                 linewidth=2,
+                 linestyle='-',
+                 alpha=0.5)
+        plt.hist(pt_pythia,
+                 bins,
+                 histtype='step',
+                 label = 'PYTHIA',
+                 linewidth=2,
+                 linestyle='-',
+                 alpha=0.5)
+        plt.title(rf'{event_type} event: $R = {jetR}, R_{{max}} = {R_max}$')
+        plt.xlabel(r'$p_{T}$', fontsize=14)
+        plt.yscale('log')
+        legend = plt.legend(loc='best', fontsize=14, frameon=False)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir_i, f'pt.pdf'))
+        plt.close()
+
+        # delta pt
+        if event_type == 'combined':
+            bins = np.linspace(-50, 50, 100)
+            sigma = np.round(np.std(self.delta_pt),2)
+            plt.hist(self.delta_pt,
+                     bins,
+                     histtype='stepfilled',
+                     label = rf'$\sigma = {sigma}$',
+                     linewidth=2,
+                     linestyle='-',
+                     alpha=0.5)
+            plt.title(rf'{event_type} event: $R = {jetR}, R_{{max}} = {R_max}$')
+            plt.xlabel(r'$\delta p_{T}$', fontsize=14)
+            plt.yscale('log')
+            legend = plt.legend(loc='best', fontsize=14, frameon=False)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir_i, f'delta_pt.pdf'))
+            plt.close()
+        
+    #---------------------------------------------------------------
+    # Main processing function
+    #---------------------------------------------------------------
+    def plot_training_data(self, K):
+            
+        # Print fraction of AA jets
+        if K == min(self.K_list):
+            print('Fraction of AA jets: {}'.format(np.sum(self.y_train)/self.y_train.size))
+            print()
+        
+        print(f'Plotting input data, K={K}...')
+        print()
+        
+        # Separate PYTHIA/JEWEL
+        jewel_indices = self.y_train
+        pythia_indices = 1 - self.y_train
+        n_plot = int(self.n_train/10) # Plot a subset to save time/space
+        X_Nsub_jewel = self.training_data[K]['X_Nsub_train'][jewel_indices.astype(bool)][:n_plot]
+        X_Nsub_pythia = self.training_data[K]['X_Nsub_train'][pythia_indices.astype(bool)][:n_plot]
+
+        # Construct dataframes for scatter matrix plotting
+        df_jewel = pd.DataFrame(X_Nsub_jewel, columns=self.training_data[K]['feature_labels'])
+        df_pythia = pd.DataFrame(X_Nsub_pythia, columns=self.training_data[K]['feature_labels'])
+        
+        # Add label columns to each df to differentiate them for plotting
+        df_jewel['generator'] = np.repeat('JEWEL', X_Nsub_jewel.shape[0])
+        df_pythia['generator'] = np.repeat('PYTHIA', X_Nsub_pythia.shape[0])
+                
+        # Plot scatter matrix
+        df = df_jewel.append(df_pythia)
+        g = sns.pairplot(df, corner=True, hue='generator')
+        #g.legend.set_bbox_to_anchor((0.75, 0.75))
+        plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.png'), dpi=50)
+        plt.close()
+        
+        # Plot correlation matrix
+        df.drop(columns=['generator'])
+        corr_matrix = df.corr()
+        sns.heatmap(corr_matrix)
+        plt.savefig(os.path.join(self.output_dir_i, f'training_data_correlation_matrix_K{K}.pdf'))
+        plt.close()
+    
+    #---------------------------------------------------------------
+    # Train models
+    #---------------------------------------------------------------
+    def train_models(self, event_type, jetR, R_max):
 
         # Train ML models
         for model in self.models:
@@ -169,38 +307,13 @@ class AnalyzePPAA(common_base.CommonBase):
                     self.fit_neural_network(K, model_settings)
                 if model == 'pfn':
                     self.fit_pfn(model_settings)
-                if model == 'lasso':
-                    self.fit_lasso(K, model_settings)
+                #if model == 'lasso':
+                #    self.fit_lasso(K, model_settings)
                 
         # Plot ROC curve and significance improvement
         self.plot_roc_curves()
         self.plot_significance_improvement()
-        
-    #---------------------------------------------------------------
-    # Main processing function
-    #---------------------------------------------------------------
-    def plot_training_data(self, K):
-            
-        # Print fraction of q/g jets
-        if K == min(self.K_list):
-            print('Fraction of AA jets: {}'.format(np.sum(self.y_train)/self.y_train.size))
-            print()
-        
-        print(f'Plotting input data, K={K}...')
-        print()
-
-        # Plot scatter matrix
-        df = pd.DataFrame(self.training_data[K]['X_Nsub_train'], columns=self.training_data[K]['feature_labels'])
-        sns.pairplot(df, kind='hist', corner=True)
-        plt.savefig(os.path.join(self.output_dir, f'training_data_scatter_matrix_K{K}.png'), dpi=200)
-        plt.close()
-        
-        # Plot correlation matrix
-        corr_matrix = df.corr()
-        sns.heatmap(corr_matrix)
-        plt.savefig(os.path.join(self.output_dir, f'training_data_correlation_matrix_K{K}.pdf'))
-        plt.close()
-       
+    
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
     #   - Linear model (SVM by default, w/o kernel) with SGD training
@@ -482,7 +595,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     
         plt.legend(loc='lower right')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, 'ROC.pdf'))
+        plt.savefig(os.path.join(self.output_dir_i, 'ROC.pdf'))
         plt.close()
         
     #--------------------------------------------------------------- 
@@ -509,7 +622,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     
         plt.legend(loc='lower right')
         plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, 'Significance_improvement.pdf'))
+        plt.savefig(os.path.join(self.output_dir_i, 'Significance_improvement.pdf'))
         plt.close()
         
     #---------------------------------------------------------------
@@ -520,7 +633,7 @@ class AnalyzePPAA(common_base.CommonBase):
     
         confusion_matrix = sklearn.metrics.confusion_matrix(y_train, y_predict_train)
         sns.heatmap(confusion_matrix)
-        plt.savefig(os.path.join(self.output_dir, f'confusion_matrix_{label}.pdf'))
+        plt.savefig(os.path.join(self.output_dir_i, f'confusion_matrix_{label}.pdf'))
         plt.close()
             
 ##################################################################
