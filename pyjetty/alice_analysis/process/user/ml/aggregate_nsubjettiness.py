@@ -92,15 +92,20 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
     for event_type in event_types:
         for jetR in jetR_list:
             for R_max in max_distance_list:
-                for observable in observables:
-                    
-                    output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
-                    output_aggregated = output[output_key]
                 
-                    if observable in ['X', 'X_Nsub', 'y']:
-                        idx = np.random.permutation(len(output_aggregated))
-                        output[output_key] = output_aggregated[idx]
-                        print(f'shuffled {output_key}: {output[output_key].shape}')
+                output_key_X = f'X_{event_type}_R{jetR}_Rmax{R_max}'
+                output_aggregated_X = output[output_key_X]
+                output_key_X_Nsub = f'X_Nsub_{event_type}_R{jetR}_Rmax{R_max}'
+                output_aggregated_X_Nsub = output[output_key_X_Nsub]
+                output_key_y = f'y_{event_type}_R{jetR}_Rmax{R_max}'
+                output_aggregated_y = output[output_key_y]
+
+                idx = np.random.permutation(len(output_aggregated_y))
+                output[output_key_X] = output_aggregated_X[idx]
+                output[output_key_X_Nsub] = output_aggregated_X_Nsub[idx]
+                output[output_key_y] = output_aggregated_y[idx]
+                print(f'shuffled {output_key_X_Nsub}: {output[output_key_X_Nsub].shape}')
+                print(f'shuffled {output_key_y}: {output[output_key_y].shape}')
         
     # Write jet arrays to file
     with h5py.File(os.path.join(output_dir, 'nsubjettiness.h5'), 'w') as hf:
