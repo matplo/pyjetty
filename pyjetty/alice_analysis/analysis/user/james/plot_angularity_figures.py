@@ -33,7 +33,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         #------------------------------------------------------
         
-        self.jetR = 0.2
+        self.jetR = 0.4
 
         self.base_dir = '/Users/jamesmulligan/Analysis_Angularity/plot-angularity/v2'
         self.file = 'fFinalResults.root'
@@ -394,7 +394,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             leg.AddEntry(self.h_list[i],'#it{{#alpha}} = {}{}'.format(beta, scale_label),'P')
             
             if i == 2:
-                leg2.AddEntry(self.h_sys_list[i], 'Sys. uncertainty', 'f')
+                leg2.AddEntry(self.h_sys_list[i], 'Syst. uncertainty', 'f')
                 leg2.AddEntry(self.h_pythia_list[i], 'PYTHIA8 Monash 2013', 'l')
                 leg2.AddEntry(self.h_herwig_list[i], 'Herwig7', 'l')
 
