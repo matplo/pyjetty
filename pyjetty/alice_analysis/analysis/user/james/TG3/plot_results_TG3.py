@@ -90,7 +90,7 @@ class PlotResults(common_base.CommonBase):
         
         # h-jet
         self.plot_hjet_IAA()
-        #self.plot_hjet_IAA_ratio()
+        self.plot_hjet_IAA_ratio()
         #self.plot_hjet_dphi()
         
     #-------------------------------------------------------------------------------------------
@@ -211,6 +211,21 @@ class PlotResults(common_base.CommonBase):
         self.y_ratio_min = 0.
         self.y_ratio_max = 2.1
         self.ytitle = '#DeltaI_{AA} = #Delta_{recoil}^{PbPb} / #Delta_{recoil}^{PYTHIA}'
+        self.plot_ratio()
+        
+    #-------------------------------------------------------------------------------------------
+    def plot_hjet_IAA_ratio(self):
+
+        # Initialize data and theory info
+        self.observable = 'hjet_IAA_ratio'
+        self.init_result()
+             
+        # Plot ratio
+        self.x_min = 20.
+        self.x_max = 100.
+        self.y_ratio_min = 0.
+        self.y_ratio_max = 2.1
+        self.ytitle = '#Delta_{recoil}^{#it{R}=0.2} / #Delta_{recoil}^{#it{R}=0.5}'
         self.plot_ratio()
 
     #---------------------------------------------------------------
@@ -334,7 +349,7 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['h_ratio_stat'].Divide(self.observable_settings['h_pp'])
             self.observable_settings['h_ratio_sys'] = self.observable_settings['h_AA_sys'].Clone()
             self.observable_settings['h_ratio_sys'].Divide(self.observable_settings['h_pp_sys'])
-        elif self.observable == 'hjet_IAA':
+        elif 'hjet_IAA' in self.observable:
             f = ROOT.TFile(result['hepdata'], 'READ')
             dir = f.Get(result['dir'])
             h = dir.Get('Hist1D_y1')
@@ -393,28 +408,40 @@ class PlotResults(common_base.CommonBase):
                 f_jetscape_AA.Close()
             
             # Construct IAA
-            if self.observable == 'hjet_IAA':
+            if 'hjet_IAA' in self.observable:
            
-                hname_ntrigger = result['hname_jetscape_ntrigger']
-                hname_high = result['hname_jetscape_high']
-                hname_low = result['hname_jetscape_low']
-                
-                h_pp_ntrigger = f_jetscape_pp.Get(hname_ntrigger)
-                h_pp_ntrigger.SetDirectory(0)
-                h_pp_high = f_jetscape_pp.Get(hname_high)
-                h_pp_high.SetDirectory(0)
-                h_pp_low = f_jetscape_pp.Get(hname_low)
-                h_pp_low.SetDirectory(0)
-                f_jetscape_pp.Close()
-                
-                # Get JETSCAPE AA prediction
-                h_AA_ntrigger = f_jetscape_AA.Get(hname_ntrigger)
-                h_AA_ntrigger.SetDirectory(0)
-                h_AA_high = f_jetscape_AA.Get(hname_high)
-                h_AA_high.SetDirectory(0)
-                h_AA_low = f_jetscape_AA.Get(hname_low)
-                h_AA_low.SetDirectory(0)
-                f_jetscape_AA.Close()
+                if self.observable == 'hjet_IAA_ratio':
+                    h_pp_ntrigger = f_jetscape_pp.Get(result['hname_jetscape_ntrigger_R05'])
+                    h_pp_ntrigger.SetDirectory(0)
+                    h_pp_high = f_jetscape_pp.Get(result['hname_jetscape_high_R05'])
+                    h_pp_high.SetDirectory(0)
+                    h_pp_low = f_jetscape_pp.Get(result['hname_jetscape_low_R05'])
+                    h_pp_low.SetDirectory(0)
+                    f_jetscape_pp.Close()
+                    
+                    h_AA_ntrigger = f_jetscape_AA.Get(result['hname_jetscape_ntrigger_R02'])
+                    h_AA_ntrigger.SetDirectory(0)
+                    h_AA_high = f_jetscape_AA.Get(result['hname_jetscape_high_R02'])
+                    h_AA_high.SetDirectory(0)
+                    h_AA_low = f_jetscape_AA.Get(result['hname_jetscape_low_R02'])
+                    h_AA_low.SetDirectory(0)
+                    f_jetscape_AA.Close()
+                else:
+                    h_pp_ntrigger = f_jetscape_pp.Get(result['hname_jetscape_ntrigger'])
+                    h_pp_ntrigger.SetDirectory(0)
+                    h_pp_high = f_jetscape_pp.Get(result['hname_jetscape_high'])
+                    h_pp_high.SetDirectory(0)
+                    h_pp_low = f_jetscape_pp.Get(result['hname_jetscape_low'])
+                    h_pp_low.SetDirectory(0)
+                    f_jetscape_pp.Close()
+                    
+                    h_AA_ntrigger = f_jetscape_AA.Get(result['hname_jetscape_ntrigger'])
+                    h_AA_ntrigger.SetDirectory(0)
+                    h_AA_high = f_jetscape_AA.Get(result['hname_jetscape_high'])
+                    h_AA_high.SetDirectory(0)
+                    h_AA_low = f_jetscape_AA.Get(result['hname_jetscape_low'])
+                    h_AA_low.SetDirectory(0)
+                    f_jetscape_AA.Close()
 
                 # Delta recoil
                 n_trig_high_pp = h_pp_ntrigger.GetBinContent(h_pp_ntrigger.FindBin(30.))
@@ -428,10 +455,13 @@ class PlotResults(common_base.CommonBase):
                 h_AA_low.Scale(1./n_trig_low_AA, 'width')
                 
                 h_jetscape_pp = h_pp_high.Clone('h_delta_recoil_pp')
-                h_jetscape_pp.Add(h_pp_low, -1)
-                
                 h_jetscape_AA = h_AA_high.Clone('h_delta_recoil_AA')
-                h_jetscape_AA.Add(h_AA_low, -1*result['c_ref'])
+                if self.observable == 'hjet_IAA_ratio':
+                    h_jetscape_pp.Add(h_pp_low, -1*result['c_ref_R05'])
+                    h_jetscape_AA.Add(h_AA_low, -1*result['c_ref_R02'])
+                else:
+                    h_jetscape_pp.Add(h_pp_low, -1)
+                    h_jetscape_AA.Add(h_AA_low, -1*result['c_ref'])
             
             # Normalization
             h_jetscape_pp.Scale(1., 'width')
@@ -679,14 +709,14 @@ class PlotResults(common_base.CommonBase):
             y_leg = 0.62
         elif self.observable in ['hadron_raa', 'jet_raa']:
             y_leg = 0.67
-        elif self.observable in ['hjet_IAA']:
+        elif self.observable in ['hjet_IAA', 'hjet_IAA_ratio']:
             y_leg = 0.58
         leg = ROOT.TLegend(0.2,y_leg,0.4,y_leg+0.11)
         self.utils.setup_legend(leg, 0.04, sep=-0.1)
         
         if self.observable == 'jet_raa':
             leg2 = ROOT.TLegend(0.58,y_leg-0.09,0.78,y_leg+0.11)
-        elif self.observable in ['hjet_IAA']:
+        elif self.observable in ['hjet_IAA', 'hjet_IAA_ratio']:
             leg2 = ROOT.TLegend(0.58,y_leg,0.78,y_leg+0.11)
         else:
             leg2 = ROOT.TLegend(0.6,y_leg,0.8,y_leg+0.11)
@@ -838,7 +868,7 @@ class PlotResults(common_base.CommonBase):
             leg.AddEntry(self.observable_settings['g_jet_raa_sys_corr_ALICE'], 'Corr. uncertainty','f')
             leg.AddEntry(self.observable_settings['g_jet_raa_sys_shape_ALICE'], 'Shape uncertainty','f')
             
-        elif self.observable == 'hjet_IAA':
+        elif self.observable in ['hjet_IAA', 'hjet_IAA_ratio']:
         
             self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetFillColor(self.data_color)
             self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetFillColorAlpha(self.data_color, 0.3)
@@ -871,7 +901,7 @@ class PlotResults(common_base.CommonBase):
         leg.Draw('same')
         leg2.Draw('same')
 
-        if self.observable in ['combined_raa', 'hadron_raa', 'hjet_IAA']:
+        if self.observable in ['combined_raa', 'hadron_raa', 'hjet_IAA', 'hjet_IAA_ratio']:
             line = ROOT.TLine(myBlankHisto.GetXaxis().GetXmin(),1,myBlankHisto.GetXaxis().GetXmax(),1)
             line.SetLineColor(1)
             line.SetLineStyle(2)
@@ -906,10 +936,15 @@ class PlotResults(common_base.CommonBase):
         elif self.observable == 'jet_raa':
             text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {self.eta_cut}'
             text_latex.DrawLatex(x, y-dy, text)
-        elif self.observable == 'hjet_IAA':
-            text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {self.eta_cut}'
+        elif self.observable in ['hjet_IAA']:
+            text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {self.eta_cut}, #it{{#pi}} - #Delta#it{{#varphi}} < 0.6'
             text_latex.DrawLatex(x, y-dy, text)
-            text = '#it{#pi} - #Delta#it{#varphi} < 0.6, TT{20,50} - TT{8,9}'
+            text = 'TT{20,50} - TT{8,9}'
+            text_latex.DrawLatex(x, y-2.2*dy, text)
+        elif self.observable in ['hjet_IAA_ratio']:
+            text = f'anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < 0.9 - #it{{R}}, #it{{#pi}} - #Delta#it{{#varphi}} < 0.6'
+            text_latex.DrawLatex(x, y-dy, text)
+            text = 'TT{20,50} - TT{8,9}'
             text_latex.DrawLatex(x, y-2.2*dy, text)
 
         output_filename = os.path.join(self.output_dir, f'h_{self.observable}.pdf')
