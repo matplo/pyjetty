@@ -70,8 +70,8 @@ jet_raa:
   hepdata: 'raa/HEPData-ins1755387-v1-Table_30.root'
   
   # JETSCAPE
-  file_jetscape_pp: 'jetscape/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
-  file_jetscape_AA: 'jetscape/501204/5020_PbPb_0-5_0.30_2.0_1/AnalysisResultsFinal.root'
+  file_jetscape_pp: 'jetscape/540755/5020_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/540755/5020_PbPb_0-5_0.30_2.0_1/AnalysisResultsFinal.root'
   hname_jetscape: 'h_jet_pt_alice_R0.2_pt0.0Scaled'
   
   # JEWEL
@@ -112,8 +112,8 @@ girth:
   name_ratio_sys: 'g_ratio_pyt11'          # TGraphAsymmErrors*
 
   # JETSCAPE
-  file_jetscape_pp: 'jetscape/501204/2760_PP_Colorless/AnalysisResultsFinal.root'
-  file_jetscape_AA: 'jetscape/501204/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  file_jetscape_pp: 'jetscape/540755/2760_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
   hname_jetscape: 'h_chjet_g_alice_R0.2_pt0.0Scaled'
 
   # Hybrid model (TGraphAsymmErrors*)
@@ -149,8 +149,8 @@ mass:
   name_ratio_sys: 'g_ratio_pyt11'          # TGraphAsymmErrors*
 
   # JETSCAPE
-  file_jetscape_pp: 'jetscape/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
-  file_jetscape_AA: 'jetscape/501204/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  file_jetscape_pp: 'jetscape/540755/5020_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/540755/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
   hname_jetscape: 'h_chjet_mass_alice_R0.4_pt0.0Scaled'
   # TODO: Confirm what is constituent threshold in measurement
 
@@ -183,8 +183,8 @@ zg:
   
   # Theory
   theory_config: '../theory_predictions_zg.yaml'
-  #file_jetscape_pp: 'jetscape/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
-  #file_jetscape_AA: 'jetscape/501204/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  #file_jetscape_pp: 'jetscape/540755/5020_PP_Colorless/AnalysisResultsFinal.root'
+  #file_jetscape_AA: 'jetscape/540755/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
   #hname_jetscape: 'h_chjet_mass_alice_R0.4_pt0.0Scaled'
   
 #------------------------------------------------------------------
@@ -208,27 +208,74 @@ theta_g:
   theory_config: '../theory_predictions_rg.yaml'
   
 #------------------------------------------------------------------
-# Jet correlation observables
-semi_inclusive_chjet:
+# ALICE R = 0.4, https://www.hepdata.net/record/ins1376027
+# jetscape jet Raa
+hjet_IAA:
 
-  # ALICE, https://www.hepdata.net/record/ins1376027
-  #   sqrts: 2.76 TeV
-  #   Centrality: 0-10%
-  #   Jets:
-  #       - R = 0.4
-  #       - 20 < pt_jet,ch < 100 in 20 GeV bins
-  #   Cuts / Notes:
-  #       - pi - dPhi < 0.6 for accepting recoil jets
-  #       - |eta_jet| < 0.9 - R
-  #       - Track pt > 0.15 (is this corrected?)
-  #       - Area: A>0.7 for R=0.2, A>0.4 for R=0.4, A>0.6 for R=0.5 (is this corrected?)
-  #       - Make predictions in 2D, and they can project them
-  hjet_alice:
-    hadron_eta_cut: 0.9
-    low_trigger_range_276: [8, 9]
-    low_trigger_range_502: [5, 7]
-    high_trigger_range: [20, 50]
-    hepdata_IAA_276_R02: 'data/TG3/hjet_IAA/HEPData-ins1376027-v1-Table_32.root'
-    hepdata_IAA_276_R04: 'data/TG3/hjet_IAA/HEPData-ins1376027-v1-Table_33.root'
-    hepdata_IAA_276_R05: 'data/TG3/hjet_IAA/HEPData-ins1376027-v1-Table_34.root'
-    hepdata_dphi_276: 'data/TG3/hjet_delta_phi/HEPData-ins1376027-v1-Table_37.root'
+  xtitle: '#it{p}_{T,jet}^{ch} (GeV/#it{c})'
+  sqrts: 2760
+  centrality: [0., 10.]
+  jetR: 0.4
+  eta_R: 0.9
+  low_trigger_range: [8, 9]
+  high_trigger_range: [20, 50]
+
+  # ALICE data
+  hepdata: 'hjet/HEPData-ins1376027-v1-root.root'
+  dir: 'Table 33'
+  
+  # JETSCAPE
+  file_jetscape_pp: 'jetscape/540755/2760_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  hname_jetscape_ntrigger: 'h_semi_inclusive_chjet_hjet_ntrigger_alice_R0.4_pt0.15Scaled'
+  hname_jetscape_high: 'h_semi_inclusive_chjet_IAA_highTrigger_alice_R0.4_276_pt0.15Scaled'
+  hname_jetscape_low: 'h_semi_inclusive_chjet_IAA_lowTrigger_alice_R0.4_276_pt0.15Scaled'
+  c_ref: 0.96 # R02: 0.99, R04: 0.96, R05: 0.93
+
+#------------------------------------------------------------------
+# ALICE IAA ratio R=0.2/R=0.5, https://www.hepdata.net/record/ins1376027
+# jetscape jet Raa
+hjet_IAA_ratio:
+
+  xtitle: '#it{p}_{T,jet}^{ch} (GeV/#it{c})'
+  sqrts: 2760
+  centrality: [0., 10.]
+  jetR: 0.4
+  eta_R: 0.9
+  low_trigger_range: [8, 9]
+  high_trigger_range: [20, 50]
+
+  # ALICE data
+  hepdata: 'hjet/HEPData-ins1376027-v1-root.root'
+  dir: 'Table 36'
+  shape: 'sys_1'
+  corr: 'sys_2'
+  
+  # JETSCAPE
+  file_jetscape_pp: 'jetscape/540755/2760_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  hname_jetscape: 'h_jet_pt_alice_R0.2_pt0.0Scaled'
+  
+#------------------------------------------------------------------
+# ALICE R = 0.4, https://www.hepdata.net/record/ins1376027
+# jetscape jet Raa
+hjet_dphi:
+
+  xtitle: '#it{p}_{T,jet}^{ch} (GeV/#it{c})'
+  sqrts: 2760
+  centrality: [0., 10.]
+  jetR: 0.4
+  eta_R: 0.9
+  low_trigger_range: [8, 9]
+  high_trigger_range: [20, 50]
+
+  # ALICE data
+  hepdata: 'hjet/HEPData-ins1376027-v1-root.root'
+  dir: 'Table 37'
+  shape: 'sys_1'
+  corr: 'sys_2'
+  
+  # JETSCAPE
+  file_jetscape_pp: 'jetscape/540755/2760_PP_Colorless/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  hname_jetscape: 'h_jet_pt_alice_R0.2_pt0.0Scaled'

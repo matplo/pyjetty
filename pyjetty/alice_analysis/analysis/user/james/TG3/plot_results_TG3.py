@@ -89,8 +89,9 @@ class PlotResults(common_base.CommonBase):
         self.plot_tg()
         
         # h-jet
-        #self.plot_semi_inclusive_chjet_IAA()
-        #self.plot_semi_inclusive_chjet_dphi()
+        self.plot_hjet_IAA()
+        #self.plot_hjet_IAA_ratio()
+        #self.plot_hjet_dphi()
         
     #-------------------------------------------------------------------------------------------
     def plot_combined_raa(self):
@@ -196,6 +197,21 @@ class PlotResults(common_base.CommonBase):
         self.ytitle = f'#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
         self.plot_distribution_and_ratio()
         #hname = f'h_chjet_tg_alice_R{R}{self.suffix}Scaled')
+
+    #-------------------------------------------------------------------------------------------
+    def plot_hjet_IAA(self):
+
+        # Initialize data and theory info
+        self.observable = 'hjet_IAA'
+        self.init_result()
+             
+        # Plot ratio
+        self.x_min = 20.
+        self.x_max = 100.
+        self.y_ratio_min = 0.
+        self.y_ratio_max = 2.1
+        self.ytitle = '#DeltaI_{AA} = #Delta_{recoil}^{PbPb} / #Delta_{recoil}^{PYTHIA}'
+        self.plot_ratio()
 
     #---------------------------------------------------------------
     # Initialize a given observable
@@ -318,24 +334,43 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['h_ratio_stat'].Divide(self.observable_settings['h_pp'])
             self.observable_settings['h_ratio_sys'] = self.observable_settings['h_AA_sys'].Clone()
             self.observable_settings['h_ratio_sys'].Divide(self.observable_settings['h_pp_sys'])
+        elif self.observable == 'hjet_IAA':
+            f = ROOT.TFile(result['hepdata'], 'READ')
+            dir = f.Get(result['dir'])
+            h = dir.Get('Hist1D_y1')
+            y = np.asarray(root_numpy.hist2array(h), dtype=np.float64)
+            stat = np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e1')), dtype=np.float64)
+            sys_shape_plus = np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e2plus')), dtype=np.float64)
+            sys_shape_minus = np.absolute(np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e2minus')), dtype=np.float64))
+            sys_corr_plus = np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e3plus')), dtype=np.float64)
+            sys_corr_minus = np.absolute(np.asarray(root_numpy.hist2array(dir.Get('Hist1D_y1_e3minus')), dtype=np.float64))
+
+            bins = np.array(h.GetXaxis().GetXbins())
+            x = (bins[1:] + bins[:-1]) / 2
+            x_err = np.ediff1d(bins)/2
+            n = len(x)
+            f.Close()
+
+            self.observable_settings['g_jet_hjet_IAA_ALICE'] = ROOT.TGraphErrors(n, x, y, np.zeros(n), stat)
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE']  = ROOT.TGraphAsymmErrors(n, x, y, x_err, x_err, sys_corr_minus, sys_corr_plus)
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE']  = ROOT.TGraphAsymmErrors(n, x, y, x_err, x_err, sys_shape_minus, sys_shape_plus)
         
         # Theory -- JETSCAPE
         if 'file_jetscape_pp' in result:
             
-            # pp
-            hname = result['hname_jetscape']
             f_jetscape_pp = ROOT.TFile(result['file_jetscape_pp'], 'READ')
-            h_jetscape_pp = f_jetscape_pp.Get(hname)
-            h_jetscape_pp.SetDirectory(0)
-            f_jetscape_pp.Close()
-            
-            # AA
             f_jetscape_AA = ROOT.TFile(result['file_jetscape_AA'], 'READ')
-            h_jetscape_AA = f_jetscape_AA.Get(hname)
-            h_jetscape_AA.SetDirectory(0)
-            #if self.observable == 'jet_raa':
-            #    h_jetscape_AA.Scale(0.5) # Since we hadd [0,5] and [5,10]
-            f_jetscape_AA.Close()
+            if 'hname_jetscape' in result:
+                hname = result['hname_jetscape']
+                h_jetscape_pp = f_jetscape_pp.Get(hname)
+                h_jetscape_pp.SetDirectory(0)
+                f_jetscape_pp.Close()
+                
+                h_jetscape_AA = f_jetscape_AA.Get(hname)
+                h_jetscape_AA.SetDirectory(0)
+                #if self.observable == 'jet_raa':
+                #    h_jetscape_AA.Scale(0.5) # Since we hadd [0,5] and [5,10]
+                f_jetscape_AA.Close()
 
             ## For hadrons, impose a 1 GeV minimum, and subtract the recoil hadrons
             if self.observable == 'hadron_raa':
@@ -357,6 +392,47 @@ class PlotResults(common_base.CommonBase):
                 h_jetscape_AA.Add(h_recoil_rebinned, -1)
                 f_jetscape_AA.Close()
             
+            # Construct IAA
+            if self.observable == 'hjet_IAA':
+           
+                hname_ntrigger = result['hname_jetscape_ntrigger']
+                hname_high = result['hname_jetscape_high']
+                hname_low = result['hname_jetscape_low']
+                
+                h_pp_ntrigger = f_jetscape_pp.Get(hname_ntrigger)
+                h_pp_ntrigger.SetDirectory(0)
+                h_pp_high = f_jetscape_pp.Get(hname_high)
+                h_pp_high.SetDirectory(0)
+                h_pp_low = f_jetscape_pp.Get(hname_low)
+                h_pp_low.SetDirectory(0)
+                f_jetscape_pp.Close()
+                
+                # Get JETSCAPE AA prediction
+                h_AA_ntrigger = f_jetscape_AA.Get(hname_ntrigger)
+                h_AA_ntrigger.SetDirectory(0)
+                h_AA_high = f_jetscape_AA.Get(hname_high)
+                h_AA_high.SetDirectory(0)
+                h_AA_low = f_jetscape_AA.Get(hname_low)
+                h_AA_low.SetDirectory(0)
+                f_jetscape_AA.Close()
+
+                # Delta recoil
+                n_trig_high_pp = h_pp_ntrigger.GetBinContent(h_pp_ntrigger.FindBin(30.))
+                n_trig_low_pp = h_pp_ntrigger.GetBinContent(h_pp_ntrigger.FindBin(8.5))
+                n_trig_high_AA = h_AA_ntrigger.GetBinContent(h_AA_ntrigger.FindBin(30.))
+                n_trig_low_AA = h_AA_ntrigger.GetBinContent(h_AA_ntrigger.FindBin(8.5))
+
+                h_pp_high.Scale(1./n_trig_high_pp, 'width')
+                h_pp_low.Scale(1./n_trig_low_pp, 'width')
+                h_AA_high.Scale(1./n_trig_high_AA, 'width')
+                h_AA_low.Scale(1./n_trig_low_AA, 'width')
+                
+                h_jetscape_pp = h_pp_high.Clone('h_delta_recoil_pp')
+                h_jetscape_pp.Add(h_pp_low, -1)
+                
+                h_jetscape_AA = h_AA_high.Clone('h_delta_recoil_AA')
+                h_jetscape_AA.Add(h_AA_low, -1*result['c_ref'])
+            
             # Normalization
             h_jetscape_pp.Scale(1., 'width')
             h_jetscape_AA.Scale(1., 'width')
@@ -367,7 +443,7 @@ class PlotResults(common_base.CommonBase):
                     min_bin = 1
                 h_jetscape_AA.Scale(1./h_jetscape_AA.Integral(min_bin, h_jetscape_AA.GetNbinsX()))
                 h_jetscape_pp.Scale(1./h_jetscape_pp.Integral(min_bin, h_jetscape_pp.GetNbinsX()))
-                
+                    
             # Form ratio
             h_ratio_jetscape = h_jetscape_AA
             h_ratio_jetscape.Divide(h_jetscape_pp)
@@ -603,11 +679,15 @@ class PlotResults(common_base.CommonBase):
             y_leg = 0.62
         elif self.observable in ['hadron_raa', 'jet_raa']:
             y_leg = 0.67
+        elif self.observable in ['hjet_IAA']:
+            y_leg = 0.58
         leg = ROOT.TLegend(0.2,y_leg,0.4,y_leg+0.11)
         self.utils.setup_legend(leg, 0.04, sep=-0.1)
         
         if self.observable == 'jet_raa':
             leg2 = ROOT.TLegend(0.58,y_leg-0.09,0.78,y_leg+0.11)
+        elif self.observable in ['hjet_IAA']:
+            leg2 = ROOT.TLegend(0.58,y_leg,0.78,y_leg+0.11)
         else:
             leg2 = ROOT.TLegend(0.6,y_leg,0.8,y_leg+0.11)
         self.utils.setup_legend(leg2, 0.04, sep=-0.1)
@@ -758,10 +838,40 @@ class PlotResults(common_base.CommonBase):
             leg.AddEntry(self.observable_settings['g_jet_raa_sys_corr_ALICE'], 'Corr. uncertainty','f')
             leg.AddEntry(self.observable_settings['g_jet_raa_sys_shape_ALICE'], 'Shape uncertainty','f')
             
+        elif self.observable == 'hjet_IAA':
+        
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetFillColor(self.data_color)
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetMarkerStyle(0)
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetFillStyle(1001)
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetLineWidth(0)
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].SetLineColor(0)
+            
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'].SetFillColor(self.data_color)
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'].SetFillColorAlpha(self.data_color, 0.3)
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'].SetMarkerStyle(0)
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'].SetFillStyle(0)
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'].SetLineWidth(1)
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'].SetLineColor(self.data_color)
+            
+            self.observable_settings['g_jet_hjet_IAA_ALICE'].SetMarkerColor(self.data_color)
+            self.observable_settings['g_jet_hjet_IAA_ALICE'].SetLineColor(self.data_color)
+            self.observable_settings['g_jet_hjet_IAA_ALICE'].SetLineWidth(1)
+            self.observable_settings['g_jet_hjet_IAA_ALICE'].SetMarkerSize(1.3)
+            
+            self.observable_settings['g_jet_hjet_IAA_ALICE'].SetMarkerStyle(21)
+            self.observable_settings['g_jet_hjet_IAA_ALICE'].Draw('PE Z same')
+            self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'].Draw('E2 same')
+            self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'].Draw('E2 same')
+
+            leg.AddEntry(self.observable_settings['g_jet_hjet_IAA_ALICE'], '0-10%','PE')
+            leg.AddEntry(self.observable_settings['g_jet_hjet_IAA_sys_corr_ALICE'], 'Corr. uncertainty','f')
+            leg.AddEntry(self.observable_settings['g_jet_hjet_IAA_sys_shape_ALICE'], 'Shape uncertainty','f')
+            
         leg.Draw('same')
         leg2.Draw('same')
 
-        if self.observable in ['combined_raa', 'hadron_raa']:
+        if self.observable in ['combined_raa', 'hadron_raa', 'hjet_IAA']:
             line = ROOT.TLine(myBlankHisto.GetXaxis().GetXmin(),1,myBlankHisto.GetXaxis().GetXmax(),1)
             line.SetLineColor(1)
             line.SetLineStyle(2)
@@ -796,7 +906,12 @@ class PlotResults(common_base.CommonBase):
         elif self.observable == 'jet_raa':
             text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {self.eta_cut}'
             text_latex.DrawLatex(x, y-dy, text)
-        
+        elif self.observable == 'hjet_IAA':
+            text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {self.eta_cut}'
+            text_latex.DrawLatex(x, y-dy, text)
+            text = '#it{#pi} - #Delta#it{#varphi} < 0.6, TT{20,50} - TT{8,9}'
+            text_latex.DrawLatex(x, y-2.2*dy, text)
+
         output_filename = os.path.join(self.output_dir, f'h_{self.observable}.pdf')
         c.SaveAs(output_filename)
         c.Close()
