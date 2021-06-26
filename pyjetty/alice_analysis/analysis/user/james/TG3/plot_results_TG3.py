@@ -10,6 +10,7 @@ To do this, we write a separate plotting function for each observable
 We include generic functions for:
   - Plotting ratio
   - Plotting distribution+ratio
+  - Plotting distribution
   - Initialize common config items
 
 Author: James Mulligan (james.mulligan@berkeley.edu)
@@ -91,7 +92,7 @@ class PlotResults(common_base.CommonBase):
         # h-jet
         self.plot_hjet_IAA()
         self.plot_hjet_IAA_ratio()
-        #self.plot_hjet_dphi()
+        self.plot_hjet_dphi()
         
     #-------------------------------------------------------------------------------------------
     def plot_combined_raa(self):
@@ -227,6 +228,21 @@ class PlotResults(common_base.CommonBase):
         self.y_ratio_max = 2.1
         self.ytitle = '#Delta_{recoil}^{#it{R}=0.2} / #Delta_{recoil}^{#it{R}=0.5}'
         self.plot_ratio()
+        
+    #-------------------------------------------------------------------------------------------
+    def plot_hjet_dphi(self):
+
+        # Initialize data and theory info
+        self.observable = 'hjet_dphi'
+        self.init_result()
+             
+        # Plot ratio
+        self.x_min = 1.5
+        self.x_max = 3.2
+        self.y_ratio_min = 0.
+        self.y_ratio_max = 0.1
+        self.ytitle = '#Phi(#Delta#it{#varphi})'
+        self.plot_distribution()
 
     #---------------------------------------------------------------
     # Initialize a given observable
@@ -278,11 +294,11 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['g_jet_raa_sys_shape_ALICE'] = file.Get(result['jet_raa_shape_ALICE_name'])
             self.observable_settings['g_jet_raa_ATLAS'] = file.Get(result['jet_raa_ATLAS_name'])
             self.observable_settings['g_jet_raa_sys_ATLAS'] = file.Get(result['jet_raa_sys_ATLAS_name'])
-        if self.observable in ['hadron_raa']:
+        elif self.observable in ['hadron_raa']:
             file = ROOT.TFile(result['file'], 'READ')
             self.observable_settings['g_hadron_raa_ALICE'] = file.Get(result['hadron_raa_ALICE_name'])
             self.observable_settings['g_hadron_raa_sys_ALICE'] = file.Get(result['hadron_raa_sys_ALICE_name'])
-        if self.observable == 'jet_raa':
+        elif self.observable == 'jet_raa':
             f = ROOT.TFile(result['hepdata'], 'READ')
             dir = f.Get('Table 30')
             h = dir.Get('Hist1D_y1')
@@ -300,8 +316,7 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['g_jet_raa_ALICE'] = ROOT.TGraphErrors(n, x, y, np.zeros(n), stat)
             self.observable_settings['g_jet_raa_sys_corr_ALICE']  = ROOT.TGraphErrors(n, x, y, x_err, sys_corr)
             self.observable_settings['g_jet_raa_sys_shape_ALICE']  = ROOT.TGraphErrors(n, x, y, x_err, sys_shape)
-
-        if self.observable in ['girth', 'mass']:
+        elif self.observable in ['girth', 'mass']:
             file = ROOT.TFile(result['file'], 'READ')
             self.observable_settings['g_pp'] = file.Get(result['name_pp'])
             self.observable_settings['h_AA_stat'] = file.Get(result['name_AA_stat'])
@@ -332,7 +347,14 @@ class PlotResults(common_base.CommonBase):
             self.f_tagging_pp = self.h_tagging_fraction_pp.GetBinContent(bin)
             bin = self.h_tagging_fraction_AA.GetXaxis().FindBin((self.pt[0] + self.pt[1])/2)
             self.f_tagging_AA = self.h_tagging_fraction_AA.GetBinContent(bin)
-            
+        elif self.observable == 'hjet_dphi':
+            file_pp = ROOT.TFile(result['file_pp'], 'READ')
+            file_AA = ROOT.TFile(result['file_AA'], 'READ')
+            self.observable_settings['h_pp'] = file_pp.Get(result['hname'])
+            self.observable_settings['h_AA'] = file_AA.Get(result['hname'])
+            self.observable_settings['h_pp'].SetDirectory(0)
+            self.observable_settings['h_AA'].SetDirectory(0)
+
         # Data -- ratio
         if self.observable == 'girth':
             #self.observable_settings['hepdata_ratio'] = result['hepdata_ratio']
@@ -408,7 +430,7 @@ class PlotResults(common_base.CommonBase):
                 f_jetscape_AA.Close()
             
             # Construct IAA
-            if 'hjet_IAA' in self.observable:
+            if 'hjet' in self.observable:
            
                 if self.observable == 'hjet_IAA_ratio':
                     h_pp_ntrigger = f_jetscape_pp.Get(result['hname_jetscape_ntrigger_R05'])
@@ -464,8 +486,9 @@ class PlotResults(common_base.CommonBase):
                     h_jetscape_AA.Add(h_AA_low, -1*result['c_ref'])
             
             # Normalization
-            h_jetscape_pp.Scale(1., 'width')
-            h_jetscape_AA.Scale(1., 'width')
+            if not self.observable in ['hjet_dphi']:
+                h_jetscape_pp.Scale(1., 'width')
+                h_jetscape_AA.Scale(1., 'width')
             if self_normalize:
                 if self.observable in ['zg', 'theta_g']:
                     min_bin = 0
@@ -475,14 +498,20 @@ class PlotResults(common_base.CommonBase):
                 h_jetscape_pp.Scale(1./h_jetscape_pp.Integral(min_bin, h_jetscape_pp.GetNbinsX()))
                     
             # Form ratio
-            h_ratio_jetscape = h_jetscape_AA
-            h_ratio_jetscape.Divide(h_jetscape_pp)
-            self.observable_settings['prediction_ratio_list'].append(h_ratio_jetscape)
-            self.observable_settings['prediction_ratio_labels'].append('JETSCAPE')
+            if not self.observable in ['hjet_dphi']:
+                h_ratio_jetscape = h_jetscape_AA
+                h_ratio_jetscape.Divide(h_jetscape_pp)
+                self.observable_settings['prediction_ratio_list'].append(h_ratio_jetscape)
+                self.observable_settings['prediction_ratio_labels'].append('JETSCAPE')
             
-            if self.observable == 'mass':
+            if self.observable in ['mass']:
                 self.observable_settings['prediction_distribution_list'].append(h_jetscape_AA)
                 self.observable_settings['prediction_distribution_labels'].append('JETSCAPE')
+            elif self.observable in ['hjet_dphi']:
+                self.observable_settings['prediction_distribution_list'].append(h_jetscape_AA)
+                self.observable_settings['prediction_distribution_labels'].append('JETSCAPE Pb-Pb')
+                self.observable_settings['prediction_distribution_list'].append(h_jetscape_pp)
+                self.observable_settings['prediction_distribution_labels'].append('JETSCAPE pp')
         
         # Theory -- Hybrid
         if self.observable == 'girth':
@@ -680,7 +709,6 @@ class PlotResults(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     def plot_ratio(self):
               
-        # Draw RAA
         cname = 'c'
         c = ROOT.TCanvas(cname, cname, 600, 450)
         c.SetRightMargin(0.05)
@@ -951,6 +979,116 @@ class PlotResults(common_base.CommonBase):
         c.SaveAs(output_filename)
         c.Close()
 
+    #-------------------------------------------------------------------------------------------
+    # Plot distribution
+    #-------------------------------------------------------------------------------------------
+    def plot_distribution(self, pp_label=None, logy = False):
+    
+        cname = 'c'
+        c = ROOT.TCanvas(cname, cname, 600, 450)
+        c.SetRightMargin(0.05)
+        c.SetLeftMargin(0.15)
+        c.SetTopMargin(0.05)
+        c.SetBottomMargin(0.17)
+        c.SetTicks(0,1)
+        if self.observable == 'combined_raa':
+            c.SetLogx()
+        c.cd()
+        
+        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, self.x_min, self.x_max)
+        myBlankHisto.SetNdivisions(505)
+        myBlankHisto.SetXTitle(self.xtitle)
+        myBlankHisto.SetYTitle(self.ytitle)
+        myBlankHisto.SetMaximum(self.y_ratio_max)
+        myBlankHisto.GetXaxis().SetTitleSize(0.06)
+        myBlankHisto.GetXaxis().SetTitleOffset(1.2)
+        myBlankHisto.GetXaxis().SetLabelSize(0.05)
+        myBlankHisto.GetYaxis().SetTitleSize(0.07)
+        myBlankHisto.GetYaxis().SetTitleOffset(1.)
+        myBlankHisto.GetYaxis().SetLabelSize(0.05)
+        myBlankHisto.Draw('E')
+        
+        if self.observable in ['hjet_dphi']:
+            y_leg = 0.52
+        leg = ROOT.TLegend(0.2,y_leg,0.4,y_leg+0.11)
+        self.utils.setup_legend(leg, 0.04, sep=-0.1)
+        
+        if self.observable == 'hjet_dphi':
+            leg2 = ROOT.TLegend(0.5,y_leg,0.7,y_leg+0.11)
+        self.utils.setup_legend(leg2, 0.04, sep=-0.1)
+        
+        # Draw theory predictions
+        for i, prediction in enumerate(self.observable_settings['prediction_distribution_list']):
+        
+            label = self.observable_settings['prediction_distribution_labels'][i]
+            color = self.theory_colors[i]
+            
+            prediction.SetFillColor(color)
+            prediction.SetFillColorAlpha(color, self.alpha)
+            prediction.SetLineColor(color)
+            prediction.SetLineColorAlpha(color, self.alpha)
+            prediction.SetLineWidth(8)
+            prediction.SetMarkerSize(0)
+            prediction.SetMarkerStyle(0)
+                    
+            if type(prediction) in [ROOT.TH1F]:
+                prediction.Draw('E3 same')
+                #prediction.Draw('E2 same')
+                #prediction.Draw('PE X0 same')
+
+                leg2.AddEntry(prediction, label, 'L')
+                
+        # Draw experimental data
+        if self.observable == 'hjet_dphi':
+        
+            self.observable_settings['h_pp'].SetMarkerSize(self.marker_size)
+            self.observable_settings['h_pp'].SetMarkerStyle(self.data_markers[0])
+            self.observable_settings['h_pp'].SetMarkerColor(self.data_color)
+            self.observable_settings['h_pp'].SetLineStyle(self.line_style)
+            self.observable_settings['h_pp'].SetLineWidth(self.line_width)
+            self.observable_settings['h_pp'].SetLineColor(self.data_color)
+        
+            self.observable_settings['h_AA'].SetMarkerSize(self.marker_size)
+            self.observable_settings['h_AA'].SetMarkerStyle(self.data_markers[1])
+            self.observable_settings['h_AA'].SetMarkerColor(self.data_color)
+            self.observable_settings['h_AA'].SetLineStyle(self.line_style)
+            self.observable_settings['h_AA'].SetLineWidth(self.line_width)
+            self.observable_settings['h_AA'].SetLineColor(self.data_color)
+
+            leg.AddEntry(self.observable_settings['h_AA'], 'Pb-Pb 0-10%','PE')
+            leg.AddEntry(self.observable_settings['h_pp'], 'PYTHIA + Pb-Pb','PE')
+
+            self.observable_settings['h_pp'].Draw('PE X0 same')
+            self.observable_settings['h_AA'].DrawCopy('PE X0 same')
+
+        leg.Draw('same')
+        leg2.Draw('same')
+        
+        # # # # # # # # # # # # # # # # # # # # # # # #
+        # text
+        # # # # # # # # # # # # # # # # # # # # # # # #
+        x = 0.2
+        dx = 0.4
+        y = 0.87
+        dy = 0.06
+        text_latex = ROOT.TLatex()
+        text_latex.SetNDC()
+        text_latex.SetTextSize(0.05)
+        text = f'#bf{{ALICE}} #sqrt{{#it{{s_{{#it{{NN}}}}}}}} = {self.sqrts/1000.} TeV'
+        text_latex.DrawLatex(x, y, text)
+
+        if self.observable in ['hjet_dphi']:
+            text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {self.eta_cut}, #it{{#pi}} - #Delta#it{{#varphi}} < 0.6'
+            text_latex.DrawLatex(x, y-dy, text)
+            text = '40 < #it{p}_{T,jet}^{ch} < 60 GeV/#it{c}'
+            text_latex.DrawLatex(x, y-2.2*dy, text)
+            text = 'TT{20,50} - TT{8,9}'
+            text_latex.DrawLatex(x, y-3.4*dy, text)
+
+        output_filename = os.path.join(self.output_dir, f'h_{self.observable}.pdf')
+        c.SaveAs(output_filename)
+        c.Close()
+        
     #-------------------------------------------------------------------------------------------
     # Plot distributions in upper panel, and ratio in lower panel
     #-------------------------------------------------------------------------------------------
@@ -1238,211 +1376,7 @@ class PlotResults(common_base.CommonBase):
 
         c.SaveAs(output_filename)
         c.Close()
-                      
-    #-------------------------------------------------------------------------------------------
-    def plot_semi_inclusive_chjet_IAA(self):
-            
-        # Get experimental data
-        R=0.4
-        c_ref = 0.96 # R02: 0.99, R04: 0.96, R05: 0.93
-        h_data_list = []
-        if R == 0.2:
-            f = ROOT.TFile(self.semi_inclusive_chjet_observables['hjet_alice']['hepdata_IAA_276_R02'], 'READ')
-            dir = f.Get('Table 32')
-        elif R == 0.4:
-            f = ROOT.TFile(self.semi_inclusive_chjet_observables['hjet_alice']['hepdata_IAA_276_R04'], 'READ')
-            dir = f.Get('Table 33')
-        elif R == 0.5:
-            f = ROOT.TFile(self.semi_inclusive_chjet_observables['hjet_alice']['hepdata_IAA_276_R05'], 'READ')
-            dir = f.Get('Table 34')
-        h_data = dir.Get('Graph1D_y1')
-        h_data_list.append([h_data, '0-10%'])
-        f.Close()
-        
-        if self.sqrts == 2760:
-            hname_ntrigger = f'h_semi_inclusive_chjet_hjet_ntrigger_alice_R{R}{self.suffix}Scaled'
-            hname_high = f'h_semi_inclusive_chjet_IAA_highTrigger_alice_R{R}_276{self.suffix}Scaled'
-            hname_low = f'h_semi_inclusive_chjet_IAA_lowTrigger_alice_R{R}_276{self.suffix}Scaled'
-            
-            # Get JETSCAPE pp prediction
-            filename_pp = os.path.join(self.output_dir, f'{self.dir_pp}/AnalysisResultsFinal.root')
-            f_pp = ROOT.TFile(filename_pp, 'READ')
-            h_pp_ntrigger = f_pp.Get(hname_ntrigger)
-            h_pp_ntrigger.SetDirectory(0)
-            h_pp_high = f_pp.Get(hname_high)
-            h_pp_high.SetDirectory(0)
-            h_pp_low = f_pp.Get(hname_low)
-            h_pp_low.SetDirectory(0)
-            f_pp.Close()
-            
-            # Get JETSCAPE AA prediction
-            filename = os.path.join(self.output_dir, f'{self.dir_AA}/AnalysisResultsFinal.root')
-            f_AA = ROOT.TFile(filename, 'READ')
-            h_AA_ntrigger = f_AA.Get(hname_ntrigger)
-            h_AA_ntrigger.SetDirectory(0)
-            h_AA_high = f_AA.Get(hname_high)
-            h_AA_high.SetDirectory(0)
-            h_AA_low = f_AA.Get(hname_low)
-            h_AA_low.SetDirectory(0)
-            f_AA.Close()
-        elif self.sqrts == 5020:
-            hname_ntrigger = f'h_semi_inclusive_chjet_hjet_ntrigger_alice_R{R}{self.suffix}Scaled'
-            hname_high = f'h_semi_inclusive_chjet_IAA_dphi_highTrigger_alice_R{R}_502{self.suffix}Scaled'
-            hname_low = f'h_semi_inclusive_chjet_IAA_dphi_lowTrigger_alice_R{R}_502{self.suffix}Scaled'
-            
-            # Get JETSCAPE pp prediction
-            filename_pp = os.path.join(self.output_dir, f'{self.dir_pp}/AnalysisResultsFinal.root')
-            f_pp = ROOT.TFile(filename_pp, 'READ')
-            h_pp_ntrigger = f_pp.Get(hname_ntrigger)
-            h_pp_ntrigger.SetDirectory(0)
-            
-            h_pp_high2d = f_pp.Get(hname_high)
-            h_pp_high2d.SetDirectory(0)
-            h_pp_high2d.GetYaxis().SetRangeUser(np.pi-0.6, np.pi)
-            h_pp_high = h_pp_high2d.ProjectionX()
-            h_pp_high.Rebin(20)
-            h_pp_high.SetDirectory(0)
-                        
-            h_pp_low2d = f_pp.Get(hname_low)
-            h_pp_low2d.SetDirectory(0)
-            h_pp_low2d.GetYaxis().SetRangeUser(np.pi-0.6, np.pi)
-            h_pp_low = h_pp_low2d.ProjectionX()
-            h_pp_low.Rebin(20)
-            h_pp_low.SetDirectory(0)
-            f_pp.Close()
-
-            # Get JETSCAPE AA prediction
-            filename = os.path.join(self.output_dir, f'{self.dir_AA}/AnalysisResultsFinal.root')
-            f_AA = ROOT.TFile(filename, 'READ')
-            h_AA_ntrigger = f_AA.Get(hname_ntrigger)
-            h_AA_ntrigger.SetDirectory(0)
-            
-            h_AA_high2d = f_AA.Get(hname_high)
-            h_AA_high2d.SetDirectory(0)
-            h_AA_high2d.GetYaxis().SetRangeUser(np.pi-0.6, np.pi)
-            h_AA_high = h_AA_high2d.ProjectionX()
-            h_AA_high.Rebin(20)
-            h_AA_high.SetDirectory(0)
-              
-            h_AA_low2d = f_AA.Get(hname_low)
-            h_AA_low2d.SetDirectory(0)
-            h_AA_low2d.GetYaxis().SetRangeUser(np.pi-0.6, np.pi)
-            h_AA_low = h_AA_low2d.ProjectionX()
-            h_AA_low.Rebin(20)
-            h_AA_low.SetDirectory(0)
-            f_AA.Close()
-        
-        # Delta recoil
-        n_trig_high_pp = h_pp_ntrigger.GetBinContent(h_pp_ntrigger.FindBin(30.))
-        n_trig_low_pp = h_pp_ntrigger.GetBinContent(h_pp_ntrigger.FindBin(8.5))
-        n_trig_high_AA = h_AA_ntrigger.GetBinContent(h_AA_ntrigger.FindBin(30.))
-        n_trig_low_AA = h_AA_ntrigger.GetBinContent(h_AA_ntrigger.FindBin(8.5))
-        print(f'n_trig_high_pp: {n_trig_high_pp}')
-        print(f'n_trig_low_pp: {n_trig_low_pp}')
-        print(f'n_trig_high_AA: {n_trig_high_AA}')
-        print(f'n_trig_low_AA: {n_trig_low_AA}')
-
-        h_pp_high.Scale(1./n_trig_high_pp, 'width')
-        h_pp_low.Scale(1./n_trig_low_pp, 'width')
-        h_AA_high.Scale(1./n_trig_high_AA, 'width')
-        h_AA_low.Scale(1./n_trig_low_AA, 'width')
-        
-        h_delta_recoil_pp = h_pp_high.Clone('h_delta_recoil_pp')
-        h_delta_recoil_pp.Add(h_pp_low, -1)
-        
-        h_delta_recoil_AA = h_AA_high.Clone('h_delta_recoil_AA')
-        h_delta_recoil_AA.Add(h_AA_low, -1*c_ref)
  
-        # Plot
-        xtitle="#it{p}_{T,ch} (GeV/#it{c})"
-        self.plot_raa_ratio(raa_type='hjet_IAA',
-                            h_pp=h_delta_recoil_pp,
-                            h_AA=h_delta_recoil_AA,
-                            h_data_list=h_data_list,
-                            eta_cut=np.round(self.inclusive_chjet_observables['eta_cut_alice_R']-R, decimals=1),
-                            data_centralities=['0-10'],
-                            mc_centralities=[f'{self.min_cent}-{self.max_cent}'],
-                            xtitle=xtitle,
-                            ytitle = '#Delta_{recoil}',
-                            ymax=1.8,
-                            outputfilename=f'h_semi_inclusive_chjet_IAA_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
-                            R=R)
-
-    #-------------------------------------------------------------------------------------------
-    def plot_semi_inclusive_chjet_dphi(self):
-            
-        # Get experimental data
-        R=0.4
-        c_ref = 0.96 # R02: 0.99, R04: 0.96, R05: 0.93
-        h_data_list = []
-        f = ROOT.TFile(self.semi_inclusive_chjet_observables['hjet_alice']['hepdata_dphi_276'], 'READ')
-        dir = f.Get('Table 37')
-        h_data = dir.Get('Graph1D_y1')
-        h_data_list.append([h_data, 'pp'])
-        f.Close()
-        
-        hname_ntrigger = f'h_semi_inclusive_chjet_hjet_ntrigger_alice_R{R}{self.suffix}Scaled'
-        hname_high = f'h_semi_inclusive_chjet_dphi_highTrigger_alice_R{R}_276{self.suffix}Scaled'
-        hname_low = f'h_semi_inclusive_chjet_dphi_lowTrigger_alice_R{R}_276{self.suffix}Scaled'
-        
-        # Get JETSCAPE pp prediction
-        filename_pp = os.path.join(self.output_dir, f'{self.dir_pp}/AnalysisResultsFinal.root')
-        f_pp = ROOT.TFile(filename_pp, 'READ')
-        h_pp_ntrigger = f_pp.Get(hname_ntrigger)
-        h_pp_ntrigger.SetDirectory(0)
-        h_pp_high = f_pp.Get(hname_high)
-        h_pp_high.SetDirectory(0)
-        h_pp_low = f_pp.Get(hname_low)
-        h_pp_low.SetDirectory(0)
-        f_pp.Close()
-        
-        # Get JETSCAPE AA prediction
-        filename = os.path.join(self.output_dir, f'{self.dir_AA}/AnalysisResultsFinal.root')
-        f_AA = ROOT.TFile(filename, 'READ')
-        h_AA_ntrigger = f_AA.Get(hname_ntrigger)
-        h_AA_ntrigger.SetDirectory(0)
-        h_AA_high = f_AA.Get(hname_high)
-        h_AA_high.SetDirectory(0)
-        h_AA_low = f_AA.Get(hname_low)
-        h_AA_low.SetDirectory(0)
-        f_AA.Close()
-        
-        # Delta recoil
-        n_trig_high_pp = h_pp_ntrigger.GetBinContent(h_pp_ntrigger.FindBin(30.))
-        n_trig_low_pp = h_pp_ntrigger.GetBinContent(h_pp_ntrigger.FindBin(8.5))
-        n_trig_high_AA = h_AA_ntrigger.GetBinContent(h_AA_ntrigger.FindBin(30.))
-        n_trig_low_AA = h_AA_ntrigger.GetBinContent(h_AA_ntrigger.FindBin(8.5))
-        print(f'n_trig_high_pp: {n_trig_high_pp}')
-        print(f'n_trig_low_pp: {n_trig_low_pp}')
-        print(f'n_trig_high_AA: {n_trig_high_AA}')
-        print(f'n_trig_low_AA: {n_trig_low_AA}')
-
-        h_pp_high.Scale(1./n_trig_high_pp, 'width')
-        h_pp_low.Scale(1./n_trig_low_pp, 'width')
-        h_AA_high.Scale(1./n_trig_high_AA, 'width')
-        h_AA_low.Scale(1./n_trig_low_AA, 'width')
-        
-        h_delta_Phi_pp = h_pp_high.Clone('h_delta_Phi_pp')
-        h_delta_Phi_pp.Add(h_pp_low, -1)
-        
-        h_delta_Phi_AA = h_AA_high.Clone('h_delta_Phi_AA')
-        h_delta_Phi_AA.Add(h_AA_low, -1*c_ref)
- 
-        # Plot
-        xtitle="#Delta #it{#varphi}"
-        self.plot_raa_ratio(raa_type='hjet_dphi',
-                            h_pp=h_delta_Phi_pp,
-                            h_AA=h_delta_Phi_AA,
-                            h_data_list=h_data_list,
-                            eta_cut=np.round(self.inclusive_chjet_observables['eta_cut_alice_R']-R, decimals=1),
-                            data_centralities=['0-10'],
-                            mc_centralities=[f'{self.min_cent}-{self.max_cent}'],
-                            xtitle=xtitle,
-                            ytitle = '#Phi(#Delta#it{#varphi})',
-                            ymax=0.1,
-                            outputfilename=f'h_semi_inclusive_chjet_dphi_alice_R{R}_{self.sqrts}_{self.min_cent}-{self.max_cent}{self.file_format}',
-                            R=R)
-                            
     #---------------------------------------------------------------
     # Rebin numpy arrays (xbins,y) representing a histogram,
     # where x represents the bin edges, and y the bin content
