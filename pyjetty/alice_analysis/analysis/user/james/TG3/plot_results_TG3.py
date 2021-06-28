@@ -239,7 +239,7 @@ class PlotResults(common_base.CommonBase):
         # Plot ratio
         self.x_min = 1.5
         self.x_max = 3.2
-        self.y_ratio_min = 0.
+        self.y_ratio_min = -0.005
         self.y_ratio_max = 0.1
         self.ytitle = '#Phi(#Delta#it{#varphi})'
         self.plot_distribution()
@@ -448,6 +448,7 @@ class PlotResults(common_base.CommonBase):
                     h_AA_low = f_jetscape_AA.Get(result['hname_jetscape_low_R02'])
                     h_AA_low.SetDirectory(0)
                     f_jetscape_AA.Close()
+                    
                 else:
                     h_pp_ntrigger = f_jetscape_pp.Get(result['hname_jetscape_ntrigger'])
                     h_pp_ntrigger.SetDirectory(0)
@@ -489,6 +490,10 @@ class PlotResults(common_base.CommonBase):
             if not self.observable in ['hjet_dphi']:
                 h_jetscape_pp.Scale(1., 'width')
                 h_jetscape_AA.Scale(1., 'width')
+            if self.observable == 'hjet_IAA_ratio':
+                # Eta acceptance -- (0.9-R)*2
+                h_jetscape_pp.Scale(1./(2*(0.9-0.5))) # R=0.5
+                h_jetscape_AA.Scale(1./(2*(0.9-0.2))) # R=0.2
             if self_normalize:
                 if self.observable in ['zg', 'theta_g']:
                     min_bin = 0
@@ -708,7 +713,7 @@ class PlotResults(common_base.CommonBase):
     # Plot ratio in single panel
     #-------------------------------------------------------------------------------------------
     def plot_ratio(self):
-              
+                  
         cname = 'c'
         c = ROOT.TCanvas(cname, cname, 600, 450)
         c.SetRightMargin(0.05)
@@ -1000,13 +1005,15 @@ class PlotResults(common_base.CommonBase):
         myBlankHisto.SetXTitle(self.xtitle)
         myBlankHisto.SetYTitle(self.ytitle)
         myBlankHisto.SetMaximum(self.y_ratio_max)
+        myBlankHisto.SetMinimum(self.y_ratio_min)
         myBlankHisto.GetXaxis().SetTitleSize(0.06)
         myBlankHisto.GetXaxis().SetTitleOffset(1.2)
         myBlankHisto.GetXaxis().SetLabelSize(0.05)
         myBlankHisto.GetYaxis().SetTitleSize(0.07)
         myBlankHisto.GetYaxis().SetTitleOffset(1.)
         myBlankHisto.GetYaxis().SetLabelSize(0.05)
-        myBlankHisto.Draw('E')
+        myBlankHisto.SetLineWidth(0)
+        myBlankHisto.Draw()
         
         if self.observable in ['hjet_dphi']:
             y_leg = 0.52

@@ -250,8 +250,8 @@ hjet_IAA_ratio:
   dir: 'Table 36'
   
   # JETSCAPE -- hack a bit to get PbPb02/PbPb05 ratio
-  #file_jetscape_pp: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
-  #file_jetscape_AA: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  file_jetscape_pp: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+  file_jetscape_AA: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
   hname_jetscape_ntrigger_R02: 'h_semi_inclusive_chjet_hjet_ntrigger_alice_R0.2_pt0.15Scaled'
   hname_jetscape_high_R02: 'h_semi_inclusive_chjet_IAA_highTrigger_alice_R0.2_276_pt0.15Scaled'
   hname_jetscape_low_R02: 'h_semi_inclusive_chjet_IAA_lowTrigger_alice_R0.2_276_pt0.15Scaled'
