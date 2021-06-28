@@ -49,6 +49,12 @@ class AnalyzePPAA(common_base.CommonBase):
         # Initialize config file
         self.initialize_config()
         
+        self.colors = {'SGDClassifier': sns.xkcd_rgb['medium green'],
+                       'RandomForest': sns.xkcd_rgb['dark sky blue'],
+                       'DNN': sns.xkcd_rgb['faded purple']
+                       }
+        self.linestyles = ['--', '-']
+        
         with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
@@ -187,7 +193,10 @@ class AnalyzePPAA(common_base.CommonBase):
                         
                     # Plot the input data
                     self.plot_QA(event_type, jetR, R_max)
-                    [self.plot_training_data(K) for K in self.K_list]
+                    
+                    for K in self.K_list:
+                        if K <= 2:
+                            self.plot_training_data(K)
                        
                     # Train models
                     self.train_models(event_type, jetR, R_max)
@@ -588,10 +597,12 @@ class AnalyzePPAA(common_base.CommonBase):
                 TPR = value[1]
                 plt.plot(FPR, TPR, linewidth=2, label=label)
             else:
-                for K in self.K_list:
+                for i,K in enumerate(self.K_list):
                     FPR = value[K][0]
                     TPR = value[K][1]
-                    plt.plot(FPR, TPR, linewidth=2, label=f'{label}, K={K}')
+                    plt.plot(FPR, TPR, linewidth=2,
+                             linestyle=self.linestyles[i], alpha=0.9, color=self.colors[label],
+                             label=f'{label}, K={K}')
                     
         plt.legend(loc='lower right')
         plt.tight_layout()
@@ -607,18 +618,21 @@ class AnalyzePPAA(common_base.CommonBase):
         plt.xlabel('True Positive Rate', fontsize=16)
         plt.ylabel('Significance improvement', fontsize=16)
         plt.grid(True)
-    
+            
         for label,value in self.roc_curve_dict.items():
+            print(f'label: {label}')
             
             if label in ['PFN', 'Jet_mass', 'Multiplicity','Lasso']:
                 FPR = value[0]
                 TPR = value[1]
                 plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=label)
             else:
-                for K in self.K_list:
+                for i,K in enumerate(self.K_list):
                     FPR = value[K][0]
                     TPR = value[K][1]
-                    plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=f'{label}, K={K}')
+                    plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2,
+                             linestyle=self.linestyles[i], alpha=0.9, color=self.colors[label],
+                             label=f'{label}, K={K}')
                     
         plt.legend(loc='lower right')
         plt.tight_layout()
