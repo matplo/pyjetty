@@ -388,7 +388,10 @@ class ProcessppAA(common_base.CommonBase):
             particle_list.append(np.array([particle.E(), particle.px(), particle.py(), particle.pz()]))
         
         # Zero pad such that all jets have the same number of four-vectors
-        particle_list += [np.array([0,0,0,0])]*(800-len(particle_list))
+        n_max = 800
+        if len(particle_list) > n_max:
+            sys.exit('ERROR: particle list has {len(particle_list)} entries before zero-padding')
+        particle_list += [np.array([0,0,0,0])]*(n_max-len(particle_list))
         
         # Append list of four-vectors to output
         self.four_vectors[label][f'R{jetR}'][f'Rmax{R_max}']['jet_constituent_four_vectors'].append(particle_list)
