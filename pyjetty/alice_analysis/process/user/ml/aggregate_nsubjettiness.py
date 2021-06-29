@@ -8,17 +8,19 @@ import argparse
 import h5py
 import numpy as np
 
-def aggregate(config_file, filelist, output_dir, include_four_vector):
+def aggregate(config_file, filelist, output_dir):
+
+    # List of arrays to aggregate
+    #observables = ['X_four_vectors', 'X_Nsub', 'y', 'pt', 'delta_pt']
+    observables = ['X_Nsub', 'y', 'pt', 'delta_pt']
 
     # Read config file
     with open(config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     jetR_list = config['jetR']
+    jet_pt_bins = config['jet_pt_bins']
     max_distance_list = config['constituent_subtractor']['max_distance']
     event_types = ['hard', 'combined']
-
-    # List of arrays to aggregate
-    observables = ['X_Nsub', 'y', 'pt', 'delta_pt']
 
     # We have separate training data for:
     # - the hard-event and the combined-event
@@ -30,10 +32,12 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
     output = {}
     for event_type in event_types:
         for jetR in jetR_list:
-            for R_max in max_distance_list:
-                for observable in observables:
-                    output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
-                    output[output_key] = np.array([])
+            for jet_pt_bin in jet_pt_bins:
+                for R_max in max_distance_list:
+                    for observable in observables:
+                        if event_type=='combined' or np.isclose(R_max, 0.):
+                            output_key = f'{observable}_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                            output[output_key] = np.array([])
     N_list = None
     beta_list = None
 
@@ -54,60 +58,44 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
         
             for event_type in event_types:
                 for jetR in jetR_list:
-                    for R_max in max_distance_list:
-                        for observable in observables:
+                    for jet_pt_bin in jet_pt_bins:
+                        for R_max in max_distance_list:
+                            for observable in observables:
 
-                            # Skip R_max for hard event
-                            if event_type == 'hard':
-                                if not np.isclose(R_max, max_distance_list[0]):
-                                    continue
-
-                            # Get arrays from file
-                            output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
-                            if observable == 'X':
-                                if include_four_vector:
+                                if event_type=='combined' or np.isclose(R_max, 0.):
+                            
+                                    # Get arrays from file
+                                    output_key = f'{observable}_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
                                     output_i = hdf[output_key][:]
-                            else:
-                                output_i = hdf[output_key][:]
-
-                            # Concatenate to master array
-                            output_aggregated = output[output_key]
-                            if output_aggregated.any():
-                                if observable == 'X':
-                                    if include_four_vector:
+                                    
+                                    # Concatenate to master array
+                                    output_aggregated = output[output_key]
+                                    if output_aggregated.any():
                                         output[output_key] = np.concatenate((output_aggregated, output_i),axis=0)
-                                else:
-                                    output[output_key] = np.concatenate((output_aggregated, output_i),axis=0)
-                            else:
-                                if observable == 'X':
-                                    if include_four_vector:
+                                    else:
                                         output[output_key] = output_i
-                                else:
-                                    output[output_key] = output_i
 
-                            if i%100 == 0 and observable == 'X_Nsub':
-                                print(f'{output_key} -- {output_aggregated.shape}')
+                                    if i%100 == 0:
+                                        if observable in ['X_Nsub']:
+                                            print(f'{output_key} -- {output_aggregated.shape}')
 
     #  Shuffle data set
     for event_type in event_types:
         for jetR in jetR_list:
-            for R_max in max_distance_list:
-                
-                if include_four_vector:
-                    output_key_X = f'X_{event_type}_R{jetR}_Rmax{R_max}'
-                    output_aggregated_X = output[output_key_X]
-                output_key_X_Nsub = f'X_Nsub_{event_type}_R{jetR}_Rmax{R_max}'
-                output_aggregated_X_Nsub = output[output_key_X_Nsub]
-                output_key_y = f'y_{event_type}_R{jetR}_Rmax{R_max}'
-                output_aggregated_y = output[output_key_y]
+            for jet_pt_bin in jet_pt_bins:
+                for R_max in max_distance_list:
+                    if event_type=='combined' or np.isclose(R_max, 0.):
+                        
+                        output_key_y = f'y_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                        idx = np.random.permutation(len(output[output_key_y]))
+                    
+                        for observable in observables:
 
-                idx = np.random.permutation(len(output_aggregated_y))
-                if include_four_vector:
-                    output[output_key_X] = output_aggregated_X[idx]
-                output[output_key_X_Nsub] = output_aggregated_X_Nsub[idx]
-                output[output_key_y] = output_aggregated_y[idx]
-                print(f'shuffled {output_key_X_Nsub}: {output[output_key_X_Nsub].shape}')
-                print(f'shuffled {output_key_y}: {output[output_key_y].shape}')
+                            if observable in ['X_four_vectors', 'X_Nsub', 'y']:
+                                output_key = f'{observable}_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                                output_aggregated = output[output_key]
+                                output[output_key] = output_aggregated[idx]
+                                print(f'shuffled {output_key}: {output[output_key].shape}')
         
     # Write jet arrays to file
     with h5py.File(os.path.join(output_dir, 'nsubjettiness.h5'), 'w') as hf:
@@ -117,21 +105,14 @@ def aggregate(config_file, filelist, output_dir, include_four_vector):
         
         for event_type in event_types:
             for jetR in jetR_list:
-                for R_max in max_distance_list:
-                    for observable in observables:
-                    
-                        # Skip R_max for hard event
-                        if event_type == 'hard':
-                            if not np.isclose(R_max, max_distance_list[0]):
-                                continue
+                for jet_pt_bin in jet_pt_bins:
+                    for R_max in max_distance_list:
+                        for observable in observables:
+                            if event_type=='combined' or np.isclose(R_max, 0.):
 
-                        output_key = f'{observable}_{event_type}_R{jetR}_Rmax{R_max}'
-                        output_aggregated = output[output_key]
-                        if observable == 'X':
-                            if include_four_vector:
+                                output_key = f'{observable}_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                                output_aggregated = output[output_key]
                                 hf.create_dataset(output_key, data=output_aggregated)
-                        else:
-                            hf.create_dataset(output_key, data=output_aggregated)
     
     print('done.')
 
@@ -148,7 +129,6 @@ if __name__ == '__main__':
                         type=str, metavar='outputDir',
                         default='./TestOutput',
                         help='Output directory for output to be written to')
-    parser.add_argument('--include_four_vector',action='store_true')
 
     # Parse the arguments
     args = parser.parse_args()
@@ -156,7 +136,6 @@ if __name__ == '__main__':
     print('Configuring...')
     print('configFile: \'{0}\''.format(args.configFile))
     print('ouputDir: \'{0}\"'.format(args.outputDir))
-    print(f'aggregate four-vectors: {args.include_four_vector}')
 
     # If invalid configFile is given, exit
     if not os.path.exists(args.configFile):
@@ -169,4 +148,4 @@ if __name__ == '__main__':
         print('File \"{0}\" does not exist! Exiting!'.format(fileList))
         sys.exit(0)
 
-    aggregate(config_file=args.configFile, filelist=fileList, output_dir=args.outputDir, include_four_vector=args.include_four_vector)
+    aggregate(config_file=args.configFile, filelist=fileList, output_dir=args.outputDir)

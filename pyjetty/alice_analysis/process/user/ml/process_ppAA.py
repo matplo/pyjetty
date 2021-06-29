@@ -239,26 +239,26 @@ class ProcessppAA(common_base.CommonBase):
                                 suffix = f'_{label}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
                         
                                 # Write Nsubjettiness
-                                hf.create_dataset(f'X_Nsub_{suffix}', data=X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
+                                hf.create_dataset(f'X_Nsub{suffix}', data=X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
                                 
                                 # Write labels: Pythia 0, Jewel 1
                                 if 'jewel' in self.input_file:
                                     y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
                                 elif 'pythia' in self.input_file:
                                     y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
-                                hf.create_dataset(f'y_{suffix}', data=y)
+                                hf.create_dataset(f'y{suffix}', data=y)
                                 
                                 # Write four-vectors
                                 X = self.four_vectors_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors']
-                                hf.create_dataset(f'X_four_vectors_{suffix}', data=X)
+                                hf.create_dataset(f'X_four_vectors{suffix}', data=X)
                                 print(label)
                                 print(f'R{jetR}')
                                 print(f'pt{jet_pt_bin}')
                                 print(f'Rmax{R_max}')
                                 print(X.shape)
                                 
-                                hf.create_dataset(f'pt_{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'])
-                                hf.create_dataset(f'delta_pt_{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'])
+                                hf.create_dataset(f'pt{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'])
+                                hf.create_dataset(f'delta_pt{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'])
                         
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
