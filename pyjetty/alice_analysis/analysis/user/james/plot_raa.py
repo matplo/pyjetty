@@ -290,7 +290,10 @@ class PlotRAA(common_base.CommonBase):
         pad1.SetTopMargin(0.08)
         pad1.SetRightMargin(0.04)
         pad1.SetBottomMargin(0.)
-        pad1.SetTicks(0,1)
+        if self.observable in ['rg', 'theta_g']:
+            pad1.SetTicks(0,1)
+        else:
+            pad1.SetTicks(1,1)
         pad1.Draw()
         pad1.cd()
 
@@ -468,6 +471,7 @@ class PlotRAA(common_base.CommonBase):
                 color = self.theory_colors[i]
                 g.SetLineColor(color)
                 g.SetFillColor(color)
+                g.SetFillColorAlpha(color, 0.9)
                 if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
                     g.SetLineColor(0)
                     if self.observable in ['rg', 'theta_g']:
@@ -541,7 +545,7 @@ class PlotRAA(common_base.CommonBase):
         text_latex.DrawLatex(0.55, 0.36, text)
 
         text_latex.SetTextSize(0.065)
-        text = f'#bf{{ALICE}} {self.figure_approval_status} #sqrt{{#it{{s_{{#it{{NN}}}}}}}} = 5.02 TeV'
+        text = f'ALICE {self.figure_approval_status} #sqrt{{#it{{s_{{#it{{NN}}}}}}}} = 5.02 TeV'
         text_latex.DrawLatex(0.55, 0.83, text)
         
         text = 'Charged-particle jets'#, anti-#it{k}_{T}'
