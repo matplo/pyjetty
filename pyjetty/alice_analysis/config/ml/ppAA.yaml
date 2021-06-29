@@ -8,14 +8,14 @@
 # (The processing script will compute and store the maximum K provided)
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
-K: [6]
+K: [6, 12, 18, 24, 30, 36]
 
 #------------------------------------------------------------------------------
 # These parameters are used only in the process script
 #------------------------------------------------------------------------------
 
-jetR: [0.2, 0.4, 0.6]
-min_jet_pt: 50.
+jetR: [0.4]
+jet_pt_bins: [[50.,100.], [200.,500.]]
 eta_max: 2.0
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 
@@ -35,7 +35,7 @@ constituent_subtractor:
 # All parameters below are only used in the analysis script
 #------------------------------------------------------------------------------
 
-# Load labeled data -- max currently 62532
+# Load labeled data -- max currently ~50k with jet_pt > 50 GeV
 n_train: 15000
 n_val: 2000
 n_test: 3000

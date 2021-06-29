@@ -112,20 +112,24 @@ class ProcessppAA(common_base.CommonBase):
                 self.jet_variables[label][f'R{jetR}'] = {}
                 self.four_vectors[label][f'R{jetR}'] = {}
                 self.jet_qa_variables[label][f'R{jetR}'] = {}
-                for R_max in self.max_distance:
-                    
-                    if label=='combined' or np.isclose(R_max, 0.):
-                        self.jet_variables[label][f'R{jetR}'][f'Rmax{R_max}'] = {}
-                        self.four_vectors[label][f'R{jetR}'][f'Rmax{R_max}'] = {}
-                        self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}'] = {}
-                        for i,N in enumerate(self.N_list):
-                            beta = self.beta_list[i]
-                            self.jet_variables[label][f'R{jetR}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'] = []
-                        self.four_vectors[label][f'R{jetR}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
+                for jet_pt_bin in self.jet_pt_bins:
+                    self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    for R_max in self.max_distance:
                         
-                        # Some QA
-                        self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['jet_pt'] = []
-                        self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['delta_pt'] = []
+                        if label=='combined' or np.isclose(R_max, 0.):
+                            self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            for i,N in enumerate(self.N_list):
+                                beta = self.beta_list[i]
+                                self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'] = []
+                            self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
+                            
+                            # Some QA
+                            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'] = []
+                            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'] = []
 
         # Create constituent subtractors
         self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.eta_max, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) for R_max in self.max_distance]
@@ -145,7 +149,7 @@ class ProcessppAA(common_base.CommonBase):
         self.K = max(config['K'])
         
         self.jetR_list = config['jetR']
-        self.min_jet_pt = config['min_jet_pt']
+        self.jet_pt_bins = config['jet_pt_bins']
         self.eta_max = config['eta_max']
         self.jet_matching_distance = config['jet_matching_distance']
         
@@ -217,39 +221,44 @@ class ProcessppAA(common_base.CommonBase):
         for label in X_Nsub.keys():
             for jetR in self.jetR_list:
                 X_Nsub[label][f'R{jetR}'] = {}
-                for R_max in self.max_distance:
-                    if label=='combined' or np.isclose(R_max, 0.):
-                        X_reformatted = np.array([list(self.jet_variables_numpy[label][f'R{jetR}'][f'Rmax{R_max}'].values())])[0].T
-                        X_Nsub[label][f'R{jetR}'][f'Rmax{R_max}'] = X_reformatted
+                for jet_pt_bin in self.jet_pt_bins:
+                    X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    for R_max in self.max_distance:
+                        if label=='combined' or np.isclose(R_max, 0.):
+                            X_Nsub_reformatted = np.array([list(self.jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].values())])[0].T
+                            X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = X_Nsub_reformatted
             
         # Write jet arrays to file
         with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'w') as hf:
             for label in X_Nsub.keys():
                 for jetR in self.jetR_list:
-                    for R_max in self.max_distance:
-                        if label=='combined' or np.isclose(R_max, 0.):
-                    
-                            # Write Nsubjettiness
-                            hf.create_dataset(f'X_Nsub_{label}_R{jetR}_Rmax{R_max}', data=X_Nsub[label][f'R{jetR}'][f'Rmax{R_max}'])
+                    for jet_pt_bin in self.jet_pt_bins:
+                        for R_max in self.max_distance:
+                            if label=='combined' or np.isclose(R_max, 0.):
                             
-                            # Write labels: Pythia 0, Jewel 1
-                            if 'jewel' in self.input_file:
-                                y = np.ones(X_Nsub[label][f'R{jetR}'][f'Rmax{R_max}'].shape[0])
-                            elif 'pythia' in self.input_file:
-                                y = np.zeros(X_Nsub[label][f'R{jetR}'][f'Rmax{R_max}'].shape[0])
-
-                            hf.create_dataset(f'y_{label}_R{jetR}_Rmax{R_max}', data=y)
-                            
-                            # Write four-vectors
-                            X = self.four_vectors_numpy[label][f'R{jetR}'][f'Rmax{R_max}']['jet_constituent_four_vectors']
-                            print(label)
-                            print(f'R{jetR}')
-                            print(f'Rmax{R_max}')
-                            print(X.shape)
-                            hf.create_dataset(f'four_vectors_{label}_R{jetR}_Rmax{R_max}', data=X)
-                            
-                            hf.create_dataset(f'pt_{label}_R{jetR}_Rmax{R_max}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'Rmax{R_max}']['jet_pt'])
-                            hf.create_dataset(f'delta_pt_{label}_R{jetR}_Rmax{R_max}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'Rmax{R_max}']['delta_pt'])
+                                suffix = f'_{label}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                        
+                                # Write Nsubjettiness
+                                hf.create_dataset(f'X_Nsub_{suffix}', data=X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
+                                
+                                # Write labels: Pythia 0, Jewel 1
+                                if 'jewel' in self.input_file:
+                                    y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
+                                elif 'pythia' in self.input_file:
+                                    y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
+                                hf.create_dataset(f'y_{suffix}', data=y)
+                                
+                                # Write four-vectors
+                                X = self.four_vectors_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors']
+                                hf.create_dataset(f'X_four_vectors_{suffix}', data=X)
+                                print(label)
+                                print(f'R{jetR}')
+                                print(f'pt{jet_pt_bin}')
+                                print(f'Rmax{R_max}')
+                                print(X.shape)
+                                
+                                hf.create_dataset(f'pt_{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'])
+                                hf.create_dataset(f'delta_pt_{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'])
                         
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
@@ -287,41 +296,45 @@ class ProcessppAA(common_base.CommonBase):
         # Loop through jetR, and process event for each R
         for jetR in self.jetR_list:
              
-            # Set jet definition and a jet selector
-            jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-            jet_selector = fj.SelectorPtMin(self.min_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
-            
-            for i, R_max in enumerate(self.max_distance):
-                #print()
-                #print(R_max)
-                #print('Total number of combined particles: {}'.format(len([p.pt() for p in fj_particles_combined_beforeCS])))
-                #print('After constituent subtraction {}: {}'.format(i, len([p.pt() for p in fj_particles_combined[i]])))
-
-                # Do jet finding (re-do each time, to make sure matching info gets reset)
-                cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
-                jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
-                jets_combined_selected = jet_selector(jets_combined)
-                cs_hard = fj.ClusterSequence(fj_particles_hard, jet_def)
-                jets_hard = fj.sorted_by_pt(cs_hard.inclusive_jets())
-                jets_hard_selected = jet_selector(jets_hard)
+            for jet_pt_bin in self.jet_pt_bins:
+                min_jet_pt = jet_pt_bin[0]
+                max_jet_pt = jet_pt_bin[1]
                 
-                self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, R_max = R_max)
+                # Set jet definition and a jet selector
+                jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+                jet_selector = fj.SelectorPtMin(min_jet_pt) & fj.SelectorPtMax(max_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+            
+                for i, R_max in enumerate(self.max_distance):
+                    #print()
+                    #print(R_max)
+                    #print('Total number of combined particles: {}'.format(len([p.pt() for p in fj_particles_combined_beforeCS])))
+                    #print('After constituent subtraction {}: {}'.format(i, len([p.pt() for p in fj_particles_combined[i]])))
+
+                    # Do jet finding (re-do each time, to make sure matching info gets reset)
+                    cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
+                    jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
+                    jets_combined_selected = jet_selector(jets_combined)
+                    cs_hard = fj.ClusterSequence(fj_particles_hard, jet_def)
+                    jets_hard = fj.sorted_by_pt(cs_hard.inclusive_jets())
+                    jets_hard_selected = jet_selector(jets_hard)
+                    
+                    self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = R_max)
 
     #---------------------------------------------------------------
     # Analyze jets of a given event.
     #---------------------------------------------------------------
-    def analyze_jets(self, jets_combined_selected, jets_hard_selected, jetR, R_max = None):
+    def analyze_jets(self, jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = None):
 
         # Fill combined jet info
         for jet_combined in jets_combined_selected:
-            self.fill_nsubjettiness(jet_combined, jetR, R_max, 'combined')
-            self.fill_four_vectors(jet_combined, jetR, R_max, 'combined')
+            self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
+            self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
             
         # Fill hard jet info
         if np.isclose(R_max, 0.):
             for jet_hard in jets_hard_selected:
-                self.fill_nsubjettiness(jet_hard, jetR, R_max, 'hard')
-                self.fill_four_vectors(jet_combined, jetR, R_max, 'hard')
+                self.fill_nsubjettiness(jet_hard, jetR, jet_pt_bin, R_max, 'hard')
+                self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, 'hard')
                         
         #----------------------------------
         # Match jets
@@ -341,12 +354,12 @@ class ProcessppAA(common_base.CommonBase):
             process_base.ProcessBase.set_matches_pp(None, jet_combined, None)
               
         # Loop through jets and fill response histograms if both det and truth jets are unique match
-        result = [self.fill_jet_matches(jet_combined, jetR, R_max, 'combined') for jet_combined in jets_combined_selected]
+        result = [self.fill_jet_matches(jet_combined, jetR, jet_pt_bin, R_max, 'combined') for jet_combined in jets_combined_selected]
                 
     #---------------------------------------------------------------
     # Analyze jets of a given event.
     #---------------------------------------------------------------
-    def fill_jet_matches(self, jet_combined, jetR, R_max, label):
+    def fill_jet_matches(self, jet_combined, jetR, jet_pt_bin, R_max, label):
     
         # Get matched pp jet
         if jet_combined.has_user_info():
@@ -357,12 +370,12 @@ class ProcessppAA(common_base.CommonBase):
             jet_pt_pp = jet_pp.pt()
             
             delta_pt = (jet_pt_combined - jet_pt_pp)
-            self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['delta_pt'].append(delta_pt)
+            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'].append(delta_pt)
     
     #---------------------------------------------------------------
     # Analyze jets of a given event.
     #---------------------------------------------------------------
-    def fill_nsubjettiness(self, jet, jetR, R_max = None, label = ''):
+    def fill_nsubjettiness(self, jet, jetR, jet_pt_bin, R_max = None, label = ''):
 
         # Compute N-subjettiness
         axis_definition = fjcontrib.KT_Axes()
@@ -372,15 +385,15 @@ class ProcessppAA(common_base.CommonBase):
             measure_definition = fjcontrib.UnnormalizedMeasure(beta)
             n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
             n_subjettiness = n_subjettiness_calculator.result(jet)/jet.pt()
-            self.jet_variables[label][f'R{jetR}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'].append(n_subjettiness)
+            self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'].append(n_subjettiness)
             
         # Fill some jet QA
-        self.jet_qa_variables[label][f'R{jetR}'][f'Rmax{R_max}']['jet_pt'].append(jet.pt())
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'].append(jet.pt())
 
     #---------------------------------------------------------------
     # Write four-vectors of jet constituents
     #---------------------------------------------------------------
-    def fill_four_vectors(self, jet, jetR, R_max = None, label = ''):
+    def fill_four_vectors(self, jet, jetR, jet_pt_bin, R_max = None, label = ''):
 
         # Loop through jet constituents
         particle_list = []
@@ -394,7 +407,7 @@ class ProcessppAA(common_base.CommonBase):
         particle_list += [np.array([0,0,0,0])]*(n_max-len(particle_list))
         
         # Append list of four-vectors to output
-        self.four_vectors[label][f'R{jetR}'][f'Rmax{R_max}']['jet_constituent_four_vectors'].append(particle_list)
+        self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'].append(particle_list)
           
     #---------------------------------------------------------------
     # Transform dictionary of lists into a dictionary of numpy arrays
@@ -406,15 +419,17 @@ class ProcessppAA(common_base.CommonBase):
         for label in jet_variables_numpy.keys():
             for jetR in self.jetR_list:
                 jet_variables_numpy[label][f'R{jetR}'] = {}
+                for jet_pt_bin in self.jet_pt_bins:
+                    jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
                
-                for R_max in self.max_distance:
-                    if label=='combined' or np.isclose(R_max, 0.):
+                    for R_max in self.max_distance:
+                        if label=='combined' or np.isclose(R_max, 0.):
 
-                        jet_variables_numpy[label][f'R{jetR}'][f'Rmax{R_max}'] = {}
-              
-                        for key,val in jet_variables_list[label][f'R{jetR}'][f'Rmax{R_max}'].items():
-                            jet_variables_numpy[label][f'R{jetR}'][f'Rmax{R_max}'][key] = np.array(val)
-                        
+                            jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                  
+                            for key,val in jet_variables_list[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].items():
+                                jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][key] = np.array(val)
+                            
         return jet_variables_numpy
             
     #---------------------------------------------------------------
