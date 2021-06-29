@@ -750,7 +750,7 @@ class PlotResults(common_base.CommonBase):
         if self.observable == 'jet_raa':
             leg2 = ROOT.TLegend(0.58,y_leg-0.09,0.78,y_leg+0.11)
         elif self.observable in ['hjet_IAA', 'hjet_IAA_ratio']:
-            leg2 = ROOT.TLegend(0.58,y_leg,0.78,y_leg+0.11)
+            leg2 = ROOT.TLegend(0.53,y_leg,0.73,y_leg+0.11)
         else:
             leg2 = ROOT.TLegend(0.6,y_leg,0.8,y_leg+0.11)
         self.utils.setup_legend(leg2, 0.04, sep=-0.1)
