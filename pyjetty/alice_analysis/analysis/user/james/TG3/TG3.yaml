@@ -275,14 +275,10 @@ hjet_dphi:
   high_trigger_range: [20, 50]
 
   # ALICE data
+  hepdata: 'hjet/HEPData-ins1376027-v1-root.root'
+  dir: 'Table 37'
+  
+  # Folded JETSCAPE
   file_pp: 'hjet/hJet_Dphi_Folded_pp.root'
   file_AA: 'hjet/hJet_Dphi_Folded_PbPb.root'
   hname: 'hdphi_4060_folded'
-  
-  # JETSCAPE
-  file_jetscape_pp: 'jetscape/540755/2760_PP_Colorless/AnalysisResultsFinal.root'
-  file_jetscape_AA: 'jetscape/540755/2760_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
-  hname_jetscape_ntrigger: 'h_semi_inclusive_chjet_hjet_ntrigger_alice_R0.4_pt0.15Scaled'
-  hname_jetscape_high: 'h_semi_inclusive_chjet_dphi_highTrigger_alice_R0.4_276_pt0.15Scaled'
-  hname_jetscape_low: 'h_semi_inclusive_chjet_dphi_lowTrigger_alice_R0.4_276_pt0.15Scaled'
-  c_ref: 0.96 # R02: 0.99, R04: 0.96, R05: 0.93

@@ -348,12 +348,9 @@ class PlotResults(common_base.CommonBase):
             bin = self.h_tagging_fraction_AA.GetXaxis().FindBin((self.pt[0] + self.pt[1])/2)
             self.f_tagging_AA = self.h_tagging_fraction_AA.GetBinContent(bin)
         elif self.observable == 'hjet_dphi':
-            file_pp = ROOT.TFile(result['file_pp'], 'READ')
-            file_AA = ROOT.TFile(result['file_AA'], 'READ')
-            self.observable_settings['h_pp'] = file_pp.Get(result['hname'])
-            self.observable_settings['h_AA'] = file_AA.Get(result['hname'])
-            self.observable_settings['h_pp'].SetDirectory(0)
-            self.observable_settings['h_AA'].SetDirectory(0)
+            f = ROOT.TFile(result['hepdata'], 'READ')
+            dir = f.Get(result['dir'])
+            self.observable_settings['g_pp'] = dir.Get('Graph1D_y1')
 
         # Data -- ratio
         if self.observable == 'girth':
@@ -487,9 +484,8 @@ class PlotResults(common_base.CommonBase):
                     h_jetscape_AA.Add(h_AA_low, -1*result['c_ref'])
             
             # Normalization
-            if not self.observable in ['hjet_dphi']:
-                h_jetscape_pp.Scale(1., 'width')
-                h_jetscape_AA.Scale(1., 'width')
+            h_jetscape_pp.Scale(1., 'width')
+            h_jetscape_AA.Scale(1., 'width')
             if self.observable == 'hjet_IAA_ratio':
                 # Eta acceptance -- (0.9-R)*2
                 h_jetscape_pp.Scale(1./(2*(0.9-0.5))) # R=0.5
@@ -503,21 +499,28 @@ class PlotResults(common_base.CommonBase):
                 h_jetscape_pp.Scale(1./h_jetscape_pp.Integral(min_bin, h_jetscape_pp.GetNbinsX()))
                     
             # Form ratio
-            if not self.observable in ['hjet_dphi']:
-                h_ratio_jetscape = h_jetscape_AA
-                h_ratio_jetscape.Divide(h_jetscape_pp)
-                self.observable_settings['prediction_ratio_list'].append(h_ratio_jetscape)
-                self.observable_settings['prediction_ratio_labels'].append('JETSCAPE')
+            h_ratio_jetscape = h_jetscape_AA
+            h_ratio_jetscape.Divide(h_jetscape_pp)
+            self.observable_settings['prediction_ratio_list'].append(h_ratio_jetscape)
+            self.observable_settings['prediction_ratio_labels'].append('JETSCAPE')
             
             if self.observable in ['mass']:
                 self.observable_settings['prediction_distribution_list'].append(h_jetscape_AA)
                 self.observable_settings['prediction_distribution_labels'].append('JETSCAPE')
-            elif self.observable in ['hjet_dphi']:
-                self.observable_settings['prediction_distribution_list'].append(h_jetscape_AA)
-                self.observable_settings['prediction_distribution_labels'].append('JETSCAPE Pb-Pb')
-                self.observable_settings['prediction_distribution_list'].append(h_jetscape_pp)
-                self.observable_settings['prediction_distribution_labels'].append('JETSCAPE pp')
-        
+                
+        # Theory -- folded JETSCAPE
+        if self.observable == 'hjet_dphi':
+            file_pp = ROOT.TFile(result['file_pp'], 'READ')
+            file_AA = ROOT.TFile(result['file_AA'], 'READ')
+            h_pp = file_pp.Get(result['hname'])
+            h_AA = file_AA.Get(result['hname'])
+            h_pp.SetDirectory(0)
+            h_AA.SetDirectory(0)
+            self.observable_settings['prediction_distribution_list'].append(h_pp)
+            self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp')
+            self.observable_settings['prediction_distribution_list'].append(h_AA)
+            self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, Pb-Pb')
+
         # Theory -- Hybrid
         if self.observable == 'girth':
             self.observable_settings['prediction_ratio_list'].append(file.Get(result['name_ratio_hybrid_wake0_lres0']))
@@ -1026,7 +1029,7 @@ class PlotResults(common_base.CommonBase):
         
         # Draw theory predictions
         for i, prediction in enumerate(self.observable_settings['prediction_distribution_list']):
-        
+
             label = self.observable_settings['prediction_distribution_labels'][i]
             color = self.theory_colors[i]
             
@@ -1037,8 +1040,8 @@ class PlotResults(common_base.CommonBase):
             prediction.SetLineWidth(8)
             prediction.SetMarkerSize(0)
             prediction.SetMarkerStyle(0)
-                    
-            if type(prediction) in [ROOT.TH1F]:
+              
+            if type(prediction) in [ROOT.TH1D]:
                 prediction.Draw('E3 same')
                 #prediction.Draw('E2 same')
                 #prediction.Draw('PE X0 same')
@@ -1048,25 +1051,26 @@ class PlotResults(common_base.CommonBase):
         # Draw experimental data
         if self.observable == 'hjet_dphi':
         
-            self.observable_settings['h_pp'].SetMarkerSize(self.marker_size)
-            self.observable_settings['h_pp'].SetMarkerStyle(self.data_markers[0])
-            self.observable_settings['h_pp'].SetMarkerColor(self.data_color)
-            self.observable_settings['h_pp'].SetLineStyle(self.line_style)
-            self.observable_settings['h_pp'].SetLineWidth(self.line_width)
-            self.observable_settings['h_pp'].SetLineColor(self.data_color)
+            self.observable_settings['g_pp'].SetMarkerSize(self.marker_size)
+            self.observable_settings['g_pp'].SetMarkerStyle(self.data_markers[0])
+            self.observable_settings['g_pp'].SetMarkerColor(self.data_color)
+            self.observable_settings['g_pp'].SetLineStyle(self.line_style)
+            self.observable_settings['g_pp'].SetLineWidth(self.line_width)
+            self.observable_settings['g_pp'].SetLineColor(self.data_color)
         
-            self.observable_settings['h_AA'].SetMarkerSize(self.marker_size)
-            self.observable_settings['h_AA'].SetMarkerStyle(self.data_markers[1])
-            self.observable_settings['h_AA'].SetMarkerColor(self.data_color)
-            self.observable_settings['h_AA'].SetLineStyle(self.line_style)
-            self.observable_settings['h_AA'].SetLineWidth(self.line_width)
-            self.observable_settings['h_AA'].SetLineColor(self.data_color)
+            #self.observable_settings['g_AA'].SetMarkerSize(self.marker_size)
+            #self.observable_settings['g_AA'].SetMarkerStyle(self.data_markers[1])
+            #self.observable_settings['g_AA'].SetMarkerColor(self.data_color)
+            #self.observable_settings['g_AA'].SetLineStyle(self.line_style)
+            #self.observable_settings['g_AA'].SetLineWidth(self.line_width)
+            #self.observable_settings['g_AA'].SetLineColor(self.data_color)
 
-            leg.AddEntry(self.observable_settings['h_AA'], 'Pb-Pb 0-10%','PE')
-            leg.AddEntry(self.observable_settings['h_pp'], 'PYTHIA + Pb-Pb','PE')
+            #leg.AddEntry(self.observable_settings['g_AA'], 'Pb-Pb 0-10%','PE')
+            leg.AddEntry(self.observable_settings['g_pp'], 'PYTHIA + Pb-Pb','PE')
 
-            self.observable_settings['h_pp'].Draw('PE X0 same')
-            self.observable_settings['h_AA'].DrawCopy('PE X0 same')
+            self.observable_settings['g_pp'].Draw('PE X0 same')
+            #self.observable_settings['g_pp'].Draw('PE X0 same')
+            #self.observable_settings['g_AA'].DrawCopy('PE X0 same')
 
         leg.Draw('same')
         leg2.Draw('same')
