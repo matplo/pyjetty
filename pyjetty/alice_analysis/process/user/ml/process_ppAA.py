@@ -334,7 +334,7 @@ class ProcessppAA(common_base.CommonBase):
         if np.isclose(R_max, 0.):
             for jet_hard in jets_hard_selected:
                 self.fill_nsubjettiness(jet_hard, jetR, jet_pt_bin, R_max, 'hard')
-                self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, 'hard')
+                self.fill_four_vectors(jet_hard, jetR, jet_pt_bin, R_max, 'hard')
                         
         #----------------------------------
         # Match jets
