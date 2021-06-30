@@ -11,7 +11,7 @@ import argparse
 import os
 import numpy as np
 
-from pythiautils import configuration as pyconf
+from heppy.pythiautils import configuration as pyconf
 import pythia8
 import pythiafjext
 import pythiaext
