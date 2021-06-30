@@ -339,7 +339,7 @@ class ProcessppAA(common_base.CommonBase):
         event_pt = 0.
         cone_pt = 0.
         R_cone = 0.4
-        eta_random = np.random.uniform(-self.eta_max, self.eta_max)
+        eta_random = np.random.uniform(-self.eta_max+R_cone, self.eta_max-R_cone)
         phi_random = np.random.uniform(0, 2*np.pi)
         for particle in fj_particles_combined_beforeCS:
             event_pt += particle.pt()
