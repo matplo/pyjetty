@@ -58,11 +58,11 @@ class AnalyzePPAA(common_base.CommonBase):
                            'DNN': 'dotted'
                           }
                        
-        self.filename = 'nsubjettiness_with_four_vectors.h5'
+        self.filename = 'nsubjettiness_without_four_vectors.h5'
         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
-            self.delta_pt_random_cone = hf['beta_list'][:]
+            self.delta_pt_random_cone = hf['delta_pt_random_cone'][:]
         
         self.qa_observables = ['jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
 
@@ -141,7 +141,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     for R_max in self.max_distance_list:
                     
                         # For hard event, skip constituent subtraction variations
-                        if event_type=='hard' and not np.isclose(R_max, self.max_distance_list[0]):
+                        if event_type=='hard' and not np.isclose(R_max, 0.):
                             continue
                     
                         # Clear variables
@@ -223,6 +223,8 @@ class AnalyzePPAA(common_base.CommonBase):
             pythia_indices = 1 - self.y
             #print(qa_observable)
             #print(self.qa_results[qa_observable].shape)
+            if self.y.shape[0] != self.qa_results[qa_observable].shape[0]:
+                continue
             result_jewel = self.qa_results[qa_observable][jewel_indices.astype(bool)]
             result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
             
