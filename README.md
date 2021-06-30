@@ -5,11 +5,11 @@
 # recommended build/setup
 
  - install heppy and `export HEPPY_DIR=<path to heppy>`
- - execute "./cpptools/build.sh" - that's it...
+ - execute "cpptools/build.sh" - that's it...
 
 # modules
 
-- ./modules/pyjetty contains an env module
+- modules/pyjetty contains an env module
 
 # example python script
 
