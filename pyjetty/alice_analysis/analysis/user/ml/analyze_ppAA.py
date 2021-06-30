@@ -58,9 +58,11 @@ class AnalyzePPAA(common_base.CommonBase):
                            'DNN': 'dotted'
                           }
                        
-        with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
+        self.filename = 'nsubjettiness_with_four_vectors.h5'
+        with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
+            self.delta_pt_random_cone = hf['beta_list'][:]
         
         print(self)
         print()
@@ -156,14 +158,14 @@ class AnalyzePPAA(common_base.CommonBase):
                     
                         # Read input variables
                         key_suffix = f'_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
-                        with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
+                        with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
                             self.y = hf[f'y{key_suffix}'][:self.n_total]
-                            if f'X_four_vectors_{key_suffix}' in hf:
-                                self.X_particles = hf[f'X_four_vectors_{key_suffix}'][:]
+                            if f'X_four_vectors{key_suffix}' in hf:
+                                self.X_particles = hf[f'X_four_vectors{key_suffix}'][:]
                             self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
                             
                             # Also get some QA info
-                            self.pt = hf[f'pt{key_suffix}'][:self.n_total]
+                            self.pt = hf[f'jet_pt{key_suffix}'][:self.n_total]
                             self.delta_pt = hf[f'delta_pt{key_suffix}'][:]
 
                         # Define formatted labels for features
@@ -260,6 +262,26 @@ class AnalyzePPAA(common_base.CommonBase):
             legend = plt.legend(loc='best', fontsize=14, frameon=False)
             plt.tight_layout()
             plt.savefig(os.path.join(self.output_dir_i, f'delta_pt.pdf'))
+            plt.close()
+            
+        # delta pt -- random cone
+        if event_type == 'combined':
+            bins = np.linspace(-50, 50, 100)
+            mean = np.round(np.mean(self.delta_pt_random_cone),2)
+            sigma = np.round(np.std(self.delta_pt_random_cone),2)
+            plt.hist(self.delta_pt_random_cone,
+                     bins,
+                     histtype='stepfilled',
+                     label = rf'$\mathrm{{mean}} = {mean},\;\sigma = {sigma}$',
+                     linewidth=2,
+                     linestyle='-',
+                     alpha=0.5)
+            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+            plt.xlabel(r'$\delta p_{T}$', fontsize=14)
+            plt.yscale('log')
+            legend = plt.legend(loc='best', fontsize=14, frameon=False)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir_i, f'delta_pt_random_cone.pdf'))
             plt.close()
         
     #---------------------------------------------------------------

@@ -36,12 +36,12 @@ constituent_subtractor:
 #------------------------------------------------------------------------------
 
 # Load labeled data -- max currently ~50k with jet_pt > 50 GeV
-n_train: 15000
-n_val: 2000
-n_test: 3000
+n_train: 1500
+n_val: 200
+n_test: 300
 
 # Select model: linear, random_forest, neural_network, pfn, lasso
-models: [random_forest, neural_network]
+models: [neural_network, pfn]
 
 linear:
 
