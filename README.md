@@ -5,7 +5,7 @@
 # recommended build/setup
 
  - install heppy and `export HEPPY_DIR=<path to heppy>`
- - execute "$HEPPYDIR/scripts/pipenv_heppy.sh run <where pyjetty>/cpptools/build.sh" - that's it...
+ - execute `$HEPPYDIR/scripts/pipenv_heppy.sh run <where pyjetty>/cpptools/build.sh` - that's it...
 
  - alternatively load the heppy module (from in heppy/modules)
 
