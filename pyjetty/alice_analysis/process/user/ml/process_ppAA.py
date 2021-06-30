@@ -111,6 +111,7 @@ class ProcessppAA(common_base.CommonBase):
         self.jet_variables = {'hard': {}, 'combined': {}}
         self.four_vectors = {'hard': {}, 'combined': {}}
         self.jet_qa_variables = {'hard': {}, 'combined': {}}
+        self.delta_pt_random_cone = []
         for label in self.jet_variables.keys():
             for jetR in self.jetR_list:
                 self.jet_variables[label][f'R{jetR}'] = {}
@@ -268,6 +269,7 @@ class ProcessppAA(common_base.CommonBase):
   
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
+            hf.create_dataset('delta_pt_random_cone', data=self.delta_pt_random_cone)
                         
     #---------------------------------------------------------------
     # Process an event (in this case, just a single jet per event)
@@ -290,6 +292,9 @@ class ProcessppAA(common_base.CommonBase):
           # The hard event tracks are each stored with a unique user_index >= 0
           # The thermal tracks are each stored with a unique user_index < 0
           [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_background]
+          
+        # Compute delta-pt by random cone method
+        self.delta_pt_RC(fj_particles_combined_beforeCS)
             
         # Perform constituent subtraction for each R_max
         fj_particles_combined = []
@@ -325,6 +330,26 @@ class ProcessppAA(common_base.CommonBase):
                     jets_hard_selected = jet_selector(jets_hard)
                     
                     self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = R_max)
+
+    #---------------------------------------------------------------
+    # Compute delta-pt by random cone method
+    #---------------------------------------------------------------
+    def delta_pt_RC(self, fj_particles_combined_beforeCS):
+    
+        event_pt = 0.
+        cone_pt = 0.
+        R_cone = 0.4
+        eta_random = np.random.uniform(-self.eta_max, self.eta_max)
+        phi_random = np.random.uniform(0, 2*np.pi)
+        for particle in fj_particles_combined_beforeCS:
+            event_pt += particle.pt()
+            delta_R = self.utils.delta_R(particle, eta_random, phi_random)
+            if delta_R < R_cone:
+                cone_pt += particle.pt()
+        rho = event_pt / (2*self.eta_max *2*np.pi)
+        delta_pt = cone_pt - rho*np.pi*R_cone*R_cone
+        
+        self.delta_pt_random_cone.append(delta_pt)
 
     #---------------------------------------------------------------
     # Analyze jets of a given event.
