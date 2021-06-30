@@ -8,7 +8,7 @@
 # (The processing script will compute and store the maximum K provided)
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
-K: [6, 12, 18, 24, 30, 36]
+K: [6, 12, 24, 36]
 
 #------------------------------------------------------------------------------
 # These parameters are used only in the process script

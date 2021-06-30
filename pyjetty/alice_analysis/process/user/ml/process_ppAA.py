@@ -28,6 +28,7 @@ import energyflow
 from pyjetty.mputils import CEventSubtractor
 from pyjetty.alice_analysis.process.base import thermal_generator
 from pyjetty.alice_analysis.process.base import process_base
+from pyjetty.alice_analysis.process.base import process_utils
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
@@ -49,6 +50,9 @@ class ProcessppAA(common_base.CommonBase):
         
         # Initialize config file
         self.initialize_config()
+        
+        # Initialize utils class
+        self.utils = process_utils.ProcessUtils()
         
         # Load dataframe of particle four-vectors for all particles in the event
         # (separate dataframes for hard process and background)
@@ -128,8 +132,9 @@ class ProcessppAA(common_base.CommonBase):
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
                             
                             # Some QA
-                            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'] = []
-                            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'] = []
+                            self.qa_observables = ['delta_pt', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
+                            for qa_observable in self.qa_observables:
+                                self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable] = []
 
         # Create constituent subtractors
         self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.eta_max, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) for R_max in self.max_distance]
@@ -257,9 +262,10 @@ class ProcessppAA(common_base.CommonBase):
                                 print(f'Rmax{R_max}')
                                 print(X.shape)
                                 
-                                hf.create_dataset(f'pt{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'])
-                                hf.create_dataset(f'delta_pt{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'])
-                        
+                                for qa_observable in self.qa_observables:
+                                    hf.create_dataset(f'{qa_observable}{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable])
+                                    data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable]
+  
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
                         
@@ -389,6 +395,37 @@ class ProcessppAA(common_base.CommonBase):
             
         # Fill some jet QA
         self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'].append(jet.pt())
+        
+        # angularity
+        alpha = 1
+        kappa = 1
+        angularity = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_angularity'].append(angularity)
+        
+        # mass
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_mass'].append(jet.m())
+        
+        # theta_g
+        beta = 0
+        zcut = 0.2
+        gshop = fjcontrib.GroomerShop(jet, jetR, fj.cambridge_algorithm)
+        jet_groomed_lund = gshop.soft_drop(beta, zcut, jetR)
+        theta_g = jet_groomed_lund.Delta() / jetR
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_theta_g'].append(theta_g)
+        
+        # subjet z
+        subjetR = 0.1
+        subjet_def = fj.JetDefinition(fj.antikt_algorithm, subjetR)
+        cs_subjet = fj.ClusterSequence(jet.constituents(), subjet_def)
+        subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
+        leading_subjet = self.utils.leading_jet(subjets)
+        z_leading = leading_subjet.pt() / jet.pt()
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_subjet_z'].append(z_leading)
+        
+        # leading hadron z
+        leading_particle = self.utils.leading_jet(jet.constituents())
+        z_leading = leading_particle.pt() / jet.pt()
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['hadron_z'].append(z_leading)
 
     #---------------------------------------------------------------
     # Write four-vectors of jet constituents
