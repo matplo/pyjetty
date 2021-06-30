@@ -7,6 +7,8 @@
  - install heppy and `export HEPPY_DIR=<path to heppy>`
  - execute "cpptools/build.sh" - that's it...
 
+ - alternatively load the heppy module (from in heppy/modules)
+
 # modules
 
 - modules/pyjetty contains an env module
@@ -18,7 +20,7 @@ module use <where pyjetty>/modules
 module load pyjetty/1.0
 pyjettypython $PYJETTY_DIR/cpptools/tests/pythia_gen_fj_lund_test.py
 ```
-
+notes/tips: use a new shell after building; no need to load or set heppy the pyjetty module should take care of things
 
 # add/extend c++ (swig) to python
 
