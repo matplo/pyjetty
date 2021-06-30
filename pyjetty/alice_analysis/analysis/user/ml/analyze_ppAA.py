@@ -72,6 +72,7 @@ class AnalyzePPAA(common_base.CommonBase):
           config = yaml.safe_load(stream)
           
         self.jetR_list = config['jetR']
+        self.jet_pt_bins = config['jet_pt_bins']
         self.max_distance_list = config['constituent_subtractor']['max_distance']
         self.event_types = ['hard', 'combined']
           
@@ -129,82 +130,83 @@ class AnalyzePPAA(common_base.CommonBase):
         # Loop through combinations of event type, jetR, and R_max
         for event_type in self.event_types:
             for jetR in self.jetR_list:
-                for R_max in self.max_distance_list:
-                
-                    # For hard event, skip constituent subtraction variations
-                    if event_type=='hard' and not np.isclose(R_max, self.max_distance_list[0]):
-                        continue
-                
-                    # Clear variables
-                    self.y = None
-                    self.y_train = None
-                    self.y_test = None
-                    self.X_particles = None
-                    self.X_Nsub = None
-                    self.pt = None
-                    self.delta_pt = None
+                for jet_pt_bin in self.jet_pt_bins:
+                    for R_max in self.max_distance_list:
                     
-                    # Create output dir
-                    self.output_dir_i = os.path.join(self.output_dir, f'{event_type}_R{jetR}_Rmax{R_max}')
-                    if not os.path.exists(self.output_dir_i):
-                        os.makedirs(self.output_dir_i)
-                
-                    # Read input variables
-                    key_suffix = f'_{event_type}_R{jetR}_Rmax{R_max}'
-                    with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
-                        self.y = hf[f'y{key_suffix}'][:self.n_total]
-                        if f'X{key_suffix}' in hf:
-                            self.X_particles = hf[f'X{key_suffix}'][:]
-                        self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
+                        # For hard event, skip constituent subtraction variations
+                        if event_type=='hard' and not np.isclose(R_max, self.max_distance_list[0]):
+                            continue
+                    
+                        # Clear variables
+                        self.y = None
+                        self.y_train = None
+                        self.y_test = None
+                        self.X_particles = None
+                        self.X_Nsub = None
+                        self.pt = None
+                        self.delta_pt = None
                         
-                        # Also get some QA info
-                        self.pt = hf[f'pt{key_suffix}'][:self.n_total]
-                        self.delta_pt = hf[f'delta_pt{key_suffix}'][:]
+                        # Create output dir
+                        self.output_dir_i = os.path.join(self.output_dir, f'{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
+                        if not os.path.exists(self.output_dir_i):
+                            os.makedirs(self.output_dir_i)
+                    
+                        # Read input variables
+                        key_suffix = f'_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                        with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
+                            self.y = hf[f'y{key_suffix}'][:self.n_total]
+                            if f'X_four_vectors_{key_suffix}' in hf:
+                                self.X_particles = hf[f'X_four_vectors_{key_suffix}'][:]
+                            self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
+                            
+                            # Also get some QA info
+                            self.pt = hf[f'pt{key_suffix}'][:self.n_total]
+                            self.delta_pt = hf[f'delta_pt{key_suffix}'][:]
 
-                    # Define formatted labels for features
-                    self.feature_labels = []
-                    for i,N in enumerate(self.N_list):
-                        beta = self.beta_list[i]
-                        self.feature_labels.append(r'$\tau_{}^{{{}}}$'.format(N,beta))
+                        # Define formatted labels for features
+                        self.feature_labels = []
+                        for i,N in enumerate(self.N_list):
+                            beta = self.beta_list[i]
+                            self.feature_labels.append(r'$\tau_{}^{{{}}}$'.format(N,beta))
 
-                    # Split into training and test sets
-                    # We will split into validatation sets (for tuning hyperparameters) separately for each model
-                    X_Nsub_train, X_Nsub_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.X_Nsub, self.y, test_size=self.test_frac)
+                        # Split into training and test sets
+                        # We will split into validatation sets (for tuning hyperparameters) separately for each model
+                        X_Nsub_train, X_Nsub_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.X_Nsub, self.y, test_size=self.test_frac)
+                               
+                        # Construct training/test sets for each K
+                        self.training_data = {}
+                        for K in self.K_list:
+                            n = 3*K-4
+                            self.training_data[K] = {}
+                            self.training_data[K]['X_Nsub_train'] = X_Nsub_train[:,:n]
+                            self.training_data[K]['X_Nsub_test'] = X_Nsub_test[:,:n]
+                            self.training_data[K]['N_list'] = self.N_list[:n]
+                            self.training_data[K]['beta_list'] = self.beta_list[:n]
+                            self.training_data[K]['feature_labels'] = self.feature_labels[:n]
+                            
+                        # Set up dict to store roc curves
+                        self.roc_curve_dict = {}
+                        if 'linear' in self.models:
+                            self.roc_curve_dict['SGDClassifier'] = {}
+                        if 'random_forest' in self.models:
+                            self.roc_curve_dict['RandomForest'] = {}
+                        if 'neural_network' in self.models:
+                            self.roc_curve_dict['DNN'] = {}
+                            
+                        # Plot the input data
+                        self.plot_QA(event_type, jetR, jet_pt_bin, R_max)
+                        
+                        for K in self.K_list:
+                            if K <= 2:
+                                self.plot_training_data(K)
                            
-                    # Construct training/test sets for each K
-                    self.training_data = {}
-                    for K in self.K_list:
-                        n = 3*K-4
-                        self.training_data[K] = {}
-                        self.training_data[K]['X_Nsub_train'] = X_Nsub_train[:,:n]
-                        self.training_data[K]['X_Nsub_test'] = X_Nsub_test[:,:n]
-                        self.training_data[K]['N_list'] = self.N_list[:n]
-                        self.training_data[K]['beta_list'] = self.beta_list[:n]
-                        self.training_data[K]['feature_labels'] = self.feature_labels[:n]
-                        
-                    # Set up dict to store roc curves
-                    self.roc_curve_dict = {}
-                    if 'linear' in self.models:
-                        self.roc_curve_dict['SGDClassifier'] = {}
-                    if 'random_forest' in self.models:
-                        self.roc_curve_dict['RandomForest'] = {}
-                    if 'neural_network' in self.models:
-                        self.roc_curve_dict['DNN'] = {}
-                        
-                    # Plot the input data
-                    self.plot_QA(event_type, jetR, R_max)
-                    
-                    for K in self.K_list:
-                        if K <= 2:
-                            self.plot_training_data(K)
-                       
-                    # Train models
-                    self.train_models(event_type, jetR, R_max)
+                        # Train models
+                        self.train_models(event_type, jetR, jet_pt_bin, R_max)
 
     #---------------------------------------------------------------
     # Plot QA
     #---------------------------------------------------------------
-    def plot_QA(self, event_type, jetR, R_max):
+    def plot_QA(self, event_type, jetR, jet_pt_bin, R_max):
     
         # pt
         jewel_indices = self.y
@@ -227,7 +229,7 @@ class AnalyzePPAA(common_base.CommonBase):
                  linewidth=2,
                  linestyle='-',
                  alpha=0.5)
-        plt.title(rf'{event_type} event: $R = {jetR}, R_{{max}} = {R_max}$')
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$')
         plt.xlabel(r'$p_{T}$', fontsize=14)
         plt.yscale('log')
         legend = plt.legend(loc='best', fontsize=14, frameon=False)
@@ -246,7 +248,7 @@ class AnalyzePPAA(common_base.CommonBase):
                      linewidth=2,
                      linestyle='-',
                      alpha=0.5)
-            plt.title(rf'{event_type} event: $R = {jetR}, R_{{max}} = {R_max}$')
+            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$')
             plt.xlabel(r'$\delta p_{T}$', fontsize=14)
             plt.yscale('log')
             legend = plt.legend(loc='best', fontsize=14, frameon=False)
@@ -299,7 +301,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Train models
     #---------------------------------------------------------------
-    def train_models(self, event_type, jetR, R_max):
+    def train_models(self, event_type, jetR, jet_pt_bin, R_max):
 
         # Train ML models
         for model in self.models:
