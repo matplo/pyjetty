@@ -49,12 +49,15 @@ class AnalyzePPAA(common_base.CommonBase):
         # Initialize config file
         self.initialize_config()
         
-        self.colors = {'SGDClassifier': sns.xkcd_rgb['medium green'],
-                       'RandomForest': sns.xkcd_rgb['dark sky blue'],
-                       'DNN': sns.xkcd_rgb['faded purple']
-                       }
-        self.linestyles = ['--', '-']
-        
+        self.colors = [sns.xkcd_rgb['watermelon'],
+                       sns.xkcd_rgb['medium green'],
+                       sns.xkcd_rgb['dark sky blue'],
+                       sns.xkcd_rgb['faded purple']
+                      ]
+        self.linestyles = {'RandomForest': 'solid',
+                           'DNN': 'dotted'
+                          }
+                       
         with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'r') as hf:
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
@@ -194,14 +197,15 @@ class AnalyzePPAA(common_base.CommonBase):
                             self.roc_curve_dict['DNN'] = {}
                             
                         # Plot the input data
-                        self.plot_QA(event_type, jetR, jet_pt_bin, R_max)
+                        jet_pt_bin_rounded = [int(pt) for pt in jet_pt_bin]
+                        self.plot_QA(event_type, jetR, jet_pt_bin_rounded, R_max)
                         
                         for K in self.K_list:
                             if K <= 2:
                                 self.plot_training_data(K)
                            
                         # Train models
-                        self.train_models(event_type, jetR, jet_pt_bin, R_max)
+                        self.train_models(event_type, jetR, jet_pt_bin_rounded, R_max)
 
     #---------------------------------------------------------------
     # Plot QA
@@ -229,7 +233,7 @@ class AnalyzePPAA(common_base.CommonBase):
                  linewidth=2,
                  linestyle='-',
                  alpha=0.5)
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$')
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
         plt.xlabel(r'$p_{T}$', fontsize=14)
         plt.yscale('log')
         legend = plt.legend(loc='best', fontsize=14, frameon=False)
@@ -240,15 +244,17 @@ class AnalyzePPAA(common_base.CommonBase):
         # delta pt
         if event_type == 'combined':
             bins = np.linspace(-50, 50, 100)
-            sigma = np.round(np.std(self.delta_pt),2)
-            plt.hist(self.delta_pt,
+            mean = np.round(np.mean(self.delta_pt),2)
+            delta_pt_centered = np.subtract(self.delta_pt, mean)
+            sigma = np.round(np.std(delta_pt_centered),2)
+            plt.hist(delta_pt_centered,
                      bins,
                      histtype='stepfilled',
-                     label = rf'$\sigma = {sigma}$',
+                     label = rf'$\mathrm{{mean}} = {mean},\;\sigma = {sigma}$',
                      linewidth=2,
                      linestyle='-',
                      alpha=0.5)
-            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$')
+            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
             plt.xlabel(r'$\delta p_{T}$', fontsize=14)
             plt.yscale('log')
             legend = plt.legend(loc='best', fontsize=14, frameon=False)
@@ -322,8 +328,8 @@ class AnalyzePPAA(common_base.CommonBase):
                 #    self.fit_lasso(K, model_settings)
                 
         # Plot ROC curve and significance improvement
-        self.plot_roc_curves()
-        self.plot_significance_improvement()
+        self.plot_roc_curves(event_type, jetR, jet_pt_bin, R_max)
+        self.plot_significance_improvement(event_type, jetR, jet_pt_bin, R_max)
     
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
@@ -584,10 +590,11 @@ class AnalyzePPAA(common_base.CommonBase):
     #--------------------------------------------------------------- 
     # Plot ROC curves
     #--------------------------------------------------------------- 
-    def plot_roc_curves(self):
+    def plot_roc_curves(self, event_type, jetR, jet_pt_bin, R_max):
     
         plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
         plt.axis([0, 1, 0, 1])
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
         plt.xlabel('False Positive Rate', fontsize=16)
         plt.ylabel('True Positive Rate', fontsize=16)
         plt.grid(True)
@@ -603,7 +610,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     FPR = value[K][0]
                     TPR = value[K][1]
                     plt.plot(FPR, TPR, linewidth=2,
-                             linestyle=self.linestyles[i], alpha=0.9, color=self.colors[label],
+                             linestyle=self.linestyles[label], alpha=0.9, color=self.colors[i],
                              label=f'{label}, K={K}')
                     
         plt.legend(loc='lower right')
@@ -614,15 +621,15 @@ class AnalyzePPAA(common_base.CommonBase):
     #--------------------------------------------------------------- 
     # Plot Significance improvement
     #--------------------------------------------------------------- 
-    def plot_significance_improvement(self):
+    def plot_significance_improvement(self, event_type, jetR, jet_pt_bin, R_max):
     
         plt.axis([0, 1, 0, 3])
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
         plt.xlabel('True Positive Rate', fontsize=16)
         plt.ylabel('Significance improvement', fontsize=16)
         plt.grid(True)
             
         for label,value in self.roc_curve_dict.items():
-            print(f'label: {label}')
             
             if label in ['PFN', 'Jet_mass', 'Multiplicity','Lasso']:
                 FPR = value[0]
@@ -633,10 +640,10 @@ class AnalyzePPAA(common_base.CommonBase):
                     FPR = value[K][0]
                     TPR = value[K][1]
                     plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2,
-                             linestyle=self.linestyles[i], alpha=0.9, color=self.colors[label],
+                             linestyle=self.linestyles[label], alpha=0.9, color=self.colors[i],
                              label=f'{label}, K={K}')
                     
-        plt.legend(loc='lower right')
+        plt.legend(loc='best')
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir_i, 'Significance_improvement.pdf'))
         plt.close()
