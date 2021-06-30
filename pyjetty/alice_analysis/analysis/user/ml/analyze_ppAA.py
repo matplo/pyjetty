@@ -64,6 +64,8 @@ class AnalyzePPAA(common_base.CommonBase):
             self.beta_list = hf['beta_list'][:]
             self.delta_pt_random_cone = hf['beta_list'][:]
         
+        self.qa_observables = ['jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
+
         print(self)
         print()
         
@@ -165,7 +167,9 @@ class AnalyzePPAA(common_base.CommonBase):
                             self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
                             
                             # Also get some QA info
-                            self.pt = hf[f'jet_pt{key_suffix}'][:self.n_total]
+                            self.qa_results = {}
+                            for qa_observable in self.qa_observables:
+                                self.qa_results[qa_observable] = hf[f'{qa_observable}{key_suffix}'][:self.n_total]
                             self.delta_pt = hf[f'delta_pt{key_suffix}'][:]
 
                         # Define formatted labels for features
@@ -214,34 +218,38 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def plot_QA(self, event_type, jetR, jet_pt_bin, R_max):
     
-        # pt
-        jewel_indices = self.y
-        pythia_indices = 1 - self.y
-        pt_jewel = self.pt[jewel_indices.astype(bool)]
-        pt_pythia = self.pt[pythia_indices.astype(bool)]
-        
-        bins = np.linspace(0, 1000, 100)
-        plt.hist(pt_jewel,
-                 bins,
-                 histtype='step',
-                 label = 'JEWEL',
-                 linewidth=2,
-                 linestyle='-',
-                 alpha=0.5)
-        plt.hist(pt_pythia,
-                 bins,
-                 histtype='step',
-                 label = 'PYTHIA',
-                 linewidth=2,
-                 linestyle='-',
-                 alpha=0.5)
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
-        plt.xlabel(r'$p_{T}$', fontsize=14)
-        plt.yscale('log')
-        legend = plt.legend(loc='best', fontsize=14, frameon=False)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, f'pt.pdf'))
-        plt.close()
+        for qa_observable in self.qa_observables:
+            jewel_indices = self.y
+            pythia_indices = 1 - self.y
+            #print(qa_observable)
+            #print(self.qa_results[qa_observable].shape)
+            result_jewel = self.qa_results[qa_observable][jewel_indices.astype(bool)]
+            result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
+            
+            max = np.amax(result_pythia)*1.2
+            bins = np.linspace(0, max, 20)
+            
+            plt.hist(result_jewel,
+                     bins,
+                     histtype='step',
+                     label = 'JEWEL',
+                     linewidth=2,
+                     linestyle='-',
+                     alpha=0.5)
+            plt.hist(result_pythia,
+                     bins,
+                     histtype='step',
+                     label = 'PYTHIA',
+                     linewidth=2,
+                     linestyle='-',
+                     alpha=0.5)
+            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+            plt.xlabel(rf'{qa_observable}', fontsize=14)
+            plt.yscale('log')
+            legend = plt.legend(loc='best', fontsize=14, frameon=False)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir_i, f'{qa_observable}.pdf'))
+            plt.close()
 
         # delta pt
         if event_type == 'combined':
