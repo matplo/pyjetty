@@ -356,8 +356,8 @@ class AnalyzePPAA(common_base.CommonBase):
                     self.fit_neural_network(K, model_settings)
                 if model == 'pfn':
                     self.fit_pfn(model_settings)
-                #if model == 'lasso':
-                #    self.fit_lasso(K, model_settings)
+                if model == 'lasso':
+                    self.fit_lasso(K, model_settings)
                 
         # Plot ROC curve and significance improvement
         self.plot_roc_curves(event_type, jetR, jet_pt_bin, R_max)
@@ -544,8 +544,8 @@ class AnalyzePPAA(common_base.CommonBase):
         
         # Take the logarithm of the data and labels
         # Not taking log of test labels to make ROC curve later which requires integers for the test data
-        X_train_lasso = np.log(self.training_data[K]['X_Nsub_train'])
-        X_test_lasso = np.log(self.training_data[K]['X_Nsub_test'])
+        X_train_lasso = np.log(self.training_data[K]['X_Nsub_train']+0.0001)
+        X_test_lasso = np.log(self.training_data[K]['X_Nsub_test']+0.0001)
         
         eps = .01
         y_train_lasso = np.log(eps + (1. - 2. * eps) * self.y_train)
