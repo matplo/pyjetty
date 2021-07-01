@@ -81,7 +81,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.jetR_list = config['jetR']
         self.jet_pt_bins = config['jet_pt_bins']
         self.max_distance_list = config['constituent_subtractor']['max_distance']
-        self.event_types = ['hard', 'combined']
+        self.event_types = ['hard', 'combined', 'combined_matched']
           
         self.n_train = config['n_train']
         self.n_val = config['n_val']
@@ -254,7 +254,7 @@ class AnalyzePPAA(common_base.CommonBase):
             plt.close()
 
         # delta pt
-        if event_type == 'combined':
+        if event_type == 'combined_matched':
             bins = np.linspace(-50, 50, 100)
             mean = np.round(np.mean(self.delta_pt),2)
             delta_pt_centered = np.subtract(self.delta_pt, mean)
