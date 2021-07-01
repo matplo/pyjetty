@@ -294,7 +294,7 @@ class ProcessppAA(common_base.CommonBase):
           [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_background]
           
         # Compute delta-pt by random cone method
-        self.delta_pt_RC(fj_particles_combined_beforeCS)
+        self.delta_pt_RC(fj_particles_background)
             
         # Perform constituent subtraction for each R_max
         fj_particles_combined = []
@@ -334,14 +334,14 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Compute delta-pt by random cone method
     #---------------------------------------------------------------
-    def delta_pt_RC(self, fj_particles_combined_beforeCS):
+    def delta_pt_RC(self, fj_particles_background):
     
         event_pt = 0.
         cone_pt = 0.
         R_cone = 0.4
         eta_random = np.random.uniform(-self.eta_max+R_cone, self.eta_max-R_cone)
         phi_random = np.random.uniform(0, 2*np.pi)
-        for particle in fj_particles_combined_beforeCS:
+        for particle in fj_particles_background:
             event_pt += particle.pt()
             delta_R = self.utils.delta_R(particle, eta_random, phi_random)
             if delta_R < R_cone:
