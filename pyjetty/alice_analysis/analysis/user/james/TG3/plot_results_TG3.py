@@ -351,6 +351,14 @@ class PlotResults(common_base.CommonBase):
             f = ROOT.TFile(result['hepdata'], 'READ')
             dir = f.Get(result['dir'])
             self.observable_settings['g_pp'] = dir.Get('Graph1D_y1')
+            
+            bins = np.array(result['x_bins'])
+            y = np.array(result['y_PbPb'])
+            y_stat = np.array(result['y_stat_PbPb'])
+            x = (bins[1:] + bins[:-1]) / 2
+            x_err = (bins[1:] - bins[:-1]) / 2
+            n = len(x)
+            self.observable_settings['g_AA'] = ROOT.TGraphErrors(n, x, y, x_err, y_stat)
 
         # Data -- ratio
         if self.observable == 'girth':
@@ -1043,8 +1051,6 @@ class PlotResults(common_base.CommonBase):
               
             if type(prediction) in [ROOT.TH1D]:
                 prediction.Draw('E3 same')
-                #prediction.Draw('E2 same')
-                #prediction.Draw('PE X0 same')
 
                 leg2.AddEntry(prediction, label, 'L')
                 
@@ -1058,19 +1064,18 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['g_pp'].SetLineWidth(self.line_width)
             self.observable_settings['g_pp'].SetLineColor(self.data_color)
         
-            #self.observable_settings['g_AA'].SetMarkerSize(self.marker_size)
-            #self.observable_settings['g_AA'].SetMarkerStyle(self.data_markers[1])
-            #self.observable_settings['g_AA'].SetMarkerColor(self.data_color)
-            #self.observable_settings['g_AA'].SetLineStyle(self.line_style)
-            #self.observable_settings['g_AA'].SetLineWidth(self.line_width)
-            #self.observable_settings['g_AA'].SetLineColor(self.data_color)
+            self.observable_settings['g_AA'].SetMarkerSize(self.marker_size)
+            self.observable_settings['g_AA'].SetMarkerStyle(self.data_markers[1])
+            self.observable_settings['g_AA'].SetMarkerColor(self.data_color)
+            self.observable_settings['g_AA'].SetLineStyle(self.line_style)
+            self.observable_settings['g_AA'].SetLineWidth(self.line_width)
+            self.observable_settings['g_AA'].SetLineColor(self.data_color)
 
-            #leg.AddEntry(self.observable_settings['g_AA'], 'Pb-Pb 0-10%','PE')
+            leg.AddEntry(self.observable_settings['g_AA'], 'Pb-Pb 0-10%','PE')
             leg.AddEntry(self.observable_settings['g_pp'], 'PYTHIA + Pb-Pb','PE')
 
-            self.observable_settings['g_pp'].Draw('PE X0 same')
-            #self.observable_settings['g_pp'].Draw('PE X0 same')
-            #self.observable_settings['g_AA'].DrawCopy('PE X0 same')
+            self.observable_settings['g_pp'].Draw('PE Z same')
+            self.observable_settings['g_AA'].Draw('PE Z same')
 
         leg.Draw('same')
         leg2.Draw('same')

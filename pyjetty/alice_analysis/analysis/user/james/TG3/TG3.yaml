@@ -278,7 +278,14 @@ hjet_dphi:
   hepdata: 'hjet/HEPData-ins1376027-v1-root.root'
   dir: 'Table 37'
   
+  # Temp data table, since HEPData is being updated
+  x_bins: [1.492, 1.592, 1.692, 1.792, 1.892, 1.992, 2.092, 2.192, 2.292, 2.392, 2.492, 2.592, 2.692, 2.792, 2.892, 2.992, 3.092, 3.142]
+  y_PbPb: [-3.863e-04, 7.916e-04, -3.905e-03, 1.186e-03, 2.755e-03, 4.518e-03, 2.169e-03, -1.161e-03, 2.101e-04, 2.167e-03, 1.484e-05, 4.529e-03, 7.074e-03, 9.623e-03, 1.570e-02, 3.550e-02, 4.667e-02]
+  y_stat_PbPb: [9.981e-04, 1.466e-03, 8.733e-04, 1.730e-03, 2.017e-03, 2.259e-03, 2.045e-03, 1.590e-03, 1.784e-03, 1.929e-03, 1.795e-03, 2.721e-03, 2.879e-03, 3.177e-03, 3.739e-03, 5.212e-03, 8.160e-03]
+  
   # Folded JETSCAPE
   file_pp: 'hjet/hJet_Dphi_Folded_pp.root'
   file_AA: 'hjet/hJet_Dphi_Folded_PbPb.root'
   hname: 'hdphi_4060_folded'
+
+
