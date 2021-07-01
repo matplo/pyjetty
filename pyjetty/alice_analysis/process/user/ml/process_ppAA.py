@@ -108,9 +108,9 @@ class ProcessppAA(common_base.CommonBase):
         self.beta_list += [1,2]
         
         # Construct dictionary to store all jet quantities of interest
-        self.jet_variables = {'hard': {}, 'combined': {}}
-        self.four_vectors = {'hard': {}, 'combined': {}}
-        self.jet_qa_variables = {'hard': {}, 'combined': {}}
+        self.jet_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        self.four_vectors = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        self.jet_qa_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
         self.delta_pt_random_cone = []
         for label in self.jet_variables.keys():
             for jetR in self.jetR_list:
@@ -123,7 +123,7 @@ class ProcessppAA(common_base.CommonBase):
                     self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
                     for R_max in self.max_distance:
                         
-                        if label=='combined' or np.isclose(R_max, 0.):
+                        if 'combined' in label or np.isclose(R_max, 0.):
                             self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
                             self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
@@ -223,14 +223,14 @@ class ProcessppAA(common_base.CommonBase):
         print()
         
         # Reformat output for ML algorithms (array with 1 array per jet which contain all N-subjettiness values)
-        X_Nsub = {'hard': {}, 'combined': {}}
+        X_Nsub = {'hard': {}, 'combined': {}, 'combined_matched': {}}
         for label in X_Nsub.keys():
             for jetR in self.jetR_list:
                 X_Nsub[label][f'R{jetR}'] = {}
                 for jet_pt_bin in self.jet_pt_bins:
                     X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
                     for R_max in self.max_distance:
-                        if label=='combined' or np.isclose(R_max, 0.):
+                        if 'combined' in label or np.isclose(R_max, 0.):
                             X_Nsub_reformatted = np.array([list(self.jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].values())])[0].T
                             X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = X_Nsub_reformatted
             
@@ -240,7 +240,7 @@ class ProcessppAA(common_base.CommonBase):
                 for jetR in self.jetR_list:
                     for jet_pt_bin in self.jet_pt_bins:
                         for R_max in self.max_distance:
-                            if label=='combined' or np.isclose(R_max, 0.):
+                            if 'combined' in label or np.isclose(R_max, 0.):
                             
                                 suffix = f'_{label}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
                         
@@ -384,8 +384,8 @@ class ProcessppAA(common_base.CommonBase):
         for jet_combined in jets_combined_selected:
             process_base.ProcessBase.set_matches_pp(None, jet_combined, None)
               
-        # Loop through jets and fill response histograms if both det and truth jets are unique match
-        result = [self.fill_jet_matches(jet_combined, jetR, jet_pt_bin, R_max, 'combined') for jet_combined in jets_combined_selected]
+        # Loop through jets and fill output if both det and truth jets are unique match
+        result = [self.fill_jet_matches(jet_combined, jetR, jet_pt_bin, R_max, 'combined_matched') for jet_combined in jets_combined_selected]
                 
     #---------------------------------------------------------------
     # Analyze jets of a given event.
@@ -402,6 +402,9 @@ class ProcessppAA(common_base.CommonBase):
             
             delta_pt = (jet_pt_combined - jet_pt_pp)
             self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'].append(delta_pt)
+            
+            self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, label)
+            self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, label)
     
     #---------------------------------------------------------------
     # Analyze jets of a given event.
@@ -476,7 +479,7 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def transform_to_numpy(self, jet_variables_list):
 
-        jet_variables_numpy = {'hard': {}, 'combined': {}}
+        jet_variables_numpy = {'hard': {}, 'combined': {}, 'combined_matched': {}}
 
         for label in jet_variables_numpy.keys():
             for jetR in self.jetR_list:
@@ -485,7 +488,7 @@ class ProcessppAA(common_base.CommonBase):
                     jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
                
                     for R_max in self.max_distance:
-                        if label=='combined' or np.isclose(R_max, 0.):
+                        if 'combined' in label or np.isclose(R_max, 0.):
 
                             jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
                   
