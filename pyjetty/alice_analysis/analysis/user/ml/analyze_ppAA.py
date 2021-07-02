@@ -505,8 +505,8 @@ class AnalyzePPAA(common_base.CommonBase):
         # Convert labels to categorical
         Y_PFN = energyflow.utils.to_categorical(self.y, num_classes=2)
                         
-        # Convert (E,px,py,pz) to (pT,y,phi,m)
-        X_PFN = energyflow.ptyphims_from_p4s(self.X_particles)[:,:,:] # Note: 4th entry is m, not PID .. could rewrite routine
+        # (pT,y,phi,m=0)
+        X_PFN = self.X_particles
         
         # Preprocess by centering jets and normalizing pts
         for x_PFN in X_PFN:
@@ -556,7 +556,7 @@ class AnalyzePPAA(common_base.CommonBase):
 
         # 1. Jet mass (Note: This takes in (pt,y,phi) and converts it to 4-vectors and computes jet mass)
         #             (Note: X_PFN_train is centered and normalized .. should be ok)
-        masses = np.asarray([energyflow.ms_from_p4s(x.sum(axis=0)) for x in self.X_particles])
+        masses = np.asarray([energyflow.ms_from_p4s(energyflow.p4s_from_ptyphims(x).sum(axis=0)) for x in self.X_particles])
         self.roc_curve_dict['Jet_mass'] = sklearn.metrics.roc_curve(self.y, -masses)
         
         # 2. Multiplicity (Is this a useful observable for pp vs AA?)
