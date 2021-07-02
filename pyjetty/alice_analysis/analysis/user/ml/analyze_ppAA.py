@@ -54,11 +54,20 @@ class AnalyzePPAA(common_base.CommonBase):
                        sns.xkcd_rgb['dark sky blue'],
                        sns.xkcd_rgb['faded purple']
                       ]
+        self.colors_pfn = {'PFN': sns.xkcd_rgb['faded purple'],
+                           'Jet_mass': sns.xkcd_rgb['dark sky blue'],
+                           'Multiplicity': sns.xkcd_rgb['medium green'],
+                           'Lasso': sns.xkcd_rgb['watermelon']
+                          }
         self.linestyles = {'RandomForest': 'solid',
-                           'DNN': 'dotted'
+                           'DNN': 'dotted',
+                           'PFN': 'solid',
+                           'Jet_mass': 'dotted',
+                           'Multiplicity': 'dotted',
+                           'Lasso': 'solid'
                           }
                        
-        self.filename = 'nsubjettiness_without_four_vectors.h5'
+        self.filename = 'nsubjettiness_with_four_vectors.h5'
         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
@@ -143,6 +152,11 @@ class AnalyzePPAA(common_base.CommonBase):
                         # For hard event, skip constituent subtraction variations
                         if event_type=='hard' and not np.isclose(R_max, 0.):
                             continue
+                            
+                        # If four-vectors are included, R_max=0 is skipped for combined event,
+                        # since due to size/time constraints, we skip merging four-vectors for Rmax=0
+                        if 'combined' in event_type and np.isclose(R_max,0):
+                            continue
                     
                         # Clear variables
                         self.y = None
@@ -163,7 +177,7 @@ class AnalyzePPAA(common_base.CommonBase):
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
                             self.y = hf[f'y{key_suffix}'][:self.n_total]
                             if f'X_four_vectors{key_suffix}' in hf:
-                                self.X_particles = hf[f'X_four_vectors{key_suffix}'][:]
+                                self.X_particles = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
                             self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
                             
                             # Also get some QA info
@@ -477,42 +491,45 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def fit_pfn(self, model_settings):
 
-        # convert labels to categorical
+        # Convert labels to categorical
         Y_PFN = energyflow.utils.to_categorical(self.y, num_classes=2)
+                        
+        # Convert (E,px,py,pz) to (pT,y,phi,m)
+        X_PFN = energyflow.ptyphims_from_p4s(self.X_particles)[:,:,:] # Note: 4th entry is m, not PID .. could rewrite routine
         
-        # preprocess by centering jets and normalizing pts
-        X_PFN = self.X_particles
+        # Preprocess by centering jets and normalizing pts
         for x_PFN in X_PFN:
             mask = x_PFN[:,0] > 0
             yphi_avg = np.average(x_PFN[mask,1:3], weights=x_PFN[mask,0], axis=0)
             x_PFN[mask,1:3] -= yphi_avg
             x_PFN[mask,0] /= x_PFN[:,0].sum()
-            
-        # Convert (E,px,py,pz) to (pT,y,phi,m)
-        X_PFN = energyflow.ptyphims_from_p4s(self.X_particles)[:,:,:] # Note: 4th entry is m, not PID .. could rewrite routine
         
-        # handle particle id channel !! Note: If changed to pT,y,phi,m the 4th component is not PID but m .. fix later
+        # Handle particle id channel !! Note: If changed to pT,y,phi,m the 4th component is not PID but m .. fix later
         #if model_settings['use_pids']:
         #    self.my_remap_pids(X_PFN)
         #else:
         #    X_PFN = X_PFN[:,:,:3]
+        
+        # Check shape
+        if self.y.shape[0] != X_PFN.shape[0]:
+            print(f'Number of labels {self.y.shape} does not match number of jets {X_PFN.shape} ! ')
 
         # Split data into train, val and test sets
-        (X_PFN_train, X_PFN_val, X_PFN_test,Y_PFN_train, Y_PFN_val, Y_PFN_test) = energyflow.utils.data_split(X_PFN, Y_PFN,
+        (X_PFN_train, X_PFN_val, X_PFN_test, Y_PFN_train, Y_PFN_val, Y_PFN_test) = energyflow.utils.data_split(X_PFN, Y_PFN,
                                                                                              val=self.n_val, test=self.n_test)
-        # build architecture
+        # Build architecture
         pfn = energyflow.archs.PFN(input_dim=X_PFN.shape[-1],
                                    Phi_sizes=model_settings['Phi_sizes'],
                                    F_sizes=model_settings['F_sizes'])
 
-        # train model
+        # Train model
         pfn.fit(X_PFN_train, Y_PFN_train,
                 epochs=model_settings['epochs'],
                 batch_size=model_settings['batch_size'],
                 validation_data=(X_PFN_val, Y_PFN_val),
                 verbose=1)
         
-        # get predictions on test data
+        # Get predictions on test data
         preds_PFN = pfn.predict(X_PFN_test, batch_size=1000)
 
         # Get AUC and ROC curve + make plot
@@ -633,10 +650,11 @@ class AnalyzePPAA(common_base.CommonBase):
     
         for label,value in self.roc_curve_dict.items():
             
-            if label in ['PFN', 'Jet_mass', 'Multiplicity','Lasso']:
+            if label in ['PFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
                 FPR = value[0]
                 TPR = value[1]
-                plt.plot(FPR, TPR, linewidth=2, label=label)
+                plt.plot(FPR, TPR, linewidth=4, label=label,
+                         linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
             else:
                 for i,K in enumerate(self.K_list):
                     FPR = value[K][0]
@@ -663,7 +681,7 @@ class AnalyzePPAA(common_base.CommonBase):
             
         for label,value in self.roc_curve_dict.items():
             
-            if label in ['PFN', 'Jet_mass', 'Multiplicity','Lasso']:
+            if label in ['PFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
                 FPR = value[0]
                 TPR = value[1]
                 plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=label)
