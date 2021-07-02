@@ -26,6 +26,11 @@ import fjext
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
 
+# Helper function
+# Turns 2D list into 1D list by concat'ing all sublists
+def li_concat(li):
+  return [item for sublist in li for item in sublist]
+
 ################################################################
 class ProcessIO(common_base.CommonBase):
   
@@ -51,6 +56,7 @@ class ProcessIO(common_base.CommonBase):
     self.tree_name = '_'.join((tree_name_base, level, "MPI%s" % MPI))
 
     self.reset_dataframes()
+    self.tree_length = self.get_tree_length()
 
     # Name of the columns to load from each respective tree
     if level == 'p':
@@ -71,6 +77,7 @@ class ProcessIO(common_base.CommonBase):
   # Clear dataframes
   #---------------------------------------------------------------
   def reset_dataframes(self):
+    self.tree_length = None
     self.track_df = None
     self.run_numbers = None
     self.unique_ev_ids_per_run = None
@@ -93,14 +100,28 @@ class ProcessIO(common_base.CommonBase):
   # Convert ROOT TTree to SeriesGroupBy object of fastjet particles per event.
   # Optionally, remove a certain random fraction of tracks
   #---------------------------------------------------------------
-  def load_data(self, group_by_evid=True, ch_cut=False):
+  def load_data(self, group_by_evid=True, ch_cut=False, start=None, stop=None):
 
     self.reset_dataframes()
 
-    print('    tree_name = {}'.format(self.tree_name))
-    self.track_df = self.load_dataframe()
+    print("  tree_name =", self.tree_name)
+    if not self.tree_length:
+      self.get_tree_length()
+    self.track_df = self.load_dataframe(start, stop)
 
     return self.group_fjparticles(group_by_evid, ch_cut)
+
+  #---------------------------------------------------------------
+  # Get total length of track TTree
+  #---------------------------------------------------------------
+  def get_tree_length(self):
+    with uproot.open(self.input_file)[self.tree_name] as tree:
+      if not tree:
+        raise ValueError("Tree %s not found in file %s" % (self.tree_name, self.input_file))
+      df = tree.arrays(self.columns, library="np")
+      self.tree_length = len(df["run_number"][0])
+      print("    |--> length =", self.tree_length)
+    return self.tree_length
 
   #---------------------------------------------------------------
   # Convert ROOT TTree to pandas dataframe
@@ -108,17 +129,18 @@ class ProcessIO(common_base.CommonBase):
   # Returned dataframe has one row per jet constituent:
   #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   #---------------------------------------------------------------
-  def load_dataframe(self):
+  def load_dataframe(self, start=None, stop=None):
 
     df = None
     with uproot.open(self.input_file)[self.tree_name] as tree:
       if not tree:
-        raise ValueError('Tree {} not found in file {}'.format(self.tree_name, self.input_file))
+        raise ValueError("Tree %s not found in file %s" % (self.tree_name, self.input_file))
       ''' Pandas DataFrame implementation
       df = uproot.concatenate(tree, self.columns, library="pd")
       '''
       # Try saving memory with numpy implementation
-      df = uproot.concatenate(tree, self.columns, library="np")
+      #df = uproot.concatenate(tree, self.columns, library="np")
+      df = tree.arrays(self.columns, library="np", entry_start=start, entry_stop=stop)
       # Each value is a 2D array for some reason, so fix that
       for key, value in df.items():
         if key == "run_number" or key == "ev_id" or key == "is_charged":
@@ -137,15 +159,17 @@ class ProcessIO(common_base.CommonBase):
     track_df = self.track_df
 
     if ch_cut:
+      print("    |--> apply ch_cut...")
       if self.level == 'p':
         raise ValueError("ch_cut cannot be set for parton-level tree")
-      #else:  # self.level == 'h'
+      else:  # self.level == 'h'
         #track_df = track_df.loc[track_df["is_charged"] == True]
         for key, value in track_df.items():
           if key == "is_charged":
             continue
           track_df[key] = value[track_df["is_charged"] == True]
         track_df.pop("is_charged")  # This info is now redundant
+      print("    |--> length =", len(track_df["run_number"]))
 
     df_fjparticles = None
     fj_particles = self.get_fjparticles(track_df)
@@ -164,20 +188,23 @@ class ProcessIO(common_base.CommonBase):
       # These are only useful for numpy implementation
       self.run_numbers = self.unique_ev_ids_per_run = None
       '''
+      print("    |--> grouping by run_number & ev_id...")
       # First split by run_number, then by ev_id
       self.run_numbers = np.unique(track_df["run_number"], return_index=True)
       ev_ids_per_run = np.split(track_df["ev_id"], self.run_numbers[1][1:])
       self.unique_ev_ids_per_run = [np.unique(ev_ids_per_run[i], return_index=True) \
                                     for i in range(len(ev_ids_per_run))]
-      split_points = np.concatenate([self.unique_ev_ids_per_run[i][1] + self.run_numbers[1][i] \
-                                     for i in range(len(ev_ids_per_run))])[1:]
+      sp_pt = [0] + li_concat([self.unique_ev_ids_per_run[i][1] + self.run_numbers[1][i] \
+                               for i in range(len(ev_ids_per_run))])[1:] + [len(fj_particles)]
+      particle_list = list(fj_particles)
       df_fjparticles = {
-        "run_number": np.concatenate(
+        "run_number": li_concat(
           [[self.run_numbers[0][i]] * len(self.unique_ev_ids_per_run[i][0]) \
            for i in range(len(ev_ids_per_run))]),
-        "ev_id": np.concatenate(
+        "ev_id": li_concat(
           [self.unique_ev_ids_per_run[i][0] for i in range(len(ev_ids_per_run))]),
-        "fj_particle": np.split(fj_particles, split_points) }
+        "fj_particle": [particle_list[sp_pt[i]:sp_pt[i+1]] for i in range(len(sp_pt)-1)] }
+      print("    |--> done\n")
 
     else:
       # Transform the track dataframe into a dataframe of fastjet particles per track
