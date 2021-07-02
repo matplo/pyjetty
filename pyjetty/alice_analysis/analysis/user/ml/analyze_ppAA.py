@@ -155,7 +155,7 @@ class AnalyzePPAA(common_base.CommonBase):
                             
                         # If four-vectors are included, R_max=0 is skipped for combined event,
                         # since due to size/time constraints, we skip merging four-vectors for Rmax=0
-                        if 'combined' in event_type and np.isclose(R_max,0):
+                        if 'with_four_vectors' in self.filename and 'combined' in event_type and np.isclose(R_max,0):
                             continue
                     
                         # Clear variables
