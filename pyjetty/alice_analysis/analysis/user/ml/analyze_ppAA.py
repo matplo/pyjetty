@@ -51,6 +51,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.initialize_config()
         
         self.colors = [sns.xkcd_rgb['watermelon'],
+                       sns.xkcd_rgb['light brown'],
                        sns.xkcd_rgb['medium green'],
                        sns.xkcd_rgb['dark sky blue'],
                        sns.xkcd_rgb['faded purple']
@@ -395,7 +396,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Plot AUC vs. K
         self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
         
-        if len(self.K_list) <= 4:
+        if len(self.K_list) <= len(self.colors):
             # Plot ROC curve and significance improvement
             self.plot_roc_curves(event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(event_type, jetR, jet_pt_bin, R_max)
