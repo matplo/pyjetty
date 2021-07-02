@@ -20,6 +20,7 @@ from matplotlib import pyplot as plt
 import fastjet as fj
 import fjcontrib
 import fjext
+import fjtools
 
 # Energy flow package
 import energyflow
@@ -91,8 +92,8 @@ class ProcessppAA(common_base.CommonBase):
         
         # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet::PseudoJets
         print('Converting particle dataframes to fastjet::PseudoJets...')
-        df_fjparticles_hard = df_particles_hard_grouped.apply(self.get_fjparticles)
-        df_fjparticles_combined = df_particles_combined_grouped.apply(self.get_fjparticles)
+        df_fjparticles_hard = df_particles_hard_grouped.apply(self.get_fjparticles_px_py_pz)
+        df_fjparticles_combined = df_particles_combined_grouped.apply(self.get_fjparticles_px_py_pz)
         self.df_fjparticles = pd.concat([df_fjparticles_hard, df_fjparticles_combined], axis=1)
         self.df_fjparticles.columns = ['fj_particles_hard', 'fj_particles_combined']
         print('Done.')
@@ -133,7 +134,7 @@ class ProcessppAA(common_base.CommonBase):
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
                             
                             # Some QA
-                            self.qa_observables = ['delta_pt', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
+                            self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
                             for qa_observable in self.qa_observables:
                                 self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable] = []
 
@@ -270,7 +271,7 @@ class ProcessppAA(common_base.CommonBase):
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
             hf.create_dataset('delta_pt_random_cone', data=self.delta_pt_random_cone)
-                        
+                            
     #---------------------------------------------------------------
     # Process an event (in this case, just a single jet per event)
     #---------------------------------------------------------------
@@ -403,6 +404,10 @@ class ProcessppAA(common_base.CommonBase):
             delta_pt = (jet_pt_combined - jet_pt_pp)
             self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'].append(delta_pt)
             
+            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['matched_deltaR'].append(jet_combined.delta_R(jet_pp))
+            matched_pt = fjtools.matched_pt(jet_combined, jet_pp)
+            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['matched_pt'].append(matched_pt)
+
             self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, label)
             self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, label)
     
@@ -463,7 +468,8 @@ class ProcessppAA(common_base.CommonBase):
         # Loop through jet constituents
         particle_list = []
         for i,particle in enumerate(jet.constituents()):
-            particle_list.append(np.array([particle.E(), particle.px(), particle.py(), particle.pz()]))
+            #particle_list.append(np.array([particle.E(), particle.px(), particle.py(), particle.pz()]))
+            particle_list.append(np.array([particle.perp(), particle.rapidity(), particle.phi_02pi(), 0.]))
         
         # Zero pad such that all jets have the same number of four-vectors
         n_max = 800
@@ -500,14 +506,26 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Construct fastjet::PseudoJets from four-vectors
     #---------------------------------------------------------------
-    def get_fjparticles(self, df_particles_grouped):
+    def get_fjparticles_px_py_pz_e(self, df_particles_grouped):
                                                  
         user_index_offset = 0
         return fjext.vectorize_px_py_pz_e(df_particles_grouped['px'].values,
                                           df_particles_grouped['py'].values,
                                           df_particles_grouped['pz'].values,
                                           df_particles_grouped['E'].values,
-                                          user_index_offset)        
+                                          user_index_offset)
+
+    #---------------------------------------------------------------
+    # Construct fastjet::PseudoJets from four-vectors
+    # Sets m=0
+    #---------------------------------------------------------------
+    def get_fjparticles_px_py_pz(self, df_particles_grouped):
+                                                 
+        user_index_offset = 0
+        return fjext.vectorize_px_py_pz(df_particles_grouped['px'].values,
+                                        df_particles_grouped['py'].values,
+                                        df_particles_grouped['pz'].values,
+                                        user_index_offset)
 
 ##################################################################
 if __name__ == '__main__':
