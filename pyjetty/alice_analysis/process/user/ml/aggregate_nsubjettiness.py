@@ -11,8 +11,7 @@ import numpy as np
 def aggregate(config_file, filelist, output_dir):
 
     # List of arrays to aggregate
-    observables = ['X_four_vectors', 'X_Nsub', 'y', 'jet_pt', 'delta_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
-    #observables = ['X_Nsub', 'y', 'jet_pt', 'delta_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
+    observables = ['X_four_vectors', 'X_Nsub', 'y', 'jet_pt', 'delta_pt', 'matched_pt', 'matched_deltaR', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
 
     # Read config file
     with open(config_file, 'r') as stream:
@@ -48,7 +47,7 @@ def aggregate(config_file, filelist, output_dir):
         n_files = len(files)
     for i,filename in enumerate(files):
         
-        #if i > 1000:
+        #if i > 300:
         #    break
 
         if i%100 == 0:
@@ -101,16 +100,18 @@ def aggregate(config_file, filelist, output_dir):
                     
                         for observable in observables:
 
-                            if observable in ['X_four_vectors', 'X_Nsub', 'y']:
-                                output_key = f'{observable}_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
-                                output_aggregated = output[output_key]
+                            output_key = f'{observable}_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                            output_aggregated = output[output_key]
+                            if output_aggregated.shape[0] == idx.shape[0]:
                                 output[output_key] = output_aggregated[idx]
                                 print(f'shuffled {output_key}: {output[output_key].shape}')
 
                                 # Remove nan
                                 where_are_nan = np.isnan(output[output_key])
                                 output[output_key][where_are_nan] = 0.
-        
+                            elif output_aggregated.shape[0] > 0:
+                                print(f'MISMATCH of shape for {output_key}: {output_aggregated.shape} vs. {idx.shape}')
+
     # Write jet arrays to file
     if 'X_four_vectors' in observables:
         output_filename = 'nsubjettiness_with_four_vectors.h5'
