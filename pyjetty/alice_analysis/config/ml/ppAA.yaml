@@ -9,6 +9,7 @@
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
 K: [6, 12, 24, 36]
+#K: [2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36]
 
 #------------------------------------------------------------------------------
 # These parameters are used only in the process script

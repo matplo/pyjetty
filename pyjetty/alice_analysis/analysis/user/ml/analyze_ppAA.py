@@ -354,6 +354,11 @@ class AnalyzePPAA(common_base.CommonBase):
     # Train models
     #---------------------------------------------------------------
     def train_models(self, event_type, jetR, jet_pt_bin, R_max):
+    
+        # Dict to store AUC
+        self.AUC = {}
+        self.AUC['DNN'] = []
+        self.AUC['PFN'] = []
 
         # Train ML models
         for model in self.models:
@@ -370,13 +375,17 @@ class AnalyzePPAA(common_base.CommonBase):
                     self.fit_neural_network(K, model_settings)
                 if model == 'lasso':
                     self.fit_lasso(K, model_settings)
-                    
+            
             if model == 'pfn':
                 self.fit_pfn(model_settings)
-                
-        # Plot ROC curve and significance improvement
-        self.plot_roc_curves(event_type, jetR, jet_pt_bin, R_max)
-        self.plot_significance_improvement(event_type, jetR, jet_pt_bin, R_max)
+
+        # Plot AUC vs. K
+        self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
+        
+        if len(self.K_list) <= 4:
+            # Plot ROC curve and significance improvement
+            self.plot_roc_curves(event_type, jetR, jet_pt_bin, R_max)
+            self.plot_significance_improvement(event_type, jetR, jet_pt_bin, R_max)
     
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
@@ -483,6 +492,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Get AUC
         Nsub_auc_DNN = sklearn.metrics.roc_auc_score(self.y_test, y_Nsub_test_preds_DNN)
         print(f'AUC = {Nsub_auc_DNN} (validation set)')
+        self.AUC['DNN'].append(Nsub_auc_DNN)
         
         # Get ROC curve results
         self.roc_curve_dict['DNN'][K] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
@@ -491,7 +501,7 @@ class AnalyzePPAA(common_base.CommonBase):
     # Fit ML model -- 4. Deep Set/Particle Flow Networks
     #---------------------------------------------------------------
     def fit_pfn(self, model_settings):
-
+    
         # Convert labels to categorical
         Y_PFN = energyflow.utils.to_categorical(self.y, num_classes=2)
                         
@@ -536,6 +546,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Get AUC and ROC curve + make plot
         auc_PFN = sklearn.metrics.roc_auc_score(Y_PFN_test[:,1], preds_PFN[:,1])
         print('Particle Flow Networks/Deep Sets: AUC = {} (test set)'.format(auc_PFN))
+        self.AUC['PFN'].append(auc_PFN)
         
         self.roc_curve_dict['PFN'] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
         
@@ -699,7 +710,32 @@ class AnalyzePPAA(common_base.CommonBase):
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir_i, 'Significance_improvement.pdf'))
         plt.close()
-        
+
+    #---------------------------------------------------------------
+    # Plot AUC as a function of K
+    #---------------------------------------------------------------
+    def plot_AUC_convergence(self, event_type, jetR, jet_pt_bin, R_max):
+    
+        plt.axis([0, self.K_list[-1], 0, 1])
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+        plt.xlabel('K', fontsize=16)
+        plt.ylabel('AUC', fontsize=16)
+            
+        for label,value in self.AUC.items():
+            if label == 'PFN':
+                AUC_PFN = value[0]
+                plt.axline((0, AUC_PFN), (1, AUC_PFN), linewidth=4, label=label,
+                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
+            elif label == 'DNN':
+                plt.plot(self.K_list, value, linewidth=2,
+                         linestyle=self.linestyles[label], alpha=0.9, color=self.colors[-1],
+                         label=label)
+                    
+        plt.legend(loc='lower right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir_i, 'AUC_convergence.pdf'))
+        plt.close()
+
     #---------------------------------------------------------------
     # Plot confusion matrix
     # Note: not normalized to relative error
