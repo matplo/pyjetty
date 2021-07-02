@@ -73,7 +73,7 @@ class AnalyzePPAA(common_base.CommonBase):
             self.beta_list = hf['beta_list'][:]
             self.delta_pt_random_cone = hf['delta_pt_random_cone'][:]
         
-        self.qa_observables = ['jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
+        self.qa_observables = ['matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
 
         print(self)
         print()
