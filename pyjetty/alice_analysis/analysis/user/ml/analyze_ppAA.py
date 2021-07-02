@@ -545,8 +545,8 @@ class AnalyzePPAA(common_base.CommonBase):
 
         # 1. Jet mass (Note: This takes in (pt,y,phi) and converts it to 4-vectors and computes jet mass)
         #             (Note: X_PFN_train is centered and normalized .. should be ok)
-        masses = np.asarray([energyflow.ms_from_p4s(energyflow.p4s_from_ptyphims(x).sum(axis=0)) for x in X_PFN_train])
-        self.roc_curve_dict['Jet_mass'] = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -masses)
+        masses = np.asarray([energyflow.ms_from_p4s(x.sum(axis=0)) for x in self.X_particles])
+        self.roc_curve_dict['Jet_mass'] = sklearn.metrics.roc_curve(self.y, -masses)
         
         # 2. Multiplicity (Is this a useful observable for pp vs AA?)
         mults = np.asarray([np.count_nonzero(x[:,0]) for x in X_PFN_train])
