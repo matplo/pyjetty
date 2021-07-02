@@ -368,10 +368,11 @@ class AnalyzePPAA(common_base.CommonBase):
                     self.fit_random_forest(K, model_settings)
                 if model == 'neural_network':
                     self.fit_neural_network(K, model_settings)
-                if model == 'pfn':
-                    self.fit_pfn(model_settings)
                 if model == 'lasso':
                     self.fit_lasso(K, model_settings)
+                    
+            if model == 'pfn':
+                self.fit_pfn(model_settings)
                 
         # Plot ROC curve and significance improvement
         self.plot_roc_curves(event_type, jetR, jet_pt_bin, R_max)
@@ -684,7 +685,8 @@ class AnalyzePPAA(common_base.CommonBase):
             if label in ['PFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
                 FPR = value[0]
                 TPR = value[1]
-                plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=label)
+                plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=label,
+                         linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
             else:
                 for i,K in enumerate(self.K_list):
                     FPR = value[K][0]
