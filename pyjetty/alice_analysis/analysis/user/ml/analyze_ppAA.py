@@ -5,6 +5,7 @@ Example class to read quark-gluon dataset
 """
 
 import os
+import sys
 import argparse
 import yaml
 import h5py
@@ -233,36 +234,48 @@ class AnalyzePPAA(common_base.CommonBase):
     def plot_QA(self, event_type, jetR, jet_pt_bin, R_max):
     
         for qa_observable in self.qa_observables:
+            
+            qa_observable_shape = self.qa_results[qa_observable].shape
+            if qa_observable_shape[0] == 0:
+                continue
+            
+            if  self.y.shape[0] != qa_observable_shape[0]:
+                sys.exit(f'ERROR: {qa_observable}: {qa_observable_shape}, y shape: {self.y.shape}')
+               
             jewel_indices = self.y
             pythia_indices = 1 - self.y
-            #print(qa_observable)
-            #print(self.qa_results[qa_observable].shape)
-            if self.y.shape[0] != self.qa_results[qa_observable].shape[0]:
-                continue
             result_jewel = self.qa_results[qa_observable][jewel_indices.astype(bool)]
             result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
             
+            # Plot distributions
+            fig, (ax1, ax2) = plt.subplots(nrows=2)
+            plt.xlabel(rf'{qa_observable}', fontsize=14)
             max = np.amax(result_pythia)*1.2
             bins = np.linspace(0, max, 20)
+            n_jewel,_,_ = ax1.hist(result_jewel,
+                                   bins,
+                                   histtype='step',
+                                   density=True,
+                                   label = 'JEWEL',
+                                   linewidth=2,
+                                   linestyle='-',
+                                   alpha=0.5)
+            n_pythia,_,_ = ax1.hist(result_pythia,
+                                    bins,
+                                    histtype='step',
+                                    density=True,
+                                    label = 'PYTHIA',
+                                    linewidth=2,
+                                    linestyle='-',
+                                    alpha=0.5)
+            legend = ax1.legend(loc='best', fontsize=14, frameon=False)
+
+            # Plot ratio
+            ratio = n_jewel/n_pythia
+            ratio[np.isnan(ratio)] = 0
+            x = (bins[1:] + bins[:-1]) / 2
+            ax2.plot(x, ratio)
             
-            plt.hist(result_jewel,
-                     bins,
-                     histtype='step',
-                     label = 'JEWEL',
-                     linewidth=2,
-                     linestyle='-',
-                     alpha=0.5)
-            plt.hist(result_pythia,
-                     bins,
-                     histtype='step',
-                     label = 'PYTHIA',
-                     linewidth=2,
-                     linestyle='-',
-                     alpha=0.5)
-            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
-            plt.xlabel(rf'{qa_observable}', fontsize=14)
-            plt.yscale('log')
-            legend = plt.legend(loc='best', fontsize=14, frameon=False)
             plt.tight_layout()
             plt.savefig(os.path.join(self.output_dir_i, f'{qa_observable}.pdf'))
             plt.close()
