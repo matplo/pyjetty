@@ -59,8 +59,8 @@ class AnalyzePPAA(common_base.CommonBase):
                            'Multiplicity': sns.xkcd_rgb['medium green'],
                            'Lasso': sns.xkcd_rgb['watermelon']
                           }
-        self.linestyles = {'RandomForest': 'solid',
-                           'DNN': 'dotted',
+        self.linestyles = {'RandomForest': 'dotted',
+                           'DNN': 'solid',
                            'PFN': 'solid',
                            'Jet_mass': 'dotted',
                            'Multiplicity': 'dotted',
