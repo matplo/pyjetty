@@ -134,7 +134,7 @@ class ProcessppAA(common_base.CommonBase):
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
                             
                             # Some QA
-                            self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
+                            self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity']
                             for qa_observable in self.qa_observables:
                                 self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable] = []
 
@@ -313,8 +313,11 @@ class ProcessppAA(common_base.CommonBase):
                 max_jet_pt = jet_pt_bin[1]
                 
                 # Set jet definition and a jet selector
+                # For the hard jets, they should satisfy the pt interval
+                # For the combined jets, they can go outside, since they will be matched to hard jets
                 jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-                jet_selector = fj.SelectorPtMin(min_jet_pt) & fj.SelectorPtMax(max_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+                jet_selector_hard = fj.SelectorPtMin(min_jet_pt) & fj.SelectorPtMax(max_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+                jet_selector_combined = fj.SelectorPtMin(min_jet_pt/2.) & fj.SelectorAbsRapMax(self.eta_max - jetR)
             
                 for i, R_max in enumerate(self.max_distance):
                     #print()
@@ -325,10 +328,10 @@ class ProcessppAA(common_base.CommonBase):
                     # Do jet finding (re-do each time, to make sure matching info gets reset)
                     cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
                     jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
-                    jets_combined_selected = jet_selector(jets_combined)
+                    jets_combined_selected = jet_selector_combined(jets_combined)
                     cs_hard = fj.ClusterSequence(fj_particles_hard, jet_def)
                     jets_hard = fj.sorted_by_pt(cs_hard.inclusive_jets())
-                    jets_hard_selected = jet_selector(jets_hard)
+                    jets_hard_selected = jet_selector_hard(jets_hard)
                     
                     self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = R_max)
 
@@ -357,10 +360,11 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def analyze_jets(self, jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = None):
 
-        # Fill combined jet info
+        # Fill combined jet info, if inside pt interval
         for jet_combined in jets_combined_selected:
-            self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
-            self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
+            if jet_pt_bin[0] < jet_combined.pt() < jet_pt_bin[1]:
+                self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
+                self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
             
         # Fill hard jet info
         if np.isclose(R_max, 0.):
@@ -401,15 +405,18 @@ class ProcessppAA(common_base.CommonBase):
             jet_pt_combined = jet_combined.pt()
             jet_pt_pp = jet_pp.pt()
             
-            delta_pt = (jet_pt_combined - jet_pt_pp)
-            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'].append(delta_pt)
-            
-            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['matched_deltaR'].append(jet_combined.delta_R(jet_pp))
-            matched_pt = fjtools.matched_pt(jet_combined, jet_pp)
-            self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['matched_pt'].append(matched_pt)
+            # Accept jet if hard jet is within pt bin
+            if jet_pt_bin[0] < jet_pt_pp < jet_pt_bin[1]:
+                
+                delta_pt = (jet_pt_combined - jet_pt_pp)
+                self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['delta_pt'].append(delta_pt)
+                
+                self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['matched_deltaR'].append(jet_combined.delta_R(jet_pp))
+                matched_pt = fjtools.matched_pt(jet_combined, jet_pp)
+                self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['matched_pt'].append(matched_pt)
 
-            self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, label)
-            self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, label)
+                self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, label)
+                self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, label)
     
     #---------------------------------------------------------------
     # Analyze jets of a given event.
@@ -459,6 +466,10 @@ class ProcessppAA(common_base.CommonBase):
         leading_particle = self.utils.leading_jet(jet.constituents())
         z_leading = leading_particle.pt() / jet.pt()
         self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['hadron_z'].append(z_leading)
+        
+        # multiplicity
+        n_constituents = len(jet.constituents())
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['multiplicity'].append(n_constituents)
 
     #---------------------------------------------------------------
     # Write four-vectors of jet constituents
