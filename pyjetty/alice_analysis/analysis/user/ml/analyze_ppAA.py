@@ -66,7 +66,7 @@ class AnalyzePPAA(common_base.CommonBase):
                            'PFN': 'solid',
                            'Jet_mass': 'dotted',
                            'Multiplicity': 'dotted',
-                           'Lasso': 'solid'
+                           'Lasso': 'dotted'
                           }
                        
         self.filename = 'nsubjettiness_with_four_vectors.h5'
@@ -76,6 +76,7 @@ class AnalyzePPAA(common_base.CommonBase):
             self.delta_pt_random_cone = hf['delta_pt_random_cone'][:]
         
         self.qa_observables = ['matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z']
+        #'multiplicity'
 
         print(self)
         print()
@@ -92,13 +93,14 @@ class AnalyzePPAA(common_base.CommonBase):
         self.jetR_list = config['jetR']
         self.jet_pt_bins = config['jet_pt_bins']
         self.max_distance_list = config['constituent_subtractor']['max_distance']
-        self.event_types = ['hard', 'combined', 'combined_matched']
+        self.event_types = ['hard', 'combined_matched']
           
         self.n_train = config['n_train']
         self.n_val = config['n_val']
         self.n_test = config['n_test']
         self.n_total = self.n_train + self.n_val + self.n_test
         self.test_frac = 1. * self.n_test / self.n_total
+        self.val_frac = 1. * self.n_val / self.n_total
         
         self.K_list = config['K']
         
@@ -127,6 +129,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['loss'] = config[model]['loss']
                 self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
                 self.model_settings[model]['epochs'] = config[model]['epochs']
+                self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 self.model_settings[model]['metrics'] = config[model]['metrics']
                 self.model_settings[model]['random_state'] = config[model]['random_state']
             
@@ -303,7 +306,7 @@ class AnalyzePPAA(common_base.CommonBase):
             plt.close()
             
         # delta pt -- random cone
-        if event_type == 'combined':
+        if 'combined' in event_type:
             bins = np.linspace(-50, 50, 100)
             mean = np.round(np.mean(self.delta_pt_random_cone),2)
             sigma = np.round(np.std(self.delta_pt_random_cone),2)
@@ -496,21 +499,27 @@ class AnalyzePPAA(common_base.CommonBase):
                     optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
                     metrics=model_settings['metrics'])
 
-        # Train DNN - need validation set here (use test set for now)
-        DNN.fit(self.training_data[K]['X_Nsub_train'], self.y_train, epochs=model_settings['epochs'],
-                validation_data=(self.training_data[K]['X_Nsub_test'], self.y_test))
+        # Train DNN - use validation_split to split into validation set
+        history = DNN.fit(self.training_data[K]['X_Nsub_train'],
+                          self.y_train,
+                          batch_size=model_settings['batch_size'],
+                          epochs=model_settings['epochs'],
+                          validation_split=self.val_frac)
+                          
+        # Plot metrics are a function of epochs
+        self.plot_NN_epochs(model_settings['epochs'], history, K)
         
-        # Get predictions for validation data set
+        # Get predictions for test data set
         y_Nsub_test_preds_DNN = DNN.predict(self.training_data[K]['X_Nsub_test']).reshape(-1)
         
         # Get AUC
         Nsub_auc_DNN = sklearn.metrics.roc_auc_score(self.y_test, y_Nsub_test_preds_DNN)
-        print(f'AUC = {Nsub_auc_DNN} (validation set)')
+        print(f'AUC = {Nsub_auc_DNN} (test set)')
         self.AUC['DNN'].append(Nsub_auc_DNN)
         
         # Get ROC curve results
         self.roc_curve_dict['DNN'][K] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
-    
+
     #---------------------------------------------------------------
     # Fit ML model -- 4. Deep Set/Particle Flow Networks
     #---------------------------------------------------------------
@@ -548,11 +557,15 @@ class AnalyzePPAA(common_base.CommonBase):
                                    F_sizes=model_settings['F_sizes'])
 
         # Train model
-        pfn.fit(X_PFN_train, Y_PFN_train,
-                epochs=model_settings['epochs'],
-                batch_size=model_settings['batch_size'],
-                validation_data=(X_PFN_val, Y_PFN_val),
-                verbose=1)
+        history = pfn.fit(X_PFN_train,
+                          Y_PFN_train,
+                          epochs=model_settings['epochs'],
+                          batch_size=model_settings['batch_size'],
+                          validation_data=(X_PFN_val, Y_PFN_val),
+                          verbose=1)
+                          
+        # Plot metrics are a function of epochs
+        self.plot_NN_epochs(model_settings['epochs'], history)
         
         # Get predictions on test data
         preds_PFN = pfn.predict(X_PFN_test, batch_size=1000)
@@ -661,7 +674,41 @@ class AnalyzePPAA(common_base.CommonBase):
                 for event in events:
                     event[:,pid_i] = np.asarray([PID2FLOAT_MAP.get(pid, 0)
                                                  for pid in event[:,pid_i].astype(int)])        
+
+    #---------------------------------------------------------------
+    # Plot NN metrics are a function of epochs
+    #---------------------------------------------------------------
+    def plot_NN_epochs(self, n_epochs, history, K=None):
+    
+        epoch_list = range(1, n_epochs+1)
+        loss = history.history['loss']
+        acc = history.history['acc']
+        val_loss = history.history['val_loss']
+        val_acc = history.history['val_acc']
         
+        plt.axis([0, n_epochs, 0, 1])
+        plt.xlabel('epochs', fontsize=16)
+        plt.plot(epoch_list, loss, linewidth=2,
+                 linestyle='solid', alpha=0.9, color=self.colors[0],
+                 label='loss')
+        plt.plot(epoch_list, val_loss, linewidth=2,
+                 linestyle='solid', alpha=0.9, color=self.colors[1],
+                 label='val_loss')
+        plt.plot(epoch_list, acc, linewidth=2,
+                 linestyle='dotted', alpha=0.9, color=self.colors[2],
+                 label='acc')
+        plt.plot(epoch_list, val_acc, linewidth=2,
+                 linestyle='dotted', alpha=0.9, color=self.colors[3],
+                 label='val_acc')
+        
+        plt.legend(loc='best')
+        plt.tight_layout()
+        if K:
+            plt.savefig(os.path.join(self.output_dir_i, f'DNN_epoch_{K}.pdf'))
+        else:
+            plt.savefig(os.path.join(self.output_dir_i, f'PFN_epoch.pdf'))
+        plt.close()
+
     #--------------------------------------------------------------- 
     # Plot ROC curves
     #--------------------------------------------------------------- 
@@ -710,7 +757,7 @@ class AnalyzePPAA(common_base.CommonBase):
             if label in ['PFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
                 FPR = value[0]
                 TPR = value[1]
-                plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2, label=label,
+                plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=4, label=label,
                          linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
             else:
                 for i,K in enumerate(self.K_list):
