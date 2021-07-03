@@ -223,6 +223,18 @@ class PlotRAA(common_base.CommonBase):
             filename = self.config_laura['file_theory']
             self.file_theory = ROOT.TFile(filename, 'READ')
             
+            # JETSCAPE
+            bins = np.array(result['jetscape']['xbins'])
+            x = (bins[1:] + bins[:-1]) / 2
+            ratio = np.array(result['jetscape']['ratio'])
+            ratio_err = np.array(result['jetscape']['ratio_err'])
+            n = len(x)
+            xerr = np.zeros(n)
+            g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
+            self.prediction_g_list.append(g)
+            self.label_list.append('JETSCAPE')
+            self.sublabel_list.append('')
+            
             theory_list = result['theory']
             for theory in theory_list:
                 key, label = list(theory.items())[0]
@@ -236,7 +248,7 @@ class PlotRAA(common_base.CommonBase):
                     g = self.translate_rg_theta_g(g, 'theta_g', tgraph=True, ratio=True)
             
                 self.prediction_g_list.append(g)
-
+            
             self.set_draw_order()
         
     #---------------------------------------------------------------
@@ -398,16 +410,19 @@ class PlotRAA(common_base.CommonBase):
         
             if self.centrality[0] == 0:
           
-                myBlankHisto2.GetYaxis().SetRangeUser(0., 2.7)
+                myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.39)
                 
-                ratio_legend = ROOT.TLegend(0.29,0.72,0.43,0.975)
+                ratio_legend = ROOT.TLegend(0.28,0.73,0.42,0.98)
                 self.utils.setup_legend(ratio_legend, 0.06, sep=-0.2)
-                ratio_legend2 = ROOT.TLegend(0.54,0.72,0.7,0.975)
+                ratio_legend2 = ROOT.TLegend(0.53,0.73,0.69,0.98)
                 self.utils.setup_legend(ratio_legend2, 0.06, sep=-0.2)
                 
             elif self.centrality[0] == 30:
           
-                myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.2)
+                if np.isclose(self.zcut, 0.2):
+                    myBlankHisto2.GetYaxis().SetRangeUser(0.4, 1.79)
+                else:
+                    myBlankHisto2.GetYaxis().SetRangeUser(0.4, 1.89)
                 
                 ratio_legend = ROOT.TLegend(0.54,0.65,0.7,0.92)
                 self.utils.setup_legend(ratio_legend, 0.06, sep=-0.2)
@@ -768,31 +783,11 @@ class PlotRAA(common_base.CommonBase):
                     
                     elif type == 'jetscape':
 
-                        plot_ratio_directly = True
-                        if plot_ratio_directly:
-                            x = np.array(theory_prediction['x_ratio'])
-                            ratio = np.array(theory_prediction['ratio'])
-                            ratio_err = np.array(theory_prediction['ratio_err'])
-                        else:
-                            # Get distributions
-                            xbins = np.array(theory_prediction['xbins'])
-                            y_pp = np.array(theory_prediction['y_pp'])
-                            y_pp_err = np.array(theory_prediction['y_pp_err'])
-                            y_AA = np.array(theory_prediction['y_AA'])
-                            y_AA_err = np.array(theory_prediction['y_AA_err'])
+                        bins = np.array(theory_prediction['xbins'])
+                        x = (bins[1:] + bins[:-1]) / 2
+                        ratio = np.array(theory_prediction['ratio'])
+                        ratio_err = np.array(theory_prediction['ratio_err'])
                             
-                            # Rebin distributions
-                            x, y_pp, y_pp_err = self.rebin_arrays(xbins, y_pp, y_pp_err)
-                            _, y_AA, y_AA_err = self.rebin_arrays(xbins, y_AA, y_AA_err)
-
-                            # Form ratio and propagate uncertainty
-                            y_pp_err_fraction = np.divide(y_pp_err, y_pp)
-                            y_AA_err_fraction = np.divide(y_AA_err, y_AA)
-                            
-                            ratio = np.divide(y_AA, y_pp)
-                            ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
-                            ratio_err = np.multiply(ratio, ratio_err_fraction)
-              
                         n = len(x)
                         xerr = np.zeros(n)
                         g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
