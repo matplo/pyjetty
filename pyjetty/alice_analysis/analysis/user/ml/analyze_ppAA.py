@@ -57,6 +57,7 @@ class AnalyzePPAA(common_base.CommonBase):
                        sns.xkcd_rgb['faded purple']
                       ]
         self.colors_pfn = {'PFN': sns.xkcd_rgb['faded purple'],
+                           'EFN': sns.xkcd_rgb['faded red'],
                            'Jet_mass': sns.xkcd_rgb['dark sky blue'],
                            'Multiplicity': sns.xkcd_rgb['medium green'],
                            'Lasso': sns.xkcd_rgb['watermelon']
@@ -64,6 +65,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.linestyles = {'RandomForest': 'dotted',
                            'DNN': 'solid',
                            'PFN': 'solid',
+                           'EFN': 'solid',
                            'Jet_mass': 'dotted',
                            'Multiplicity': 'dotted',
                            'Lasso': 'dotted'
@@ -139,6 +141,12 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['epochs'] = config[model]['epochs']
                 self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 self.model_settings[model]['use_pids'] = config[model]['use_pids']
+                
+            if model == 'efn':
+                self.model_settings[model]['Phi_sizes'] = tuple(config[model]['Phi_sizes'])
+                self.model_settings[model]['F_sizes'] = tuple(config[model]['F_sizes'])
+                self.model_settings[model]['epochs'] = config[model]['epochs']
+                self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 
             if model == 'lasso':
                 self.model_settings[model]['alpha'] = config[model]['alpha']
@@ -376,6 +384,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.AUC = {}
         self.AUC['DNN'] = []
         self.AUC['PFN'] = []
+        self.AUC['EFN'] = []
 
         # Train ML models
         for model in self.models:
@@ -395,6 +404,9 @@ class AnalyzePPAA(common_base.CommonBase):
             
             if model == 'pfn':
                 self.fit_pfn(model_settings)
+                
+            if model == 'efn':
+                self.fit_efn(model_settings)
 
         # Plot AUC vs. K
         self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
@@ -542,7 +554,7 @@ class AnalyzePPAA(common_base.CommonBase):
         #if model_settings['use_pids']:
         #    self.my_remap_pids(X_PFN)
         #else:
-        #    X_PFN = X_PFN[:,:,:3]
+        X_PFN = X_PFN[:,:,:3]
         
         # Check shape
         if self.y.shape[0] != X_PFN.shape[0]:
@@ -593,7 +605,65 @@ class AnalyzePPAA(common_base.CommonBase):
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
         
     #---------------------------------------------------------------
-    # Fit ML model -- 5. Lasso regression
+    # Fit ML model -- 5. (IRC safe) Energy Flow Networks
+    #---------------------------------------------------------------
+    def fit_efn(self, model_settings):
+    
+        # Convert labels to categorical
+        Y_EFN = energyflow.utils.to_categorical(self.y, num_classes=2)
+                        
+        # (pT,y,phi,m=0)
+        X_EFN = self.X_particles # CONTINUE EDITING HERE.
+        
+        # Preprocess by centering jets and normalizing pts
+        for x_EFN in X_EFN:
+            mask = x_EFN[:,0] > 0
+            yphi_avg = np.average(x_EFN[mask,1:3], weights=x_EFN[mask,0], axis=0)
+            x_EFN[mask,1:3] -= yphi_avg
+            x_EFN[mask,0] /= x_EFN[:,0].sum()
+        
+        # Do not use PID for EFNs
+        X_EFN = X_EFN[:,:,:3]
+        
+        # Check shape
+        if self.y.shape[0] != X_EFN.shape[0]:
+            print(f'Number of labels {self.y.shape} does not match number of jets {X_EFN.shape} ! ')
+
+        # Split data into train, val and test sets 
+        # and separate momentum fraction z and angles (y,phi)
+        (z_EFN_train, z_EFN_val, z_EFN_test, 
+         p_EFN_train, p_EFN_val, p_EFN_test,
+         Y_EFN_train, Y_EFN_val, Y_EFN_test) = energyflow.utils.data_split(X_EFN[:,:,0], X_EFN[:,:,1:], Y_EFN, 
+                                                                           val=self.n_val, test=self.n_test)
+        
+        # Build architecture
+        efn = energyflow.archs.EFN(input_dim=2,
+                                   Phi_sizes=model_settings['Phi_sizes'],
+                                   F_sizes=model_settings['F_sizes'])
+
+        # Train model
+        history = efn.fit([z_EFN_train,p_EFN_train],
+                          Y_EFN_train,
+                          epochs=model_settings['epochs'],
+                          batch_size=model_settings['batch_size'],
+                          validation_data=([z_EFN_val,p_EFN_val], Y_EFN_val),
+                          verbose=1)
+                          
+        # Plot metrics are a function of epochs
+        self.plot_NN_epochs(model_settings['epochs'], history)
+        
+        # Get predictions on test data
+        preds_EFN = efn.predict([z_EFN_test,p_EFN_test], batch_size=1000)
+
+        # Get AUC and ROC curve + make plot
+        auc_EFN = sklearn.metrics.roc_auc_score(Y_EFN_test[:,1], preds_EFN[:,1])
+        print('(IRC safe) Energy Flow Networks: AUC = {} (test set)'.format(auc_EFN))
+        self.AUC['EFN'].append(auc_EFN)
+        
+        self.roc_curve_dict['EFN'] = sklearn.metrics.roc_curve(Y_EFN_test[:,1], preds_EFN[:,1])
+        
+    #---------------------------------------------------------------
+    # Fit ML model -- 6. Lasso regression
     #---------------------------------------------------------------
     def fit_lasso(self, K, model_settings):
         print(f'Training Lasso regression...')
@@ -706,7 +776,7 @@ class AnalyzePPAA(common_base.CommonBase):
         if K:
             plt.savefig(os.path.join(self.output_dir_i, f'DNN_epoch_{K}.pdf'))
         else:
-            plt.savefig(os.path.join(self.output_dir_i, f'PFN_epoch.pdf'))
+            plt.savefig(os.path.join(self.output_dir_i, f'PFN_epoch.pdf')) # NEED TO EDIT HERE?
         plt.close()
 
     #--------------------------------------------------------------- 
@@ -723,7 +793,7 @@ class AnalyzePPAA(common_base.CommonBase):
     
         for label,value in self.roc_curve_dict.items():
             
-            if label in ['PFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
+            if label in ['PFN','EFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
                 FPR = value[0]
                 TPR = value[1]
                 plt.plot(FPR, TPR, linewidth=4, label=label,
@@ -754,7 +824,7 @@ class AnalyzePPAA(common_base.CommonBase):
             
         for label,value in self.roc_curve_dict.items():
             
-            if label in ['PFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
+            if label in ['PFN', 'EFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
                 FPR = value[0]
                 TPR = value[1]
                 plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=4, label=label,
@@ -783,10 +853,17 @@ class AnalyzePPAA(common_base.CommonBase):
         plt.ylabel('AUC', fontsize=16)
             
         for label,value in self.AUC.items():
+            print(label,value)
             if label == 'PFN':
                 AUC_PFN = value[0]
                 plt.axline((0, AUC_PFN), (1, AUC_PFN), linewidth=4, label=label,
                            linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
+                
+                print(AUC_PFN)    
+            elif label == 'EFN':
+                AUC_EFN = value[0]
+                plt.axline((0, AUC_EFN), (1, AUC_EFN), linewidth=4, label=label,
+                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])            
             elif label == 'DNN':
                 plt.plot(self.K_list, value, linewidth=2,
                          linestyle=self.linestyles[label], alpha=0.9, color=self.colors[-1],
