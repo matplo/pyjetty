@@ -50,6 +50,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Initialize config file
         self.initialize_config()
         
+        alpha_list = self.config['lasso']['alpha']
         self.colors = {'PFN': sns.xkcd_rgb['faded purple'],
                        'EFN': sns.xkcd_rgb['faded red'],
                        'DNN (K = 10)': sns.xkcd_rgb['watermelon'],
@@ -58,9 +59,9 @@ class AnalyzePPAA(common_base.CommonBase):
                        'DNN (K = 40)': sns.xkcd_rgb['dark sky blue'],
                        'DNN (K = 50)': sns.xkcd_rgb['faded purple'],
                        'Lasso': sns.xkcd_rgb['watermelon'],
-                       'Lasso (alpha = 0)': sns.xkcd_rgb['watermelon'],
-                       'Lasso (alpha = 0.01)': sns.xkcd_rgb['light brown'],
-                       'Lasso (alpha = 0.1)': sns.xkcd_rgb['faded purple'],
+                       f'Lasso (alpha = {alpha_list[0]})': sns.xkcd_rgb['watermelon'],
+                       f'Lasso (alpha = {alpha_list[1]})': sns.xkcd_rgb['light brown'],
+                       f'Lasso (alpha = {alpha_list[2]})': sns.xkcd_rgb['faded purple'],
                        'Jet_mass': sns.xkcd_rgb['faded red'],
                        'Multiplicity': sns.xkcd_rgb['medium green']
                       }
@@ -153,6 +154,11 @@ class AnalyzePPAA(common_base.CommonBase):
                 
             if model == 'lasso':
                 self.model_settings[model]['alpha'] = config[model]['alpha']
+                self.model_settings[model]['max_iter'] = config[model]['max_iter']
+                self.model_settings[model]['tol'] = [float(x) for x in config[model]['tol']]
+                self.model_settings[model]['n_iter'] = config[model]['n_iter']
+                self.model_settings[model]['cv'] = config[model]['cv']
+                self.model_settings[model]['random_state'] = config[model]['random_state']
 
     #---------------------------------------------------------------
     # Main processing function
@@ -269,9 +275,10 @@ class AnalyzePPAA(common_base.CommonBase):
                     self.fit_random_forest(K, model_settings)
                 if model == 'neural_network':
                     self.fit_neural_network(K, model_settings)
-                if model == 'lasso':
-                    if K in self.K_ROC_list:
-                        self.fit_lasso(K, model_settings, event_type, jetR, jet_pt_bin, R_max)
+                
+            if model == 'lasso':
+                self.K_lasso = 30
+                self.fit_lasso(self.K_lasso, model_settings, event_type, jetR, jet_pt_bin, R_max)
             
             if model == 'pfn':
                 self.fit_pfn(model_settings)
@@ -280,46 +287,50 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.fit_efn(model_settings)
 
         # Plot AUC vs. K
-        self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
+        if 'pfn' in self.models and 'neural_network' in self.models:
+            self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
         
         # Plot several versions of ROC curves and significance improvement
-        roc_list = {}
-        roc_list['PFN'] = self.roc_curve_dict['PFN']
-        roc_list['EFN'] = self.roc_curve_dict['EFN']
-        for K in self.K_ROC_list:
-            roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
-        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
-        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
+        if 'pfn' in self.models and 'neural_network' in self.models and 'efn' in self.models:
+            roc_list = {}
+            roc_list['PFN'] = self.roc_curve_dict['PFN']
+            roc_list['EFN'] = self.roc_curve_dict['EFN']
+            for K in self.K_ROC_list:
+                roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
+            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
         
-        roc_list = {}
-        roc_list['PFN'] = self.roc_curve_dict['PFN']
-        for K in self.K_ROC_list:
-            roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
-        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
-        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
+        if 'pfn' in self.models and 'neural_network' in self.models:
+            roc_list = {}
+            roc_list['PFN'] = self.roc_curve_dict['PFN']
+            for K in self.K_ROC_list:
+                roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
+            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
         
-        roc_list = {}
-        for K in self.K_ROC_list:
-            roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
-        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
-        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
+        if 'neural_network' in self.models:
+            roc_list = {}
+            for K in self.K_ROC_list:
+                roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
+            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
         
-        roc_list = {}
-        K = 40
-        for alpha in self.config['lasso']['alpha']:
-            roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][K][alpha]
-        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
-        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
+        if 'lasso' in self.models:
+            roc_list = {}
+            for alpha in self.config['lasso']['alpha']:
+                roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
+            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
         
-        roc_list = {}
-        K = 40
-        roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
-        roc_list['Jet_mass'] = self.roc_curve_dict['Jet_mass']
-        roc_list['Multiplicity'] = self.roc_curve_dict['Multiplicity']
-        for alpha in self.config['lasso']['alpha']:
-            roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][K][alpha]
-        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
-        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
+        if 'pfn' in self.models and 'neural_network' in self.models and 'lasso' in self.models:
+            roc_list = {}
+            roc_list[f'DNN (K = {self.K_lasso})'] = self.roc_curve_dict['DNN'][K]
+            roc_list['Jet_mass'] = self.roc_curve_dict['Jet_mass']
+            roc_list['Multiplicity'] = self.roc_curve_dict['Multiplicity']
+            for alpha in self.config['lasso']['alpha']:
+                roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
+            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
         
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
@@ -591,8 +602,9 @@ class AnalyzePPAA(common_base.CommonBase):
         
             # Use Lasso regression
             # The parameter alpha multiplies to L1 term
-            lasso_clf = sklearn.linear_model.Lasso(alpha=alpha)
-            
+            # If convergence error: can increase max_iter and/or tol, and/or set normalize=True
+            lasso_clf = sklearn.linear_model.LassoCV(alphas=[alpha], max_iter=model_settings['max_iter'], cv=model_settings['cv'])
+
             # Fit model
             lasso_clf.fit(X_train_lasso, y_train_lasso)
             
@@ -600,14 +612,14 @@ class AnalyzePPAA(common_base.CommonBase):
             print('Coefficients of lasso regression: c_N^beta * log(tau_n^beta):\n {}'.format(lasso_clf.coef_))
 
             # Make predictions for test set
-            preds_lasso = lasso_clf.predict(X_test_lasso)
+            y_predict_test = lasso_clf.predict(X_test_lasso)
             
             # Compute AUC
-            auc_lasso = sklearn.metrics.roc_auc_score(y_test_lasso, preds_lasso)
-            print(f'AUC = {auc_lasso} (test set)')
+            auc_lasso_test = sklearn.metrics.roc_auc_score(y_test_lasso, y_predict_test)
+            print(f'AUC = {auc_lasso_test} (test set)')
             
             # ROC curve
-            self.roc_curve_dict['Lasso'][K][alpha] = sklearn.metrics.roc_curve(y_test_lasso, preds_lasso)
+            self.roc_curve_dict['Lasso'][K][alpha] = sklearn.metrics.roc_curve(y_test_lasso, y_predict_test)
 
     #--------------------------------------------------------------- 
     # My own remap PID routine (similar to remap_pids from energyflow)

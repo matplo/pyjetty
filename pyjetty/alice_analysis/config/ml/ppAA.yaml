@@ -99,5 +99,13 @@ efn:
     
 lasso:
 
-    # Network architecture parameters
-    alpha: [0, 0.01, 0.1]        # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    # Model hyperparameters
+    alpha: [0.01, 0.1, 1.]        # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    max_iter: 10000               # max number of epochs
+    tol: [1e-5, 1e-4, 1e-3]      # criteria to stop training
+
+    # Hyperparameter tuning
+    n_iter: 3                    # number of random hyperparameter sets to try
+    cv: 5                        # number of cross-validation folds
+    
+    random_state: null           # seed for shuffling data (set to an int to have reproducible results)
