@@ -8,8 +8,8 @@
 # (The processing script will compute and store the maximum K provided)
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
-K: [10, 20, 30, 40, 50]
-#K: [2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50]
+K: [2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50]
+K_ROC: [10, 20, 30, 40, 50]
 
 #------------------------------------------------------------------------------
 # These parameters are used only in the process script
@@ -42,7 +42,7 @@ n_val: 2000
 n_test: 3000
 
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso
-models: [neural_network, efn]
+models: [neural_network, pfn, efn, lasso]
 
 linear:
 
@@ -83,7 +83,7 @@ pfn:
     F_sizes: [100, 100, 100]
 
     # Network training parameters
-    epochs: 3 # 0                   # number of training epochs
+    epochs: 30                   # number of training epochs
     batch_size: 500
     use_pids: True               # Use PID information
     
@@ -100,4 +100,4 @@ efn:
 lasso:
 
     # Network architecture parameters
-    alpha: 0.01                 # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    alpha: [0, 0.01, 0.1]        # Constant multiplying the L1 term. 0 corresponds to the standard regression

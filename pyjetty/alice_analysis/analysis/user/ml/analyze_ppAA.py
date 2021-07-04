@@ -50,22 +50,23 @@ class AnalyzePPAA(common_base.CommonBase):
         # Initialize config file
         self.initialize_config()
         
-        self.colors = [sns.xkcd_rgb['watermelon'],
-                       sns.xkcd_rgb['light brown'],
-                       sns.xkcd_rgb['medium green'],
-                       sns.xkcd_rgb['dark sky blue'],
-                       sns.xkcd_rgb['faded purple']
-                      ]
-        self.colors_pfn = {'PFN': sns.xkcd_rgb['faded purple'],
-                           'EFN': sns.xkcd_rgb['faded red'],
-                           'Jet_mass': sns.xkcd_rgb['dark sky blue'],
-                           'Multiplicity': sns.xkcd_rgb['medium green'],
-                           'Lasso': sns.xkcd_rgb['watermelon']
-                          }
-        self.linestyles = {'RandomForest': 'dotted',
-                           'DNN': 'solid',
-                           'PFN': 'solid',
+        self.colors = {'PFN': sns.xkcd_rgb['faded purple'],
+                       'EFN': sns.xkcd_rgb['faded red'],
+                       'DNN (K = 10)': sns.xkcd_rgb['watermelon'],
+                       'DNN (K = 20)': sns.xkcd_rgb['light brown'],
+                       'DNN (K = 30)': sns.xkcd_rgb['medium green'],
+                       'DNN (K = 40)': sns.xkcd_rgb['dark sky blue'],
+                       'DNN (K = 50)': sns.xkcd_rgb['faded purple'],
+                       'Lasso': sns.xkcd_rgb['watermelon'],
+                       'Lasso (alpha = 0)': sns.xkcd_rgb['watermelon'],
+                       'Lasso (alpha = 0.01)': sns.xkcd_rgb['light brown'],
+                       'Lasso (alpha = 0.1)': sns.xkcd_rgb['faded purple'],
+                       'Jet_mass': sns.xkcd_rgb['faded red'],
+                       'Multiplicity': sns.xkcd_rgb['medium green']
+                      }
+        self.linestyles = {'PFN': 'solid',
                            'EFN': 'solid',
+                           'DNN': 'solid',
                            'Jet_mass': 'dotted',
                            'Multiplicity': 'dotted',
                            'Lasso': 'dotted'
@@ -105,8 +106,10 @@ class AnalyzePPAA(common_base.CommonBase):
         self.val_frac = 1. * self.n_val / self.n_total
         
         self.K_list = config['K']
+        self.K_ROC_list = config['K_ROC']
         
         # Initialize model-specific settings
+        self.config = config
         self.models = config['models']
         self.model_settings = {}
         for model in self.models:
@@ -228,18 +231,575 @@ class AnalyzePPAA(common_base.CommonBase):
                             self.roc_curve_dict['RandomForest'] = {}
                         if 'neural_network' in self.models:
                             self.roc_curve_dict['DNN'] = {}
-                            
+                        if 'lasso' in self.models:
+                            self.roc_curve_dict['Lasso'] = {}
+
                         # Plot the input data
                         jet_pt_bin_rounded = [int(pt) for pt in jet_pt_bin]
                         self.plot_QA(event_type, jetR, jet_pt_bin_rounded, R_max)
                         
                         for K in self.K_list:
-                            if K <= 2:
+                            if K <= 4:
                                 self.plot_training_data(K)
                            
                         # Train models
                         self.train_models(event_type, jetR, jet_pt_bin_rounded, R_max)
+    
+    #---------------------------------------------------------------
+    # Train models
+    #---------------------------------------------------------------
+    def train_models(self, event_type, jetR, jet_pt_bin, R_max):
+    
+        # Dict to store AUC
+        self.AUC = {}
+        self.AUC['DNN'] = []
+        self.AUC['PFN'] = []
+        self.AUC['EFN'] = []
 
+        # Train ML models
+        for model in self.models:
+        
+            model_settings = self.model_settings[model]
+            
+            for K in self.K_list:
+            
+                if model == 'linear':
+                    self.fit_linear_model(K, model_settings)
+                if model == 'random_forest':
+                    self.fit_random_forest(K, model_settings)
+                if model == 'neural_network':
+                    self.fit_neural_network(K, model_settings)
+                if model == 'lasso':
+                    if K in self.K_ROC_list:
+                        self.fit_lasso(K, model_settings, event_type, jetR, jet_pt_bin, R_max)
+            
+            if model == 'pfn':
+                self.fit_pfn(model_settings)
+                
+            if model == 'efn':
+                self.fit_efn(model_settings)
+
+        # Plot AUC vs. K
+        self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
+        
+        # Plot several versions of ROC curves and significance improvement
+        roc_list = {}
+        roc_list['PFN'] = self.roc_curve_dict['PFN']
+        roc_list['EFN'] = self.roc_curve_dict['EFN']
+        for K in self.K_ROC_list:
+            roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
+        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
+        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
+        
+        roc_list = {}
+        roc_list['PFN'] = self.roc_curve_dict['PFN']
+        for K in self.K_ROC_list:
+            roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
+        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
+        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
+        
+        roc_list = {}
+        for K in self.K_ROC_list:
+            roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
+        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
+        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
+        
+        roc_list = {}
+        K = 40
+        for alpha in self.config['lasso']['alpha']:
+            roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][K][alpha]
+        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
+        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
+        
+        roc_list = {}
+        K = 40
+        roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
+        roc_list['Jet_mass'] = self.roc_curve_dict['Jet_mass']
+        roc_list['Multiplicity'] = self.roc_curve_dict['Multiplicity']
+        for alpha in self.config['lasso']['alpha']:
+            roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][K][alpha]
+        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
+        self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
+        
+    #---------------------------------------------------------------
+    # Fit ML model -- 1. SGDClassifier
+    #   - Linear model (SVM by default, w/o kernel) with SGD training
+    #   - For best performance, data should have zero mean and unit variance
+    #---------------------------------------------------------------
+    def fit_linear_model(self, K, model_settings):
+        print(f'Training SGDClassifier, K={K}...')
+        
+        # Define model
+        sgd_clf = sklearn.linear_model.SGDClassifier(loss=model_settings['loss'],
+                                                     max_iter=model_settings['max_iter'],
+                                                     learning_rate=model_settings['learning_rate'],
+                                                     early_stopping=model_settings['early_stopping'],
+                                                     random_state=model_settings['random_state'])
+
+        # Optimize hyperparameters with random search, using cross-validation to determine best set
+        # Here we just search over discrete values, although can also easily specify a distribution
+        param_distributions = {'penalty': model_settings['penalty'],
+                               'alpha': model_settings['alpha'],
+                               'tol': model_settings['tol']}
+        randomized_search = sklearn.model_selection.RandomizedSearchCV(sgd_clf, param_distributions,
+                                                                       n_iter=model_settings['n_iter'],
+                                                                       cv=model_settings['cv'],
+                                                                       random_state=model_settings['random_state'])
+        search_result = randomized_search.fit(self.training_data[K]['X_Nsub_train'], self.y_train)
+        final_model = search_result.best_estimator_
+        result_info = search_result.cv_results_
+        print(f'Best params: {search_result.best_params_}')
+
+        # Get predictions for the test set
+        #y_predict_train = final_model.predict(self.training_data[K]['X_Nsub_train'])
+        #y_predict_test = final_model.predict(self.training_data[K]['X_Nsub_test'])
+        
+        y_predict_train = sklearn.model_selection.cross_val_predict(sgd_clf, self.training_data[K]['X_Nsub_train'], self.y_train, cv=3,method="decision_function")
+        
+        # Compare AUC on train set and test set
+        AUC_train = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
+        print(f'AUC = {AUC_train} (train set)')
+        AUC_test = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
+        print(f'AUC = {AUC_test} (test set)')
+        print()
+
+        # Compute ROC curve: the roc_curve() function expects labels and scores
+        self.roc_curve_dict['SGDClassifier'][K] = sklearn.metrics.roc_curve(self.y_train, y_predict_train)
+    
+        # Check number of threhsolds used for ROC curve
+        # print('thresholds: {}'.format(self.roc_curve_dict['SGDClassifier'][K][2]))
+        
+        # Plot confusion matrix
+        #self.plot_confusion_matrix(self.y_train, y_predict_train, f'linear_K{K}')
+ 
+    #---------------------------------------------------------------
+    # Fit ML model -- 2. Random Forest Classifier
+    #---------------------------------------------------------------
+    def fit_random_forest(self, K, model_settings):
+        print(f'Training Random Forest Classifier, K={K}...')
+        
+        forest_clf = sklearn.ensemble.RandomForestClassifier(random_state=model_settings['random_state'])
+        y_Nsub_probas_forest = sklearn.model_selection.cross_val_predict(forest_clf, self.training_data[K]['X_Nsub_train'], self.y_train, cv=3,method="predict_proba")
+        
+        # The output here are class probabilities. We us use the positive class's probability for the ROC curve
+        y_Nsub_scores_forest = y_Nsub_probas_forest[:,1]
+        
+        print(y_Nsub_scores_forest)
+        
+        # Compute AUC & ROC curve
+        Nsub_auc_RFC = sklearn.metrics.roc_auc_score(self.y_train,y_Nsub_scores_forest)
+        print(f'AUC = {Nsub_auc_RFC} (cross validation)')
+        print()
+
+        self.roc_curve_dict['RandomForest'][K] = sklearn.metrics.roc_curve(self.y_train,y_Nsub_scores_forest)
+
+    #---------------------------------------------------------------
+    # Fit ML model -- 3. Dense Neural network with Keras
+    #---------------------------------------------------------------
+    def fit_neural_network(self, K, model_settings):
+        print(f'Training Dense Neural Network, K={K}...')
+        
+        # input_shape expects shape of an instance (not including batch size)
+        DNN = keras.models.Sequential()
+        DNN.add(keras.layers.Flatten(input_shape=[self.training_data[K]['X_Nsub_train'].shape[1]]))
+        DNN.add(keras.layers.Dense(300,activation='relu'))
+        DNN.add(keras.layers.Dense(300,activation='relu'))
+        DNN.add(keras.layers.Dense(100,activation='relu'))
+        DNN.add(keras.layers.Dense(1,activation='sigmoid')) # softmax? # Last layer has to be 1 or 2 for binary classification?
+
+        # Print DNN summary
+        DNN.summary()
+        
+        # Compile DNN
+        opt = keras.optimizers.Adam(lr=model_settings['learning_rate']) # if error, change name to learning_rate
+        DNN.compile(loss=model_settings['loss'],
+                    optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
+                    metrics=model_settings['metrics'])
+
+        # Train DNN - use validation_split to split into validation set
+        history = DNN.fit(self.training_data[K]['X_Nsub_train'],
+                          self.y_train,
+                          batch_size=model_settings['batch_size'],
+                          epochs=model_settings['epochs'],
+                          validation_split=self.val_frac)
+                          
+        # Plot metrics are a function of epochs
+        if K in self.K_ROC_list:
+            self.plot_NN_epochs(model_settings['epochs'], history, 'DNN', K)
+        
+        # Get predictions for test data set
+        y_Nsub_test_preds_DNN = DNN.predict(self.training_data[K]['X_Nsub_test']).reshape(-1)
+        
+        # Get AUC
+        Nsub_auc_DNN = sklearn.metrics.roc_auc_score(self.y_test, y_Nsub_test_preds_DNN)
+        print(f'AUC = {Nsub_auc_DNN} (test set)')
+        self.AUC['DNN'].append(Nsub_auc_DNN)
+        
+        # Get ROC curve results
+        self.roc_curve_dict['DNN'][K] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
+
+    #---------------------------------------------------------------
+    # Fit ML model -- 4. Deep Set/Particle Flow Networks
+    #---------------------------------------------------------------
+    def fit_pfn(self, model_settings):
+    
+        # Convert labels to categorical
+        Y_PFN = energyflow.utils.to_categorical(self.y, num_classes=2)
+                        
+        # (pT,y,phi,m=0)
+        X_PFN = self.X_particles
+        
+        # Preprocess by centering jets and normalizing pts
+        for x_PFN in X_PFN:
+            mask = x_PFN[:,0] > 0
+            yphi_avg = np.average(x_PFN[mask,1:3], weights=x_PFN[mask,0], axis=0)
+            x_PFN[mask,1:3] -= yphi_avg
+            x_PFN[mask,0] /= x_PFN[:,0].sum()
+        
+        # Handle particle id channel !! Note: If changed to pT,y,phi,m the 4th component is not PID but m .. fix later
+        #if model_settings['use_pids']:
+        #    self.my_remap_pids(X_PFN)
+        #else:
+        X_PFN = X_PFN[:,:,:3]
+        
+        # Check shape
+        if self.y.shape[0] != X_PFN.shape[0]:
+            print(f'Number of labels {self.y.shape} does not match number of jets {X_PFN.shape} ! ')
+
+        # Split data into train, val and test sets
+        (X_PFN_train, X_PFN_val, X_PFN_test, Y_PFN_train, Y_PFN_val, Y_PFN_test) = energyflow.utils.data_split(X_PFN, Y_PFN,
+                                                                                             val=self.n_val, test=self.n_test)
+        # Build architecture
+        pfn = energyflow.archs.PFN(input_dim=X_PFN.shape[-1],
+                                   Phi_sizes=model_settings['Phi_sizes'],
+                                   F_sizes=model_settings['F_sizes'])
+
+        # Train model
+        history = pfn.fit(X_PFN_train,
+                          Y_PFN_train,
+                          epochs=model_settings['epochs'],
+                          batch_size=model_settings['batch_size'],
+                          validation_data=(X_PFN_val, Y_PFN_val),
+                          verbose=1)
+                          
+        # Plot metrics are a function of epochs
+        self.plot_NN_epochs(model_settings['epochs'], history, 'PFN')
+        
+        # Get predictions on test data
+        preds_PFN = pfn.predict(X_PFN_test, batch_size=1000)
+
+        # Get AUC and ROC curve + make plot
+        auc_PFN = sklearn.metrics.roc_auc_score(Y_PFN_test[:,1], preds_PFN[:,1])
+        print('Particle Flow Networks/Deep Sets: AUC = {} (test set)'.format(auc_PFN))
+        self.AUC['PFN'].append(auc_PFN)
+        
+        self.roc_curve_dict['PFN'] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
+        
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        
+        # Now we compare the PFN ROC curve to single observables
+
+        # 1. Jet mass (Note: This takes in (pt,y,phi) and converts it to 4-vectors and computes jet mass)
+        #             (Note: X_PFN_train is centered and normalized .. should be ok)
+        masses = np.asarray([energyflow.ms_from_p4s(energyflow.p4s_from_ptyphims(x).sum(axis=0)) for x in self.X_particles])
+        self.roc_curve_dict['Jet_mass'] = sklearn.metrics.roc_curve(self.y, -masses)
+        
+        # 2. Multiplicity (Is this a useful observable for pp vs AA?)
+        mults = np.asarray([np.count_nonzero(x[:,0]) for x in X_PFN_train])
+        self.roc_curve_dict['Multiplicity'] = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -mults)
+
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        
+    #---------------------------------------------------------------
+    # Fit ML model -- 5. (IRC safe) Energy Flow Networks
+    #---------------------------------------------------------------
+    def fit_efn(self, model_settings):
+    
+        # Convert labels to categorical
+        Y_EFN = energyflow.utils.to_categorical(self.y, num_classes=2)
+                        
+        # (pT,y,phi,m=0)
+        X_EFN = self.X_particles # CONTINUE EDITING HERE.
+        
+        # Preprocess by centering jets and normalizing pts
+        for x_EFN in X_EFN:
+            mask = x_EFN[:,0] > 0
+            yphi_avg = np.average(x_EFN[mask,1:3], weights=x_EFN[mask,0], axis=0)
+            x_EFN[mask,1:3] -= yphi_avg
+            x_EFN[mask,0] /= x_EFN[:,0].sum()
+        
+        # Do not use PID for EFNs
+        X_EFN = X_EFN[:,:,:3]
+        
+        # Check shape
+        if self.y.shape[0] != X_EFN.shape[0]:
+            print(f'Number of labels {self.y.shape} does not match number of jets {X_EFN.shape} ! ')
+
+        # Split data into train, val and test sets 
+        # and separate momentum fraction z and angles (y,phi)
+        (z_EFN_train, z_EFN_val, z_EFN_test, 
+         p_EFN_train, p_EFN_val, p_EFN_test,
+         Y_EFN_train, Y_EFN_val, Y_EFN_test) = energyflow.utils.data_split(X_EFN[:,:,0], X_EFN[:,:,1:], Y_EFN, 
+                                                                           val=self.n_val, test=self.n_test)
+        
+        # Build architecture
+        efn = energyflow.archs.EFN(input_dim=2,
+                                   Phi_sizes=model_settings['Phi_sizes'],
+                                   F_sizes=model_settings['F_sizes'])
+
+        # Train model
+        history = efn.fit([z_EFN_train,p_EFN_train],
+                          Y_EFN_train,
+                          epochs=model_settings['epochs'],
+                          batch_size=model_settings['batch_size'],
+                          validation_data=([z_EFN_val,p_EFN_val], Y_EFN_val),
+                          verbose=1)
+                          
+        # Plot metrics are a function of epochs
+        self.plot_NN_epochs(model_settings['epochs'], history, 'EFN')
+        
+        # Get predictions on test data
+        preds_EFN = efn.predict([z_EFN_test,p_EFN_test], batch_size=1000)
+
+        # Get AUC and ROC curve + make plot
+        auc_EFN = sklearn.metrics.roc_auc_score(Y_EFN_test[:,1], preds_EFN[:,1])
+        print('(IRC safe) Energy Flow Networks: AUC = {} (test set)'.format(auc_EFN))
+        self.AUC['EFN'].append(auc_EFN)
+        
+        self.roc_curve_dict['EFN'] = sklearn.metrics.roc_curve(Y_EFN_test[:,1], preds_EFN[:,1])
+        
+    #---------------------------------------------------------------
+    # Fit ML model -- 6. Lasso regression
+    #---------------------------------------------------------------
+    def fit_lasso(self, K, model_settings, event_type, jetR, jet_pt_bin, R_max):
+        print(f'Training Lasso regression...')
+        
+        # Take the logarithm of the data and labels, such that the product observable becomes a sum
+        # and the exponents in the product observable become the regression weights
+        # Not taking log of test labels to make ROC curve later which requires integers for the test data
+        X_train_lasso = np.log(self.training_data[K]['X_Nsub_train']+0.0001)
+        X_test_lasso = np.log(self.training_data[K]['X_Nsub_test']+0.0001)
+        
+        eps = .01
+        y_train_lasso = np.log(eps + (1. - 2. * eps) * self.y_train)
+        y_test_lasso = self.y_test
+        
+        # Loop through values of regularization parameter
+        self.roc_curve_dict['Lasso'][K] = {}
+        for alpha in model_settings['alpha']:
+            print(f'Fitting lasso regression with alpha = {alpha}')
+        
+            # Use Lasso regression
+            # The parameter alpha multiplies to L1 term
+            lasso_clf = sklearn.linear_model.Lasso(alpha=alpha)
+            
+            # Fit model
+            lasso_clf.fit(X_train_lasso, y_train_lasso)
+            
+            # Print coefficients of log(tau_N^beta) or exponents of the product observable
+            print('Coefficients of lasso regression: c_N^beta * log(tau_n^beta):\n {}'.format(lasso_clf.coef_))
+
+            # Make predictions for test set
+            preds_lasso = lasso_clf.predict(X_test_lasso)
+            
+            # Compute AUC
+            auc_lasso = sklearn.metrics.roc_auc_score(y_test_lasso, preds_lasso)
+            print(f'AUC = {auc_lasso} (test set)')
+            
+            # ROC curve
+            self.roc_curve_dict['Lasso'][K][alpha] = sklearn.metrics.roc_curve(y_test_lasso, preds_lasso)
+
+    #--------------------------------------------------------------- 
+    # My own remap PID routine (similar to remap_pids from energyflow)
+    #---------------------------------------------------------------         
+    def my_remap_pids(self,events, pid_i=3, error_on_unknown=True):
+        # PDGid to small float dictionary
+        PID2FLOAT_MAP = {0: 0.0, 22: 1.4,
+                         211: .1, -211: .2,
+                         321: .3, -321: .4,
+                         130: .5,
+                         2112: .6, -2112: .7,
+                         2212: .8, -2212: .9,
+                         11: 1.0, -11: 1.1,
+                         13: 1.2, -13: 1.3}
+        
+        """Remaps PDG id numbers to small floats for use in a neural network.
+        `events` are modified in place and nothing is returned.
+    
+        **Arguments**
+    
+        - **events** : _numpy.ndarray_
+            - The events as an array of arrays of particles.
+        - **pid_i** : _int_
+            - The column index corresponding to pid information in an event.
+        - **error_on_unknown** : _bool_
+            - Controls whether a `KeyError` is raised if an unknown PDG ID is
+            encountered. If `False`, unknown PDG IDs will map to zero.
+        """
+    
+        if events.ndim == 3:
+            pids = events[:,:,pid_i].astype(int).reshape((events.shape[0]*events.shape[1]))
+            if error_on_unknown:
+                events[:,:,pid_i] = np.asarray([PID2FLOAT_MAP[pid]
+                                                for pid in pids]).reshape(events.shape[:2])
+            else:
+                events[:,:,pid_i] = np.asarray([PID2FLOAT_MAP.get(pid, 0)
+                                                for pid in pids]).reshape(events.shape[:2])
+        else:
+            if error_on_unknown:
+                for event in events:
+                    event[:,pid_i] = np.asarray([PID2FLOAT_MAP[pid]
+                                                 for pid in event[:,pid_i].astype(int)])
+            else:
+                for event in events:
+                    event[:,pid_i] = np.asarray([PID2FLOAT_MAP.get(pid, 0)
+                                                 for pid in event[:,pid_i].astype(int)])        
+
+    #---------------------------------------------------------------
+    # Plot NN metrics are a function of epochs
+    #---------------------------------------------------------------
+    def plot_NN_epochs(self, n_epochs, history, label, K=None):
+    
+        epoch_list = range(1, n_epochs+1)
+        loss = history.history['loss']
+        acc = history.history['acc']
+        val_loss = history.history['val_loss']
+        val_acc = history.history['val_acc']
+        
+        plt.axis([0, n_epochs, 0, 1])
+        plt.xlabel('epochs', fontsize=16)
+        plt.plot(epoch_list, loss, linewidth=2,
+                 linestyle='solid', alpha=0.9, color=sns.xkcd_rgb['dark sky blue'],
+                 label='loss')
+        plt.plot(epoch_list, val_loss, linewidth=2,
+                 linestyle='solid', alpha=0.9, color=sns.xkcd_rgb['faded purple'],
+                 label='val_loss')
+        plt.plot(epoch_list, acc, linewidth=2,
+                 linestyle='dotted', alpha=0.9, color=sns.xkcd_rgb['watermelon'],
+                 label='acc')
+        plt.plot(epoch_list, val_acc, linewidth=2,
+                 linestyle='dotted', alpha=0.9, color=sns.xkcd_rgb['medium green'],
+                 label='val_acc')
+        
+        plt.legend(loc='best')
+        plt.tight_layout()
+        if K:
+            plt.savefig(os.path.join(self.output_dir_i, f'DNN_epoch_{label}_K{K}.pdf'))
+        else:
+            plt.savefig(os.path.join(self.output_dir_i, f'PFN_epoch_{label}.pdf'))
+        plt.close()
+
+    #---------------------------------------------------------------
+    # Plot AUC as a function of K
+    #---------------------------------------------------------------
+    def plot_AUC_convergence(self, event_type, jetR, jet_pt_bin, R_max):
+    
+        plt.axis([0, self.K_list[-1], 0, 1])
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+        plt.xlabel('K', fontsize=16)
+        plt.ylabel('AUC', fontsize=16)
+            
+        for label,value in self.AUC.items():
+            if label == 'PFN':
+                AUC_PFN = value[0]
+                plt.axline((0, AUC_PFN), (1, AUC_PFN), linewidth=4, label=label,
+                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors[label])
+            elif label == 'EFN':
+                AUC_EFN = value[0]
+                plt.axline((0, AUC_EFN), (1, AUC_EFN), linewidth=4, label=label,
+                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors[label])
+            elif label == 'DNN':
+                plt.plot(self.K_list, value, linewidth=2,
+                         linestyle=self.linestyles[label], alpha=0.9, color=self.colors['DNN (K = 40)'],
+                         label=label)
+                    
+        plt.legend(loc='lower right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir_i, 'AUC_convergence.pdf'))
+        plt.close()
+
+    #--------------------------------------------------------------- 
+    # Plot ROC curves
+    #--------------------------------------------------------------- 
+    def plot_roc_curves(self, roc_list, event_type, jetR, jet_pt_bin, R_max, suffix):
+    
+        plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
+        plt.axis([0, 1, 0, 1])
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+        plt.xlabel('False Positive Rate', fontsize=16)
+        plt.ylabel('True Positive Rate', fontsize=16)
+        plt.grid(True)
+    
+        for label,value in roc_list.items():
+            if label in ['PFN', 'EFN', 'Jet_mass', 'Multiplicity']:
+                linewidth = 4
+                alpha = 0.5
+                linestyle = self.linestyles[label]
+            elif 'DNN' in label:
+                linewidth = 2
+                alpha = 0.9
+                linestyle = 'solid'
+            elif 'Lasso' in label:
+                linewidth = 2
+                alpha = 0.9
+                linestyle = 'solid'
+
+            FPR = value[0]
+            TPR = value[1]
+            plt.plot(FPR, TPR, linewidth=linewidth, label=label,
+                     linestyle=linestyle, alpha=alpha, color=self.colors[label])
+                    
+        plt.legend(loc='lower right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir_i, f'ROC_{suffix}.pdf'))
+        plt.close()
+ 
+    #--------------------------------------------------------------- 
+    # Plot Significance improvement
+    #--------------------------------------------------------------- 
+    def plot_significance_improvement(self, roc_list, event_type, jetR, jet_pt_bin, R_max, suffix):
+    
+        plt.axis([0, 1, 0, 3])
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+        plt.xlabel('True Positive Rate', fontsize=16)
+        plt.ylabel('Significance improvement', fontsize=16)
+        plt.grid(True)
+            
+        for label,value in roc_list.items():
+            if label in ['PFN', 'EFN', 'Jet_mass', 'Multiplicity']:
+                linewidth = 4
+                alpha = 0.5
+                linestyle = self.linestyles[label]
+            elif 'DNN' in label:
+                linewidth = 2
+                alpha = 0.9
+                linestyle = 'solid'
+            elif 'Lasso' in label:
+                linewidth = 4
+                alpha = 0.5
+                linestyle = 'solid'
+                
+            FPR = value[0]
+            TPR = value[1]
+            plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=linewidth, label=label,
+                     linestyle=linestyle, alpha=alpha, color=self.colors[label])
+         
+        plt.legend(loc='best')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir_i, f'Significance_improvement_{suffix}.pdf'))
+        plt.close()
+
+    #---------------------------------------------------------------
+    # Plot confusion matrix
+    # Note: not normalized to relative error
+    #---------------------------------------------------------------
+    def plot_confusion_matrix(self, y_train, y_predict_train, label):
+    
+        confusion_matrix = sklearn.metrics.confusion_matrix(y_train, y_predict_train)
+        sns.heatmap(confusion_matrix)
+        plt.savefig(os.path.join(self.output_dir_i, f'confusion_matrix_{label}.pdf'))
+        plt.close()
+        
     #---------------------------------------------------------------
     # Plot QA
     #---------------------------------------------------------------
@@ -365,7 +925,8 @@ class AnalyzePPAA(common_base.CommonBase):
         df = df_jewel.append(df_pythia)
         g = sns.pairplot(df, corner=True, hue='generator')
         #g.legend.set_bbox_to_anchor((0.75, 0.75))
-        plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.png'), dpi=50)
+        #plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.png'), dpi=50)
+        plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.pdf'))
         plt.close()
         
         # Plot correlation matrix
@@ -373,516 +934,6 @@ class AnalyzePPAA(common_base.CommonBase):
         corr_matrix = df.corr()
         sns.heatmap(corr_matrix)
         plt.savefig(os.path.join(self.output_dir_i, f'training_data_correlation_matrix_K{K}.pdf'))
-        plt.close()
-    
-    #---------------------------------------------------------------
-    # Train models
-    #---------------------------------------------------------------
-    def train_models(self, event_type, jetR, jet_pt_bin, R_max):
-    
-        # Dict to store AUC
-        self.AUC = {}
-        self.AUC['DNN'] = []
-        self.AUC['PFN'] = []
-        self.AUC['EFN'] = []
-
-        # Train ML models
-        for model in self.models:
-        
-            model_settings = self.model_settings[model]
-            
-            for K in self.K_list:
-            
-                if model == 'linear':
-                    self.fit_linear_model(K, model_settings)
-                if model == 'random_forest':
-                    self.fit_random_forest(K, model_settings)
-                if model == 'neural_network':
-                    self.fit_neural_network(K, model_settings)
-                if model == 'lasso':
-                    self.fit_lasso(K, model_settings)
-            
-            if model == 'pfn':
-                self.fit_pfn(model_settings)
-                
-            if model == 'efn':
-                self.fit_efn(model_settings)
-
-        # Plot AUC vs. K
-        self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
-        
-        if len(self.K_list) <= len(self.colors):
-            # Plot ROC curve and significance improvement
-            self.plot_roc_curves(event_type, jetR, jet_pt_bin, R_max)
-            self.plot_significance_improvement(event_type, jetR, jet_pt_bin, R_max)
-    
-    #---------------------------------------------------------------
-    # Fit ML model -- 1. SGDClassifier
-    #   - Linear model (SVM by default, w/o kernel) with SGD training
-    #   - For best performance, data should have zero mean and unit variance
-    #---------------------------------------------------------------
-    def fit_linear_model(self, K, model_settings):
-        print(f'Training SGDClassifier, K={K}...')
-        
-        # Define model
-        sgd_clf = sklearn.linear_model.SGDClassifier(loss=model_settings['loss'],
-                                                     max_iter=model_settings['max_iter'],
-                                                     learning_rate=model_settings['learning_rate'],
-                                                     early_stopping=model_settings['early_stopping'],
-                                                     random_state=model_settings['random_state'])
-
-        # Optimize hyperparameters with random search, using cross-validation to determine best set
-        # Here we just search over discrete values, although can also easily specify a distribution
-        param_distributions = {'penalty': model_settings['penalty'],
-                               'alpha': model_settings['alpha'],
-                               'tol': model_settings['tol']}
-        randomized_search = sklearn.model_selection.RandomizedSearchCV(sgd_clf, param_distributions,
-                                                                       n_iter=model_settings['n_iter'],
-                                                                       cv=model_settings['cv'],
-                                                                       random_state=model_settings['random_state'])
-        search_result = randomized_search.fit(self.training_data[K]['X_Nsub_train'], self.y_train)
-        final_model = search_result.best_estimator_
-        result_info = search_result.cv_results_
-        print(f'Best params: {search_result.best_params_}')
-
-        # Get predictions for the test set
-        #y_predict_train = final_model.predict(self.training_data[K]['X_Nsub_train'])
-        #y_predict_test = final_model.predict(self.training_data[K]['X_Nsub_test'])
-        
-        y_predict_train = sklearn.model_selection.cross_val_predict(sgd_clf, self.training_data[K]['X_Nsub_train'], self.y_train, cv=3,method="decision_function")
-        
-        # Compare AUC on train set and test set
-        AUC_train = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
-        print(f'AUC = {AUC_train} (train set)')
-        AUC_test = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
-        print(f'AUC = {AUC_test} (test set)')
-        print()
-
-        # Compute ROC curve: the roc_curve() function expects labels and scores
-        self.roc_curve_dict['SGDClassifier'][K] = sklearn.metrics.roc_curve(self.y_train, y_predict_train)
-    
-        # Check number of threhsolds used for ROC curve
-        # print('thresholds: {}'.format(self.roc_curve_dict['SGDClassifier'][K][2]))
-        
-        # Plot confusion matrix
-        #self.plot_confusion_matrix(self.y_train, y_predict_train, f'linear_K{K}')
- 
-    #---------------------------------------------------------------
-    # Fit ML model -- 2. Random Forest Classifier
-    #---------------------------------------------------------------
-    def fit_random_forest(self, K, model_settings):
-        print(f'Training Random Forest Classifier, K={K}...')
-        
-        forest_clf = sklearn.ensemble.RandomForestClassifier(random_state=model_settings['random_state'])
-        y_Nsub_probas_forest = sklearn.model_selection.cross_val_predict(forest_clf, self.training_data[K]['X_Nsub_train'], self.y_train, cv=3,method="predict_proba")
-        
-        # The output here are class probabilities. We us use the positive class's probability for the ROC curve
-        y_Nsub_scores_forest = y_Nsub_probas_forest[:,1]
-        
-        print(y_Nsub_scores_forest)
-        
-        # Compute AUC & ROC curve
-        Nsub_auc_RFC = sklearn.metrics.roc_auc_score(self.y_train,y_Nsub_scores_forest)
-        print(f'AUC = {Nsub_auc_RFC} (cross validation)')
-        print()
-
-        self.roc_curve_dict['RandomForest'][K] = sklearn.metrics.roc_curve(self.y_train,y_Nsub_scores_forest)
-
-    #---------------------------------------------------------------
-    # Fit ML model -- 3. Dense Neural network with Keras
-    #---------------------------------------------------------------
-    def fit_neural_network(self, K, model_settings):
-        print(f'Training Dense Neural Network, K={K}...')
-        
-        # input_shape expects shape of an instance (not including batch size)
-        DNN = keras.models.Sequential()
-        DNN.add(keras.layers.Flatten(input_shape=[self.training_data[K]['X_Nsub_train'].shape[1]]))
-        DNN.add(keras.layers.Dense(300,activation='relu'))
-        DNN.add(keras.layers.Dense(300,activation='relu'))
-        DNN.add(keras.layers.Dense(100,activation='relu'))
-        DNN.add(keras.layers.Dense(1,activation='sigmoid')) # softmax? # Last layer has to be 1 or 2 for binary classification?
-
-        # Print DNN summary
-        DNN.summary()
-        
-        # Compile DNN
-        opt = keras.optimizers.Adam(lr=model_settings['learning_rate']) # if error, change name to learning_rate
-        DNN.compile(loss=model_settings['loss'],
-                    optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
-                    metrics=model_settings['metrics'])
-
-        # Train DNN - use validation_split to split into validation set
-        history = DNN.fit(self.training_data[K]['X_Nsub_train'],
-                          self.y_train,
-                          batch_size=model_settings['batch_size'],
-                          epochs=model_settings['epochs'],
-                          validation_split=self.val_frac)
-                          
-        # Plot metrics are a function of epochs
-        self.plot_NN_epochs(model_settings['epochs'], history, K)
-        
-        # Get predictions for test data set
-        y_Nsub_test_preds_DNN = DNN.predict(self.training_data[K]['X_Nsub_test']).reshape(-1)
-        
-        # Get AUC
-        Nsub_auc_DNN = sklearn.metrics.roc_auc_score(self.y_test, y_Nsub_test_preds_DNN)
-        print(f'AUC = {Nsub_auc_DNN} (test set)')
-        self.AUC['DNN'].append(Nsub_auc_DNN)
-        
-        # Get ROC curve results
-        self.roc_curve_dict['DNN'][K] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
-
-    #---------------------------------------------------------------
-    # Fit ML model -- 4. Deep Set/Particle Flow Networks
-    #---------------------------------------------------------------
-    def fit_pfn(self, model_settings):
-    
-        # Convert labels to categorical
-        Y_PFN = energyflow.utils.to_categorical(self.y, num_classes=2)
-                        
-        # (pT,y,phi,m=0)
-        X_PFN = self.X_particles
-        
-        # Preprocess by centering jets and normalizing pts
-        for x_PFN in X_PFN:
-            mask = x_PFN[:,0] > 0
-            yphi_avg = np.average(x_PFN[mask,1:3], weights=x_PFN[mask,0], axis=0)
-            x_PFN[mask,1:3] -= yphi_avg
-            x_PFN[mask,0] /= x_PFN[:,0].sum()
-        
-        # Handle particle id channel !! Note: If changed to pT,y,phi,m the 4th component is not PID but m .. fix later
-        #if model_settings['use_pids']:
-        #    self.my_remap_pids(X_PFN)
-        #else:
-        X_PFN = X_PFN[:,:,:3]
-        
-        # Check shape
-        if self.y.shape[0] != X_PFN.shape[0]:
-            print(f'Number of labels {self.y.shape} does not match number of jets {X_PFN.shape} ! ')
-
-        # Split data into train, val and test sets
-        (X_PFN_train, X_PFN_val, X_PFN_test, Y_PFN_train, Y_PFN_val, Y_PFN_test) = energyflow.utils.data_split(X_PFN, Y_PFN,
-                                                                                             val=self.n_val, test=self.n_test)
-        # Build architecture
-        pfn = energyflow.archs.PFN(input_dim=X_PFN.shape[-1],
-                                   Phi_sizes=model_settings['Phi_sizes'],
-                                   F_sizes=model_settings['F_sizes'])
-
-        # Train model
-        history = pfn.fit(X_PFN_train,
-                          Y_PFN_train,
-                          epochs=model_settings['epochs'],
-                          batch_size=model_settings['batch_size'],
-                          validation_data=(X_PFN_val, Y_PFN_val),
-                          verbose=1)
-                          
-        # Plot metrics are a function of epochs
-        self.plot_NN_epochs(model_settings['epochs'], history)
-        
-        # Get predictions on test data
-        preds_PFN = pfn.predict(X_PFN_test, batch_size=1000)
-
-        # Get AUC and ROC curve + make plot
-        auc_PFN = sklearn.metrics.roc_auc_score(Y_PFN_test[:,1], preds_PFN[:,1])
-        print('Particle Flow Networks/Deep Sets: AUC = {} (test set)'.format(auc_PFN))
-        self.AUC['PFN'].append(auc_PFN)
-        
-        self.roc_curve_dict['PFN'] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
-        
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-        
-        # Now we compare the PFN ROC curve to single observables
-
-        # 1. Jet mass (Note: This takes in (pt,y,phi) and converts it to 4-vectors and computes jet mass)
-        #             (Note: X_PFN_train is centered and normalized .. should be ok)
-        masses = np.asarray([energyflow.ms_from_p4s(energyflow.p4s_from_ptyphims(x).sum(axis=0)) for x in self.X_particles])
-        self.roc_curve_dict['Jet_mass'] = sklearn.metrics.roc_curve(self.y, -masses)
-        
-        # 2. Multiplicity (Is this a useful observable for pp vs AA?)
-        mults = np.asarray([np.count_nonzero(x[:,0]) for x in X_PFN_train])
-        self.roc_curve_dict['Multiplicity'] = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -mults)
-
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-        
-    #---------------------------------------------------------------
-    # Fit ML model -- 5. (IRC safe) Energy Flow Networks
-    #---------------------------------------------------------------
-    def fit_efn(self, model_settings):
-    
-        # Convert labels to categorical
-        Y_EFN = energyflow.utils.to_categorical(self.y, num_classes=2)
-                        
-        # (pT,y,phi,m=0)
-        X_EFN = self.X_particles # CONTINUE EDITING HERE.
-        
-        # Preprocess by centering jets and normalizing pts
-        for x_EFN in X_EFN:
-            mask = x_EFN[:,0] > 0
-            yphi_avg = np.average(x_EFN[mask,1:3], weights=x_EFN[mask,0], axis=0)
-            x_EFN[mask,1:3] -= yphi_avg
-            x_EFN[mask,0] /= x_EFN[:,0].sum()
-        
-        # Do not use PID for EFNs
-        X_EFN = X_EFN[:,:,:3]
-        
-        # Check shape
-        if self.y.shape[0] != X_EFN.shape[0]:
-            print(f'Number of labels {self.y.shape} does not match number of jets {X_EFN.shape} ! ')
-
-        # Split data into train, val and test sets 
-        # and separate momentum fraction z and angles (y,phi)
-        (z_EFN_train, z_EFN_val, z_EFN_test, 
-         p_EFN_train, p_EFN_val, p_EFN_test,
-         Y_EFN_train, Y_EFN_val, Y_EFN_test) = energyflow.utils.data_split(X_EFN[:,:,0], X_EFN[:,:,1:], Y_EFN, 
-                                                                           val=self.n_val, test=self.n_test)
-        
-        # Build architecture
-        efn = energyflow.archs.EFN(input_dim=2,
-                                   Phi_sizes=model_settings['Phi_sizes'],
-                                   F_sizes=model_settings['F_sizes'])
-
-        # Train model
-        history = efn.fit([z_EFN_train,p_EFN_train],
-                          Y_EFN_train,
-                          epochs=model_settings['epochs'],
-                          batch_size=model_settings['batch_size'],
-                          validation_data=([z_EFN_val,p_EFN_val], Y_EFN_val),
-                          verbose=1)
-                          
-        # Plot metrics are a function of epochs
-        self.plot_NN_epochs(model_settings['epochs'], history)
-        
-        # Get predictions on test data
-        preds_EFN = efn.predict([z_EFN_test,p_EFN_test], batch_size=1000)
-
-        # Get AUC and ROC curve + make plot
-        auc_EFN = sklearn.metrics.roc_auc_score(Y_EFN_test[:,1], preds_EFN[:,1])
-        print('(IRC safe) Energy Flow Networks: AUC = {} (test set)'.format(auc_EFN))
-        self.AUC['EFN'].append(auc_EFN)
-        
-        self.roc_curve_dict['EFN'] = sklearn.metrics.roc_curve(Y_EFN_test[:,1], preds_EFN[:,1])
-        
-    #---------------------------------------------------------------
-    # Fit ML model -- 6. Lasso regression
-    #---------------------------------------------------------------
-    def fit_lasso(self, K, model_settings):
-        print(f'Training Lasso regression...')
-        
-        # Take the logarithm of the data and labels
-        # Not taking log of test labels to make ROC curve later which requires integers for the test data
-        X_train_lasso = np.log(self.training_data[K]['X_Nsub_train']+0.0001)
-        X_test_lasso = np.log(self.training_data[K]['X_Nsub_test']+0.0001)
-        
-        eps = .01
-        y_train_lasso = np.log(eps + (1. - 2. * eps) * self.y_train)
-        y_test_lasso = self.y_test
-        
-        # Use Lasso regression
-        # The parameter alpha multiplies to L1 term
-        lasso_clf = sklearn.linear_model.Lasso(alpha = model_settings['alpha'])
-        
-        # Fit model
-        lasso_clf.fit(X_train_lasso, y_train_lasso)
-        
-        # Print coefficients of log(tau_N^beta) or exponents of the product observable
-        print('Coefficients of lasso regression: c_N^beta * log(tau_n^beta):\n {}'.format(lasso_clf.coef_))
-
-        # Make predictions for test set
-        preds_lasso = lasso_clf.predict(X_test_lasso)
-        
-        # Compute AUC
-        auc_lasso = sklearn.metrics.roc_auc_score(y_test_lasso, preds_lasso)
-        print(f'AUC = {auc_lasso} (test set)')
-        
-        # ROC curve
-        self.roc_curve_dict['Lasso'] = sklearn.metrics.roc_curve(y_test_lasso, preds_lasso)
-
-        # Seems we would have to scan different alpha and K and see if some observable has a nice interpretation??
-
-    #--------------------------------------------------------------- 
-    # My own remap PID routine (similar to remap_pids from energyflow)
-    #---------------------------------------------------------------         
-    def my_remap_pids(self,events, pid_i=3, error_on_unknown=True):
-        # PDGid to small float dictionary
-        PID2FLOAT_MAP = {0: 0.0, 22: 1.4,
-                         211: .1, -211: .2,
-                         321: .3, -321: .4,
-                         130: .5,
-                         2112: .6, -2112: .7,
-                         2212: .8, -2212: .9,
-                         11: 1.0, -11: 1.1,
-                         13: 1.2, -13: 1.3}
-        
-        """Remaps PDG id numbers to small floats for use in a neural network.
-        `events` are modified in place and nothing is returned.
-    
-        **Arguments**
-    
-        - **events** : _numpy.ndarray_
-            - The events as an array of arrays of particles.
-        - **pid_i** : _int_
-            - The column index corresponding to pid information in an event.
-        - **error_on_unknown** : _bool_
-            - Controls whether a `KeyError` is raised if an unknown PDG ID is
-            encountered. If `False`, unknown PDG IDs will map to zero.
-        """
-    
-        if events.ndim == 3:
-            pids = events[:,:,pid_i].astype(int).reshape((events.shape[0]*events.shape[1]))
-            if error_on_unknown:
-                events[:,:,pid_i] = np.asarray([PID2FLOAT_MAP[pid]
-                                                for pid in pids]).reshape(events.shape[:2])
-            else:
-                events[:,:,pid_i] = np.asarray([PID2FLOAT_MAP.get(pid, 0)
-                                                for pid in pids]).reshape(events.shape[:2])
-        else:
-            if error_on_unknown:
-                for event in events:
-                    event[:,pid_i] = np.asarray([PID2FLOAT_MAP[pid]
-                                                 for pid in event[:,pid_i].astype(int)])
-            else:
-                for event in events:
-                    event[:,pid_i] = np.asarray([PID2FLOAT_MAP.get(pid, 0)
-                                                 for pid in event[:,pid_i].astype(int)])        
-
-    #---------------------------------------------------------------
-    # Plot NN metrics are a function of epochs
-    #---------------------------------------------------------------
-    def plot_NN_epochs(self, n_epochs, history, K=None):
-    
-        epoch_list = range(1, n_epochs+1)
-        loss = history.history['loss']
-        acc = history.history['acc']
-        val_loss = history.history['val_loss']
-        val_acc = history.history['val_acc']
-        
-        plt.axis([0, n_epochs, 0, 1])
-        plt.xlabel('epochs', fontsize=16)
-        plt.plot(epoch_list, loss, linewidth=2,
-                 linestyle='solid', alpha=0.9, color=self.colors[0],
-                 label='loss')
-        plt.plot(epoch_list, val_loss, linewidth=2,
-                 linestyle='solid', alpha=0.9, color=self.colors[1],
-                 label='val_loss')
-        plt.plot(epoch_list, acc, linewidth=2,
-                 linestyle='dotted', alpha=0.9, color=self.colors[2],
-                 label='acc')
-        plt.plot(epoch_list, val_acc, linewidth=2,
-                 linestyle='dotted', alpha=0.9, color=self.colors[3],
-                 label='val_acc')
-        
-        plt.legend(loc='best')
-        plt.tight_layout()
-        if K:
-            plt.savefig(os.path.join(self.output_dir_i, f'DNN_epoch_{K}.pdf'))
-        else:
-            plt.savefig(os.path.join(self.output_dir_i, f'PFN_epoch.pdf')) # NEED TO EDIT HERE?
-        plt.close()
-
-    #--------------------------------------------------------------- 
-    # Plot ROC curves
-    #--------------------------------------------------------------- 
-    def plot_roc_curves(self, event_type, jetR, jet_pt_bin, R_max):
-    
-        plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
-        plt.axis([0, 1, 0, 1])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
-        plt.xlabel('False Positive Rate', fontsize=16)
-        plt.ylabel('True Positive Rate', fontsize=16)
-        plt.grid(True)
-    
-        for label,value in self.roc_curve_dict.items():
-            
-            if label in ['PFN','EFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
-                FPR = value[0]
-                TPR = value[1]
-                plt.plot(FPR, TPR, linewidth=4, label=label,
-                         linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
-            else:
-                for i,K in enumerate(self.K_list):
-                    FPR = value[K][0]
-                    TPR = value[K][1]
-                    plt.plot(FPR, TPR, linewidth=2,
-                             linestyle=self.linestyles[label], alpha=0.9, color=self.colors[i],
-                             label=f'{label}, K={K}')
-                    
-        plt.legend(loc='lower right')
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, 'ROC.pdf'))
-        plt.close()
-        
-    #--------------------------------------------------------------- 
-    # Plot Significance improvement
-    #--------------------------------------------------------------- 
-    def plot_significance_improvement(self, event_type, jetR, jet_pt_bin, R_max):
-    
-        plt.axis([0, 1, 0, 3])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
-        plt.xlabel('True Positive Rate', fontsize=16)
-        plt.ylabel('Significance improvement', fontsize=16)
-        plt.grid(True)
-            
-        for label,value in self.roc_curve_dict.items():
-            
-            if label in ['PFN', 'EFN', 'Jet_mass', 'Multiplicity', 'Lasso']:
-                FPR = value[0]
-                TPR = value[1]
-                plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=4, label=label,
-                         linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
-            else:
-                for i,K in enumerate(self.K_list):
-                    FPR = value[K][0]
-                    TPR = value[K][1]
-                    plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=2,
-                             linestyle=self.linestyles[label], alpha=0.9, color=self.colors[i],
-                             label=f'{label}, K={K}')
-                    
-        plt.legend(loc='best')
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, 'Significance_improvement.pdf'))
-        plt.close()
-
-    #---------------------------------------------------------------
-    # Plot AUC as a function of K
-    #---------------------------------------------------------------
-    def plot_AUC_convergence(self, event_type, jetR, jet_pt_bin, R_max):
-    
-        plt.axis([0, self.K_list[-1], 0, 1])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
-        plt.xlabel('K', fontsize=16)
-        plt.ylabel('AUC', fontsize=16)
-            
-        for label,value in self.AUC.items():
-            print(label,value)
-            if label == 'PFN':
-                AUC_PFN = value[0]
-                plt.axline((0, AUC_PFN), (1, AUC_PFN), linewidth=4, label=label,
-                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])
-                
-                print(AUC_PFN)    
-            elif label == 'EFN':
-                AUC_EFN = value[0]
-                plt.axline((0, AUC_EFN), (1, AUC_EFN), linewidth=4, label=label,
-                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors_pfn[label])            
-            elif label == 'DNN':
-                plt.plot(self.K_list, value, linewidth=2,
-                         linestyle=self.linestyles[label], alpha=0.9, color=self.colors[-1],
-                         label=label)
-                    
-        plt.legend(loc='lower right')
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, 'AUC_convergence.pdf'))
-        plt.close()
-
-    #---------------------------------------------------------------
-    # Plot confusion matrix
-    # Note: not normalized to relative error
-    #---------------------------------------------------------------
-    def plot_confusion_matrix(self, y_train, y_predict_train, label):
-    
-        confusion_matrix = sklearn.metrics.confusion_matrix(y_train, y_predict_train)
-        sns.heatmap(confusion_matrix)
-        plt.savefig(os.path.join(self.output_dir_i, f'confusion_matrix_{label}.pdf'))
         plt.close()
             
 ##################################################################
