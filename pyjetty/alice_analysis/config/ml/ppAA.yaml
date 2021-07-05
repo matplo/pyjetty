@@ -42,7 +42,7 @@ n_val: 2000
 n_test: 3000
 
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso
-models: [neural_network, pfn, efn, lasso]
+models: [neural_network, pfn, lasso]
 
 linear:
 
