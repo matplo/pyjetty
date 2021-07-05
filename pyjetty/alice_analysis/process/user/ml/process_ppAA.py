@@ -134,7 +134,7 @@ class ProcessppAA(common_base.CommonBase):
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
                             
                             # Some QA
-                            self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity']
+                            self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
                             for qa_observable in self.qa_observables:
                                 self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable] = []
 
@@ -266,7 +266,6 @@ class ProcessppAA(common_base.CommonBase):
                                 
                                 for qa_observable in self.qa_observables:
                                     hf.create_dataset(f'{qa_observable}{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable])
-                                    data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable]
   
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
@@ -469,8 +468,21 @@ class ProcessppAA(common_base.CommonBase):
         
         # multiplicity
         n_constituents = len(jet.constituents())
-        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['multiplicity'].append(n_constituents)
-
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['multiplicity_0000'].append(n_constituents)
+        multiplicity_0150 = 0
+        multiplicity_0500 = 0
+        multiplicity_1000 = 0
+        for constituent in jet.constituents():
+            if constituent.pt() > 0.15:
+                multiplicity_0150 += 1
+            if constituent.pt() > 0.5:
+                multiplicity_0500 += 1
+            if constituent.pt() > 1.:
+                multiplicity_1000 += 1
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['multiplicity_0150'].append(multiplicity_0150)
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['multiplicity_0500'].append(multiplicity_0500)
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['multiplicity_1000'].append(multiplicity_1000)
+        
     #---------------------------------------------------------------
     # Write four-vectors of jet constituents
     #---------------------------------------------------------------
