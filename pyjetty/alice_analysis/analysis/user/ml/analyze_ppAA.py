@@ -9,6 +9,7 @@ import sys
 import argparse
 import yaml
 import h5py
+import re
 
 # Data analysis and plotting
 import pandas as pd
@@ -25,6 +26,8 @@ import energyflow.archs
 import sklearn
 import sklearn.linear_model
 import sklearn.ensemble
+import sklearn.model_selection
+import sklearn.pipeline
 
 # Tensorflow and Keras
 import tensorflow as tf
@@ -59,9 +62,9 @@ class AnalyzePPAA(common_base.CommonBase):
                        'DNN (K = 40)': sns.xkcd_rgb['dark sky blue'],
                        'DNN (K = 50)': sns.xkcd_rgb['faded purple'],
                        'Lasso': sns.xkcd_rgb['watermelon'],
-                       f'Lasso (alpha = {alpha_list[0]})': sns.xkcd_rgb['watermelon'],
-                       f'Lasso (alpha = {alpha_list[1]})': sns.xkcd_rgb['light brown'],
-                       f'Lasso (alpha = {alpha_list[2]})': sns.xkcd_rgb['faded purple'],
+                       rf'Lasso $(\alpha = {alpha_list[0]})$': sns.xkcd_rgb['watermelon'],
+                       rf'Lasso $(\alpha = {alpha_list[1]})$': sns.xkcd_rgb['light brown'],
+                       rf'Lasso $(\alpha = {alpha_list[2]})$': sns.xkcd_rgb['faded purple'],
                        'Jet_mass': sns.xkcd_rgb['faded red'],
                        'Multiplicity': sns.xkcd_rgb['medium green']
                       }
@@ -153,6 +156,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 
             if model == 'lasso':
+                self.K_lasso = config[model]['K_lasso']
                 self.model_settings[model]['alpha'] = config[model]['alpha']
                 self.model_settings[model]['max_iter'] = config[model]['max_iter']
                 self.model_settings[model]['tol'] = [float(x) for x in config[model]['tol']]
@@ -277,8 +281,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     self.fit_neural_network(K, model_settings)
                 
             if model == 'lasso':
-                self.K_lasso = 30
-                self.fit_lasso(self.K_lasso, model_settings, event_type, jetR, jet_pt_bin, R_max)
+                self.fit_lasso(model_settings, event_type, jetR, jet_pt_bin, R_max)
             
             if model == 'pfn':
                 self.fit_pfn(model_settings)
@@ -318,7 +321,7 @@ class AnalyzePPAA(common_base.CommonBase):
         if 'lasso' in self.models:
             roc_list = {}
             for alpha in self.config['lasso']['alpha']:
-                roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
+                roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
         
@@ -328,7 +331,7 @@ class AnalyzePPAA(common_base.CommonBase):
             roc_list['Jet_mass'] = self.roc_curve_dict['Jet_mass']
             roc_list['Multiplicity'] = self.roc_curve_dict['Multiplicity']
             for alpha in self.config['lasso']['alpha']:
-                roc_list[f'Lasso (alpha = {alpha})'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
+                roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
         
@@ -581,45 +584,110 @@ class AnalyzePPAA(common_base.CommonBase):
         
     #---------------------------------------------------------------
     # Fit ML model -- 6. Lasso regression
+    #   The parameter alpha multiplies to L1 term
+    #   If convergence error: can increase max_iter and/or tol, and/or set normalize=True
     #---------------------------------------------------------------
-    def fit_lasso(self, K, model_settings, event_type, jetR, jet_pt_bin, R_max):
+    def fit_lasso(self, model_settings, event_type, jetR, jet_pt_bin, R_max):
         print(f'Training Lasso regression...')
         
         # Take the logarithm of the data and labels, such that the product observable becomes a sum
         # and the exponents in the product observable become the regression weights
-        # Not taking log of test labels to make ROC curve later which requires integers for the test data
-        X_train_lasso = np.log(self.training_data[K]['X_Nsub_train']+0.0001)
-        X_test_lasso = np.log(self.training_data[K]['X_Nsub_test']+0.0001)
+        X_train_lasso = np.log(self.training_data[self.K_lasso]['X_Nsub_train']+0.0001)
+        X_test_lasso = np.log(self.training_data[self.K_lasso]['X_Nsub_test']+0.0001)
         
+        # Not taking log of test labels to make ROC curve later which requires integers for the test data
         eps = .01
         y_train_lasso = np.log(eps + (1. - 2. * eps) * self.y_train)
-        y_test_lasso = self.y_test
+        y_test_lasso = np.log(eps + (1. - 2. * eps) * self.y_test)
+        y_test_lasso_roc = self.y_test
         
         # Loop through values of regularization parameter
-        self.roc_curve_dict['Lasso'][K] = {}
+        self.roc_curve_dict['Lasso'][self.K_lasso] = {}
+        self.N_terms_lasso = {}
         for alpha in model_settings['alpha']:
             print(f'Fitting lasso regression with alpha = {alpha}')
         
-            # Use Lasso regression
-            # The parameter alpha multiplies to L1 term
-            # If convergence error: can increase max_iter and/or tol, and/or set normalize=True
-            lasso_clf = sklearn.linear_model.LassoCV(alphas=[alpha], max_iter=model_settings['max_iter'], cv=model_settings['cv'])
-
-            # Fit model
-            lasso_clf.fit(X_train_lasso, y_train_lasso)
+            lasso_clf = sklearn.linear_model.Lasso(alpha=alpha, max_iter=model_settings['max_iter'])
+                                                   
+            plot_learning_curve = False
+            if plot_learning_curve:
+                # Split into validation set
+                X_train, X_val, y_train, y_val = sklearn.model_selection.train_test_split(X_train_lasso, y_train_lasso, test_size=0.2)
+                train_errors = []
+                validation_errors = []
+                train_sizes = np.linspace(0, len(X_train)/2, 50)[1:]
+                print('Compute Lasso learning curve...')
+                for train_size in train_sizes:
+                    train_size = int(train_size)
+                    lasso_clf.fit(X_train[:train_size], y_train[:train_size])
+                    y_predict_train = lasso_clf.predict(X_train[:train_size])
+                    y_predict_val = lasso_clf.predict(X_val)
+                    train_errors.append(sklearn.metrics.mean_squared_error(y_predict_train, y_train[:train_size]))
+                    validation_errors.append(sklearn.metrics.mean_squared_error(y_predict_val, y_val))
+            else:
+                # Cross-validation
+                lasso_clf.fit(X_train_lasso, y_train_lasso)
+                scores = sklearn.model_selection.cross_val_score(lasso_clf, X_train_lasso, y_train_lasso,
+                                                                            scoring='neg_mean_squared_error',
+                                                                            cv=model_settings['cv'])
+                print(f'cross-validation scores: {scores}')
+                y_predict_train = lasso_clf.predict(X_train_lasso)
+                rmse = sklearn.metrics.mean_squared_error(y_train_lasso, y_predict_train)
+                print(f'training rmse: {rmse}')
             
-            # Print coefficients of log(tau_N^beta) or exponents of the product observable
-            print('Coefficients of lasso regression: c_N^beta * log(tau_n^beta):\n {}'.format(lasso_clf.coef_))
-
-            # Make predictions for test set
+            # Compute AUC on test set
             y_predict_test = lasso_clf.predict(X_test_lasso)
-            
-            # Compute AUC
-            auc_lasso_test = sklearn.metrics.roc_auc_score(y_test_lasso, y_predict_test)
+            auc_lasso_test = sklearn.metrics.roc_auc_score(y_test_lasso_roc, y_predict_test)
+            rmse_lasso_test = sklearn.metrics.mean_squared_error(y_test_lasso, y_predict_test)
             print(f'AUC = {auc_lasso_test} (test set)')
+            print(f'test rmse: {rmse_lasso_test}')
             
             # ROC curve
-            self.roc_curve_dict['Lasso'][K][alpha] = sklearn.metrics.roc_curve(y_test_lasso, y_predict_test)
+            self.roc_curve_dict['Lasso'][self.K_lasso][alpha] = sklearn.metrics.roc_curve(y_test_lasso_roc, y_predict_test)
+            
+            if plot_learning_curve:
+                plt.axis([0, train_sizes[-1], 0, 10])
+                plt.xlabel('training size', fontsize=16)
+                plt.ylabel('MSE', fontsize=16)
+                plt.plot(train_sizes, train_errors, linewidth=2,
+                         linestyle='solid', alpha=0.9, color=sns.xkcd_rgb['dark sky blue'], label='train')
+                plt.plot(train_sizes, validation_errors, linewidth=2,
+                         linestyle='solid', alpha=0.9, color=sns.xkcd_rgb['watermelon'], label='val')
+                plt.axline((0, rmse_lasso_test), (len(X_train), rmse_lasso_test), linewidth=4, label='test',
+                           linestyle='dotted', alpha=0.9, color=sns.xkcd_rgb['medium green'])
+                plt.legend(loc='best')
+                plt.tight_layout()
+                plt.savefig(os.path.join(self.output_dir_i, f'Lasso_learning_curve_a{alpha}.pdf'))
+                plt.close()
+                
+            # Print out observable
+            coeffs = lasso_clf.coef_
+            #print('Coefficients of lasso regression: c_N^beta * log(tau_n^beta):\n {}'.format(coeffs))
+            observable = ''
+            n_terms = 0
+            for i,_ in enumerate(coeffs):
+                coeff = np.round(coeffs[i], 3)
+                if not np.isclose(coeff, 0., atol=1e-10):
+                    N,beta = self.N_beta_from_index(i)
+                    observable += rf'(\tau_{{{N}}}^{{{beta}}})^{{{coeff}}} '
+                    n_terms += 1
+            print(f'Observable: {observable}')
+            self.N_terms_lasso[alpha] = n_terms
+
+    #---------------------------------------------------------------
+    # Return N,beta from N-subjettiness index
+    #---------------------------------------------------------------
+    def N_beta_from_index(self, i):
+               
+        N = 1 + int((i+1)/3)
+        if i%3 == 0:
+            beta = 1
+        elif i%3 == 1:
+            beta = 2
+        elif i%3 == 2:
+            beta = 0.5
+        
+        return N,beta
 
     #--------------------------------------------------------------- 
     # My own remap PID routine (similar to remap_pids from energyflow)
@@ -747,19 +815,26 @@ class AnalyzePPAA(common_base.CommonBase):
                 linewidth = 4
                 alpha = 0.5
                 linestyle = self.linestyles[label]
+                color=self.colors[label]
             elif 'DNN' in label:
                 linewidth = 2
                 alpha = 0.9
                 linestyle = 'solid'
+                color=self.colors[label]
             elif 'Lasso' in label:
                 linewidth = 2
                 alpha = 0.9
                 linestyle = 'solid'
-
+                color=self.colors[label]
+                reg_param = float(re.search('= (.*)\)', label).group(1))
+                print(reg_param)
+                n_terms = self.N_terms_lasso[reg_param]
+                label += f', {n_terms} terms'
+                
             FPR = value[0]
             TPR = value[1]
             plt.plot(FPR, TPR, linewidth=linewidth, label=label,
-                     linestyle=linestyle, alpha=alpha, color=self.colors[label])
+                     linestyle=linestyle, alpha=alpha, color=color)
                     
         plt.legend(loc='lower right')
         plt.tight_layout()
