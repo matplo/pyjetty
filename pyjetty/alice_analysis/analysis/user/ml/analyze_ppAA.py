@@ -56,11 +56,11 @@ class AnalyzePPAA(common_base.CommonBase):
         alpha_list = self.config['lasso']['alpha']
         self.colors = {'PFN': sns.xkcd_rgb['faded purple'],
                        'EFN': sns.xkcd_rgb['faded red'],
-                       'DNN (K = 10)': sns.xkcd_rgb['watermelon'],
-                       'DNN (K = 20)': sns.xkcd_rgb['light brown'],
-                       'DNN (K = 30)': sns.xkcd_rgb['medium green'],
-                       'DNN (K = 40)': sns.xkcd_rgb['dark sky blue'],
-                       'DNN (K = 50)': sns.xkcd_rgb['faded purple'],
+                       'DNN (K = 5)': sns.xkcd_rgb['watermelon'],
+                       'DNN (K = 10)': sns.xkcd_rgb['light brown'],
+                       'DNN (K = 20)': sns.xkcd_rgb['medium green'],
+                       'DNN (K = 30)': sns.xkcd_rgb['dark sky blue'],
+                       'DNN (K = 40)': sns.xkcd_rgb['faded purple'],
                        'Lasso': sns.xkcd_rgb['watermelon'],
                        rf'Lasso $(\alpha = {alpha_list[0]})$': sns.xkcd_rgb['watermelon'],
                        rf'Lasso $(\alpha = {alpha_list[1]})$': sns.xkcd_rgb['light brown'],
@@ -173,6 +173,7 @@ class AnalyzePPAA(common_base.CommonBase):
     def analyze_pp_aa(self):
     
         # Loop through combinations of event type, jetR, and R_max
+        self.AUC = {}
         for event_type in self.event_types:
             for jetR in self.jetR_list:
                 for jet_pt_bin in self.jet_pt_bins:
@@ -256,21 +257,38 @@ class AnalyzePPAA(common_base.CommonBase):
                                 self.plot_training_data(K)
                            
                         # Train models
-                        self.train_models(event_type, jetR, jet_pt_bin_rounded, R_max)
+                        self.train_models(event_type, jetR, jet_pt_bin, R_max)
+          
+        # Plot AUC vs. K for hard vs. combined
+        for jetR in self.jetR_list:
+            for jet_pt_bin in self.jet_pt_bins:
+                for R_max in self.max_distance_list:
+                
+                    if np.isclose(R_max, 0.):
+                        continue
+                
+                    if 'pfn' in self.models and 'neural_network' in self.models:
+                        auc_list = {}
+                        suffix = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
+                        auc_list[f'neural_network{suffix}'] = self.AUC[f'neural_network{suffix}']
+                        auc_list[f'pfn{suffix}'] = self.AUC[f'pfn{suffix}']
+                        suffix = f'_combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                        auc_list[f'neural_network{suffix}'] = self.AUC[f'neural_network{suffix}']
+                        auc_list[f'pfn{suffix}'] = self.AUC[f'pfn{suffix}']
+                        outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
+                        self.plot_AUC_convergence(outputdir, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
     
     #---------------------------------------------------------------
     # Train models
     #---------------------------------------------------------------
     def train_models(self, event_type, jetR, jet_pt_bin, R_max):
-    
-        # Dict to store AUC
-        self.AUC = {}
-        self.AUC['DNN'] = []
-        self.AUC['PFN'] = []
-        self.AUC['EFN'] = []
 
         # Train ML models
+        self.key_suffix = f'_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
         for model in self.models:
+        
+            # Dict to store AUC
+            self.AUC[f'{model}{self.key_suffix}'] = []
         
             model_settings = self.model_settings[model]
             
@@ -284,7 +302,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     self.fit_neural_network(K, model_settings)
                 
             if model == 'lasso':
-                self.fit_lasso(model_settings, event_type, jetR, jet_pt_bin, R_max)
+                self.fit_lasso(model_settings)
             
             if model == 'pfn':
                 self.fit_pfn(model_settings)
@@ -298,9 +316,16 @@ class AnalyzePPAA(common_base.CommonBase):
         self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['jet_theta_g'])
         #self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
 
-        # Plot AUC vs. K
+        # Plot several verisons of AUC vs. K curve
+        if 'neural_network' in self.models:
+            auc_list = {}
+            auc_list[f'neural_network{self.key_suffix}'] = self.AUC[f'neural_network{self.key_suffix}']
+            self.plot_AUC_convergence(self.output_dir_i, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
         if 'pfn' in self.models and 'neural_network' in self.models:
-            self.plot_AUC_convergence(event_type, jetR, jet_pt_bin, R_max)
+            auc_list = {}
+            auc_list[f'neural_network{self.key_suffix}'] = self.AUC[f'neural_network{self.key_suffix}']
+            auc_list[f'pfn{self.key_suffix}'] = self.AUC[f'pfn{self.key_suffix}']
+            self.plot_AUC_convergence(self.output_dir_i, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
         
         # Plot several versions of ROC curves and significance improvement
         if 'pfn' in self.models and 'neural_network' in self.models and 'efn' in self.models:
@@ -460,7 +485,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Get AUC
         Nsub_auc_DNN = sklearn.metrics.roc_auc_score(self.y_test, y_Nsub_test_preds_DNN)
         print(f'AUC = {Nsub_auc_DNN} (test set)')
-        self.AUC['DNN'].append(Nsub_auc_DNN)
+        self.AUC[f'neural_network{self.key_suffix}'].append(Nsub_auc_DNN)
         
         # Get ROC curve results
         self.roc_curve_dict['DNN'][K] = sklearn.metrics.roc_curve(self.y_test, y_Nsub_test_preds_DNN)
@@ -518,7 +543,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Get AUC and ROC curve + make plot
         auc_PFN = sklearn.metrics.roc_auc_score(Y_PFN_test[:,1], preds_PFN[:,1])
         print('Particle Flow Networks/Deep Sets: AUC = {} (test set)'.format(auc_PFN))
-        self.AUC['PFN'].append(auc_PFN)
+        self.AUC[f'pfn{self.key_suffix}'].append(auc_PFN)
         
         self.roc_curve_dict['PFN'] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
         
@@ -576,7 +601,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Get AUC and ROC curve + make plot
         auc_EFN = sklearn.metrics.roc_auc_score(Y_EFN_test[:,1], preds_EFN[:,1])
         print('(IRC safe) Energy Flow Networks: AUC = {} (test set)'.format(auc_EFN))
-        self.AUC['EFN'].append(auc_EFN)
+        self.AUC[f'efn{self.key_suffix}'].append(auc_EFN)
         
         self.roc_curve_dict['EFN'] = sklearn.metrics.roc_curve(Y_EFN_test[:,1], preds_EFN[:,1])
         
@@ -585,7 +610,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #   The parameter alpha multiplies to L1 term
     #   If convergence error: can increase max_iter and/or tol, and/or set normalize=True
     #---------------------------------------------------------------
-    def fit_lasso(self, model_settings, event_type, jetR, jet_pt_bin, R_max):
+    def fit_lasso(self, model_settings):
         print(f'Training Lasso regression...')
         
         # Take the logarithm of the data and labels, such that the product observable becomes a sum
@@ -654,7 +679,7 @@ class AnalyzePPAA(common_base.CommonBase):
                          linestyle='solid', alpha=0.9, color=sns.xkcd_rgb['watermelon'], label='val')
                 plt.axline((0, rmse_lasso_test), (len(X_train), rmse_lasso_test), linewidth=4, label='test',
                            linestyle='dotted', alpha=0.9, color=sns.xkcd_rgb['medium green'])
-                plt.legend(loc='best')
+                plt.legend(loc='best', fontsize=12)
                 plt.tight_layout()
                 plt.savefig(os.path.join(self.output_dir_i, f'Lasso_learning_curve_a{alpha}.pdf'))
                 plt.close()
@@ -762,7 +787,7 @@ class AnalyzePPAA(common_base.CommonBase):
                  linestyle='dotted', alpha=0.9, color=sns.xkcd_rgb['medium green'],
                  label='val_acc')
         
-        plt.legend(loc='best')
+        plt.legend(loc='best', fontsize=12)
         plt.tight_layout()
         if K:
             plt.savefig(os.path.join(self.output_dir_i, f'DNN_epoch_{label}_K{K}.pdf'))
@@ -773,30 +798,41 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Plot AUC as a function of K
     #---------------------------------------------------------------
-    def plot_AUC_convergence(self, event_type, jetR, jet_pt_bin, R_max):
+    def plot_AUC_convergence(self, output_dir, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix):
     
         plt.axis([0, self.K_list[-1], 0, 1])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
         plt.xlabel('K', fontsize=16)
         plt.ylabel('AUC', fontsize=16)
-            
-        for label,value in self.AUC.items():
-            if label == 'PFN':
+
+        for label,value in auc_list.items():
+        
+            if 'hard' in label:
+                color = sns.xkcd_rgb['dark sky blue']
+                label_suffix = ' (no background)'
+            if 'combined' in label:
+                color = sns.xkcd_rgb['medium green']
+                label_suffix = ' (thermal background)'
+
+            if 'pfn' in label:
                 AUC_PFN = value[0]
+                label = f'PFN{label_suffix}'
                 plt.axline((0, AUC_PFN), (1, AUC_PFN), linewidth=4, label=label,
-                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors[label])
-            elif label == 'EFN':
+                           linestyle='solid', alpha=0.5, color=color)
+            elif 'efn' in label:
                 AUC_EFN = value[0]
+                label = f'EFN{label_suffix}'
                 plt.axline((0, AUC_EFN), (1, AUC_EFN), linewidth=4, label=label,
-                           linestyle=self.linestyles[label], alpha=0.5, color=self.colors[label])
-            elif label == 'DNN':
+                           linestyle='solid', alpha=0.5, color=color)
+            elif 'neural_network' in label:
+                label = f'DNN{label_suffix}'
                 plt.plot(self.K_list, value, linewidth=2,
-                         linestyle=self.linestyles[label], alpha=0.9, color=self.colors['DNN (K = 40)'],
+                         linestyle='solid', alpha=0.9, color=color,
                          label=label)
                     
-        plt.legend(loc='lower right')
+        plt.legend(loc='lower right', fontsize=12)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, 'AUC_convergence.pdf'))
+        plt.savefig(os.path.join(output_dir, f'AUC_convergence{suffix}.pdf'))
         plt.close()
 
     #--------------------------------------------------------------- 
@@ -806,7 +842,7 @@ class AnalyzePPAA(common_base.CommonBase):
     
         plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
         plt.axis([0, 1, 0, 1])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
         plt.xlabel('False Positive Rate', fontsize=16)
         plt.ylabel('True Positive Rate', fontsize=16)
         plt.grid(True)
@@ -834,7 +870,6 @@ class AnalyzePPAA(common_base.CommonBase):
                 linestyle = 'solid'
                 color=self.colors[label]
                 reg_param = float(re.search('= (.*)\)', label).group(1))
-                print(reg_param)
                 n_terms = self.N_terms_lasso[reg_param]
                 label += f', {n_terms} terms'
                 
@@ -843,7 +878,7 @@ class AnalyzePPAA(common_base.CommonBase):
             plt.plot(FPR, TPR, linewidth=linewidth, label=label,
                      linestyle=linestyle, alpha=alpha, color=color)
                     
-        plt.legend(loc='lower right')
+        plt.legend(loc='lower right', fontsize=10)
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir_i, f'ROC_{suffix}.pdf'))
         plt.close()
@@ -854,7 +889,7 @@ class AnalyzePPAA(common_base.CommonBase):
     def plot_significance_improvement(self, roc_list, event_type, jetR, jet_pt_bin, R_max, suffix):
     
         plt.axis([0, 1, 0, 3])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
         plt.xlabel('True Positive Rate', fontsize=16)
         plt.ylabel('Significance improvement', fontsize=16)
         plt.grid(True)
@@ -878,7 +913,7 @@ class AnalyzePPAA(common_base.CommonBase):
             plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=linewidth, label=label,
                      linestyle=linestyle, alpha=alpha, color=self.colors[label])
          
-        plt.legend(loc='best')
+        plt.legend(loc='best', fontsize=10)
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir_i, f'Significance_improvement_{suffix}.pdf'))
         plt.close()
@@ -959,7 +994,7 @@ class AnalyzePPAA(common_base.CommonBase):
                      linewidth=2,
                      linestyle='-',
                      alpha=0.5)
-            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
             plt.xlabel(r'$\delta p_{T}$', fontsize=14)
             plt.yscale('log')
             legend = plt.legend(loc='best', fontsize=14, frameon=False)
@@ -979,7 +1014,7 @@ class AnalyzePPAA(common_base.CommonBase):
                      linewidth=2,
                      linestyle='-',
                      alpha=0.5)
-            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=16)
+            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
             plt.xlabel(r'$\delta p_{T}$', fontsize=14)
             plt.yscale('log')
             legend = plt.legend(loc='best', fontsize=14, frameon=False)
