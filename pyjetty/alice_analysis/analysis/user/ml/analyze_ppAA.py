@@ -65,14 +65,17 @@ class AnalyzePPAA(common_base.CommonBase):
                        rf'Lasso $(\alpha = {alpha_list[0]})$': sns.xkcd_rgb['watermelon'],
                        rf'Lasso $(\alpha = {alpha_list[1]})$': sns.xkcd_rgb['light brown'],
                        rf'Lasso $(\alpha = {alpha_list[2]})$': sns.xkcd_rgb['faded purple'],
-                       'Jet_mass': sns.xkcd_rgb['faded red'],
-                       'Multiplicity': sns.xkcd_rgb['medium green']
+                       'jet_mass': sns.xkcd_rgb['faded red'],
+                       'jet_angularity': sns.xkcd_rgb['medium green'],
+                       'jet_theta_g': sns.xkcd_rgb['medium brown']
                       }
         self.linestyles = {'PFN': 'solid',
                            'EFN': 'solid',
                            'DNN': 'solid',
-                           'Jet_mass': 'dotted',
-                           'Multiplicity': 'dotted',
+                           'jet_mass': 'dotted',
+                           'jet_angularity': 'dotted',
+                           'jet_theta_g': 'dotted',
+                           'multiplicity': 'dotted',
                            'Lasso': 'dotted'
                           }
                        
@@ -159,7 +162,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.K_lasso = config[model]['K_lasso']
                 self.model_settings[model]['alpha'] = config[model]['alpha']
                 self.model_settings[model]['max_iter'] = config[model]['max_iter']
-                self.model_settings[model]['tol'] = [float(x) for x in config[model]['tol']]
+                self.model_settings[model]['tol'] = float(config[model]['tol'])
                 self.model_settings[model]['n_iter'] = config[model]['n_iter']
                 self.model_settings[model]['cv'] = config[model]['cv']
                 self.model_settings[model]['random_state'] = config[model]['random_state']
@@ -288,6 +291,12 @@ class AnalyzePPAA(common_base.CommonBase):
                 
             if model == 'efn':
                 self.fit_efn(model_settings)
+                
+        # Plot traditional observables
+        self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['jet_mass'])
+        self.roc_curve_dict['jet_angularity'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['jet_angularity'])
+        self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['jet_theta_g'])
+        #self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
 
         # Plot AUC vs. K
         if 'pfn' in self.models and 'neural_network' in self.models:
@@ -320,16 +329,20 @@ class AnalyzePPAA(common_base.CommonBase):
         
         if 'lasso' in self.models:
             roc_list = {}
+            roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
+            roc_list['jet_angularity'] = self.roc_curve_dict['jet_angularity']
+            roc_list['jet_theta_g'] = self.roc_curve_dict['jet_theta_g']
             for alpha in self.config['lasso']['alpha']:
                 roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
         
-        if 'pfn' in self.models and 'neural_network' in self.models and 'lasso' in self.models:
+        if 'neural_network' in self.models and 'lasso' in self.models:
             roc_list = {}
             roc_list[f'DNN (K = {self.K_lasso})'] = self.roc_curve_dict['DNN'][K]
-            roc_list['Jet_mass'] = self.roc_curve_dict['Jet_mass']
-            roc_list['Multiplicity'] = self.roc_curve_dict['Multiplicity']
+            roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
+            roc_list['jet_angularity'] = self.roc_curve_dict['jet_angularity']
+            roc_list['jet_theta_g'] = self.roc_curve_dict['jet_theta_g']
             for alpha in self.config['lasso']['alpha']:
                 roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
@@ -509,21 +522,6 @@ class AnalyzePPAA(common_base.CommonBase):
         
         self.roc_curve_dict['PFN'] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
         
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-        
-        # Now we compare the PFN ROC curve to single observables
-
-        # 1. Jet mass (Note: This takes in (pt,y,phi) and converts it to 4-vectors and computes jet mass)
-        #             (Note: X_PFN_train is centered and normalized .. should be ok)
-        masses = np.asarray([energyflow.ms_from_p4s(energyflow.p4s_from_ptyphims(x).sum(axis=0)) for x in self.X_particles])
-        self.roc_curve_dict['Jet_mass'] = sklearn.metrics.roc_curve(self.y, -masses)
-        
-        # 2. Multiplicity (Is this a useful observable for pp vs AA?)
-        mults = np.asarray([np.count_nonzero(x[:,0]) for x in X_PFN_train])
-        self.roc_curve_dict['Multiplicity'] = sklearn.metrics.roc_curve(Y_PFN_train[:,1], -mults)
-
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-        
     #---------------------------------------------------------------
     # Fit ML model -- 5. (IRC safe) Energy Flow Networks
     #---------------------------------------------------------------
@@ -607,7 +605,8 @@ class AnalyzePPAA(common_base.CommonBase):
         for alpha in model_settings['alpha']:
             print(f'Fitting lasso regression with alpha = {alpha}')
         
-            lasso_clf = sklearn.linear_model.Lasso(alpha=alpha, max_iter=model_settings['max_iter'])
+            lasso_clf = sklearn.linear_model.Lasso(alpha=alpha, max_iter=model_settings['max_iter'],
+                                                   tol=model_settings['tol'])
                                                    
             plot_learning_curve = False
             if plot_learning_curve:
@@ -661,10 +660,12 @@ class AnalyzePPAA(common_base.CommonBase):
                 plt.close()
                 
             # Print out observable
-            coeffs = lasso_clf.coef_
-            #print('Coefficients of lasso regression: c_N^beta * log(tau_n^beta):\n {}'.format(coeffs))
             observable = ''
             n_terms = 0
+            coeffs = lasso_clf.coef_
+            nonzero_coeffs = coeffs[np.absolute(coeffs)>1e-10]
+            mean_coeff = np.mean(np.absolute(nonzero_coeffs))
+            coeffs = np.divide(coeffs, mean_coeff)
             for i,_ in enumerate(coeffs):
                 coeff = np.round(coeffs[i], 3)
                 if not np.isclose(coeff, 0., atol=1e-10):
@@ -811,11 +812,17 @@ class AnalyzePPAA(common_base.CommonBase):
         plt.grid(True)
     
         for label,value in roc_list.items():
-            if label in ['PFN', 'EFN', 'Jet_mass', 'Multiplicity']:
+            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label:
                 linewidth = 4
                 alpha = 0.5
                 linestyle = self.linestyles[label]
                 color=self.colors[label]
+                if label == 'jet_mass':
+                    label = r'$m_{\mathrm{jet}}$'
+                if label == 'jet_angularity':
+                    label = r'$\lambda_1$'
+                if label == 'jet_theta_g':
+                    label = r'$\theta_{\mathrm{g}}$'
             elif 'DNN' in label:
                 linewidth = 2
                 alpha = 0.9
@@ -853,7 +860,7 @@ class AnalyzePPAA(common_base.CommonBase):
         plt.grid(True)
             
         for label,value in roc_list.items():
-            if label in ['PFN', 'EFN', 'Jet_mass', 'Multiplicity']:
+            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label:
                 linewidth = 4
                 alpha = 0.5
                 linestyle = self.linestyles[label]
