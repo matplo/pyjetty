@@ -21,6 +21,8 @@ from pyjetty.mputils import MPBase, pwarning, pinfo, perror, treewriter, jet_ana
 def match_dR(j, partons, drmatch = 0.1):
 	mps = [p for p in partons if j.delta_R(p) < drmatch]
 	# for p in fj.sorted_by_pt(mps)[0]:
+	if len(mps) < 1:
+		return None, False, False
 	p = fj.sorted_by_pt(mps)[0]
 	pyp = pythiafjext.getPythia8Particle(p)
 	# print(p, pyp.id(), pyp.isQuark(), pyp.isGluon())
@@ -92,6 +94,9 @@ def main():
 		# for j in tqdm.tqdm(jets):
 		for j in jets:
 			j_type = match_dR(j, partons, jet_R0 / 2.)
+			if j_type[0] is None:
+				pwarning('Jet with no parton label')
+				continue
 			j_sd = sd.result(j)
 			sd_info = fjcontrib.get_SD_jet_info(j_sd)
 			rc_sjets01 = fj.sorted_by_pt(jet_def_rc01(j.constituents()))
