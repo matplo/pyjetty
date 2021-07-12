@@ -47,6 +47,8 @@ namespace RUtil
 	void delete_h(TH2* h);
 	void delete_h(THn* h);
 
+	bool* sorted_match(const int* a, const int a_len, const int* b, const int b_len);
+
     //------------------------------------------------------
     // Rebinning utilities
     class HistUtils : public TObject

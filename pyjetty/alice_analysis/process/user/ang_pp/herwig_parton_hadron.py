@@ -80,8 +80,8 @@ class herwig_parton_hadron(process_base.ProcessBase):
 
         # Manually added binnings for RM and scaling histograms
         self.pt_bins = array('d', list(range(10, 50, 5)) + list(range(50, 210, 10)))
-        self.obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
-                                   np.linspace(0.11, 1., 90)))
+        self.obs_bins = np.concatenate((np.linspace(0, 0.0009, 10), np.linspace(0.001, 0.009, 9),
+                                        np.linspace(0.01, 0.1, 19), np.linspace(0.11, 1., 90)))
 
         # hadron level - ALICE tracking restriction
         self.max_eta_hadron = 0.9
