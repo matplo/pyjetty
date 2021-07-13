@@ -555,22 +555,57 @@ class AnalyzePPAA(common_base.CommonBase):
         Y_EFN = energyflow.utils.to_categorical(self.y, num_classes=2)
                         
         # (pT,y,phi,m=0)
-        X_EFN = self.X_particles # CONTINUE EDITING HERE.
+        X_EFN = self.X_particles
         
-        # Preprocess by centering jets and normalizing pts
+        # Can switch here to quark vs gluon data set
+        #X_EFN, y_EFN = energyflow.datasets.qg_jets.load(self.n_train + self.n_val + self.n_test)
+        #Y_EFN = energyflow.utils.to_categorical(y_EFN, num_classes=2)
+        #print('(n_jets, n_particles per jet, n_variables): {}'.format(X_EFN.shape))
+
+        # For now just use the first 30 entries of the 4-vectors per jet (instead of 800)
+        #np.set_printoptions(threshold=sys.maxsize)        
+        #X_EFN = X_EFN[:,:30]        
+        
+        # Preprocess data set by centering jets and normalizing pts
+        # Note: this step is somewhat different for pp/AA compared to the quark/gluon data set
         for x_EFN in X_EFN:
             mask = x_EFN[:,0] > 0
+            
+            # Compute y,phi averages
             yphi_avg = np.average(x_EFN[mask,1:3], weights=x_EFN[mask,0], axis=0)
-            x_EFN[mask,1:3] -= yphi_avg
+
+            # Adjust phi range: Initially it is [0,2Pi], now allow for negative values and >2Pi 
+            # so there are no gaps for a given jet.
+            # Mask particles that are far away from the average phi & cross the 2Pi<->0 boundary
+            mask_phi_1 = ((x_EFN[:,2] - yphi_avg[1] >  np.pi) & (x_EFN[:,2] != 0.))
+            mask_phi_2 = ((x_EFN[:,2] - yphi_avg[1] < -np.pi) & (x_EFN[:,2] != 0.))
+            
+            x_EFN[mask_phi_1,2] -= 2*np.pi
+            x_EFN[mask_phi_2,2] += 2*np.pi            
+            
+            # Now recompute y,phi averages after adjusting the phi range
+            yphi_avg1 = np.average(x_EFN[mask,1:3], weights=x_EFN[mask,0], axis=0)            
+            
+            # And center jets in the y,phi plane
+            x_EFN[mask,1:3] -= yphi_avg1
+
+            # Normalize transverse momenta p_Ti -> z_i
             x_EFN[mask,0] /= x_EFN[:,0].sum()
+            
+            # Set particle four-vectors to zero if the z value is below a certain threshold.
+            mask2 = x_EFN[:,0]<0.00001
+            x_EFN[mask2,:]=0
         
         # Do not use PID for EFNs
         X_EFN = X_EFN[:,:,:3]
         
+        # Make 800 four-vector array smaller, e.g. only 150. Ok w/o background
+        X_EFN = X_EFN[:,:150]
+        
         # Check shape
         if self.y.shape[0] != X_EFN.shape[0]:
             print(f'Number of labels {self.y.shape} does not match number of jets {X_EFN.shape} ! ')
-
+            
         # Split data into train, val and test sets 
         # and separate momentum fraction z and angles (y,phi)
         (z_EFN_train, z_EFN_val, z_EFN_test, 
@@ -582,7 +617,7 @@ class AnalyzePPAA(common_base.CommonBase):
         efn = energyflow.archs.EFN(input_dim=2,
                                    Phi_sizes=model_settings['Phi_sizes'],
                                    F_sizes=model_settings['F_sizes'])
-
+        
         # Train model
         history = efn.fit([z_EFN_train,p_EFN_train],
                           Y_EFN_train,
@@ -595,7 +630,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.plot_NN_epochs(model_settings['epochs'], history, 'EFN')
         
         # Get predictions on test data
-        preds_EFN = efn.predict([z_EFN_test,p_EFN_test], batch_size=1000)
+        preds_EFN = efn.predict([z_EFN_test,p_EFN_test], batch_size=1000)     
 
         # Get AUC and ROC curve + make plot
         auc_EFN = sklearn.metrics.roc_auc_score(Y_EFN_test[:,1], preds_EFN[:,1])
