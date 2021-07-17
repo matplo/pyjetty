@@ -34,6 +34,7 @@ def main():
 	parser.add_argument('--ignore-mycfg', help="ignore some settings hardcoded here", default=False, action='store_true')
 	parser.add_argument('--output', help="output file name", default="test_hjet_parton.root", type=str)
 	parser.add_argument('--no-tt', help="do not require TT to accept the event", default=False, action='store_true')
+	parser.add_argument('--charged', help="analyze only the charged particles of the FS", default=False, action='store_true')
 	args = parser.parse_args()
 
 	# print the banner first
@@ -49,6 +50,10 @@ def main():
 	hTT12_selector 	= fj.SelectorPtMin(12) & fj.SelectorPtMax(50) & fj.SelectorAbsEtaMax(hadron_eta_max)
 	hTT20_selector 	= fj.SelectorPtMin(20) & fj.SelectorPtMax(50) & fj.SelectorAbsEtaMax(hadron_eta_max)
 
+	pythia_fs_part_selection = [pythiafjext.kFinal]
+	if args.charged is True:
+		pwarning('running with charged particles in the final state')
+		pythia_fs_part_selection.append(pythiafjext.kCharged)
 	print(jet_def)
 
 	all_jets = []
@@ -76,10 +81,15 @@ def main():
 	while t.n < args.nev:
 		if not pythia.next():
 			continue
+
+		# information about the leading process
+		# print(pythia.info.code(), pythia.info.nameProc(pythia.info.code()))
+		# continue
 		# parts = pythiafjext.vectorize(pythia, True, -1, 1, False)
 		partons = pythiafjext.vectorize_select(pythia, [pythiafjext.kParton], 0, True)
 		# parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, False)
-		parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, False)
+		# parts = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, False)
+		parts = pythiafjext.vectorize_select(pythia, pythia_fs_part_selection, 0, False)
 
 		hTT6 = zero_psj
 		hTT6s = fj.sorted_by_pt(hTT6_selector(parts))
@@ -108,16 +118,18 @@ def main():
 			j_type = match_dR(j, partons, jet_R0 / 2.)
 			if j_type[0] is None:
 				continue
-			tw.fill_branches(			j=j,
-                            hTT6=hTT6,
-                            hTT12=hTT12,
-                            hTT20=hTT20,
-                            dphi6=j.delta_phi_to(hTT6),
-                            dphi12=j.delta_phi_to(hTT12),
-                            dphi20=j.delta_phi_to(hTT20),
-                            ppid=j_type[0],
-                            pquark=j_type[1],
-                            pglue=j_type[2]  # this is redundancy
+			tw.fill_branches(	j=j,
+								mult = len(parts),
+	                            hTT6=hTT6,
+	                            hTT12=hTT12,
+	                            hTT20=hTT20,
+	                            dphi6=j.delta_phi_to(hTT6),
+	                            dphi12=j.delta_phi_to(hTT12),
+	                            dphi20=j.delta_phi_to(hTT20),
+	                            ppid=j_type[0],
+	                            pquark=j_type[1],
+	                            pglue=j_type[2],  # this is redundancy
+	                            pycode=pythia.info.code()
                     )
 			tw.fill_tree()
 
