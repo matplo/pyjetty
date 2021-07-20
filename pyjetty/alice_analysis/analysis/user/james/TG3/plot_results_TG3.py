@@ -182,7 +182,6 @@ class PlotResults(common_base.CommonBase):
         self.y_ratio_max = 1.59
         self.ytitle = f'#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
         self.plot_distribution_and_ratio()
-        #hname = f'h_chjet_zg_alice_R{R}{self.suffix}Scaled')
 
     #-------------------------------------------------------------------------------------------
     def plot_tg(self):
@@ -193,11 +192,10 @@ class PlotResults(common_base.CommonBase):
              
         # Plot distribution + ratio
         self.y_max = 4.1
-        self.y_ratio_min = 0.
-        self.y_ratio_max = 2.69
+        self.y_ratio_min = 0.3
+        self.y_ratio_max = 1.89
         self.ytitle = f'#frac{{1}}{{#it{{#sigma}}_{{jet, inc}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
         self.plot_distribution_and_ratio()
-        #hname = f'h_chjet_tg_alice_R{R}{self.suffix}Scaled')
 
     #-------------------------------------------------------------------------------------------
     def plot_hjet_IAA(self):
@@ -359,6 +357,9 @@ class PlotResults(common_base.CommonBase):
             x_err = (bins[1:] - bins[:-1]) / 2
             n = len(x)
             self.observable_settings['g_AA'] = ROOT.TGraphErrors(n, x, y, x_err, y_stat)
+            
+            integral_pp_data = dir.Get('Hist1D_y1').Integral()
+            integral_PbPb_data = np.sum(y)
 
         # Data -- ratio
         if self.observable == 'girth':
@@ -524,10 +525,25 @@ class PlotResults(common_base.CommonBase):
             h_AA = file_AA.Get(result['hname'])
             h_pp.SetDirectory(0)
             h_AA.SetDirectory(0)
+            
+            # Also add versions that are scaled to integral of data
+            integral_pp_jetscape = h_pp.Integral(1, h_pp.GetNbinsX()+1)
+            integral_PbPb_jetscape = h_AA.Integral(1, h_AA.GetNbinsX()+1)
+            h_pp_scaled = h_pp.Clone(f'{h_pp.GetName()}_scaled')
+            h_AA_scaled = h_AA.Clone(f'{h_AA.GetName()}_scaled')
+            h_pp_scaled.SetDirectory(0)
+            h_AA_scaled.SetDirectory(0)
+            h_pp_scaled.Scale(integral_pp_data/integral_pp_jetscape)
+            h_AA_scaled.Scale(integral_PbPb_data/integral_PbPb_jetscape)
+            
             self.observable_settings['prediction_distribution_list'].append(h_pp)
             self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp')
+            self.observable_settings['prediction_distribution_list'].append(h_pp_scaled)
+            self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp (scaled)')
             self.observable_settings['prediction_distribution_list'].append(h_AA)
             self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, Pb-Pb')
+            self.observable_settings['prediction_distribution_list'].append(h_AA_scaled)
+            self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, Pb-Pb (scaled)')
 
         # Theory -- Hybrid
         if self.observable == 'girth':
@@ -623,7 +639,7 @@ class PlotResults(common_base.CommonBase):
                     
                         if type == 'lbnl':
                         
-                            if not 'med q/g' in theory_prediction['sublabel']:
+                            if not 'med #it{q}/#it{g}' in theory_prediction['sublabel']:
                                 continue
                         
                             x = np.array(theory_prediction['x'])
@@ -685,31 +701,11 @@ class PlotResults(common_base.CommonBase):
                         
                         elif type == 'jetscape':
 
-                            plot_ratio_directly = True
-                            if plot_ratio_directly:
-                                x = np.array(theory_prediction['x_ratio'])
-                                ratio = np.array(theory_prediction['ratio'])
-                                ratio_err = np.array(theory_prediction['ratio_err'])
-                            else:
-                                # Get distributions
-                                xbins = np.array(theory_prediction['xbins'])
-                                y_pp = np.array(theory_prediction['y_pp'])
-                                y_pp_err = np.array(theory_prediction['y_pp_err'])
-                                y_AA = np.array(theory_prediction['y_AA'])
-                                y_AA_err = np.array(theory_prediction['y_AA_err'])
+                            bins = np.array(theory_prediction['xbins'])
+                            x = (bins[1:] + bins[:-1]) / 2
+                            ratio = np.array(theory_prediction['ratio'])
+                            ratio_err = np.array(theory_prediction['ratio_err'])
                                 
-                                # Rebin distributions
-                                x, y_pp, y_pp_err = self.rebin_arrays(xbins, y_pp, y_pp_err)
-                                _, y_AA, y_AA_err = self.rebin_arrays(xbins, y_AA, y_AA_err)
-
-                                # Form ratio and propagate uncertainty
-                                y_pp_err_fraction = np.divide(y_pp_err, y_pp)
-                                y_AA_err_fraction = np.divide(y_AA_err, y_AA)
-                                
-                                ratio = np.divide(y_AA, y_pp)
-                                ratio_err_fraction = np.sqrt(np.square(y_AA_err_fraction) + np.square(y_pp_err_fraction))
-                                ratio_err = np.multiply(ratio, ratio_err_fraction)
-                  
                             n = len(x)
                             xerr = np.zeros(n)
                             g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
@@ -1032,7 +1028,8 @@ class PlotResults(common_base.CommonBase):
         self.utils.setup_legend(leg, 0.04, sep=-0.1)
         
         if self.observable == 'hjet_dphi':
-            leg2 = ROOT.TLegend(0.5,y_leg,0.7,y_leg+0.11)
+            y_leg = 0.32
+            leg2 = ROOT.TLegend(0.2,y_leg,0.5,y_leg+0.16)
         self.utils.setup_legend(leg2, 0.04, sep=-0.1)
         
         # Draw theory predictions
@@ -1040,7 +1037,7 @@ class PlotResults(common_base.CommonBase):
 
             label = self.observable_settings['prediction_distribution_labels'][i]
             color = self.theory_colors[i]
-            
+           
             prediction.SetFillColor(color)
             prediction.SetFillColorAlpha(color, self.alpha)
             prediction.SetLineColor(color)
@@ -1048,11 +1045,24 @@ class PlotResults(common_base.CommonBase):
             prediction.SetLineWidth(8)
             prediction.SetMarkerSize(0)
             prediction.SetMarkerStyle(0)
+           
+            if self.observable == 'hjet_dphi':
+                prediction.SetLineColor(0)
+                prediction.SetFillColorAlpha(color, 1.)
+                if 'pp' in label:
+                    prediction.SetFillColor(ROOT.kViolet-8)
+                else:
+                    prediction.SetFillColor(ROOT.kRed-7)
+                prediction.SetLineWidth(8)
+                if 'scaled' in label:
+                    prediction.SetFillStyle(3001)
               
             if type(prediction) in [ROOT.TH1D]:
                 prediction.Draw('E3 same')
-
-                leg2.AddEntry(prediction, label, 'L')
+                if self.observable == 'hjet_dphi':
+                    leg2.AddEntry(prediction, label, 'F')
+                else:
+                    leg2.AddEntry(prediction, label, 'L')
                 
         # Draw experimental data
         if self.observable == 'hjet_dphi':
@@ -1226,14 +1236,14 @@ class PlotResults(common_base.CommonBase):
         if self.observable == 'zg':
             ratio_legend = ROOT.TLegend(0.29,0.75,0.4,0.95)
         if self.observable == 'theta_g':
-            ratio_legend = ROOT.TLegend(0.34,0.7,0.52,0.95)
+            ratio_legend = ROOT.TLegend(0.34,0.72,0.52,0.96)
         self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
         
         if self.observable == 'zg':
             ratio_legend2 = ROOT.TLegend(0.5,0.72,0.7,0.975)
             self.utils.setup_legend(ratio_legend2, 0.07, sep=0.2)
         elif self.observable == 'theta_g':
-            ratio_legend2 = ROOT.TLegend(0.6,0.7,0.8,0.95)
+            ratio_legend2 = ROOT.TLegend(0.6,0.72,0.8,0.96)
             self.utils.setup_legend(ratio_legend2, 0.07, sep=0.2)
 
         myBlankHisto2.Draw('')

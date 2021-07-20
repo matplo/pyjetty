@@ -183,10 +183,7 @@ zg:
   
   # Theory
   theory_config: '../theory_predictions_zg.yaml'
-  #file_jetscape_pp: 'jetscape/540755/5020_PP_Colorless/AnalysisResultsFinal.root'
-  #file_jetscape_AA: 'jetscape/540755/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
-  #hname_jetscape: 'h_chjet_mass_alice_R0.4_pt0.0Scaled'
-  
+
 #------------------------------------------------------------------
 # ALICE, ALICE-PUBLIC-2020-006 (no hepdata)
 theta_g:
