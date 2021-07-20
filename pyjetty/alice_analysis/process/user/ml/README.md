@@ -9,12 +9,12 @@ The analysis workflow is as follows:
 
 0. Generate JEWEL events: 
    ```
-   cd pyjetty/alice_analysis/generation/jewel/vac/slurm_jewel_pp.sh
+   cd pyjetty/alice_analysis/generation/jewel/vac
    sbatch slurm_jewel_pp.sh
    ```
    and 
    ```
-   cd pyjetty/alice_analysis/generation/jewel/medium/slurm_jewel_pp.sh
+   cd pyjetty/alice_analysis/generation/jewel/medium
    sbatch slurm_jewel_PbPb.sh
    ```
    Then create a filelist manually in `/rstorage/ml/egml/data`, to be used in the next step.
