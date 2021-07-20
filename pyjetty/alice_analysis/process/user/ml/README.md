@@ -1,9 +1,55 @@
 # Running the code
 
-## pp-AA (full events)
+## pp-AA (full events) from James
 
 The events are located on hiccup at:
-- PYTHIA/JEWEL + HYDJET, full events: `/rstorage/ml/egml/data/files_hydjet.txt`
+- JEWEL (vacuum + medium) with thermal background, full events: `/rstorage/ml/egml/data/files.txt`
+
+The analysis workflow is as follows:
+
+0. Generate JEWEL events: 
+   ```
+   cd pyjetty/alice_analysis/generation/jewel/vac/slurm_jewel_pp.sh
+   sbatch slurm_jewel_pp.sh
+   ```
+   and 
+   ```
+   cd pyjetty/alice_analysis/generation/jewel/medium/slurm_jewel_pp.sh
+   sbatch slurm_jewel_PbPb.sh
+   ```
+   Then create a filelist manually in `/rstorage/ml/egml/data`, to be used in the next step.
+   
+1. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
+   ```
+   cd pyjetty/alice_analysis/process/user/ml/slurm
+   sbatch slurm_compute_nsubjettiness.sh
+   ```
+   You should update the skimmed filelist in `slurm_compute_nsubjettiness.sh` if necessary.
+   
+   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
+   
+   This writes output to `/rstorage/ml/egml/nsubjettiness/<job_id>/files.txt`
+
+2. Aggregate the results from each file's processing output
+   ```
+   cd pyjetty/alice_analysis/process/user/ml
+   python aggregate_nsubjettiness.py -o /rstorage/ml/egml/nsubjettiness/<process_job_id>
+   ```
+   The `-o` path should point to the directory containing `files.txt` from Step 2. This is the location that the output file, `nsubjettiness.h5`, will be written to. 
+   
+3. Fit model and make plots:
+   ```
+   cd alice_analysis/analysis/user/ml
+   python analyze_ppAA.py -c <config> -o <output_dir>
+   ```
+   The `-o` path should point to the directory containing `nsubjettiness.h5` from Step 3. This is the location that the output plots will be written to. 
+   
+   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
+
+## pp-AA (full events) from Yue Shi
+
+The events are located on hiccup at:
+- PYTHIA/JEWEL + HYDJET, full events: `/rstorage/ml/egml/data/v3/files_hydjet.txt`
 
 The analysis workflow is as follows:
 
