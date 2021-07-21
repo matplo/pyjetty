@@ -10,6 +10,7 @@ import argparse
 import yaml
 import h5py
 import pickle
+import time
 
 # Data analysis and plotting
 import pandas as pd
@@ -26,10 +27,11 @@ import fjtools
 import energyflow
 
 # Analysis utilities
-from pyjetty.mputils import CEventSubtractor
-from pyjetty.alice_analysis.process.base import thermal_generator
+from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_base
 from pyjetty.alice_analysis.process.base import process_utils
+from pyjetty.alice_analysis.process.base import thermal_generator
+from pyjetty.mputils import CEventSubtractor
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
@@ -42,6 +44,8 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def __init__(self, config_file='', input_file='', output_dir='', **kwargs):
         super(common_base.CommonBase, self).__init__(**kwargs)
+       
+        self.start_time = time.time()
         
         self.config_file = config_file
         self.input_file = input_file
@@ -54,46 +58,27 @@ class ProcessppAA(common_base.CommonBase):
         
         # Initialize utils class
         self.utils = process_utils.ProcessUtils()
-        
+
         # Load dataframe of particle four-vectors for all particles in the event
         # (separate dataframes for hard process and background)
-        print()
-        print('Loading particle dataframes')
-        with open(self.input_file, 'rb') as f:
-            df_particles_hard = pickle.load(f)
-            if not self.thermal_model:
-                df_particles_background = pickle.load(f)
-        print('Done.')
-        print()
-        
-        # Apply eta cut
-        #print(f'df_particles_hard (before filtering pseudorapidity): {df_particles_hard.describe()}')
-        df_particles_hard = self.apply_eta_cut(df_particles_hard)
-        print(f'df_particles_hard (after filtering pseudorapidity): {df_particles_hard.describe()}')
+        # Use IO helper class to convert truth-level ROOT TTree into
+        # a SeriesGroupBy object of fastjet particles per event
+        tree_dir = 'PWGHF_TreeCreator'
+        io_hard = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
+                                        track_tree_name='tree_Particle_gen', use_ev_id_ext=False)
+        df_fjparticles_hard = io_hard.load_data()
+        self.nEvents_truth = len(df_fjparticles_hard.index)
+        self.nTracks_truth = len(io_hard.track_df.index)
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
         
         if self.thermal_model:
             # Construct dummy combined event -- we will add thermal particles in event loop
-            df_particles_combined = df_particles_hard
+            df_fjparticles_combined = df_fjparticles_hard
         else:
-            #print(f'df_particles_background (before filtering pseudorapidity): {df_particles_background.describe()}')
-            df_particles_background = self.apply_eta_cut(df_particles_background)
-            print(f'df_particles_background (after filtering pseudorapidity): {df_particles_background.describe()}')
-        
             # Construct a dataframe of the combined hard+background particles
             df_particles_combined = pd.concat([df_particles_hard, df_particles_background])
 
-        # Next, we will transform these into fastjet::PseudoJet objects.
-        # This allows us to do jet finding and use the fastjet contrib to compute Nsubjettiness
-        
-        # (i) Group the particle dataframe by event id
-        #     df_particles_grouped is a DataFrameGroupBy object with one particle dataframe per event
-        df_particles_hard_grouped = df_particles_hard.groupby('event_id')
-        df_particles_combined_grouped = df_particles_combined.groupby('event_id')
-        
-        # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet::PseudoJets
-        print('Converting particle dataframes to fastjet::PseudoJets...')
-        df_fjparticles_hard = df_particles_hard_grouped.apply(self.get_fjparticles_px_py_pz)
-        df_fjparticles_combined = df_particles_combined_grouped.apply(self.get_fjparticles_px_py_pz)
+        # Merge hard event and background dataframes
         self.df_fjparticles = pd.concat([df_fjparticles_hard, df_fjparticles_combined], axis=1)
         self.df_fjparticles.columns = ['fj_particles_hard', 'fj_particles_combined']
         print('Done.')
@@ -177,34 +162,6 @@ class ProcessppAA(common_base.CommonBase):
         self.bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
         self.max_pt_correct = constituent_subtractor['max_pt_correct']
         self.ghost_area = constituent_subtractor['ghost_area']
-
-    #---------------------------------------------------------------
-    # Compute pseudorapidity from four-vector
-    #---------------------------------------------------------------
-    def apply_eta_cut(self, df):
-   
-        df['eta'] = df.apply(self.eta, axis=1)
-        df = df[np.abs(df['eta']) < self.eta_max].drop(['eta'],axis=1)
-        return df
-
-    #---------------------------------------------------------------
-    # Compute pseudorapidity from four-vector
-    #---------------------------------------------------------------
-    def eta(self, df):
-            
-        p = np.sqrt(df['px']*df['px'] + df['py']*df['py'] + df['pz']*df['pz'])
-        numerator = p + df['pz']
-        denominator = p - df['pz']
-        
-        if not np.isclose(numerator, 0.) and not np.isclose(denominator, 0.):
-            eta = 0.5*np.log( (p + df['pz']) / (p - df['pz']) )
-        else:
-            eta = 1000
-            
-        if np.abs(eta) < 1. and df['E'] > 1000.:
-            print(df)
-            
-        return eta
 
     #---------------------------------------------------------------
     # Main processing function
@@ -525,30 +482,34 @@ class ProcessppAA(common_base.CommonBase):
                                 jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][key] = np.array(val)
                             
         return jet_variables_numpy
-            
+                                        
     #---------------------------------------------------------------
-    # Construct fastjet::PseudoJets from four-vectors
+    # Compute pseudorapidity from four-vector
     #---------------------------------------------------------------
-    def get_fjparticles_px_py_pz_e(self, df_particles_grouped):
-                                                 
-        user_index_offset = 0
-        return fjext.vectorize_px_py_pz_e(df_particles_grouped['px'].values,
-                                          df_particles_grouped['py'].values,
-                                          df_particles_grouped['pz'].values,
-                                          df_particles_grouped['E'].values,
-                                          user_index_offset)
+    def apply_eta_cut(self, df):
+   
+        df['eta'] = df.apply(self.eta, axis=1)
+        df = df[np.abs(df['eta']) < self.eta_max].drop(['eta'],axis=1)
+        return df
 
     #---------------------------------------------------------------
-    # Construct fastjet::PseudoJets from four-vectors
-    # Sets m=0
+    # Compute pseudorapidity from four-vector
     #---------------------------------------------------------------
-    def get_fjparticles_px_py_pz(self, df_particles_grouped):
-                                                 
-        user_index_offset = 0
-        return fjext.vectorize_px_py_pz(df_particles_grouped['px'].values,
-                                        df_particles_grouped['py'].values,
-                                        df_particles_grouped['pz'].values,
-                                        user_index_offset)
+    def eta(self, df):
+            
+        p = np.sqrt(df['px']*df['px'] + df['py']*df['py'] + df['pz']*df['pz'])
+        numerator = p + df['pz']
+        denominator = p - df['pz']
+        
+        if not np.isclose(numerator, 0.) and not np.isclose(denominator, 0.):
+            eta = 0.5*np.log( (p + df['pz']) / (p - df['pz']) )
+        else:
+            eta = 1000
+            
+        if np.abs(eta) < 1. and df['E'] > 1000.:
+            print(df)
+            
+        return eta
 
 ##################################################################
 if __name__ == '__main__':
@@ -561,7 +522,7 @@ if __name__ == '__main__':
                         help='Path of config file for analysis')
     parser.add_argument('-f', '--inputFile', action='store',
                         type=str, metavar='inputFile',
-                default='./skim_blah.pkl',
+                default='./jewel.root',
                         help='Path of input file for analysis')
     parser.add_argument('-o', '--outputDir', action='store',
                         type=str, metavar='outputDir',

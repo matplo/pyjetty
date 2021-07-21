@@ -4,15 +4,15 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-160
+#SBATCH --array=1-200
 #SBATCH --output=/rstorage/ml/egml/nsubjettiness/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/ml/egml/skim/513736/files.txt'
+FILE_PATHS='/rstorage/ml/egml/data/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 8 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 160 + 1 ))
+FILES_PER_JOB=$(( $NFILES / 200 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 
 STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))
