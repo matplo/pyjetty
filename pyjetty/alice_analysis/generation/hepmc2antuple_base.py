@@ -102,7 +102,7 @@ class HepMC2antupleBase(common_base.CommonBase):
   
     # Print final list of particles that we accepted
     print('particles included: {}'.format(self.particles_accepted))
-    reference_particles = ['Omega+', 'Xi-', 'e+', 'Sigma-', 'mu-', 'Omega-', 'antiproton', 'proton', 'mu+', 'Sigma+', 'Sigma-_bar', 'Sigma+_bar', 'K-', 'pi+', 'K+', 'pi-', 'e-', 'Xi-_bar']
+    reference_particles = ['Omega+', 'Xi-', 'e+', 'Sigma-', 'mu-', 'Omega-', 'antiproton', 'proton', 'mu+', 'Sigma+', 'Sigma-_bar', 'Sigma+_bar', 'K-', 'pi+', 'K+', 'pi-', 'e-', 'Xi-_bar', 'antineutron', 'neutron', 'K_L0', 'gamma']
     
     # Check that we are not missing any particles
     for particle in reference_particles:

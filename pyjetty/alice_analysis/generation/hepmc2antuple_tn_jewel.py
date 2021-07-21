@@ -36,11 +36,11 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
 
     while not input_hepmc.failed():
       if input_hepmc.NextEvent():
-
         self.fill_event(input_hepmc)
-        self.increment_event()
-        if self.nev > 0 and self.ev_id > self.nev:
-          break
+      
+      self.increment_event()
+      if self.nev > 0 and self.ev_id > self.nev:
+        break
       
     self.finish()
 

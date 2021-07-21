@@ -31,7 +31,7 @@ def accept_particle_jewel(part, status, end_vertex, pid, pdg, parton=False):
   if parton:
     raise NotImplementedError('Parton tree not implemented yet for JEWEL') 
 
-  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1], select_charged=False)
 
 #---------------------------------------------------------------
 def accept_particle_jetscape(part, pdg, parton=False):
@@ -85,7 +85,7 @@ def accept_particle_hybrid(part, pdg, parton):
   return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1, 6, 7])
   
 #---------------------------------------------------------------
-def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, status_accepted = [1]):
+def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, status_accepted = [1], select_charged=True):
   
   # Check status
   #print('status: {} in {}'.format(status, status_accpted))
@@ -99,13 +99,14 @@ def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, sta
     return False
   
   # Check PID for charged particles
-  if pdg.GetParticle(part.pid):
-    #if parton:
-    #  print(part, status)
-    #  print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
-    if not parton and pdg.GetParticle(part.pid).Charge() == 0:
-      return False
-  else:
-    return False
+  if select_charged:
+    if pdg.GetParticle(part.pid):
+      #if parton:
+      #  print(part, status)
+      #  print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
+      if not parton and pdg.GetParticle(part.pid).Charge() == 0:
+        return False
+      else:
+        return False
     
   return True
