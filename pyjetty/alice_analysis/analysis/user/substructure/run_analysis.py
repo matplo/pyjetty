@@ -37,7 +37,7 @@ import os
 import argparse
 import itertools
 from array import *
-import numpy
+import numpy as np
 import math
 import ROOT
 import yaml
@@ -213,6 +213,7 @@ class RunAnalysis(common_base.CommonBase):
       self.create_output_subdir(output_dir, 'unfolding_tests')
 
     if self.do_plot_final_result:
+      self.output_dir_systematics = os.path.join(output_dir, 'systematics')
       output_dir_final = self.create_output_subdir(output_dir, 'final_results')
       final_result_root_file = os.path.join(output_dir_final, 'fFinalResults.root')
       fFinalResults = ROOT.TFile(final_result_root_file, 'RECREATE')
@@ -799,7 +800,7 @@ class RunAnalysis(common_base.CommonBase):
         return None
         
     elif systematic == 'thermal_closure':
-      fname = 'nonclosure{}_{}_{}-{}.root'.format(jetR, grooming_setting, min_pt_truth, max_pt_truth)
+      fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_label, grooming_setting, min_pt_truth, max_pt_truth)
       outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
       f_nonclosure = ROOT.TFile(os.path.join(outf_name, fname), 'READ')
       h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
@@ -845,6 +846,12 @@ class RunAnalysis(common_base.CommonBase):
 
     if 'fastsim_generator1' in systematic:
         systematic = 'generator'  # For generator systematic, need to set label here
+        
+    # Normalization
+    #integral = hMain.Integral(2, hMain.GetNbinsX(), 'width')
+    #hMain.Scale(1./integral)
+    #integral = h_systematic.Integral(2, h_systematic.GetNbinsX(), 'width')
+    #h_systematic.Scale(1./integral)
     
     name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
       self.observable, systematic, jetR, obs_label,
@@ -1159,23 +1166,22 @@ class RunAnalysis(common_base.CommonBase):
           min_pt_truth = self.pt_bins_reported[bin]
           max_pt_truth = self.pt_bins_reported[bin+1]
           
-          self.add_hepdata_table(jetR, obs_label, obs_setting, grooming_setting,
+          self.add_hepdata_table(i, jetR, obs_label, obs_setting, grooming_setting,
                                  min_pt_truth, max_pt_truth)
       
     # Write submission files
     self.hepdata_submission.create_files(self.hepdata_dir)
 
   #----------------------------------------------------------------------
-  def add_hepdata_table(self, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
+  def add_hepdata_table(self, i, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
   
-    table = hepdata_lib.Table('Table R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label, min_pt, max_pt))
-    table.location = 'Figure X. '
-    if grooming_setting and 'sd' in grooming_setting.keys():
-        table.description = 'Note: first bin corresponds to untagged fraction'
-    else:
-        table.description = 'Description...'
+    index = self.set_hepdata_table_index(i, jetR, min_pt)
+    table = hepdata_lib.Table(f'Table {index}')
     table.keywords["reactions"] = ['P P --> jet+X']
     table.keywords["cmenergies"] = ['5020']
+    
+    # Set observable-specific info in table
+    x_label, y_label = self.set_hepdata_table_descriptors(table, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt)
  
     # Create readers to read histograms
     final_result_root_filename = os.path.join(getattr(self, 'output_dir_final_results'), 'fFinalResults.root')
@@ -1186,13 +1192,20 @@ class RunAnalysis(common_base.CommonBase):
  
     # Define variables
     h_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt, max_pt)
+    if self.observable == 'ang':
+        h_name += '_trunc'
     h = hepdata_reader.read_hist_1d(h_name)
  
-    x = hepdata_lib.Variable(self.observable, is_independent=True, is_binned=True, units='()')
+    n_significant_digits = 3 # Note: use 2 significant digits for uncertainties
+    
+    x = hepdata_lib.Variable(x_label, is_independent=True, is_binned=True, units='')
+    x.digits = n_significant_digits
     x.values = h['x_edges']
  
-    y = hepdata_lib.Variable('$d^{2}\sigma/dX$', is_independent=False, is_binned=False, units='()')
+    y = hepdata_lib.Variable(y_label, is_independent=False, is_binned=False, units='')
+    y.digits = n_significant_digits
     y.values = h['y']
+    y.add_qualifier('RE', 'P P --> jet+X')
     y.add_qualifier('SQRT(S)', 5.02, 'TeV')
     y.add_qualifier('ETARAP', '|0.9-R|')
     y.add_qualifier('jet radius', jetR)
@@ -1200,7 +1213,7 @@ class RunAnalysis(common_base.CommonBase):
  
     # Define uncertainties
     stat = hepdata_lib.Uncertainty('stat', is_symmetric=True)
-    stat.values = h['dy']
+    stat.values = [float('{:.2g}'.format(dy)) for dy in h['dy']]
  
     # Add tables to submission
     table.add_variable(x)
@@ -1212,7 +1225,7 @@ class RunAnalysis(common_base.CommonBase):
                                                       int(min_pt), int(max_pt))
     h_sys_unfolding = hepdata_reader_systematics.read_hist_1d(getattr(self, name).GetName())
     sys_unfolding = hepdata_lib.Uncertainty('sys,unfolding', is_symmetric=True)
-    sys_unfolding.values = ['{}{}'.format(y,'%') for y in h_sys_unfolding['y']]
+    sys_unfolding.values = ['{:.2g}%'.format(y) for y in h_sys_unfolding['y']]
     y.add_uncertainty(sys_unfolding)
  
     # Add systematic uncertainty breakdown
@@ -1233,11 +1246,84 @@ class RunAnalysis(common_base.CommonBase):
         
         h_sys = hepdata_reader_systematics.read_hist_1d(h_sys.GetName())
         sys = hepdata_lib.Uncertainty('sys,{}'.format(sys_label), is_symmetric=True)
-        sys.values = ['{}{}'.format(y,'%') for y in h_sys['y']]
+        sys.values = ['{:.2g}%'.format(y) for y in h_sys['y']]
         y.add_uncertainty(sys)
  
     # Add table to the submission
     self.hepdata_submission.add_table(table)
+
+  #----------------------------------------------------------------------
+  def set_hepdata_table_index(self, i, jetR, min_pt):
+  
+    index = 1
+    index += i
+    if self.observable == 'ang':
+        if np.isclose(jetR, 0.4):
+            if np.isclose(min_pt, 40.):
+                index += 8
+            elif np.isclose(min_pt, 60.):
+                index += 16
+            elif np.isclose(min_pt, 80.):
+                index += 24
+        elif np.isclose(jetR, 0.2):
+            if np.isclose(min_pt, 20.):
+                index += 32
+            if np.isclose(min_pt, 40.):
+                index += 40
+            if np.isclose(min_pt, 60.):
+                index += 48
+            if np.isclose(min_pt, 80.):
+                index += 56
+                
+    return index
+
+  #----------------------------------------------------------------------
+  def set_hepdata_table_descriptors(self, table, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
+    
+    if self.observable == 'ang':
+    
+        if grooming_setting and 'sd' in grooming_setting.keys():
+        
+            if np.isclose(jetR, 0.4):
+                table.location = 'Figure 3.'
+            elif np.isclose(jetR, 0.2):
+                table.location = 'Figure 4.'
+                
+            table.description = r'Groomed jet angularity $\lambda_{{\alpha,g}}$ for $\alpha = {}$.'.format(obs_setting)
+            table.description += '\n'
+            table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, Soft Drop $z_{{\mathrm{{cut}}}}=0.2, \beta=0$.'.format(min_pt, max_pt)
+            table.description += '\n\nNote: The first bin corresponds to the Soft Drop untagged fraction.'
+            
+            x_label = r'$\lambda_{\alpha,g}$'
+            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{d\lambda_{\alpha,g}}$'
+            
+        else:
+        
+            if np.isclose(jetR, 0.4):
+                table.location = 'Figure 1.'
+            elif np.isclose(jetR, 0.2):
+                table.location = 'Figure 2.'
+
+            table.description = r'Jet angularity $\lambda_{{\alpha}}$ for $\alpha = {}$.'.format(obs_setting)
+            table.description += '\n'
+            table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$.'.format(min_pt, max_pt)
+            
+            x_label = r'$\lambda_{{\alpha}}$'
+            y_label = r'$\frac{1}{\sigma} \frac{d\sigma}{d\lambda_{\alpha}}$'
+          
+        table.description += '\n\n'
+        table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables). For the remaining sources ("unfolding", "random_mass") no correlation information is specified ($\pm$ is always used).'
+            
+        if np.isclose(min_pt, 20.):
+            table.location += ' upper left'
+        elif np.isclose(min_pt, 40.):
+            table.location += ' upper right'
+        elif np.isclose(min_pt, 60.):
+            table.location += ' lower left'
+        elif np.isclose(min_pt, 80.):
+            table.location += ' lower right'
+            
+    return x_label, y_label
 
   #----------------------------------------------------------------------
   def change_to_per(self, h, signed=False):

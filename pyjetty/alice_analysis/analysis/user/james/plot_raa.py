@@ -55,11 +55,11 @@ class PlotRAA(common_base.CommonBase):
         self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12');
         
-        self.theory_colors_james = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kBlue-10]
+        self.theory_colors_james = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kBlue-10, ROOT.kCyan-2]
         self.theory_colors_laura = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kCyan-2]
 
-        self.line_style_james = [1, 1, 1, 1, 1, 1, 11, 1, 1]
-        self.line_width_james = [4, 4, 4, 4, 4, 4, 6, 4, 4]
+        self.line_style_james = [1, 1, 1, 1, 1, 1, 11, 11]
+        self.line_width_james = [4, 4, 4, 4, 4, 4, 4, 6]
         self.line_style_laura = [1, 1, 1, 1, 11, 1, 1]
         self.line_width_laura = [4, 4, 4, 4, 6, 4, 4]
          
@@ -309,8 +309,8 @@ class PlotRAA(common_base.CommonBase):
         pad1.Draw()
         pad1.cd()
 
-        myLegend = ROOT.TLegend(0.25,0.65,0.45,0.85)
-        self.utils.setup_legend(myLegend,0.055, sep=0.)
+        myLegend = ROOT.TLegend(0.24,0.65,0.44,0.85)
+        self.utils.setup_legend(myLegend,0.06, sep=0.)
         
         self.h_main_pp.SetMarkerSize(1.5)
         self.h_main_pp.SetMarkerStyle(self.markers[0])
@@ -372,9 +372,9 @@ class PlotRAA(common_base.CommonBase):
                 top_axis_tf1 = ROOT.TF1('top_axis_tf1', 'x', 0, self.jetR*xmax-0.001)
                 top_axis = ROOT.TGaxis(xmin, ymax, xmax, ymax, 'top_axis_tf1', 505, '- S')
                 top_axis.SetTitle('#it{R}_{g}')
-            top_axis.SetTitleSize(25)
+            top_axis.SetTitleSize(24)
             top_axis.SetTitleFont(43)
-            top_axis.SetTitleOffset(0.62)
+            top_axis.SetTitleOffset(0.69)
             top_axis.SetLabelFont(43)
             top_axis.SetLabelSize(25)
             top_axis.SetTickSize(0.025)
@@ -410,7 +410,7 @@ class PlotRAA(common_base.CommonBase):
         
             if self.centrality[0] == 0:
           
-                myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.39)
+                myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.19)
                 
                 ratio_legend = ROOT.TLegend(0.28,0.73,0.42,0.98)
                 self.utils.setup_legend(ratio_legend, 0.06, sep=-0.2)
@@ -486,7 +486,7 @@ class PlotRAA(common_base.CommonBase):
                 color = self.theory_colors[i]
                 g.SetLineColor(color)
                 g.SetFillColor(color)
-                g.SetFillColorAlpha(color, 0.9)
+                g.SetFillColorAlpha(color, 0.85)
                 if type(g) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
                     g.SetLineColor(0)
                     if self.observable in ['rg', 'theta_g']:
@@ -584,7 +584,7 @@ class PlotRAA(common_base.CommonBase):
     # Set draw order (slightly hacky-- just move selected curves to start or end of draw list)
     #----------------------------------------------------------------------
     def set_draw_order(self):
-    
+        
         self.draw_order = list(range(0, len(self.prediction_g_list)))
         for i, g in enumerate(self.prediction_g_list):
 

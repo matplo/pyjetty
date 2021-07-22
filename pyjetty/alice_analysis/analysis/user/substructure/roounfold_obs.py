@@ -1141,7 +1141,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.plot_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle,
                         int(min_pt_det), int(max_pt_det), jetR, obs_label, obs_setting,
                         grooming_setting, outf_name, 'width', legendTitle,
-                        h1LegendLabel, h2LegendLabel)
+                        h1LegendLabel, h2LegendLabel, min_bin_for_normalization=2)
 
   #################################################################################################
   # Plot refolding test, for pt dimension
@@ -1426,7 +1426,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                      max_pt_det, jetR, obs_label, obs_setting, grooming_setting,
                      outputFilename, scalingOptions = "", legendTitle = "",
                      hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "",
-                     yRatioMax = 2.2):
+                     yRatioMax = 2.2, min_bin_for_normalization=1):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -1450,7 +1450,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     # First scale by bin width -- then normalize by integral
     # (where integral weights by bin width)
     h.Scale(1., scalingOptions)
-    integral = h.Integral(1, h.GetNbinsX(), 'width')
+    integral = h.Integral(min_bin_for_normalization, h.GetNbinsX(), 'width')
     if integral < 1e-10:
       print("Warning: scaling skipped for histogram {} since integral is {}".format(h.GetName(), integral))
     else:
@@ -1479,7 +1479,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     # First scale by bin width -- then normalize by integral
     # (where integral weights by bin width)
     h2.Scale(1., scalingOptions)
-    integral = h2.Integral(1, h2.GetNbinsX(), 'width')
+    integral = h2.Integral(min_bin_for_normalization, h2.GetNbinsX(), 'width')
     h2.Scale(1./integral)
 
     h.Draw("hist same E")
@@ -1493,7 +1493,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       # First scale by bin width -- then normalize by integral
       # (where integral weights by bin width)
       h3.Scale(1., scalingOptions)
-      integral = h3.Integral(1, h3.GetNbinsX(), 'width')
+      integral = h3.Integral(min_bin_for_normalization, h3.GetNbinsX(), 'width')
       h3.Scale(1./integral)
 
       h3.Draw("hist same")
@@ -1593,7 +1593,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     c.Close()
     
     if 'ThermalClosure' in outputFilename:
-      fname = 'nonclosure{}_{}_{}-{}.root'.format(jetR, grooming_setting, int(min_pt_det), int(max_pt_det))
+      fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_setting, grooming_setting, int(min_pt_det), int(max_pt_det))
       outf_name = os.path.join(getattr(self, 'output_dir_Test_ThermalClosure'), fname)
       f = ROOT.TFile(outf_name, 'RECREATE')
       hRatio.Write('hNonclosureRatio')
