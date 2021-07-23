@@ -6,6 +6,7 @@ from array import *
 import numpy as np
 import ROOT
 import yaml
+import hepdata_lib
 
 from pyjetty.alice_analysis.process.base import common_base
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
@@ -72,6 +73,10 @@ class PlotRAA(common_base.CommonBase):
     # This function is called once for each subconfiguration
     #----------------------------------------------------------------------
     def plot_raa(self):
+    
+        # Create HEPData submission
+        self.hepdata_dir = os.path.join(self.output_dir, 'hepdata')
+        self.hepdata_submission = hepdata_lib.Submission()
 
         for result in self.config_james_results:
             self.centrality = [0, 10]
@@ -82,6 +87,9 @@ class PlotRAA(common_base.CommonBase):
             self.centrality = [30, 50]
             self.init_result_laura(result)
             self.plot_result()
+            
+        # Write submission files
+        self.hepdata_submission.create_files(self.hepdata_dir)
 
     #---------------------------------------------------------------
     # Initialize
@@ -152,7 +160,12 @@ class PlotRAA(common_base.CommonBase):
         # Load theory predictions
         if self.plot_theory:
             self.init_theory_james()
-    
+            
+        # Add HEPData tables
+        self.add_hepdata_table(is_pp=True)
+        self.add_hepdata_table(is_pp=False)
+        self.add_hepdata_table(is_ratio=True)
+        
     #---------------------------------------------------------------
     # Initialize
     #---------------------------------------------------------------
@@ -250,7 +263,157 @@ class PlotRAA(common_base.CommonBase):
                 self.prediction_g_list.append(g)
             
             self.set_draw_order()
+            
+        # Add HEPData tables
+        self.add_hepdata_table(is_pp=True)
+        self.add_hepdata_table(is_pp=False)
+        self.add_hepdata_table(is_ratio=True)
+
+    #----------------------------------------------------------------------
+    def add_hepdata_table(self, is_pp=False, is_ratio=False):
+  
+        result_index = self.set_hepdata_table_index()
+        if is_ratio:
+            h = self.h_ratio
+            h_sys = self.h_ratio_sys
+            index = 3*result_index
+        elif is_pp:
+            h = self.h_main_pp
+            h_sys = self.h_sys_pp
+            index = 3*result_index-2
+        else:
+            h = self.h_main_AA
+            h_sys = self.h_sys_AA
+            index = 3*result_index-1
+        table = hepdata_lib.Table(f'Table {index}')
+
+        if is_ratio:
+            table.keywords["reactions"] = ['P P --> jet+X, Pb Pb --> jet+X']
+        elif is_pp:
+            table.keywords["reactions"] = ['P P --> jet+X']
+        else:
+            table.keywords["reactions"] = ['Pb Pb --> jet+X']
+        table.keywords["cmenergies"] = ['5020']
         
+        # Set observable-specific info in table
+        x_label, y_label = self.set_hepdata_table_descriptors(table, result_index, is_pp, is_ratio)
+     
+        # Define variables
+        h = hepdata_lib.root_utils.get_hist_1d_points(h)
+     
+        n_significant_digits = 3 # Note: use 2 significant digits for uncertainties
+        
+        x = hepdata_lib.Variable(x_label, is_independent=True, is_binned=True, units='')
+        x.digits = n_significant_digits
+        x.values = h['x_edges']
+     
+        y = hepdata_lib.Variable(y_label, is_independent=False, is_binned=False, units='')
+        y.digits = n_significant_digits
+        y.values = h['y']
+        if is_ratio:
+            y.add_qualifier('RE', 'P P --> jet+X, Pb Pb --> jet+X')
+            y.add_qualifier('CENTRALITY', str(self.centrality))
+        elif is_pp:
+            y.add_qualifier('RE', 'P P --> jet+X')
+        else:
+            y.add_qualifier('RE', 'Pb Pb --> jet+X')
+            y.add_qualifier('CENTRALITY', str(self.centrality))
+        y.add_qualifier('SQRT(S)', 5.02, 'TeV')
+        y.add_qualifier('ETARAP', '|0.9-R|')
+        y.add_qualifier('jet radius', self.jetR)
+        y.add_qualifier('jet method', 'Anti-$k_{T}$')
+ 
+        # Define uncertainties
+        stat = hepdata_lib.Uncertainty('stat', is_symmetric=True)
+        stat.values = [float('{:.2g}'.format(dy)) for dy in h['dy']]
+     
+        # Add tables to submission
+        table.add_variable(x)
+        table.add_variable(y)
+        y.add_uncertainty(stat)
+     
+        # Add unfolding systematic
+        if self.centrality == [0,10]:
+            h_sys = hepdata_lib.root_utils.get_hist_1d_points(h_sys)
+            sys = hepdata_lib.Uncertainty('sys', is_symmetric=True)
+            sys.values = [float('{:.2g}'.format(dy)) for dy in h_sys['dy']]
+        elif self.centrality == [30,50]:
+            h_sys = hepdata_lib.root_utils.get_graph_points(h_sys)
+            sys = hepdata_lib.Uncertainty('sys', is_symmetric=False)
+            sys.values = [(float('{:.2g}'.format(dy[0])), float('{:.2g}'.format(dy[1]))) for dy in h_sys['dy']]
+        y.add_uncertainty(sys)
+     
+        # Add table to the submission
+        self.hepdata_submission.add_table(table)
+
+    #----------------------------------------------------------------------
+    def set_hepdata_table_index(self):
+    
+        if self.observable == 'zg':
+            if np.isclose(self.jetR, 0.2):
+                return 1
+            elif np.isclose(self.jetR, 0.4):
+                if self.centrality == [0,10]:
+                    return 5
+                elif self.centrality == [30,50]:
+                    return 2
+        elif self.observable in ['theta_g', 'rg']:
+            if np.isclose(self.jetR, 0.2):
+                return 3
+            elif np.isclose(self.jetR, 0.4):
+                if np.isclose(self.zcut, 0.2):
+                    return 4
+                elif np.isclose(self.zcut, 0.4):
+                    return 6
+
+    #----------------------------------------------------------------------
+    def set_hepdata_table_descriptors(self, table, result_index, is_pp=False, is_ratio=False):
+        
+        if self.observable == 'zg':
+            table.description = r'Groomed jet momentum splitting fraction $z_{{\mathrm{g}}}$'
+            x_label = r'$z_{{\mathrm{g}}}$'
+            if is_ratio:
+                y_label = 'PbPb/pp'
+            else:
+                y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{dz_{{\mathrm{g}}}}$'
+            if result_index == 1:
+                table.location = 'Figure 2 (left)'
+            elif result_index == 2:
+                table.location = 'Figure 2 (right)'
+            elif result_index == 5:
+                table.location = 'Figure 2 (right) in Ref. [Public Note]'
+            
+        elif self.observable in ['theta_g', 'rg']:
+            table.description = r'Groomed jet radius (scaled) $\theta_{{\mathrm{g}}}$'
+            x_label = r'$\theta_{{\mathrm{g}}}$'
+            if is_ratio:
+                y_label = 'PbPb/pp'
+            else:
+                y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{d\theta_{{\mathrm{g}}}}$'
+            if result_index == 3:
+                table.location = 'Figure 3 (left)'
+            elif result_index == 4:
+                table.location = 'Figure 3 (right)'
+            elif result_index == 6:
+                table.location = 'Figure 5 (right) in Ref. [Public Note]'
+                
+        if is_ratio:
+            table.description += ' -- ratio of Pb-Pb to pp collisions.'
+        elif is_pp:
+            table.description += 'in pp collisions.'
+        else:
+            table.description += 'in Pb-Pb collisions.'
+                
+        table.description += '\n'
+        table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, Soft Drop $z_{{\mathrm{{cut}}}}=0.2, \beta=0$.'.format(self.min_pt, self.max_pt)
+        table.description += '\n\nNote: The first bin corresponds to the Soft Drop untagged fraction.'
+        
+        if is_pp:
+            table.description += '\n\n'
+            table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
+        
+        return x_label, y_label
+
     #---------------------------------------------------------------
     # This function is called once for each subconfiguration
     #

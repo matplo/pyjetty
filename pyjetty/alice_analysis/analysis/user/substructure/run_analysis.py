@@ -216,7 +216,8 @@ class RunAnalysis(common_base.CommonBase):
       self.output_dir_systematics = os.path.join(output_dir, 'systematics')
       output_dir_final = self.create_output_subdir(output_dir, 'final_results')
       final_result_root_file = os.path.join(output_dir_final, 'fFinalResults.root')
-      fFinalResults = ROOT.TFile(final_result_root_file, 'RECREATE')
+      if self.do_systematics:
+        fFinalResults = ROOT.TFile(final_result_root_file, 'RECREATE')
 
   #---------------------------------------------------------------
   # Create a single output subdirectory
@@ -254,12 +255,12 @@ class RunAnalysis(common_base.CommonBase):
             self.compute_systematics(jetR, obs_label, obs_setting, grooming_setting)
 
         # Plot result for each individial subconfiguration
-        if self.do_plot_final_result:
+        if self.do_plot_final_result and self.do_systematics:
           # You must implement this
           self.plot_single_result(jetR, obs_label, obs_setting, grooming_setting)
           
-      # Plot final results for all subconfigs
-      if self.do_plot_final_result:
+      # Plot final results for all subconfigs (may need to comment this out if only writing hepdata)
+      if self.do_plot_final_result and self.do_systematics:
         self.plot_all_results(jetR) # You must implement this
         
     # Write hepdata submission
@@ -605,7 +606,7 @@ class RunAnalysis(common_base.CommonBase):
         h_systematic_ratio = self.retrieve_systematic(systematic, jetR, obs_label,
                                                       reg_param, min_pt_truth, max_pt_truth)
       else:
-        h_systematic_ratio = self.construct_systematic(systematic, hMain, jetR, obs_label, grooming_setting,
+        h_systematic_ratio = self.construct_systematic(systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
                                                        reg_param, min_pt_truth, max_pt_truth, maxbin)
       if h_systematic_ratio:
         if systematic in ['main', 'prior1', 'truncation', 'binning']:
@@ -734,7 +735,7 @@ class RunAnalysis(common_base.CommonBase):
 
   #----------------------------------------------------------------------
   # Get systematic variation and save percentage difference as attribte
-  def construct_systematic(self, systematic, hMain, jetR, obs_label, grooming_setting,
+  def construct_systematic(self, systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
                            reg_param, min_pt_truth, max_pt_truth, maxbin):
                            
     # Set whether to store signed uncertainty value or absolute value
@@ -800,7 +801,7 @@ class RunAnalysis(common_base.CommonBase):
         return None
         
     elif systematic == 'thermal_closure':
-      fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_label, grooming_setting, min_pt_truth, max_pt_truth)
+      fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_setting, grooming_setting, int(min_pt_truth), int(max_pt_truth))
       outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
       f_nonclosure = ROOT.TFile(os.path.join(outf_name, fname), 'READ')
       h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
@@ -1205,7 +1206,10 @@ class RunAnalysis(common_base.CommonBase):
     y = hepdata_lib.Variable(y_label, is_independent=False, is_binned=False, units='')
     y.digits = n_significant_digits
     y.values = h['y']
-    y.add_qualifier('RE', 'P P --> jet+X')
+    if self.is_pp:
+        y.add_qualifier('RE', 'P P --> jet+X')
+    else:
+        y.add_qualifier('RE', 'Pb Pb --> jet+X')
     y.add_qualifier('SQRT(S)', 5.02, 'TeV')
     y.add_qualifier('ETARAP', '|0.9-R|')
     y.add_qualifier('jet radius', jetR)
@@ -1323,6 +1327,33 @@ class RunAnalysis(common_base.CommonBase):
         elif np.isclose(min_pt, 80.):
             table.location += ' lower right'
             
+    elif self.observable in ['zg', 'theta_g']:
+            
+        if self.observable == 'zg':
+            table.description = r'Groomed jet momentum splitting fraction $z_{{\mathrm{g}}}$'
+            x_label = r'$z_{{\mathrm{g}}}$'
+            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{dz_{{\mathrm{g}}}}$'
+            if np.isclose(jetR, 0.4):
+                table.location = 'Figure 2 (right)'
+            elif np.isclose(jetR, 0.2):
+                table.location = 'Figure 2 (left)'
+            
+        elif self.observable == 'theta_g':
+            table.description = r'Groomed jet radius (scaled) $\theta_{{\mathrm{g}}}$'
+            x_label = r'$\theta_{{\mathrm{g}}}$'
+            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{d\theta_{{\mathrm{g}}}}$'
+            table.location = 'Figure 4'
+            
+        table.description += '\n'
+        table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, Soft Drop $z_{{\mathrm{{cut}}}}=0.2, \beta=0$.'.format(min_pt, max_pt)
+        table.description += '\n\nNote: The first bin corresponds to the Soft Drop untagged fraction.'
+        
+        table.description += '\n\n'
+        if self.is_pp:
+            table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
+        else:
+            table.description += r'For the "trkeff" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding", "subtraction", "thermal_closure") no correlation information is specified ($\pm$ is always used).'
+        
     return x_label, y_label
 
   #----------------------------------------------------------------------
