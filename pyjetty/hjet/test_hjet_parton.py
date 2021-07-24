@@ -35,6 +35,7 @@ def main():
 	parser.add_argument('--output', help="output file name", default="test_hjet_parton.root", type=str)
 	parser.add_argument('--no-tt', help="do not require TT to accept the event", default=False, action='store_true')
 	parser.add_argument('--charged', help="analyze only the charged particles of the FS", default=False, action='store_true')
+	parser.add_argument('--max-jet-pt', help="maximum jet pT to consider", type=float, default=100.)
 	args = parser.parse_args()
 
 	# print the banner first
@@ -44,7 +45,7 @@ def main():
 	hadron_eta_max = 2.0
 	jet_R0 = 0.4
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
-	jet_selector = fj.SelectorPtMin(10.0) & fj.SelectorPtMax(100.0) & fj.SelectorAbsEtaMax(hadron_eta_max - jet_R0)
+	jet_selector = fj.SelectorPtMin(10.0) & fj.SelectorPtMax(args.max_jet_pt) & fj.SelectorAbsEtaMax(hadron_eta_max - jet_R0)
 	# jet_selector = fj.SelectorPtMin(40.0) & fj.SelectorPtMax(200.0) &fj.SelectorAbsEtaMax(hadron_eta_max - jet_R0)
 	hTT6_selector 	= fj.SelectorPtMin(6) & fj.SelectorPtMax(7) & fj.SelectorAbsEtaMax(hadron_eta_max)
 	hTT12_selector 	= fj.SelectorPtMin(12) & fj.SelectorPtMax(50) & fj.SelectorAbsEtaMax(hadron_eta_max)
