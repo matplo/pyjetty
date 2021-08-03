@@ -56,7 +56,6 @@ class ProcessIO(common_base.CommonBase):
     self.tree_name = '_'.join((tree_name_base, level, "MPI%s" % MPI))
 
     self.reset_dataframes()
-    self.tree_length = self.get_tree_length()
 
     # Name of the columns to load from each respective tree
     if level == 'p':
@@ -68,6 +67,8 @@ class ProcessIO(common_base.CommonBase):
     else:
       raise ValueError("Particle level %s not recognized / use either 'p' or 'h'")
 
+    self.get_tree_length()
+
     # Set the combination of fields that give a unique event id
     self.unique_identifier =  ['run_number', 'ev_id']
 
@@ -77,7 +78,7 @@ class ProcessIO(common_base.CommonBase):
   # Clear dataframes
   #---------------------------------------------------------------
   def reset_dataframes(self):
-    self.tree_length = None
+    #self.tree_length = None
     self.track_df = None
     self.run_numbers = None
     self.unique_ev_ids_per_run = None
@@ -104,9 +105,12 @@ class ProcessIO(common_base.CommonBase):
 
     self.reset_dataframes()
 
-    print("  tree_name =", self.tree_name)
+    #print("  tree_name =", self.tree_name)
+    ''' Currently this will never be called, so just comment it out
     if not self.tree_length:
       self.get_tree_length()
+      print("    |--> length =", self.tree_length)
+    '''
     self.track_df = self.load_dataframe(start, stop)
 
     return self.group_fjparticles(group_by_evid, ch_cut)
@@ -118,9 +122,8 @@ class ProcessIO(common_base.CommonBase):
     with uproot.open(self.input_file)[self.tree_name] as tree:
       if not tree:
         raise ValueError("Tree %s not found in file %s" % (self.tree_name, self.input_file))
-      df = tree.arrays(self.columns, library="np")
-      self.tree_length = len(df["run_number"][0])
-      print("    |--> length =", self.tree_length)
+      self.full_track_df = tree.arrays(self.columns, library="np")
+      self.tree_length = len(self.full_track_df["run_number"][0])
     return self.tree_length
 
   #---------------------------------------------------------------
@@ -131,22 +134,29 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   def load_dataframe(self, start=None, stop=None):
 
-    df = None
-    with uproot.open(self.input_file)[self.tree_name] as tree:
-      if not tree:
-        raise ValueError("Tree %s not found in file %s" % (self.tree_name, self.input_file))
-      ''' Pandas DataFrame implementation
-      df = uproot.concatenate(tree, self.columns, library="pd")
-      '''
-      # Try saving memory with numpy implementation
-      #df = uproot.concatenate(tree, self.columns, library="np")
-      df = tree.arrays(self.columns, library="np", entry_start=start, entry_stop=stop)
-      # Each value is a 2D array for some reason, so fix that
-      for key, value in df.items():
-        if key == "run_number" or key == "ev_id" or key == "is_charged":
-          df[key] = value[0].astype('int32')
-        else:
-          df[key] = value[0]
+    ''' This should technically never get called, so just comment it out
+    if not self.full_track_df:
+      with uproot.open(self.input_file)[self.tree_name] as tree:
+        if not tree:
+          raise ValueError("Tree %s not found in file %s" % (self.tree_name, self.input_file))
+        """ Pandas DataFrame implementation
+        df = uproot.concatenate(tree, self.columns, library="pd")
+        """
+        # Try saving memory with numpy implementation
+        #df = uproot.concatenate(tree, self.columns, library="np")
+        self.full_track_df = tree.arrays(expressions=self.columns, library="np")
+    '''
+
+    if len(self.full_track_df["run_number"][0]) != self.tree_length:
+      raise ValueError("full track df has been modified...")
+
+    df = self.full_track_df.copy()
+    # Each value is a 2D array for some reason, so fix that
+    for key, value in df.items():
+      if key == "run_number" or key == "ev_id" or key == "is_charged":
+        df[key] = value[0].astype('int32')[start:stop]
+      else:
+        df[key] = value[0][start:stop]
 
     return df
 
@@ -159,7 +169,7 @@ class ProcessIO(common_base.CommonBase):
     track_df = self.track_df
 
     if ch_cut:
-      print("    |--> apply ch_cut...")
+      #print("    |--> apply ch_cut...")
       if self.level == 'p':
         raise ValueError("ch_cut cannot be set for parton-level tree")
       else:  # self.level == 'h'
@@ -169,7 +179,7 @@ class ProcessIO(common_base.CommonBase):
             continue
           track_df[key] = value[track_df["is_charged"] == True]
         track_df.pop("is_charged")  # This info is now redundant
-      print("    |--> length =", len(track_df["run_number"]))
+      #print("    |--> length =", len(track_df["run_number"]))
 
     df_fjparticles = None
     fj_particles = self.get_fjparticles(track_df)
@@ -188,7 +198,7 @@ class ProcessIO(common_base.CommonBase):
       # These are only useful for numpy implementation
       self.run_numbers = self.unique_ev_ids_per_run = None
       '''
-      print("    |--> grouping by run_number & ev_id...")
+      #print("    |--> grouping by run_number & ev_id...")
       # First split by run_number, then by ev_id
       self.run_numbers = np.unique(track_df["run_number"], return_index=True)
       ev_ids_per_run = np.split(track_df["ev_id"], self.run_numbers[1][1:])
@@ -204,7 +214,7 @@ class ProcessIO(common_base.CommonBase):
         "ev_id": li_concat(
           [self.unique_ev_ids_per_run[i][0] for i in range(len(ev_ids_per_run))]),
         "fj_particle": [particle_list[sp_pt[i]:sp_pt[i+1]] for i in range(len(sp_pt)-1)] }
-      print("    |--> done\n")
+      #print("    |--> done\n")
 
     else:
       # Transform the track dataframe into a dataframe of fastjet particles per track

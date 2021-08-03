@@ -129,18 +129,18 @@ class ProcessPHBase(process_base.ProcessBase):
         if setting not in self.grooming_settings and setting != None:
           self.grooming_settings.append(setting)
 
+    # These values set the step size and control memory usage
     self.track_df_step_size = 1e5
-    self.max_ev_storage = 1e4
+    self.max_ev_storage = 5e3
+
+    fj.ClusterSequence.print_banner()
 
   #---------------------------------------------------------------
   # Initialize empty storage dictionaries to store events for use in next iteration
   #---------------------------------------------------------------
   def init_storage(self, level, MPI):
     setattr(self, "df_fjparticles_storage_%s_MPI%s" % (level, MPI), 
-            { "run_number": [], "ev_id": [] "ParticleE": [], "ParticlePx": [], 
-              "ParticlePy": [], "ParticlePz": [] })
-    if level == "h":
-      getattr(self, "df_fjparticles_storage_%s_MPI%s" % (level, MPI))["is_charged"] = []
+            { "run_number": [], "ev_id": [], "fj_particle": [] })
     setattr(self, "run_numbers_storage_%s_MPI%s" % (level, MPI), [])
     setattr(self, "unique_ev_ids_per_run_storage_%s_MPI%s" % (level, MPI), [])
   
@@ -166,7 +166,7 @@ class ProcessPHBase(process_base.ProcessBase):
     for MPI in ["off", "on"]:
 
       # Initialize necessary objects for looping
-      self.init_tree_sizes(MPI)
+      self.init_tree_readers(MPI)
       getattr(self, "hNevents_MPI%s" % MPI).Fill(1, getattr(self, "nEvents_MPI%s" % MPI))
       for level in ["p", "h", "ch"]:
         self.init_storage(level, MPI)
@@ -179,16 +179,21 @@ class ProcessPHBase(process_base.ProcessBase):
 
       # Iterate through the track TTree in steps
       # (This strategy saves memory as compared to loading the entire TTree at once)
-      while getattr(self, "tree_len_p_MPI"+MPI) < max_iter_p or \
-            getattr(self, "tree_len_h_MPI"+MPI) < max_iter_h or \
+      while getattr(self, "df_iter_p_MPI"+MPI) < max_iter_p or \
+            getattr(self, "df_iter_h_MPI"+MPI) < max_iter_h or \
             len(getattr(self, "df_fjparticles_storage_p_MPI"+MPI)["run_number"]) > 0 or \
             len(getattr(self, "df_fjparticles_storage_h_MPI"+MPI)["run_number"]) > 0:
 
+        if self.debug_level > 1:
+          print(getattr(self, "df_iter_p_MPI"+MPI), getattr(self, "df_iter_h_MPI"+MPI),
+                len(getattr(self, "df_fjparticles_storage_p_MPI"+MPI)["run_number"]),
+                len(getattr(self, "df_fjparticles_storage_h_MPI"+MPI)["run_number"]))
+
         print("Load TTrees with MPI %s, iteration %i/%i (p) | %i/%i (h)..." % \
-              (MPI, getattr(self, "tree_len_p_MPI"+MPI), max_iter_p, 
-               getattr(self, "tree_len_h_MPI"+MPI, max_iter_h)))
+              (MPI, getattr(self, "df_iter_p_MPI"+MPI), max_iter_p, 
+               getattr(self, "df_iter_h_MPI"+MPI), max_iter_h))
         self.load_trees_to_dict(MPI)
-        print('--- {} seconds ---'.format(time.time() - self.start_time))
+        #print('--- {} seconds ---'.format(time.time() - self.start_time))
 
         # ------------------------------------------------------------------------
 
@@ -196,7 +201,7 @@ class ProcessPHBase(process_base.ProcessBase):
         print('Find jets with MPI %s...' % MPI)
         self.analyze_events(MPI)
 
-        print('--- {} seconds ---'.format(time.time() - self.start_time))
+        print('\n--- {} seconds ---'.format(time.time() - self.start_time))
     
     # ------------------------------------------------------------------------
 
@@ -265,27 +270,29 @@ class ProcessPHBase(process_base.ProcessBase):
     ###### level == "p" or "h" ######
     copy_h = True  # Save bool for checking ch case separately
     for level in ["p", "h"]:
+
       # Copy saved events from storage for new processing step
       self.copy_df_from_storage(level, MPI)
 
       # Check if there are already "enough" ev_id's loaded, to minimize memory usage
       # or if we have already read all the info from the TTree
       it = getattr(self, "df_iter_%s_MPI%s" % (level, MPI))
-      tree_len = getattr(self, "tree_len_%s_MPI%s"% (level, MPI))
-      if len(getattr(self, "df_fjparticles_%s_MPI%s")["run_number"]) > self.max_ev_storage \
-         or it*self.track_df_step_size >= tree_len:
+      tree_len = getattr(self, "tree_len_%s_MPI%s" % (level, MPI))
+      if len(getattr(self, "df_fjparticles_%s_MPI%s" % (level, MPI))["run_number"]) > \
+         self.max_ev_storage or it*self.track_df_step_size >= tree_len:
         if level == "h":
           copy_h = False
         continue
 
       # Load ROOT TTrees into Python objects
       df_to_append = getattr(self, "io_%s_MPI%s" % (level, MPI)).load_data(
-        start=it*self.track_df_step_size, stop=min((it+1)*self.track_df_step_size, tree_len) )
+        start=int(it*self.track_df_step_size), stop=int(min((it+1)*self.track_df_step_size, tree_len)) )
+      #print("df len:", len(df_to_append["run_number"]))
       self.append_df_fjparticles(level, MPI, df_to_append)
       setattr(self, "df_iter_%s_MPI%s" % (level, MPI), it+1)
 
-      # Save run_number / ev_id information for later pairing & trimming
-      self.append_run_evid(getattr(self, "io_%s_MPI%s" % (level, MPI)), level)
+      # Save run_number / ev_id information for pairing & trimming
+      self.append_run_evid(getattr(self, "io_%s_MPI%s" % (level, MPI)), level, MPI)
 
     ###### level == "ch" ######
     # Do the ch case separately since it is slightly different
@@ -295,9 +302,9 @@ class ProcessPHBase(process_base.ProcessBase):
       # Do the charge cut on the hadron-level tree (don't need to reload twice)
       df_to_append = getattr(self, "io_h_MPI"+str(MPI)).group_fjparticles(ch_cut=True)
       self.append_df_fjparticles("ch", MPI, df_to_append)
-      self.append_run_evid(getattr(self, "io_h_MPI"+str(MPI)), "ch")
+      self.append_run_evid(getattr(self, "io_h_MPI"+str(MPI)), "ch", MPI)
 
-    print('--- {} seconds ---'.format(time.time() - self.start_time))
+    #print('--- {} seconds ---'.format(time.time() - self.start_time))
 
     # ------------------------------------------------------------------------
 
@@ -319,29 +326,75 @@ class ProcessPHBase(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Move storage dataframes to "current" dataframes and reset (empty) storage
   #---------------------------------------------------------------
-  def copy_df_from_storage(level, MPI):
-    setattr(self, "df_fjparticles_%s_MPI%s" % (level, MPI), getattr(
-      self, "df_fjparticles_storage_%s_MPI%s" % (level, MPI)))
-    setattr(self, "run_numbers_%s_MPI%s" % (level, MPI), getattr(
-      self, "run_numbers_storage_%s_MPI%s" % (level, MPI)))
-    setattr(self, "unique_ev_ids_per_run_%s_MPI%s" % (level, MPI), getattr(
-      self, "unique_ev_ids_per_run_storage_%s_MPI%s" % (level, MPI)))
+  def copy_df_from_storage(self, level, MPI):
 
-    # Remove any existing events from storage
-    if len(getattr(self, "df_fjparticles_%s_MPI%s" % (level, MPI))["run_number"]) > 0:
-      self.init_storage()
+    setattr(self, "df_fjparticles_%s_MPI%s" % (level, MPI), getattr(
+      self, "df_fjparticles_storage_%s_MPI%s" % (level, MPI)).copy())
+    setattr(self, "run_numbers_%s_MPI%s" % (level, MPI), getattr(
+      self, "run_numbers_storage_%s_MPI%s" % (level, MPI)).copy())
+    setattr(self, "unique_ev_ids_per_run_%s_MPI%s" % (level, MPI), getattr(
+      self, "unique_ev_ids_per_run_storage_%s_MPI%s" % (level, MPI)).copy())
+
+    # Remove any existing events from storage and create new pointers
+    self.init_storage(level, MPI)
 
   #---------------------------------------------------------------
   def append_df_fjparticles(self, level, MPI, df_to_append):
+    name = "df_fjparticles_%s_MPI%s" % (level, MPI)
+    # Merge events that were not fully loaded in last iteration
+    if len(df_to_append["ev_id"]) and len(getattr(self, name)["ev_id"]) and \
+       df_to_append["ev_id"][0] == getattr(self, name)["ev_id"][-1]:
+      for key, val in df_to_append.items():
+        if "fj" in key:
+          getattr(self, name)[key][-1] += df_to_append[key][0]
+        df_to_append[key].pop(0)
+    # Merge dfs
     for key, val in df_to_append.items():
-      getattr(self, "df_fjparticles_%s_MPI%s" % (level, MPI))[key] += val
+      getattr(self, name)[key] += val
 
   #---------------------------------------------------------------
   # Save the run_numbers and unique ev_ids as attributes for given io, level
   #---------------------------------------------------------------
-  def append_run_evid(self, io, level):
-    getattr(self, "run_numbers_%s_MPI%s" % (level, MPI)) += io.run_numbers[0]
-    getattr(self, "unique_ev_ids_per_run_%s_MPI%s" % (level, MPI)) += io.unique_ev_ids_per_run[0]
+  def append_run_evid(self, io, level, MPI):
+
+    nr = "run_numbers_%s_MPI%s" % (level, MPI)
+    ne = "unique_ev_ids_per_run_%s_MPI%s" % (level, MPI)
+
+    if self.debug_level > 1:
+      print("nr before:", getattr(self, nr))
+
+    # Merge ev info with existing rather than creating additional list per run
+    if len(getattr(self, nr)) == 0:
+      setattr(self, nr, getattr(self, nr) + list(io.run_numbers[0]))
+
+      if len(getattr(self, ne)):
+        if getattr(self, ne)[-1][0][-1] == io.unique_ev_ids_per_run[0][0][0]:
+          # Remove duplicate event number which was split across iterations
+          getattr(self, ne)[-1][0] = getattr(self, ne)[-1][0][:-1]
+        setattr(self, ne, list(getattr(self, ne)[:-1]) + [[np.concatenate((
+          getattr(self, ne)[-1][0], io.unique_ev_ids_per_run[0][0]))]] + \
+                list(io.unique_ev_ids_per_run)[1:])
+      else:
+        setattr(self, ne, list(io.unique_ev_ids_per_run))
+
+    elif getattr(self, nr)[-1] == io.run_numbers[0][0]:
+      # Ignore repeated entry
+      setattr(self, nr, getattr(self, nr) + list(io.run_numbers[0][:-1]))
+
+      if getattr(self, ne)[-1][0][-1] == io.unique_ev_ids_per_run[0][0][0]:
+        # Remove duplicate event number which was split across iterations
+        getattr(self, ne)[-1][0] = getattr(self, ne)[-1][0][1:]
+      setattr(self, ne, list(getattr(self, ne)[:-1]) + [[np.concatenate((
+        getattr(self, ne)[-1][0], io.unique_ev_ids_per_run[0][0]))]] + \
+              list(io.unique_ev_ids_per_run)[1:])
+
+    else:  # different runs
+      setattr(self, nr, getattr(self, nr) + list(io.run_numbers[0]))
+      setattr(self, ne, getattr(self, ne) + list(io.unique_ev_ids_per_run))
+
+    if self.debug_level > 1:
+      print("nr after:", getattr(self, nr))
+    #setattr(self, n, getattr(self, n) + list(io.unique_ev_ids_per_run))
 
   #---------------------------------------------------------------
   # Delete all unpaired track / run / event DFs from memory
@@ -400,7 +453,7 @@ class ProcessPHBase(process_base.ProcessBase):
     extra_runs = []
     for i in range(len(run_numbers)-1, -1, -1):
       if run_numbers[i] != last_run:
-        extra_runs += run_numbers[i]
+        extra_runs += [run_numbers[i]]
       else:
         break
 
@@ -423,11 +476,16 @@ class ProcessPHBase(process_base.ProcessBase):
       # Unless there is only 1 ev, move last ev to storage to make sure we have all its tracks
       if getattr(self, "df_fjparticles_p_MPI" + MPI)["ev_id"][0] != last_ev:
         last_ev -= 1
+      if self.debug_level > 1:
+        print("last_ev:", last_ev)
 
       for i, level in zip([0, 1, 2], ["p", "h", "ch"]):
         if last_ev_ids[i] != last_ev:
-          extra_i, extra_i_ev = self.get_extra_index_ev("p", MPI, last_ev)
-          self.move_df_to_storage_index("p", MPI, extra_i)
+          extra_i, extra_i_ev = self.get_extra_index_ev(level, MPI, last_ev)
+          self.move_df_to_storage_index(level, MPI, extra_i)
+          self.move_ev_to_storage_index(level, MPI, extra_i_ev)
+          # Update run storage to contain run number of these extra events
+          self.add_last_run_to_storage(level, MPI)
 
   #---------------------------------------------------------------
   # Return first index in track df where extra runs start
@@ -440,9 +498,11 @@ class ProcessPHBase(process_base.ProcessBase):
     extra_evs = []
     # We have already moved the extra runs, so only have to consider the last one
     run_i = len(run_numbers)-1
+    if self.debug_level > 1:
+      print("unique:", unique_ev_ids_per_run[run_i][0])
     for i in range(len(unique_ev_ids_per_run[run_i][0])-1, -1, -1):
-      if unique_ev_ids_per_run[run_i][0][i] != last_ev:
-        extra_evs += unique_ev_ids_per_run[run_i][0][i]
+      if unique_ev_ids_per_run[run_i][0][i] > last_ev:
+        extra_evs += [unique_ev_ids_per_run[run_i][0][i]]
       else:
         break
 
@@ -457,13 +517,14 @@ class ProcessPHBase(process_base.ProcessBase):
     df_name_storage = "df_fjparticles_storage_%s_MPI%s" % (level, MPI)
     df_name = "df_fjparticles_%s_MPI%s" % (level, MPI)
     for key, val in getattr(self, df_name).items():
-      getattr(self, df_name_storage)[key] += val[move_index:]
+      # Move to _beginning_ of storage array (we move extra runs first)
+      getattr(self, df_name_storage)[key] = val[move_index:] + getattr(self, df_name_storage)[key]
       getattr(self, df_name)[key] = val[:move_index]
 
   #---------------------------------------------------------------
   # Move entries in runs/ev_ids to storage starting at move_index
   #---------------------------------------------------------------
-  def move_run_to_storage_index(self, move_index):
+  def move_run_to_storage_index(self, level, MPI, move_index):
 
     names = ["run_numbers_%s_MPI%s" % (level, MPI),
              "unique_ev_ids_per_run_%s_MPI%s" % (level, MPI)]
@@ -477,18 +538,45 @@ class ProcessPHBase(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Move ev_ids in last run to storage starting at move_index
   #---------------------------------------------------------------
-  def move_ev_to_storage_index(self, move_index):
+  def move_ev_to_storage_index(self, level, MPI, move_index):
 
     n = "unique_ev_ids_per_run_%s_MPI%s" % (level, MPI)
     sn = "unique_ev_ids_per_run_storage_%s_MPI%s" % (level, MPI)
 
-    getattr(self, sn)[-1][0] += getattr(self, n)[-1][0][move_index:]
-    getattr(self, n)[-1][0] = getattr(self, n)[-1][0][:move_index]
+    setattr(self, sn, getattr(self, sn) + [[getattr(self, n)[-1][0][move_index:]]])
+    setattr(self, n, getattr(self, n)[:-1] + [[getattr(self, n)[-1][0][:move_index]]])
+    if self.debug_level > 1:
+      print("storage ev id %s:" % level, getattr(self, sn)[-1][0])
+      print("ana ev id %s:" % level, getattr(self, n)[-1][0])
+
+  #---------------------------------------------------------------
+  # Copy last run number in run_numbers to end of storage list
+  #---------------------------------------------------------------
+  def add_last_run_to_storage(self, level, MPI):
+
+    n = "run_numbers_%s_MPI%s" % (level, MPI)
+    sn = "run_numbers_storage_%s_MPI%s" % (level, MPI)
+
+    setattr(self, sn, list(getattr(self, sn)) + [getattr(self, n)[-1]])
+    if self.debug_level > 1:
+      print("storage run id:", getattr(self, sn), type(getattr(self, sn)))
 
   #---------------------------------------------------------------
   # Pair NumPy dictionaries at p, h, and ch levels
   #---------------------------------------------------------------
   def pair_dictionary(self, MPI):
+
+    run_numbers_p = getattr(self, "run_numbers_p_MPI" + MPI)
+    run_numbers_h = getattr(self, "run_numbers_h_MPI" + MPI)
+    run_numbers_ch = getattr(self, "run_numbers_ch_MPI" + MPI)
+
+    unique_ev_ids_per_run_p = getattr(self, "unique_ev_ids_per_run_p_MPI" + MPI)
+    unique_ev_ids_per_run_h = getattr(self, "unique_ev_ids_per_run_h_MPI" + MPI)
+    unique_ev_ids_per_run_ch = getattr(self, "unique_ev_ids_per_run_ch_MPI" + MPI)
+
+    df_fjparticles_p = getattr(self, "df_fjparticles_p_MPI" + MPI)
+    df_fjparticles_h = getattr(self, "df_fjparticles_h_MPI" + MPI)
+    df_fjparticles_ch = getattr(self, "df_fjparticles_ch_MPI" + MPI)
 
     # Need to figure out which ev_id to save. 
     # For some reason, it can be the case that the ev_id does not exist 
@@ -669,9 +757,6 @@ class ProcessPHBase(process_base.ProcessBase):
     for level in ['p', 'h', 'ch']:
       for fj_particles in df['fj_particles_%s' % level]:
         self.fill_track_histograms(fj_particles, level, MPI)
-    
-    fj.ClusterSequence.print_banner()
-    print()
         
     self.event_number = 0
 
