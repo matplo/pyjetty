@@ -20,6 +20,12 @@ dry_run: False
 fast_simulation: False
 #reclustering_algorithm: 'AKT'
 
+# Parameters for generating theory folding RMs
+response_levels: [["p", "ch", "off"], ["p", "h", "off"], ["h", "ch", "on"]]
+theory_pt_bins: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80,
+                 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145,
+                 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200]
+
 # Observable block
 theta_g:
 

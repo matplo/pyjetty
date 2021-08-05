@@ -131,7 +131,7 @@ class ProcessPHBase(process_base.ProcessBase):
 
     # These values set the step size and control memory usage
     self.track_df_step_size = 1e5
-    self.max_ev_storage = 5e3
+    self.max_ev_storage = 5e4
 
     fj.ClusterSequence.print_banner()
 
