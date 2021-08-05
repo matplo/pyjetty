@@ -548,7 +548,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.h_sys.SetFillStyle(1001)
         self.h_sys.SetLineWidth(0)
         
-        leg.AddEntry(self.h,'ALICE','PE')
+        leg.AddEntry(self.h, 'Data','PE')
         
         # Draw theory
         iterlist = self.folding_labels if not Fnp else self.Omega_list
@@ -586,7 +586,7 @@ class PlotAngularityFigures(common_base.CommonBase):
                 leg3.AddEntry(line_lambda_np_groomed, '#it{#lambda}_{#it{#alpha},g}^{NP} #leq ' + \
                               '#it{z}_{cut}^{1-#it{#alpha}} (#it{#lambda}_{#it{#alpha}}^{NP})' + \
                               '^{#it{#alpha}}', 'lf')
-            leg3.AddEntry(self.h_sys, 'Sys. uncertainty', 'f')
+            leg3.AddEntry(self.h_sys, 'Syst. uncertainty', 'f')
 
         # Reset for ratio plot
         self.logy = True

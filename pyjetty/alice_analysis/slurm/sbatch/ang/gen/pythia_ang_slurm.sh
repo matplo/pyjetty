@@ -1,9 +1,9 @@
 #! /bin/bash
 
 #SBATCH --job-name="ang_pythia"
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --partition=std
-#SBATCH --time=24:00:00
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=3
+#SBATCH --partition=long
+#SBATCH --time=48:00:00
 #SBATCH --array=1-2560
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
