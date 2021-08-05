@@ -42,6 +42,21 @@ if [ ! -z ${debug} ]; then
     build_configuration="Debug"
 fi
 
+build_tenngen=""
+tengen=$(get_opt "tenngen" $@)
+if [ ! -z ${tengen} ]; then
+    build_tenngen="-DTENNGEN=TRUE"
+    echo_note "TennGen will be build"
+    if [ ! -d "${THISD}/src/TennGen" ]; then
+        cdir=$PWD
+        cd ${THISD}/src/
+        git clone https://github.com/matplo/TennGen.git
+        cd ${cdir}
+    fi
+else
+    echo_note "TennGen will NOT be build"    
+fi
+
 configure_only=$(get_opt "configure-only" $@)
 
 echo "[i] building in ${build_path}"
@@ -49,7 +64,10 @@ mkdir -p ${build_path}
 if [ -d ${build_path} ]; then
     cd ${build_path}
     separator "configure"
-    cmake -DMAKE_MODULE=TRUE -DBUILD_PYTHON=${build_python_iface} ${build_python_iface} -DCMAKE_INSTALL_PREFIX=${install_path} -DCMAKE_BUILD_TYPE=${build_configuration} ${THISD}
+    cmake -DMAKE_MODULE=TRUE -DBUILD_PYTHON=${build_python_iface} ${build_python_iface} \
+            -DCMAKE_INSTALL_PREFIX=${install_path} -DCMAKE_BUILD_TYPE=${build_configuration} \
+            ${build_tenngen} \
+            ${THISD}
     if [ "x${configure_only}" == "xyes" ]; then
         warning "stopping short of building...- configure-only requested"
         exit 0
