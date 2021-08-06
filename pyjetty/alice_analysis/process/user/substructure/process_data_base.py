@@ -257,7 +257,7 @@ class ProcessDataBase(process_base.ProcessBase):
             print('R_max: {}'.format(R_max))
 
           # Keep track of whether to fill R_max-independent histograms
-          self.fill_Rmax_indep_hists = (i == 0)
+          self.fill_Rmax_indep_hists = (R_max == max_distance[0])
 
           # Perform constituent subtraction
           rho = self.constituent_subtractor[R_max].bge_rho.rho()

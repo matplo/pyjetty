@@ -13,6 +13,8 @@ from __future__ import print_function
 # General
 import os
 import argparse
+import numpy as np
+from array import array
 
 # Data analysis and plotting
 import ROOT
@@ -35,9 +37,6 @@ class ProcessData_ang(process_data_base.ProcessDataBase):
     super(ProcessData_ang, self).__init__(
       input_file, config_file, output_dir, debug_level, **kwargs)
 
-    # Dictionary containing the optimal R_max values for each jet R of interest
-    self.R_max = { "0.2" : "0.1", "0.4" : "0.25" }
-
     self.pt_bins = array('d', list(range(5, 305, 5)))
     self.obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
                                     np.linspace(0.11, 0.8, 70)))
@@ -54,30 +53,32 @@ class ProcessData_ang(process_data_base.ProcessDataBase):
         if observable != "ang":
           raise ValueError("Observable %s is not implemented in this script" % observable)
 
-        for grooming_setting in self.obs_grooming_settings[observable]:
+        for i in range(len(self.obs_settings[observable])):
 
-          if grooming_setting:
-            grooming_label = self.utils.grooming_label(grooming_setting)
-            if self.is_pp:
-              name = 'h_%s_JetPt_R%s_%s' % (observable, jetR, grooming_label)
+          obs_setting = self.obs_settings[observable][i]
+          grooming_setting = self.obs_grooming_settings[observable][i]
+          obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+
+          if self.is_pp:
+            name = 'h_%s_JetPt_R%s_%s' % (observable, jetR, obs_label)
+            h = ROOT.TH2F(name, name, len(self.pt_bins)-1, self.pt_bins,
+                          len(self.obs_bins)-1, self.obs_bins)
+            h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
+            h.GetYaxis().SetTitle('#it{#lambda}_{g,ch}^{#it{#alpha}}')
+            setattr(self, name, h)
+
+          else:
+            # Pb-Pb: have several R_max for contituent subtraction
+            max_distance = self.max_distance if isinstance(self.max_distance, list) \
+                           else self.max_distance[jetR]
+            for R_max in max_distance:
+              name = 'h_%s_JetPt_R%s_%s_Rmax%s' % (
+                observable, jetR, obs_label, R_max)
               h = ROOT.TH2F(name, name, len(self.pt_bins)-1, self.pt_bins,
                             len(self.obs_bins)-1, self.obs_bins)
               h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
               h.GetYaxis().SetTitle('#it{#lambda}_{g,ch}^{#it{#alpha}}')
               setattr(self, name, h)
-
-            else:
-              # Pb-Pb: have several R_max for contituent subtraction
-              max_distance = self.max_distance if isinstance(self.max_distance, list) \
-                             else self.max_distance[jetR]
-              for R_max in max_distance:
-                name = 'h_%s_JetPt_R%s_%s_Rmax%s' % (
-                  observable, jetR, grooming_label, self.R_max[jetR])
-                h = ROOT.TH2F(name, name, len(self.pt_bins)-1, self.pt_bins,
-                        len(self.obs_bins)-1, self.obs_bins)
-                h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
-                h.GetYaxis().SetTitle('#it{#lambda}_{g,ch}^{#it{#alpha}}')
-                setattr(self, name, h)
 
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
