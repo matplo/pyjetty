@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /home/ezra/pyjetty/pyjetty/alice_analysis
-python process/user/ezra/process_parton_hadron_theta_g.py -c config/theta_g/pp/james_pp.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+python process/user/james/process_parton_hadron_theta_g.py -c config/theta_g/pp/james_pp.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/theta_g/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/theta_g/${JOB_ID}
