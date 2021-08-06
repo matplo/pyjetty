@@ -203,7 +203,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if self.do_theory:
 
         self.theory_dir = config['theory_dir']
-        self.theory_beta = config['theory_beta']
+        self.theory_alpha = config['theory_alpha']
         self.theory_pt_bins = config['theory_pt_bins']
         self.theory_pt_bins_center = [(self.theory_pt_bins[i] + self.theory_pt_bins[i+1]) / 2 for \
                                       i in range(len(self.theory_pt_bins)-1)]
@@ -271,8 +271,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       raise NotImplementedError("Not implemented for more than one grooming setting.")
 
     for jetR in self.jetR_list:
-      for beta in self.theory_beta:
-        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+      for alpha in self.theory_alpha:
+        label = "R%s_%s" % (str(jetR).replace('.', ''), str(alpha).replace('.', ''))
         if gs:
           label_gr = label + '_' + gl
 
@@ -344,9 +344,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
           else:  # Generated theory folding matrix needs rebinning
             # Response axes: ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', 
-            #                 '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
+            #                 '#lambda_{#alpha}^{ch}', '#lambda_{#alpha}^{parton}']
             # as compared to the usual
-            #      ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
+            #      ['p_{T,det}', 'p_{T,truth}', '#lambda_{#alpha,det}', '#lambda_{#alpha,truth}']
             det_pt_bin_array = array('d', self.theory_pt_bins)
             tru_pt_bin_array = det_pt_bin_array
             obs_bins = array('d', self.theory_obs_bins)
@@ -491,10 +491,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if self.do_theory_F_np:
           obs_bins_Fnp_gr = obs_bins_Fnp
 
-    # Create histogram for each value of R and beta
+    # Create histogram for each value of R and alpha
     for jetR in self.jetR_list:
-      for beta in self.theory_beta:   # beta value
-        label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+      for alpha in self.theory_alpha:   # alpha value
+        label = "R%s_%s" % (str(jetR).replace('.', ''), str(alpha).replace('.', ''))
         if gs:
           label_gr = label + '_' + gl
 
@@ -576,17 +576,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                 if not self.use_old:
                   th_dir = os.path.join(
                     self.theory_dir, "ungr_ALICE_R%s" % str(jetR).replace('.', ''), 
-                    "beta%s" % str(beta).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
+                    "alpha%s" % str(alpha).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
                 else:
                   th_dir = os.path.join(
                     self.theory_dir, "old", "R%s" % str(jetR).replace('.', ''),
-                    "pT%s_%s" % (pt_min, pt_max), "beta%s" % str(beta).replace('.', 'p'))
+                    "pT%s_%s" % (pt_min, pt_max), "alpha%s" % str(alpha).replace('.', 'p'))
 
                 th_dir_gr = None
                 if gs:  # != None:
                   th_dir_gr = os.path.join(
                     self.theory_dir, "gr_ALICE_R%s" % str(jetR).replace('.', ''), 
-                    "beta%s" % str(beta).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
+                    "alpha%s" % str(alpha).replace('.', 'p'), "pT%s_%s" % (pt_min, pt_max))
 
                 val_li = None; val_li_gr = None; val_li_Fnp = None; val_li_Fnp_gr = None
                 if self.exp_test:
@@ -680,12 +680,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                       if disable_tagging_fraction:
                         missed_tagging_fraction = 0
                       elif missed_tagging_fraction < 0:
-                        print("WARNING: missed tagging fraction %f < 0 (\\beta = %s, R = %s)." % \
-                              (missed_tagging_fraction, beta, jetR), "Manually setting to 0.")
+                        print("WARNING: missed tagging fraction %f < 0 (\\alpha = %s, R = %s)." % \
+                              (missed_tagging_fraction, alpha, jetR), "Manually setting to 0.")
                         missed_tagging_fraction = 0
                       elif missed_tagging_fraction > 1:
-                        print("WARNING: missed tagging fraction %f > 1 (\\beta = %s, R = %s)." % \
-                              (missed_tagging_fraction, beta, jetR), "Manually setting to 0.")
+                        print("WARNING: missed tagging fraction %f > 1 (\\alpha = %s, R = %s)." % \
+                              (missed_tagging_fraction, alpha, jetR), "Manually setting to 0.")
                         missed_tagging_fraction = 0
 
                       if missed_tagging_fraction == 0:
@@ -766,26 +766,26 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
         # Fold from parton to CH level and scale by MPI
         print("Folding theory predictions...")
-        self.fold_theory(jetR, beta, parton_hists, scale_req)
+        self.fold_theory(jetR, alpha, parton_hists, scale_req)
         if gs:
           print("Folding theory predictions with %s..." % gl.replace('_', ' '))
-          self.fold_theory(jetR, beta, parton_hists_gr, scale_req, gl)
+          self.fold_theory(jetR, alpha, parton_hists_gr, scale_req, gl)
 
         # Also do NP shape function predictions + fold from H to CH level
         if self.do_theory_F_np:
           print("Applying NP shape function...")
-          self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp, scale_req)
+          self.apply_np_shape_fn(jetR, alpha, parton_hists_Fnp, scale_req)
           if gs:
             print("Applying NP shape function with %s..." % gl.replace('_', ' '))
-            self.apply_np_shape_fn(jetR, beta, parton_hists_Fnp_gr, scale_req, gl)
+            self.apply_np_shape_fn(jetR, alpha, parton_hists_Fnp_gr, scale_req, gl)
 
 
   #----------------------------------------------------------------------
   # Fold theoretical predictions
   #----------------------------------------------------------------------
-  def fold_theory(self, jetR, beta, parton_hists, scale_req, grooming_label=None):
+  def fold_theory(self, jetR, alpha, parton_hists, scale_req, grooming_label=None):
 
-    label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(alpha).replace('.', ''))
     if grooming_label:
       label += '_' + grooming_label
 
@@ -829,17 +829,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       else:
         printstring += "..."
       print(printstring)
-      self.mpi_scale_theory(jetR, beta, ri, response, folded_ch_hists, folded_h_hists,
+      self.mpi_scale_theory(jetR, alpha, ri, response, folded_ch_hists, folded_h_hists,
                             scale_req, grooming_label)
 
 
   #----------------------------------------------------------------------
   # Fold theoretical predictions
   #----------------------------------------------------------------------
-  def mpi_scale_theory(self, jetR, beta, ri, response, folded_ch_hists, folded_h_hists,
+  def mpi_scale_theory(self, jetR, alpha, ri, response, folded_ch_hists, folded_h_hists,
                        scale_req, grooming_label=None):
 
-    label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(alpha).replace('.', ''))
     using_sd_grooming = False
     if grooming_label:
       label += '_' + grooming_label
@@ -1053,9 +1053,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #---------------------------------------------------------------
   # Apply NP corrections via shape function (includes MPI & hadronization)
   #---------------------------------------------------------------
-  def apply_np_shape_fn(self, jetR, beta, parton_hists, scale_req, gl=None):
+  def apply_np_shape_fn(self, jetR, alpha, parton_hists, scale_req, gl=None):
 
-    label = "R%s_%s" % (str(jetR).replace('.', ''), str(beta).replace('.', ''))
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(alpha).replace('.', ''))
     grooming = False
     if gl:
       label += '_' + gl
@@ -1130,7 +1130,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             pTs = [self.pt_avg_jetR(self.theory_pt_bins[i], self.theory_pt_bins[i+1], jetR) for
                    i in range(0, len(self.theory_pt_bins) - 1)]
             h_np = self.histutils.convolve_F_np(
-              Omega, jetR, beta, array('d', obs_bins_Fnp),
+              Omega, jetR, alpha, array('d', obs_bins_Fnp),
               len(obs_bins_center_Fnp), array('d', obs_bins_center_Fnp),
               array('d', obs_bins_width_Fnp),
               array('d', self.theory_pt_bins), len(self.theory_pt_bins_center),
@@ -1293,13 +1293,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta and \
+    if self.do_theory and float(obs_label.split('_')[0]) in self.theory_alpha and \
        ( (self.use_old and not grooming_setting) or not self.use_old ):
       # Compare parton-level theory to parton-level event generators
       print("Plotting parton-level theory comparisons for", obs_label)
       self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
 
-    if self.do_theory_F_np and float(obs_label.split('_')[0]) in self.theory_beta and \
+    if self.do_theory_F_np and float(obs_label.split('_')[0]) in self.theory_alpha and \
        ( (self.use_old and not grooming_setting) or not self.use_old ):
       # Compare parton-level theory to parton-level event generators
       print("Plotting F_NP-convolved theory comparisons for", obs_label)
@@ -1314,7 +1314,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_MC=True)
 
-      if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta and \
+      if self.do_theory and float(obs_label.split('_')[0]) in self.theory_alpha and \
          ( (self.use_old and not grooming_setting) or not self.use_old ):
         self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin, plot_MC=False, plot_theory=True)
@@ -1328,7 +1328,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                   min_pt_truth, max_pt_truth, maxbin)
 
       if min_pt_truth == 40 and (jetR == 0.2 or jetR == 0.4):
-        # Only want to compare to girth with \beta=1
+        # Only want to compare to girth with \alpha=1
         if obs_label == '1':
           self.plot_obs_comp(jetR, obs_label, obs_setting, grooming_setting,
                              min_pt_truth, max_pt_truth, maxbin)
@@ -1452,7 +1452,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       color = self.ColorArray[4]
 
       if show_np_region:
-        # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
+        # P vs NP cutoff point: lambda_alpha ~ Lambda / (pT * R) -- use avg value of pT for the bin.
         # Formula assumes that jet pT xsec falls like pT^(-5.5)
         formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5) / \
                      (min_pt_truth**-4.5 - max_pt_truth**-4.5)
@@ -1745,7 +1745,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.DrawLatex(text_xval, 0.66-delta, text)
     
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
+      text = self.utils.formatted_grooming_label(grooming_setting)#.replace("#beta}", "#beta}_{SD}")
       text_latex.DrawLatex(text_xval, 0.66-2*delta, text)
       
       text_latex.SetTextSize(0.04)
@@ -1800,7 +1800,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           else:
             for ri, lab in enumerate(self.theory_response_labels):
               myLegend.AddEntry(hcent_list[ri], 'NLL\' #otimes '+lab, 'lf')
-        myLegend.AddEntry(line, '#it{#lambda}_{#it{#beta}}^{NP region} #leq' + \
+        myLegend.AddEntry(line, '#it{#lambda}_{#it{#alpha}}^{NP region} #leq' + \
                           '#Lambda / (#it{p}_{T,jet}^{ch} #it{R})', 'lf')
     myLegend.Draw()
 
@@ -2651,7 +2651,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       delta = 0.07
     
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
+      text = self.utils.formatted_grooming_label(grooming_setting)#.replace("#beta}", "#beta}_{SD}")
       text_latex.DrawLatex(0.57, 0.59-delta, text)
       
       text_latex.SetTextSize(0.04)
@@ -3136,7 +3136,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex.DrawLatex(text_xval, 0.63, text)
 
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting).replace("#beta}", "#beta}_{SD}")
+      text = self.utils.formatted_grooming_label(grooming_setting)#.replace("#beta}", "#beta}_{SD}")
       text_latex.DrawLatex(text_xval, 0.57, text)
 
     myLegend.Draw()

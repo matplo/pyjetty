@@ -91,7 +91,7 @@ class process_ang_data(process_base.ProcessBase):
 
     # Set configuration for analysis
     self.jetR_list = config["jetR"]
-    self.beta_list = config["betas"]
+    self.alpha_list = config["alphas"]
 
     self.n_pt_bins = config["n_pt_bins"]
     self.pt_limits = config["pt_limits"]
@@ -118,7 +118,7 @@ class process_ang_data(process_base.ProcessBase):
     self.grooming_settings = [{'sd': [self.sd_zcut, self.sd_beta]}]  # self.utils.grooming_settings
     self.grooming_labels = [self.utils.grooming_label(gs) for gs in self.grooming_settings]
 
-    # Configs for each jetR / beta
+    # Configs for each jetR / alpha
     #self.config_dict = config["ang"]
   
   #---------------------------------------------------------------
@@ -147,63 +147,63 @@ class process_ang_data(process_base.ProcessBase):
       setattr(self, name, h)
       '''
       
-      for beta in self.beta_list:
+      for alpha in self.alpha_list:
 
         '''
         for i, pTmin in list(enumerate(self.pTbins))[0:-1]:
 
-          # Individual angularity plots, \lambda_{\beta}^{\kappa}
+          # Individual angularity plots, \lambda_{\alpha}^{\kappa}
           pTmax = self.pTbins[i+1]
           name = "hLambda_pT%i-%i_%s" % (pTmin, pTmax, config)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % alpha)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % alpha)
           h.Sumw2()
           setattr(self, name, h)
 
           # Angularities with soft drop
           name = "hLambda_pT%i-%i_%s_SD" % (pTmin, pTmax, config)
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % alpha)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % alpha)
           h.Sumw2()
           setattr(self, name, h)
         '''
 
         # Lambda vs pT plots with fine binning
-        name = "h_ang_JetPt_R%s_%s" % (jetR, beta)
+        name = "h_ang_JetPt_R%s_%s" % (jetR, alpha)
         h = ROOT.TH2F(name, name, len(self.pt_bins_response)-1, self.pt_bins_response,
                       len(self.obs_bins_response)-1, self.obs_bins_response)
         h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
-        h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+        h.GetYaxis().SetTitle('#it{#lambda}_{#it{#alpha}=%s}' % alpha)
         h.Sumw2()
         setattr(self, name, h)
 
         # Lambda vs rapidity plots with fine binning
-        name = "h_ang_JetRap_R%s_%s" % (jetR, beta)
+        name = "h_ang_JetRap_R%s_%s" % (jetR, alpha)
         h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('#it{#eta}_{ch jet}')
-        h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+        h.GetYaxis().SetTitle('#it{#lambda}_{#it{#alpha}=%s}' % alpha)
         h.Sumw2()
         setattr(self, name, h)
 
         for gl in self.grooming_labels:
           # Lambda vs pT plots with fine binning -- with soft drop
-          name = "h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl)
+          name = "h_ang_JetPt_R%s_%s_%s" % (jetR, alpha, gl)
           h = ROOT.TH2F(name, name, len(self.pt_bins_response)-1, self.pt_bins_response,
                         len(self.obs_bins_response)-1, self.obs_bins_response)
           h.GetXaxis().SetTitle('#it{p}_{T,ch jet}')
-          h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+          h.GetYaxis().SetTitle('#it{#lambda}_{#it{#alpha}=%s}' % alpha)
           h.Sumw2()
           setattr(self, name, h)
 
           # Lambda vs pT plots with fine binning -- with soft drop
-          name = "h_ang_JetRap_R%s_%s_%s" % (jetR, beta, gl)
+          name = "h_ang_JetRap_R%s_%s_%s" % (jetR, alpha, gl)
           h = ROOT.TH2F(name, name, self.n_rap_bins, self.rap_limits[0], self.rap_limits[1], 
                         self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
           h.GetXaxis().SetTitle('#it{#eta}_{ch jet}')
-          h.GetYaxis().SetTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+          h.GetYaxis().SetTitle('#it{#lambda}_{#it{#alpha}=%s}' % alpha)
           h.Sumw2()
           setattr(self, name, h)
 
@@ -223,16 +223,16 @@ class process_ang_data(process_base.ProcessBase):
       print('jet definition is:', jet_def)
       print('jet selector is:', jet_selector,'\n')
       
-      for beta in self.beta_list:
+      for alpha in self.alpha_list:
         for fj_particles in self.df_fjparticles:
           # do jet-finding and fill histograms
-          self.analyzeJets(fj_particles, jet_def, jet_selector, beta)
+          self.analyzeJets(fj_particles, jet_def, jet_selector, alpha)
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
   #---------------------------------------------------------------
-  def analyzeJets(self, fj_particles, jet_def, jet_selector, beta):
+  def analyzeJets(self, fj_particles, jet_def, jet_selector, alpha):
     
     # Do jet finding
     cs = fj.ClusterSequence(fj_particles, jet_def)
@@ -252,20 +252,20 @@ class process_ang_data(process_base.ProcessBase):
         continue
       
       # Fill histograms
-      self.fillJetHistograms(jet, jetR, beta)
+      self.fillJetHistograms(jet, jetR, alpha)
 
 
   #---------------------------------------------------------------
   # Fill jet histograms
   #---------------------------------------------------------------
-  def fillJetHistograms(self, jet, jetR, beta):
+  def fillJetHistograms(self, jet, jetR, alpha):
 
     kappa = 1
-    l = fjext.lambda_beta_kappa(jet, beta, kappa, jetR)
+    l = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
 
     # Fill plots
-    getattr(self, "h_ang_JetPt_R%s_%s" % (jetR, beta)).Fill(jet.pt(), l)
-    getattr(self, "h_ang_JetRap_R%s_%s" % (jetR, beta)).Fill(jet.rap(), l)
+    getattr(self, "h_ang_JetPt_R%s_%s" % (jetR, alpha)).Fill(jet.pt(), l)
+    getattr(self, "h_ang_JetRap_R%s_%s" % (jetR, alpha)).Fill(jet.rap(), l)
 
     getattr(self, "hJetPt_R%s" % str(jetR)).Fill(jet.pt())
     #getattr(self, "hM_JetPt_R%s" % str(jetR)).Fill(jet_pt, jet.m())
@@ -275,10 +275,10 @@ class process_ang_data(process_base.ProcessBase):
       gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
       jet_sd = self.utils.groom(gshop, gs, jetR).pair()
 
-      l_sd = fjext.lambda_beta_kappa(jet, jet_sd, beta, kappa, jetR)
+      l_sd = fjext.lambda_alpha_kappa(jet, jet_sd, alpha, kappa, jetR)
       # Should fill histograms using the ungroomed jet pT & rapidity
-      getattr(self, ("h_ang_JetPt_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet.pt(), l_sd)
-      getattr(self, ("h_ang_JetRap_R%s_%s_%s" % (jetR, beta, gl))).Fill(jet.rap(), l_sd)
+      getattr(self, ("h_ang_JetPt_R%s_%s_%s" % (jetR, alpha, gl))).Fill(jet.pt(), l_sd)
+      getattr(self, ("h_ang_JetRap_R%s_%s_%s" % (jetR, alpha, gl))).Fill(jet.rap(), l_sd)
 
 
 ##################################################################

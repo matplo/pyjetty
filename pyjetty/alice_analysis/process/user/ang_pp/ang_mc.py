@@ -132,7 +132,7 @@ class process_ang_mc(process_base.ProcessBase):
 
     # Set configuration for analysis
     self.jetR_list = config['jetR']
-    self.beta_list = config['betas']
+    self.alpha_list = config['alphas']
 
     self.n_pt_bins = config["n_pt_bins"]
     self.pt_limits = config["pt_limits"]
@@ -198,14 +198,14 @@ class process_ang_mc(process_base.ProcessBase):
       h.Sumw2()
       setattr(self, name, h)
 
-      for beta in self.beta_list:
+      for alpha in self.alpha_list:
 
-        label = "R%s_%s" % (str(jetR), str(beta))
+        label = "R%s_%s" % (str(jetR), str(alpha))
 
         name = 'hResponse_ang_%s' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
-        h.GetXaxis().SetTitle('#it{#lambda}_{%s,det}' % beta)
-        h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru}' % beta)
+        h.GetXaxis().SetTitle('#it{#lambda}_{%s,det}' % alpha)
+        h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru}' % alpha)
         h.Sumw2()
         setattr(self, name, h)
 
@@ -213,7 +213,7 @@ class process_ang_mc(process_base.ProcessBase):
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
-        h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s}}' % str(beta))
+        h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s}}' % str(alpha))
         h.Sumw2()
         setattr(self, name, h)
 
@@ -221,26 +221,26 @@ class process_ang_mc(process_base.ProcessBase):
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('#it{p}_{T,tru}^{ch jet}')
-        h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s}}' % str(beta))
+        h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s}}' % str(alpha))
         h.Sumw2()
         setattr(self, name, h)
 
         '''
         for i, pTmin in list(enumerate(self.pTbins))[0:-1]:
 
-          # Angularities, \lambda_{\beta}^{\kappa}
+          # Angularities, \lambda_{\alpha}^{\kappa}
           pTmax = self.pTbins[i+1]
-          name = ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, beta)).replace('.', '')
+          name = ("hLambda_pT%i-%i_R%s_B%s_mcdet" % (pTmin, pTmax, jetR, alpha)).replace('.', '')
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % alpha)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % alpha)
           setattr(self, name, h)
 
           # Angularities with soft drop
-          name = ("hLambda_pT%i-%i_R%s_B%s_mcdet_SD" % (pTmin, pTmax, jetR, beta)).replace('.', '')
+          name = ("hLambda_pT%i-%i_R%s_B%s_mcdet_SD" % (pTmin, pTmax, jetR, alpha)).replace('.', '')
           h = ROOT.TH1F(name, name, self.n_lambda_bins, 0, 1.0)
-          h.GetXaxis().SetTitle('#lambda_{%s}' % beta)
-          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % beta)
+          h.GetXaxis().SetTitle('#lambda_{%s}' % alpha)
+          h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{%s}}' % alpha)
           setattr(self, name, h)
         '''
 
@@ -248,14 +248,14 @@ class process_ang_mc(process_base.ProcessBase):
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 2.)
         h.GetXaxis().SetTitle('#it{p}_{T,truth}^{ch jet}')
         h.GetYaxis().SetTitle(
-          '#frac{#it{#lambda}_{#it{#beta},det}-#it{#lambda}_{#it{#beta},truth}}{#it{#lambda}_{#it{#beta},truth}}')
+          '#frac{#it{#lambda}_{#it{#alpha},det}-#it{#lambda}_{#it{#alpha},truth}}{#it{#lambda}_{#it{#alpha},truth}}')
         h.Sumw2()
         setattr(self, name, h)
 
         # Create THn of response
         dim = 4
         title = ['#it{p}_{T,det}^{ch jet}', '#it{p}_{T,truth}^{ch jet}', 
-                 '#it{#lambda}_{#it{#beta},det}', '#it{#lambda}_{#it{#beta},truth}']
+                 '#it{#lambda}_{#it{#alpha},det}', '#it{#lambda}_{#it{#alpha},truth}']
         pt_bins = array('d', list(range(5, 100, 5)) + list(range(100, 210, 10)))
         obs_bins = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
                                    np.linspace(0.11, 0.8, 70)))
@@ -284,8 +284,8 @@ class process_ang_mc(process_base.ProcessBase):
         for gl in self.grooming_labels:
           name = 'hResponse_ang_%s_%s' % (label, gl)
           h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
-          h.GetXaxis().SetTitle('#it{#lambda}_{%s,det,SD}' % beta)
-          h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru,SD}' % beta)
+          h.GetXaxis().SetTitle('#it{#lambda}_{%s,det,SD}' % alpha)
+          h.GetYaxis().SetTitle('#it{#lambda}_{%s,tru,SD}' % alpha)
           h.Sumw2()
           setattr(self, name, h)
 
@@ -293,7 +293,7 @@ class process_ang_mc(process_base.ProcessBase):
           h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                         self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
           h.GetXaxis().SetTitle('#it{p}_{T,det,SD}^{ch jet}')
-          h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s,SD}}' % str(beta))
+          h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{det,%s,SD}}' % str(alpha))
           h.Sumw2()
           setattr(self, name, h)
 
@@ -301,7 +301,7 @@ class process_ang_mc(process_base.ProcessBase):
           h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                         self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
           h.GetXaxis().SetTitle('#it{p}_{T,tru,SD}^{ch jet}')
-          h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s,SD}}' % str(beta))
+          h.GetYaxis().SetTitle('#frac{d#it{N}}{d#it{#lambda}_{tru,%s,SD}}' % str(alpha))
           h.Sumw2()
           setattr(self, name, h)
 
@@ -427,8 +427,8 @@ class process_ang_mc(process_base.ProcessBase):
           self.fill_matching_histograms(jet_det, jet_truth, jetR)
 
           # Fill response matrices for each subobservable
-          for beta in self.beta_list:
-            self.fill_response_histograms(jet_det, jet_truth, jetR, beta)
+          for alpha in self.alpha_list:
+            self.fill_response_histograms(jet_det, jet_truth, jetR, alpha)
 
   '''
   #---------------------------------------------------------------
@@ -487,7 +487,7 @@ class process_ang_mc(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill response histograms
   #---------------------------------------------------------------
-  def fill_response_histograms(self, jet_det, jet_tru, jetR, beta):
+  def fill_response_histograms(self, jet_det, jet_tru, jetR, alpha):
 
     # Ungroomed jet pT
     jet_pt_det = jet_det.pt()
@@ -495,10 +495,10 @@ class process_ang_mc(process_base.ProcessBase):
 
     # just use kappa = 1 for now
     kappa = 1
-    l_det = fjext.lambda_beta_kappa(jet_det, beta, kappa, jetR) 
-    l_tru = fjext.lambda_beta_kappa(jet_tru, beta, kappa, jetR)
+    l_det = fjext.lambda_beta_kappa(jet_det, alpha, kappa, jetR) 
+    l_tru = fjext.lambda_beta_kappa(jet_tru, alpha, kappa, jetR)
 
-    label = "R%s_%s" % (str(jetR), str(beta))
+    label = "R%s_%s" % (str(jetR), str(alpha))
 
     ''' Histograms per pT bin (currently unnecessary and cause clutter)
     (pTmin, pTmax) = pT_bin(jet_det.pt(), self.pTbins)
@@ -533,8 +533,8 @@ class process_ang_mc(process_base.ProcessBase):
       jet_sd_tru = self.utils.groom(gshop_tru, gs, jetR).pair()
 
       # lambda for soft drop jet
-      l_sd_det = fjext.lambda_beta_kappa(jet_det, jet_sd_det, beta, kappa, jetR)
-      l_sd_tru = fjext.lambda_beta_kappa(jet_tru, jet_sd_tru, beta, kappa, jetR)
+      l_sd_det = fjext.lambda_beta_kappa(jet_det, jet_sd_det, alpha, kappa, jetR)
+      l_sd_tru = fjext.lambda_beta_kappa(jet_tru, jet_sd_tru, alpha, kappa, jetR)
 
       # Should fill histograms using the ungroomed jet pT
       getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_pt_det, l_sd_det)

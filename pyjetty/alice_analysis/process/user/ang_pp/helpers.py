@@ -30,8 +30,8 @@ def deltaR(pjet1, pjet2):
 #                for constit in jet.constituents() ] )
 
 # Return angularity for single fastjet.PseudoJet object with no constituents
-def lambda_beta_kappa_i(constit, jet, jetR, beta, kappa):
-  return (constit.pt() / jet.pt())**kappa * (jet.delta_R(constit) / jetR)**beta
+def lambda_alpha_kappa_i(constit, jet, jetR, alpha, kappa):
+  return (constit.pt() / jet.pt())**kappa * (jet.delta_R(constit) / jetR)**alpha
 
 # Helper function for finding the correct jet pT bin
 def pT_bin(jet_pT, pTbins):

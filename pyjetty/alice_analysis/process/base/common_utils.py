@@ -46,7 +46,7 @@ class CommonUtils(common_base.CommonBase):
     elif observable == 'jet_axis':
       return [obs_config_dict[name]['axis'] for name in obs_subconfig_list]
     elif observable == 'ang':
-      return [obs_config_dict[name]['beta'] for name in obs_subconfig_list]
+      return [obs_config_dict[name]['alpha'] for name in obs_subconfig_list]
 
     # Else observable not implemented
     return [None for _ in obs_subconfig_list]

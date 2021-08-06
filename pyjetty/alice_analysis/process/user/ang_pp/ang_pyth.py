@@ -67,7 +67,7 @@ class process_ang_data(process_base.ProcessBase):
       inf_MPIon = self.input_dir + "PythiaResults_R%s.root" % str(jetR)
       inf_MPIoff = self.input_dir + "PythiaResults_R%s_MPIoff.root" % str(jetR)
       io = process_io_pyth.ProcessIO(input_file_MPIoff=inf_MPIoff, input_file_MPIon=inf_MPIon,
-                                     mergebetween=False, betas=self.beta_list)
+                                     mergebetween=False, alphas=self.alpha_list)
       self.df_ang_jets = io.load_data()
       print('--- {} seconds ---'.format(time.time() - start_time))
 
@@ -95,7 +95,7 @@ class process_ang_data(process_base.ProcessBase):
 
     # Set configuration for analysis
     self.jetR_list = config["jetR"]
-    self.beta_list = config["betas"]
+    self.alpha_list = config["alphas"]
 
     self.n_pt_bins = config["n_pt_bins"]
     self.pt_limits = config["pt_limits"]
@@ -133,41 +133,41 @@ class process_ang_data(process_base.ProcessBase):
       h.GetYaxis().SetTitle('p_{T}^{jet, ch}')
       setattr(self, name, h)
 
-      for beta in self.beta_list:
+      for alpha in self.alpha_list:
 
-        label = ("R%s_%s" % (str(jetR), str(beta))).replace('.', '')
+        label = ("R%s_%s" % (str(jetR), str(alpha))).replace('.', '')
 
         name = 'hResponse_ang_p_%s' % label
         h = ROOT.TH2F(name, name, 100, 0, 1, 100, 0, 1)
-        h.GetXaxis().SetTitle('#lambda_{#beta=%s}^{parton}' % beta)
-        h.GetYaxis().SetTitle('#lambda_{#beta=%s}^{ch}' % beta)
+        h.GetXaxis().SetTitle('#lambda_{#alpha=%s}^{parton}' % alpha)
+        h.GetYaxis().SetTitle('#lambda_{#alpha=%s}^{ch}' % alpha)
         setattr(self, name, h)
 
         name = 'hAng_JetPt_ch_%s' % label
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('p_{T}^{jet, ch}')
-        h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{#beta=%s}^{ch}}' % str(beta))
+        h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{#alpha=%s}^{ch}}' % str(alpha))
         setattr(self, name, h)
 
         name = 'hAng_JetPt_p_%s' % label
         h = ROOT.TH2F(name, name, self.n_pt_bins, self.pt_limits[0], self.pt_limits[1],
                       self.n_lambda_bins, self.lambda_limits[0], self.lambda_limits[1])
         h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
-        h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{#beta=%s}^{parton}}' % str(beta))
+        h.GetYaxis().SetTitle('#frac{dN}{d#lambda_{#alpha=%s}^{parton}}' % str(alpha))
         setattr(self, name, h)
 
         name = "hAngResidual_JetPt_%s" % label
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
         h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
-        h.GetYaxis().SetTitle('#frac{#lambda_{#beta}^{jet, parton}-#lambda_{#beta}' + \
-                              '^{jet, ch}}{#lambda_{#beta}^{jet, parton}}')
+        h.GetYaxis().SetTitle('#frac{#lambda_{#alpha}^{jet, parton}-#lambda_{#alpha}' + \
+                              '^{jet, ch}}{#lambda_{#alpha}^{jet, parton}}')
         setattr(self, name, h)
 
         # Create THn of response
         dim = 4
         title = ['p_{T}^{jet, parton}', 'p_{T}^{jet, ch}',
-                 '#lambda_{#beta}^{parton}', '#lambda_{#beta}^{ch}']
+                 '#lambda_{#alpha}^{parton}', '#lambda_{#alpha}^{ch}']
         nbins = [10, 20, 100, 100]
         min_li = [0.,   0.,   0.,  0.]
         max_li = [100., 200., 1.0, 1.0]
@@ -198,9 +198,9 @@ class process_ang_data(process_base.ProcessBase):
 
       self.fillJetHistograms(ang_jets, jetR)
 
-      for beta in self.beta_list:
+      for alpha in self.alpha_list:
         
-        self.fillRMs(ang_jets, jetR, beta)
+        self.fillRMs(ang_jets, jetR, alpha)
 
   #---------------------------------------------------------------
   # Fill jet histograms for each value of R
@@ -222,11 +222,11 @@ class process_ang_data(process_base.ProcessBase):
   #---------------------------------------------------------------
   # Fill jet response matrices for each value of R
   #---------------------------------------------------------------
-  def fillRMs(self, ang_jets, jetR, beta):
+  def fillRMs(self, ang_jets, jetR, alpha):
 
-    label = ("R%s_%s" % (str(jetR), str(beta))).replace('.', '')
+    label = ("R%s_%s" % (str(jetR), str(alpha))).replace('.', '')
 
-    b = str(beta).replace('.', '')
+    b = str(alpha).replace('.', '')
     l_p = ang_jets["l_p_%s" % b]
     l_ch = ang_jets["l_ch_%s" % b]
 
