@@ -15,6 +15,14 @@ import ROOT
 ROOT.gSystem.Load("$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so")
 import yaml
 
+# For log y plots which ROOT just decides not to work for
+#import matplotlib
+#matplotlib.rcParams['text.usetex'] = True   # LaTeX labels
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+plt.rcParams["yaxis.labellocation"] = 'top'
+plt.rcParams["xaxis.labellocation"] = 'right'
+
 from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
 
 # Load pyjetty ROOT utils
@@ -117,11 +125,22 @@ def set_zero_range(yvals):
       yvals[i] = 0
       continue
     else:
-      if yvals[i-1] <= 0:  # require at least 2 positive values in a row
-        yvals[i] = 0
-        continue
       found_nonzero_val = True
       continue
+
+  return yvals
+
+
+# Where there are single values pos/neg between two neg/pos, interpolate point
+def fix_fluctuations(yvals):
+
+  for i in range(1, len(yvals) - 1):
+    if yvals[i] > 0:
+      if yvals[i+1] < 0 and yvals[i-1] < 0:
+        yvals[i] = (yvals[i+1] + yvals[i-1]) / 2
+    else:  # yvals[i] <= 0
+      if yvals[i+1] > 0 and yvals[i-1] > 0:
+        yvals[i] = (yvals[i+1] + yvals[i-1]) / 2
 
   return yvals
 
@@ -199,6 +218,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         self.do_theory_F_np = True  # NP shape f'n convolution
         if self.do_theory_F_np:
           self.Omega_list = config['Omega_list']  # list of universal(?) parameters to try
+          if len(self.Omega_list) <= 0:
+            self.do_theory_F_np = False
 
         # Define observable binnings -- may want to move to config file eventually
         self.theory_obs_bins = np.concatenate((
@@ -435,6 +456,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     obs_bins_Fnp = None; obs_bins_center_Fnp = None; obs_bins_width_Fnp = None
     if self.do_theory_F_np:
+      # Hard code for now... since RM does not have low-ang bins
+      theory_obs_bins_Fnp = np.concatenate((
+        np.linspace(0, 0.0009, 10), np.linspace(0.001, 0.009, 9),
+        np.linspace(0.01, 0.1, 19), np.linspace(0.11, 0.8, 70)))
+
+      bin_width_Fnp = theory_obs_bins_Fnp[1] - theory_obs_bins_Fnp[0]
+      n_bins_Fnp = round((theory_obs_bins_Fnp[-1] - theory_obs_bins_Fnp[0]) / bin_width_Fnp)
+      obs_bins_width_Fnp = [bin_width_Fnp] * n_bins_Fnp
+      obs_bins_Fnp = array('d', np.linspace(
+        theory_obs_bins_Fnp[0], theory_obs_bins_Fnp[-1], n_bins_Fnp))
+      obs_bins_center_Fnp = [(obs_bins_Fnp[i] + obs_bins_Fnp[i+1]) / 2 for \
+                             i in range(len(obs_bins_Fnp)-1)]
+
+      '''
       bin_width_Fnp = self.theory_obs_bins[1] - self.theory_obs_bins[0]
       n_bins_Fnp = round((self.theory_obs_bins[-1] - self.theory_obs_bins[0]) / bin_width_Fnp)
       obs_bins_width_Fnp = [bin_width_Fnp] * n_bins_Fnp
@@ -442,6 +477,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         self.theory_obs_bins[0], self.theory_obs_bins[-1], n_bins_Fnp))
       obs_bins_center_Fnp = [(obs_bins_Fnp[i] + obs_bins_Fnp[i+1]) / 2 for \
                              i in range(len(obs_bins_Fnp)-1)]
+      '''
 
     obs_bins_gr = None; obs_bins_Fnp_gr = None
     if gs:
@@ -576,7 +612,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                   with open(os.path.join(th_dir, "%i%i%i%s" % (l, m, n, filetype))) as f:
                     lines = [line for line in f.read().split('\n') if line]
                     x_val_li = [float(line.split()[0]) for line in lines]
-                    y_val_li = [float(line.split()[1]) for line in lines]
+                    y_val_li = fix_fluctuations(
+                      [float(line.split()[1]) if str(line.split()[1]).lower() != 'nan' else -1 \
+                       for line in lines] )
 
                   # Interpolate parton curve to all bins and set 0 range on LHS tail
                   # Scale by bin width (to match RM)
@@ -585,15 +623,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                     list_interpolate(x_val_li, y_val_li, obs_bins_center,
                                      power=power, require_positive=True)))]
                   if self.do_theory_F_np:
-                    val_li_Fnp = [val * obs_bins_width_Fnp[i] for i, val in enumerate(
-                      list_interpolate(x_val_li, set_zero_range(y_val_li), obs_bins_center_Fnp,
-                                     power=power, require_positive=True))]
+                    val_li_Fnp = [val * obs_bins_width_Fnp[i] for i, val in enumerate(set_zero_range(
+                      list_interpolate(x_val_li, y_val_li, obs_bins_center_Fnp,
+                                       power=power, require_positive=True)))]
 
                   if gs:
                     y_val_li_gr = None
                     with open(os.path.join(th_dir_gr, "%i%i%i.dat" % (l, m, n))) as f:
                       lines = [line for line in f.read().split('\n') if line]
-                      y_val_li_gr = [float(line.split()[1]) for line in lines]
+                      y_val_li_gr = fix_fluctuations(
+                        [float(line.split()[1]) if str(line.split()[1]).lower() != 'nan' else -1 \
+                         for line in lines] )
 
                     if "sd" in gs:
                       # Copy tail of ungroomed distribution onto groomed one for lambda > z_cut
@@ -603,6 +643,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                         k += 1
                       if y_val_li[k] <= 0:
                         y_val_li_gr[k:] = [0] * len(y_val_li_gr[k:])
+                      elif y_val_li_gr[k] <= 0:
+                        y_val_li_gr[k:] = y_val_li[k:]
                       else:
                         # Prefactor is to rescale tail to match correctly
                         y_val_li_gr[k:] = [(y_val_li_gr[k] / y_val_li[k]) * value for
@@ -615,8 +657,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                        power=power, require_positive=True)))]
                     if self.do_theory_F_np:
                       val_li_Fnp_gr = [val * obs_bins_width_Fnp[i] for i, val in enumerate(
-                        list_interpolate(x_val_li, set_zero_range(y_val_li_gr), obs_bins_center_Fnp,
-                                         power=power, require_positive=True))]
+                        set_zero_range(list_interpolate(x_val_li, y_val_li_gr, obs_bins_center_Fnp,
+                                         power=power, require_positive=True)))]
 
                   # Rescale histograms by the correct integral
                   # Simultaneously scale by scale_f to get correct jet pT scaling 
@@ -646,12 +688,21 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                               (missed_tagging_fraction, beta, jetR), "Manually setting to 0.")
                         missed_tagging_fraction = 0
 
-                      # Add underflow bin and normalize by inclusive integral
-                      val_li_gr = [missed_tagging_fraction * scale_f] + \
-                                  [val * scale_f / integral_val_li for val in val_li_gr]
-                      if self.do_theory_F_np:
-                        val_li_Fnp_gr = [0] + [val * scale_f / integral_val_li_Fnp for
-                                               val in val_li_Fnp_gr]
+                      if missed_tagging_fraction == 0:
+                        # Disabled, so do "regular" (groomed) scaling
+                        # Normalize to 1 by dividing out groomed integral
+                        val_li_gr = [0] + [val * scale_f / integral_val_li_gr for val in val_li_gr]
+                        if self.do_theory_F_np:
+                          val_li_Fnp_gr = [0] + [val * scale_f / integral_val_li_Fnp_gr for
+                                           val in val_li_Fnp_gr]
+
+                      else:
+                        # Add underflow bin and normalize by inclusive integral
+                        val_li_gr = [missed_tagging_fraction * scale_f] + \
+                                    [val * scale_f / integral_val_li for val in val_li_gr]
+                        if self.do_theory_F_np:
+                          val_li_Fnp_gr = [0] + [val * scale_f / integral_val_li_Fnp for
+                                                 val in val_li_Fnp_gr]
                     else:
                       # Normalize to 1 by dividing out groomed integral
                       val_li_gr = [val * scale_f / integral_val_li_gr for val in val_li_gr]
@@ -1010,6 +1061,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       label += '_' + gl
       grooming = True
 
+    # Hard code for now... since RM does not have low-ang bins
+    theory_obs_bins_Fnp = np.concatenate((
+      np.linspace(0, 0.0009, 10), np.linspace(0.001, 0.009, 9),
+      np.linspace(0.01, 0.1, 19), np.linspace(0.11, 0.8, 70)))
+
+    bin_width_Fnp = theory_obs_bins_Fnp[1] - theory_obs_bins_Fnp[0]
+    n_bins_Fnp = round((theory_obs_bins_Fnp[-1] - theory_obs_bins_Fnp[0]) / bin_width_Fnp)
+    obs_bins_width_Fnp = [bin_width_Fnp] * n_bins_Fnp
+    obs_bins_Fnp = array('d', np.linspace(
+      theory_obs_bins_Fnp[0], theory_obs_bins_Fnp[-1], n_bins_Fnp))
+    obs_bins_center_Fnp = [(obs_bins_Fnp[i] + obs_bins_Fnp[i+1]) / 2 for \
+                           i in range(len(obs_bins_Fnp)-1)]
+
+    '''
     bin_width_Fnp = self.theory_obs_bins[1] - self.theory_obs_bins[0]
     n_bins_Fnp = round((self.theory_obs_bins[-1] - self.theory_obs_bins[0]) / bin_width_Fnp)
     obs_bins_width_Fnp = [bin_width_Fnp] * n_bins_Fnp
@@ -1017,6 +1082,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self.theory_obs_bins[0], self.theory_obs_bins[-1], n_bins_Fnp))
     obs_bins_center_Fnp = [(obs_bins_Fnp[i] + obs_bins_Fnp[i+1]) / 2 for \
                            i in range(len(obs_bins_Fnp)-1)]
+    '''
 
     for Omega in self.Omega_list:
       print("  ... Omega = %s" % str(Omega))
@@ -1028,13 +1094,22 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       # Load hadron-to-charged-hadron response matrix
       response_name = "hResponse_theory_Fnp_%s_Roounfold_%i" % (label, ri)
       response = getattr(self, response_name)
-      h_cent = None; h_min = None; h_max = None;
-      h_min_name = "theory_min_%s_%s_ch_Fnp_Omega%s_%i" % \
-                   (self.observable, label, str(Omega), ri)
-      h_max_name = "theory_max_%s_%s_ch_Fnp_Omega%s_%i" % \
-                   (self.observable, label, str(Omega), ri)
-      h_cent_name = "theory_cent_%s_%s_ch_Fnp_Omega%s_%i" % \
-                    (self.observable, label, str(Omega), ri)
+      h_cent_ch = None; h_min_ch = None; h_max_ch = None;
+      h_min_ch_name = "theory_min_%s_%s_ch_Fnp_Omega%s_%i" % \
+                      (self.observable, label, str(Omega), ri)
+      h_max_ch_name = "theory_max_%s_%s_ch_Fnp_Omega%s_%i" % \
+                      (self.observable, label, str(Omega), ri)
+      h_cent_ch_name = "theory_cent_%s_%s_ch_Fnp_Omega%s_%i" % \
+                       (self.observable, label, str(Omega), ri)
+
+      # Also save without ch folding for comparison plots
+      h_cent_h = None; h_min_h = None; h_max_h = None;
+      h_min_h_name = "theory_min_%s_%s_h_Fnp_Omega%s_%i" % \
+                     (self.observable, label, str(Omega), ri)
+      h_max_h_name = "theory_max_%s_%s_h_Fnp_Omega%s_%i" % \
+                     (self.observable, label, str(Omega), ri)
+      h_cent_h_name = "theory_cent_%s_%s_h_Fnp_Omega%s_%i" % \
+                      (self.observable, label, str(Omega), ri)
 
       for l in range(0, 3):
         for m in range(0, 3):
@@ -1076,31 +1151,42 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
             # Update min/max/cent histograms
             if l == m == n == 1: # set central variation
-              h_cent = h_folded_Fnp.Clone()
-              #h_cent = h_np_rebinned.Clone()
-              h_cent.SetNameTitle(h_cent_name, h_cent_name)
+              h_cent_ch = h_folded_Fnp.Clone()
+              h_cent_ch.SetNameTitle(h_cent_ch_name, h_cent_ch_name)
+              h_cent_h = h_np_rebinned.Clone()
+              h_cent_h.SetNameTitle(h_cent_h_name, h_cent_h_name)
 
             if l == m == n == 0:  # initialize min/max histograms
-              h_min = h_folded_Fnp.Clone()
-              #h_min = h_np_rebinned.Clone()
-              h_min.SetNameTitle(h_min_name, h_min_name)
-              h_max = h_folded_Fnp.Clone()
-              #h_max = h_np_rebinned.Clone()
-              h_max.SetNameTitle(h_max_name, h_max_name)
+              h_min_ch = h_folded_Fnp.Clone()
+              h_min_ch.SetNameTitle(h_min_ch_name, h_min_ch_name)
+              h_min_h = h_np_rebinned.Clone()
+              h_min_h.SetNameTitle(h_min_h_name, h_min_h_name)
+              h_max_ch = h_folded_Fnp.Clone()
+              h_max_ch.SetNameTitle(h_max_ch_name, h_max_ch_name)
+              h_max_h = h_np_rebinned.Clone()
+              h_max_h.SetNameTitle(h_max_h_name, h_max_h_name)
 
             else:  # loop through pT & obs bins and update each min/max value
               for i in range(h_folded_Fnp.GetNbinsX()):
                 for j in range(h_folded_Fnp.GetNbinsY()):
-                  val = h_folded_Fnp.GetBinContent(i+1, j+1)
-                  #val = h_np_rebinned.GetBinContent(i+1, j+1)
-                  if float(val) < h_min.GetBinContent(i+1, j+1):
-                    h_min.SetBinContent(i+1, j+1, val)
-                  if float(val) > h_max.GetBinContent(i+1, j+1):
-                    h_max.SetBinContent(i+1, j+1, val)
+                  val_ch = h_folded_Fnp.GetBinContent(i+1, j+1)
+                  if float(val_ch) < h_min_ch.GetBinContent(i+1, j+1):
+                    h_min_ch.SetBinContent(i+1, j+1, val_ch)
+                  if float(val_ch) > h_max_ch.GetBinContent(i+1, j+1):
+                    h_max_ch.SetBinContent(i+1, j+1, val_ch)
+                  val_h = h_np_rebinned.GetBinContent(i+1, j+1)
+                  if float(val_h) < h_min_h.GetBinContent(i+1, j+1):
+                    h_min_h.SetBinContent(i+1, j+1, val_h)
+                  if float(val_h) > h_max_h.GetBinContent(i+1, j+1):
+                    h_max_h.SetBinContent(i+1, j+1, val_h)
 
-      setattr(self, h_cent_name, h_cent)
-      setattr(self, h_min_name, h_min)
-      setattr(self, h_max_name, h_max)
+      setattr(self, h_cent_ch_name, h_cent_ch)
+      setattr(self, h_min_ch_name, h_min_ch)
+      setattr(self, h_max_ch_name, h_max_ch)
+
+      setattr(self, h_cent_h_name, h_cent_h)
+      setattr(self, h_min_h_name, h_min_h)
+      setattr(self, h_max_h_name, h_max_h)
 
 
   #---------------------------------------------------------------
@@ -1210,7 +1296,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if self.do_theory and float(obs_label.split('_')[0]) in self.theory_beta and \
        ( (self.use_old and not grooming_setting) or not self.use_old ):
       # Compare parton-level theory to parton-level event generators
+      print("Plotting parton-level theory comparisons for", obs_label)
       self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
+
+    if self.do_theory_F_np and float(obs_label.split('_')[0]) in self.theory_beta and \
+       ( (self.use_old and not grooming_setting) or not self.use_old ):
+      # Compare parton-level theory to parton-level event generators
+      print("Plotting F_NP-convolved theory comparisons for", obs_label)
+      self.plot_Fnp_comp(jetR, obs_label, obs_setting, grooming_setting)
 
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
     for i in range(0, len(self.pt_bins_reported) - 1):
@@ -1245,6 +1338,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                       min_pt_truth, max_pt_truth, maxbin, plot_MC=False,
                       plot_theory=False, plot_theory_Fnp=False):
 
+    self.set_logy = False
+    #if grooming_setting:
+    #  self.set_logy = True
+
     # For theory plots, whether or not to show original parton-level predictions
     show_parton_theory = True
     show_everything_else = True  # set 'False' to show *only* parton-level theory
@@ -1267,6 +1364,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myPad.SetTopMargin(0.07)
     myPad.SetRightMargin(0.04)
     myPad.SetBottomMargin(0.13)
+    if self.set_logy:
+      myPad.SetLogy()
     myPad.Draw()
     myPad.cd()
     
@@ -1314,7 +1413,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myBlankHisto.SetYTitle(ytitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.1)
     myBlankHisto.GetYaxis().SetTitleSize(0.055)
-    myBlankHisto.SetMinimum(0.)
+    ymin = 1e-4 if self.set_logy else 0
+    myBlankHisto.SetMinimum(ymin)
     if not plot_theory or not show_parton_theory:
       maxval = max(2.3*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
       myBlankHisto.SetMaximum(maxval)
@@ -1354,7 +1454,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if show_np_region:
         # P vs NP cutoff point: lambda_beta ~ Lambda / (pT * R) -- use avg value of pT for the bin.
         # Formula assumes that jet pT xsec falls like pT^(-5.5)
-        formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5)/(min_pt_truth**-4.5 - max_pt_truth**-4.5)
+        formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5) / \
+                     (min_pt_truth**-4.5 - max_pt_truth**-4.5)
         lambda_np_cutoff = min(self.theory_obs_bins,
                                key=lambda x:abs(x - self.Lambda / (formula_pt * jetR)))
         if lambda_np_cutoff > 0.8:
@@ -1985,11 +2086,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myPad.SetTopMargin(0.07)
       myPad.SetRightMargin(0.04)
       myPad.SetBottomMargin(0.13)
+      #if grooming_setting:
+      #  myPad.SetLogy()
       myPad.Draw()
       myPad.cd()
 
       # Find the max bin: the last bin where the angularity is 0
-      maxbin = hcent_proj_p.GetNbinsX()   # initialize
+      maxbin = hcent_proj_p.GetNbinsX()-1   # initialize
       while hmax_proj_p.GetBinContent(maxbin) < 1e-3 and maxbin > 1:
         maxbin -= 1
 
@@ -2071,7 +2174,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
       self.utils.setup_legend(myLegend, 0.035)
-      myLegend.AddEntry(h_theory, 'NLO+NLL', 'lf')
+      myLegend.AddEntry(h_theory, "NLL'", 'lf')
       for rl, l in enumerate(self.theory_response_labels):
         myLegend.AddEntry(h_resp_list[rl], l, 'lf')
       myLegend.Draw()
@@ -2087,6 +2190,302 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     hcent_p.GetXaxis().UnZoom()
     hmin_p.GetXaxis().UnZoom()
     hmax_p.GetXaxis().UnZoom()
+
+
+  #----------------------------------------------------------------------
+  # Plot comparison of F_np-convolved theory to RM projection at hadron+MPI level
+  #----------------------------------------------------------------------
+  def plot_Fnp_comp(self, jetR, obs_label, obs_setting, grooming_setting):
+
+    label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
+
+    # Directory to save the histograms
+    output_dir = os.path.join(self.output_dir_theory, "Fnp_comp")
+    if not os.path.exists(output_dir):
+      os.mkdir(output_dir)
+
+    n_obs_bins = len(self.theory_obs_bins) - 1
+    obs_edges = self.theory_obs_bins
+
+    # red, blue, green, babyblue, purple
+    ColorArray = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  #["#db0000", "#0000bf", "#00bd00", "#00b6bd", "#8a008a"]
+
+    # Make projections in pT bins at parton level
+    for i, min_pt in list(enumerate(self.theory_pt_bins))[:-1]:
+      max_pt = self.theory_pt_bins[i+1]
+
+      '''
+      # Initialize canvas & pad for plotting
+      name = 'cTheoryComp_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt, max_pt)
+      c = ROOT.TCanvas(name, name, 600, 450)
+      c.Draw()
+      c.cd()
+
+      name = 'pTheoryComp_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt, max_pt)
+      myPad = ROOT.TPad(name, name, 0, 0, 1, 1)
+      myPad.SetLeftMargin(0.2)
+      myPad.SetTopMargin(0.07)
+      myPad.SetRightMargin(0.04)
+      myPad.SetBottomMargin(0.13)
+      if grooming_setting:
+        myPad.SetLogy()
+      myPad.Draw()
+      myPad.cd()
+      '''
+
+      x_min = 5e-4 if grooming_setting else 0
+      y_min = 1e-3 if grooming_setting else 0
+      axMain = plt.gca(); axLine = None
+      if grooming_setting:
+        plt.yscale("log")
+        plt.ylim(y_min, 1e8)
+
+        axMain.set_xscale('linear')
+        axMain.set_xlim((0.09, 1))
+        axMain.spines['left'].set_visible(False)
+        axMain.yaxis.set_ticks_position('right')
+        axMain.yaxis.set_visible(False)
+
+        divider = make_axes_locatable(axMain)
+        axLin = divider.append_axes("left", size=2.0, pad=0, sharey=axMain)
+        axLin.set_xscale('log')
+        axLin.set_xlim((x_min, 0.09))
+        axLin.spines['right'].set_visible(False)
+        axLin.yaxis.set_ticks_position('left')
+        plt.setp(axLin.get_xticklabels(), visible=True)
+      else:
+        plt.xscale("linear")
+        plt.yscale("linear")
+
+      h_resp_list = []
+      #for ri in range(len(self.theory_response_files)):
+      # Only using PYTHIA8 for now
+      ri = 0
+      # Get event generator histogram
+      thn = getattr(self, "hResponse_theory_Fnp_%s_%i" % (label, ri))
+
+      # Get the response matrix prediction
+      thn.GetAxis(1).SetRangeUser(int(min_pt), int(max_pt))
+      h_response_projection = thn.Projection(3)
+      name = "hTheoryComp_Fnp_%s_PtBin%i-%i_%s" % \
+             (label, min_pt, max_pt, self.theory_response_labels[ri])
+      h_response_projection.SetNameTitle(name, name)
+      h_response_projection.SetDirectory(0)
+
+      # Rescale by integral for correct normalization
+      h_response_projection.Scale(1/h_response_projection.Integral(), "width")
+
+      '''
+      color = self.ColorArray[4+len(self.Omega_list)+ri]
+      h_response_projection.SetLineColor(color)
+      h_response_projection.SetLineWidth(3)
+      h_resp_list.append(h_response_projection)
+      '''
+      nbinsx = h_response_projection.GetNbinsX()
+      if grooming_setting:
+        axMain.plot([h_response_projection.GetBinCenter(i) for i in range(1, nbinsx+1)],
+                    [h_response_projection.GetBinContent(i) for i in range(1, nbinsx+1)],
+                    color=ColorArray[len(self.Omega_list)+ri], label="PYTHIA8")
+        axLin.plot([h_response_projection.GetBinCenter(i) for i in range(1, nbinsx+1)],
+                   [h_response_projection.GetBinContent(i) for i in range(1, nbinsx+1)],
+                   color=ColorArray[len(self.Omega_list)+ri], label="PYTHIA8")
+      else:
+        plt.plot([h_response_projection.GetBinCenter(i) for i in range(1, nbinsx+1)],
+                 [h_response_projection.GetBinContent(i) for i in range(1, nbinsx+1)],
+                 color=ColorArray[len(self.Omega_list)+ri], label="PYTHIA8")
+
+      y_maximum = 0
+      maxbin = None
+      h_theory_list = []
+      for oi, Omega in enumerate(self.Omega_list):
+        hcent_h = getattr(self, "theory_cent_%s_%s_h_Fnp_Omega%s_%i" % \
+                          (self.observable, label, str(Omega), ri))
+        hmin_h = getattr(self, "theory_min_%s_%s_h_Fnp_Omega%s_%i" % \
+                         (self.observable, label, str(Omega), ri))
+        hmax_h = getattr(self, "theory_max_%s_%s_h_Fnp_Omega%s_%i" % \
+                         (self.observable, label, str(Omega), ri))
+
+        # Get the theory prediction
+        hcent_h.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
+        hmin_h.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
+        hmax_h.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
+
+        hcent_proj_h = hcent_h.ProjectionY()
+        hmin_proj_h = hmin_h.ProjectionY()
+        hmax_proj_h = hmax_h.ProjectionY()
+
+        # Fix normalization
+        hmin_proj_h.Scale(1/hcent_proj_h.Integral(), "width")
+        hmax_proj_h.Scale(1/hcent_proj_h.Integral(), "width")
+        hcent_proj_h.Scale(1/hcent_proj_h.Integral(), "width")
+
+        if hmax_proj_h.GetMaximum() > y_maximum:
+          y_maximum = hmax_proj_h.GetMaximum()
+
+        # Find the max bin: the last bin where the angularity is 0
+        if not maxbin:
+          maxbin = hcent_proj_h.GetNbinsX()-1   # initialize
+          while hmax_proj_h.GetBinContent(maxbin) < 1e-3 and maxbin > 1:
+            maxbin -= 1
+
+        x = array('d', [round(hcent_proj_h.GetXaxis().GetBinCenter(i), 5) for
+                        i in range(1, maxbin+1)])
+        y = array('d', [hcent_proj_h.GetBinContent(i) for i in range(1, maxbin+1)])
+        if grooming_setting:
+          axMain.plot(x, y, 'k', color=ColorArray[oi])
+          axLin.plot(x, y, 'k', color=ColorArray[oi])
+        else:
+          plt.plot(x, y, 'k', color=ColorArray[oi])
+
+        xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)] + [0])
+        xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)])
+        # ROOT version
+        #yerrup = array('d', [hmax_proj_h.GetBinContent(i)-y[i-1] for i in range(1, maxbin+1)])
+        #yerrdn = array('d', [y[i-1]-hmin_proj_h.GetBinContent(i) for i in range(1, maxbin+1)])
+        # PyPlot version
+        yerrup = [hmax_proj_h.GetBinContent(i) for i in range(1, maxbin+1)]
+        yerrdn = [hmin_proj_h.GetBinContent(i) for i in range(1, maxbin+1)]
+        if grooming_setting:
+          axMain.fill_between(x, yerrdn, yerrup, alpha=0.25, facecolor=ColorArray[oi],
+                           label=(r"NLL$^{\prime}$ $\otimes$ F$_\mathrm{NP}^{\Omega=%.1f}$" % Omega))
+          axLin.fill_between(x, yerrdn, yerrup, alpha=0.25, facecolor=ColorArray[oi],
+                           label=(r"NLL$^{\prime}$ $\otimes$ F$_\mathrm{NP}^{\Omega=%.1f}$" % Omega))
+        else:
+          plt.fill_between(x, yerrdn, yerrup, alpha=0.25, facecolor=ColorArray[oi],
+                           label=(r"NLL$^{\prime}$ $\otimes$ F$_\mathrm{NP}^{\Omega=%.1f}$" % Omega))
+
+        '''
+        h_theory = ROOT.TGraphAsymmErrors(maxbin, x, y, xerrdn, xerrup, yerrdn, yerrup)
+        color = self.ColorArray[4+oi]
+        h_theory.SetFillColorAlpha(color, 0.25)
+        h_theory.SetLineColor(color)
+        h_theory.SetLineWidth(3)
+        h_theory_list.append(h_theory)
+        '''
+
+      plt.legend(loc="upper left")
+
+      y_max = 5e2 * y_maximum if grooming_setting else 1.7 * y_maximum
+      if y_max <= 0:
+        print(y_maximum, y_max)
+      ax2 = None
+      if grooming_setting:
+        axMain.set_xlim((0.09, obs_edges[maxbin]))
+        axMain.set_ylim((y_min, y_max))
+        axLin.set_ylim((y_min, y_max))
+      else:
+        plt.xlim(x_min, obs_edges[maxbin])
+        plt.ylim(y_min, y_max)
+      plt.ylabel(r"$%s$" % self.ytitle.replace("#", "\\").replace("\it", "\\mathit").replace(
+        '{d', '{\\mathrm{d}').replace('jet', '\\mathrm{jet}'), fontsize='20')
+      plt.xlabel(r"$%s$" % self.xtitle.replace("#", "\\").replace("\it", "\\mathit"), fontsize='16')
+      plt.subplots_adjust(left=(0.15 if not grooming_setting else 0.2),
+                          bottom=0.15, right=0.98, top=0.98)
+
+      ''' ROOT version
+      # Use blank histogram to initialize this range
+      bin_array = array('d', obs_edges[0:maxbin+1])
+      name = 'hTheoryComp_R{}_{}_{}-{}_Blank'.format(jetR, obs_label, min_pt, max_pt)
+      myBlankHisto = ROOT.TH1F(name, name, maxbin, bin_array)
+      myBlankHisto.SetNdivisions(505)
+      myBlankHisto.SetXTitle(self.xtitle)
+      myBlankHisto.GetXaxis().SetTitleOffset(1.02)
+      myBlankHisto.GetXaxis().SetTitleSize(0.055)
+      myBlankHisto.SetYTitle(self.ytitle)
+      myBlankHisto.GetYaxis().SetTitleOffset(1.1)
+      myBlankHisto.GetYaxis().SetTitleSize(0.055)
+      myBlankHisto.SetMinimum(y_min)
+      myBlankHisto.SetMaximum(y_max)
+      myBlankHisto.Draw()
+
+      for h_theory in h_theory_list:
+        h_theory.SetMinimum(y_min)
+        h_theory.Draw('L 3 same')
+      for h_response_projection in h_resp_list:
+        h_response_projection.SetMinimum(y_min)
+        h_response_projection.Draw('L hist same')
+      '''
+
+      # Reset thn range in case used later
+      thn.GetAxis(1).UnZoom()
+
+      # matplotlib version
+      text = '\n'.join((
+        "ALICE {}".format(self.figure_approval_status),
+        r"pp $\sqrt{s} = 5.02$ TeV",
+        r"anti-${k}_{\mathrm{T}}$ jets,   $R = %s$" % str(jetR),
+        r"$%i < p_\mathrm{T,jet}^\mathrm{full} < %i$ GeV/$c$" % (min_pt, max_pt),
+        r"$| \eta_\mathrm{jet}| < %s$" % str(0.9 - jetR)))
+      subobs_label = self.utils.formatted_subobs_label(self.observable)
+      if subobs_label:
+        text += r',   $%s = %s$' % (
+          subobs_label.replace("#", "\\").replace("\it", "\\mathit"), obs_setting)
+      plt.text(0.52*obs_edges[maxbin], 0.65*y_max if
+               not grooming_setting else 3*math.log(y_max/y_min),
+               text, fontsize='14', fontname='sans-serif')
+
+
+      ''' ROOT version
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text_xval = 0.61
+      text = 'ALICE {}'.format(self.figure_approval_status)
+      text_latex.DrawLatex(text_xval, 0.87, text)
+
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+      text_latex.SetTextSize(0.045)
+      text_latex.DrawLatex(text_xval, 0.8, text)
+
+      text = "anti-#it{k}_{T} jets,   #it{R} = %s" % str(jetR)
+      text_latex.DrawLatex(text_xval, 0.73, text)
+
+      text = str(min_pt) + ' < #it{p}_{T,jet}^{full} < ' + str(max_pt) + ' GeV/#it{c}'
+      text_latex.DrawLatex(text_xval, 0.66, text)
+
+      text = '| #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
+      subobs_label = self.utils.formatted_subobs_label(self.observable)
+      if subobs_label:
+        text += ',   %s = %s' % (subobs_label, obs_setting)
+      delta = 0.07
+      text_latex.DrawLatex(text_xval, 0.66-delta, text)
+
+      myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
+      self.utils.setup_legend(myLegend, 0.035)
+      for oi, Omega in enumerate(self.Omega_list):
+        myLegend.AddEntry(h_theory_list[oi],
+                          "NLL' #otimes #it{F}_{NP}^{#Omega=%s}" % str(Omega), 'lf')
+      #for rl, l in enumerate(self.theory_response_labels):
+      rl = 0; l = self.theory_response_labels[rl]
+      myLegend.AddEntry(h_resp_list[rl], l, 'lf')
+      myLegend.Draw()
+      '''
+
+      if grooming_setting:
+        ax2 = axLin.twinx()
+        ax2.spines['left'].set_visible(False)
+        ax2.tick_params(axis='y',which='both',labelright='off')
+
+      name = 'hTheoryRatio_Fnp_R{}_{}_{}-{}{}'.format(
+        self.utils.remove_periods(jetR), obs_label,
+        int(min_pt), int(max_pt), self.file_format)
+      outputFilename = os.path.join(output_dir, name)
+      #c.SaveAs(outputFilename)
+      #c.Close()
+      plt.savefig(outputFilename)
+      plt.close()
+
+    # Reset hadron-level ranges in case used later
+    for oi, Omega in enumerate(self.Omega_list):
+      ri = 0
+      hcent_h = getattr(self, "theory_cent_%s_%s_h_Fnp_Omega%s_%i" % \
+                        (self.observable, label, str(Omega), ri))
+      hmin_h = getattr(self, "theory_min_%s_%s_h_Fnp_Omega%s_%i" % \
+                       (self.observable, label, str(Omega), ri))
+      hmax_h = getattr(self, "theory_max_%s_%s_h_Fnp_Omega%s_%i" % \
+                       (self.observable, label, str(Omega), ri))
+      hcent_h.GetXaxis().UnZoom()
+      hmin_h.GetXaxis().UnZoom()
+      hmax_h.GetXaxis().UnZoom()
 
 
   #----------------------------------------------------------------------
@@ -2162,8 +2561,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
                                               min_pt_truth, max_pt_truth)
-    if grooming_setting:
-      fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
+    if grooming_setting and show_everything_else:
+      fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(
+        jetR, obs_label, min_pt_truth, max_pt_truth))
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
     h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
     h.SetMarkerSize(1.5)

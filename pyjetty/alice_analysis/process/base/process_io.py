@@ -126,10 +126,10 @@ class ProcessIO(common_base.CommonBase):
     event_tree = None
     event_df = None
     event_tree_name = self.tree_dir + self.event_tree_name
-    event_tree = uproot.open(self.input_file)[event_tree_name]
-    if not event_tree:
-      sys.exit('Tree {} not found in file {}'.format(event_tree_name, self.input_file))
-    self.event_df_orig = event_tree.pandas.df(self.event_columns)
+    with uproot.open(self.input_file)[event_tree_name] as event_tree:
+      if not event_tree:
+        raise ValueError("Tree %s not found in file %s" % (event_tree_name, self.input_file))
+      self.event_df_orig = uproot.concatenate(event_tree, self.event_columns, library="pd")
     
     # Check if there are duplicated event ids
     #print(self.event_df_orig)
@@ -137,7 +137,8 @@ class ProcessIO(common_base.CommonBase):
     #print(self.event_df_orig[d])
     n_duplicates = sum(self.event_df_orig.duplicated(self.unique_identifier))
     if n_duplicates > 0:
-      sys.exit('ERROR: There appear to be {} duplicate events in the event dataframe'.format(n_duplicates))
+      raise ValueError(
+        "There appear to be %i duplicate events in the event dataframe" % n_duplicates)
     
     # Apply event selection
     self.event_df_orig.reset_index(drop=True)
@@ -154,10 +155,10 @@ class ProcessIO(common_base.CommonBase):
     track_tree = None
     track_df_orig = None
     track_tree_name = self.tree_dir + self.track_tree_name
-    track_tree = uproot.open(self.input_file)[track_tree_name]
-    if not track_tree:
-      sys.exit('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
-    track_df_orig = track_tree.pandas.df(self.track_columns)
+    with uproot.open(self.input_file)[track_tree_name] as track_tree:
+      if not track_tree:
+        raise ValueError("Tree %s not found in file %s" % (track_tree_name, self.input_file))
+      track_df_orig = uproot.concatenate(track_tree, self.track_columns, library="pd")
     
     # Apply hole selection, in case of jetscape
     if self.is_jetscape:
@@ -174,7 +175,8 @@ class ProcessIO(common_base.CommonBase):
     #print(track_df_orig[d])
     n_duplicates = sum(track_df_orig.duplicated(self.track_columns))
     if n_duplicates > 0:
-      sys.exit('ERROR: There appear to be {} duplicate particles in the track dataframe'.format(n_duplicates))
+      raise ValueError(
+        "There appear to be %i duplicate particles in the track dataframe" % n_duplicates)
 
     # Merge event info into track tree
     self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)

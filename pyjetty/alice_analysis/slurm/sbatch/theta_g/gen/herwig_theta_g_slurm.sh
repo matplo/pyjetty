@@ -1,11 +1,11 @@
 #! /bin/bash
 
-#SBATCH --job-name="ang_herwig"
+#SBATCH --job-name="Rg_herwig"
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=3
 #SBATCH --partition=long
 #SBATCH --time=48:00:00
 #SBATCH --array=1-2560
-#SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
 FILE_PATHS='/rstorage/alice/sim/herwig_gen/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
@@ -29,5 +29,5 @@ echo "STOP=$STOP"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun ang_gen.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+  srun theta_g_gen.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done

@@ -961,7 +961,11 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
     myBlankHisto.SetMaximum(2.7*h_total.GetMaximum(50))
-    myBlankHisto.SetMinimum(-1.1*h_total.GetMaximum(50))
+    if not suffix=="Unfolding":
+      myBlankHisto.SetMinimum(-1.1*h_total.GetMaximum(50))
+    else:
+      # Unfolding uncertainties do not go below 0
+      myBlankHisto.SetMinimum(0)
     myBlankHisto.Draw("E")
 
     leg = ROOT.TLegend(0.67,0.6,0.8,0.92)

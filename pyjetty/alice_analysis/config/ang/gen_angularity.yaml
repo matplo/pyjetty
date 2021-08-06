@@ -20,3 +20,45 @@ reject_tracks_fraction: 0
 # SoftDrop setting (current same for all SD plots)
 sd_zcut: 0.2    # multiplier
 sd_beta: 0      # exponent on (deltaR / R)
+
+response_levels: [["p", "ch", "off"], ["p", "h", "off"], ["h", "ch", "on"]]
+theory_pt_bins: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
+                 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
+
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  ############################################################################
+  # Different R & beta configurations
+
+  config_B1.5:
+    beta: 1.5
+
+  config_B2:
+    beta: 2
+
+  config_B3:
+    beta: 3
+
+  ############################################################################
+  # Different R & beta configurations for SoftDrop
+
+  config_B1.5_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 1.5
+
+  config_B2_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 2
+
+  config_B3_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 3
