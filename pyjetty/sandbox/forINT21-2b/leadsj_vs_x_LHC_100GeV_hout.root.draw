@@ -1,0 +1,24 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=PYTHIA 100 GeV/c jets R=0.4 a-k_{T}
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_100GeV_hout.root 		:h_rgcutALL :hist +l1 +f1001 +a20 +w5 +k1 : title=all
+pquark==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_100GeV_hout.root 		:h_rgcutQ :hist +l1 +f1001 +a50 +w5 +k2 : title=r_{g} > 0.95
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_100GeV_hout.root 		:h_rgcutG :hist +l1 +f1001 +a50 +w5 +k4 : title=0.3 < r_{g} < 0.7
+
+
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_100GeV_hout.root 		:h_rgcutQ_glue :p  : title=sd01_Delta w/ (j_pt > 100 && j_pt < 120 && sjet01_pt/j_pt > 0.95 && pglue==1) * (pysigmagen)
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_100GeV_hout.root 		:h_rgcutQ_quark :p  : title=sd01_Delta w/ (j_pt > 100 && j_pt < 120 && sjet01_pt/j_pt > 0.95 && 
+
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_100GeV_hout.root 		:h_rgcutG_glue :p  : title=sd01_Delta w/ (j_pt > 100 && j_pt < 120 && sjet01_pt/j_pt > 0.3 && sjet01_pt/j_pt < 0.7 && pglue==1) * (pysigmagen)
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_100GeV_hout.root 		:h_rgcutG_quark :p  : title=sd01_Delta w/ (j_pt > 100 && j_pt < 120 && sjet01_pt/j_pt > 0.3 && sjet01_pt/j_pt < 0.7 && pquark==1) * (pysigmagen)
+
+#normalize index=1
+
+#xrange 0, 0.5
+#x R_{SD}
+#y dN/dR_{SD}

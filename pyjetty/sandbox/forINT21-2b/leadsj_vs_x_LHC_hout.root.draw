@@ -1,0 +1,76 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_jpt_glue :p  : title=j_pt w/ (j_pt > 10 && pglue==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_jpt_quark :p  : title=j_pt w/ (j_pt > 10 && pquark==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_jpt :p  : title=j_pt w/ (j_pt > 10) * (pysigmagen)
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_glue :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && pglue==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_quark :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && pquark==1) * (pysigmagen)
+#scale indexGraph=0 fout=sd100_z.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_CMS :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && sd01_Delta > 0.1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_CMS_glue :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && pglue==1 && sd01_Delta > 0.1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_CMS_quark :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && pquark==1 && sd01_Delta > 0.1) * (pysigmagen)
+#scale indexGraph=0 fout=sd100_z_CMS.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_Delta :p  : title=sd01_Delta w/ (j_pt > 100 && j_pt < 120) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_Delta_glue :p  : title=sd01_Delta w/ (j_pt > 100 && j_pt < 120 && pglue==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_Delta_quark :p  : title=sd01_Delta w/ (j_pt > 100 && j_pt < 120 && pquark==1) * (pysigmagen)
+#scale indexGraph=0 fout=sd100_Delta.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z :p  : title=sd01_z w/ (j_pt > 300 && j_pt < 300) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z_glue :p  : title=sd01_z w/ (j_pt > 300 && j_pt < 300 && pglue==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z_quark :p  : title=sd01_z w/ (j_pt > 300 && j_pt < 300 && pquark==1) * (pysigmagen)
+#scale indexGraph=0 fout=sd300_z.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z_CMS :p  : title=sd01_z w/ (j_pt > 300 && j_pt < 300 && sd01_Delta > 0.1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z_CMS_glue :p  : title=sd01_z w/ (j_pt > 300 && j_pt < 300 && pglue==1 && sd01_Delta > 0.1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z_CMS_quark :p  : title=sd01_z w/ (j_pt > 300 && j_pt < 300 && pquark==1 && sd01_Delta > 0.1) * (pysigmagen)
+#scale indexGraph=0 fout=sd300_z_CMS.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=up
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_Delta :p  : title=sd01_Delta w/ (j_pt > 300 && j_pt < 300) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_Delta_glue :p  : title=sd01_Delta w/ (j_pt > 300 && j_pt < 300 && pglue==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_Delta_quark :p  : title=sd01_Delta w/ (j_pt > 300 && j_pt < 300 && pquark==1) * (pysigmagen)
+#scale indexGraph=0 fout=sd300_Delta.root
+
