@@ -1,0 +1,156 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_RHIC_hout.root 		:h_jpt :p  : title=all
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_RHIC_hout.root 		:h_jpt_glue :p  : title=glue
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_RHIC_hout.root 		:h_jpt_quark :p  : title=quark
+
+#logx 1
+#logy 1
+
+#x p_{T}^{jet} (GeV/c)
+#y x-section
+
+#scale indexGraph=0 fout=RHIC_qg_ratio.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_jpt :p  : title=all
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_jpt_glue :p  : title=glue
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_jpt_quark :p  : title=quark
+
+#logx 1
+#logy 1
+
+#x p_{T}^{jet} (GeV/c)
+#y x-section
+
+#scale indexGraph=0 fout=LHC_qg_ratio.root
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=#sqrt{s} = 200 GeV/c
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/RHIC_qg_ratio.root 		:o_0 :l +EX0  +k4 +l1 +w5: title=gluon
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/RHIC_qg_ratio.root 		:o_1 :l +EX0  +k2 +l1 +w5: title=quark
+
+#line 5,1,60,1,1,9,2
+#y fraction
+#xrange 5, 60
+#maxy 1.5
+#miny 0
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=#sqrt{s} = 5000 GeV/c
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/LHC_qg_ratio.root 		:o_0 :l +EX0  +k4 +l1 +w5: title=gluon
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/LHC_qg_ratio.root 		:o_1 :l +EX0  +k2 +l1 +w5: title=quark
+
+#line 10,1,1000,1,1,9,2
+#y fraction
+#xrange 10, 1000
+#maxy 1.5
+#miny 0
+#logx 1
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z :p +k9 : title=100-120 p_{T}
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_glue :p  : title=glue
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_quark :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && pquark==1) * (pysigmagen)
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_CMS :p +k9: title=100-120 p_{T} R_{SD}>0.1
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_CMS_glue :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && pglue==1 && sd01_Delta > 0.1) * (pysigmagen)
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_z_CMS_quark :p  : title=sd01_z w/ (j_pt > 100 && j_pt < 120 && pquark==1 && sd01_Delta > 0.1) * (pysigmagen)
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z :p +k6: title=300-350 p_{T}
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_z_CMS :p +k6 : title=300-350 p_{T} R_{SD}>0.1
+
+
+#normalize self
+#x z_{SD}
+#y dN/dz per jet
+#xrange 0, 0.5
+#maxy 10
+#miny 0
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=100-120 GeV jets - 5TeV w/ PYTHIA
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd100_z.root 		:o_0 :p ex0  +k4 +l1: title=gluon
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd100_z.root 		:o_1 :p ex0  +k2 +l1: title=quark
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd100_z_CMS.root 		:o_0 :l ex0  +k4 +l9: title=gluon R_{g} > 0.1
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd100_z_CMS.root 		:o_1 :l ex0  +k2 +l9: title=quark R_{g} > 0.1
+#x z_{SD}
+#y fraction
+#xrange 0, 0.5
+#maxy 1.5
+#miny 0
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=300-350 GeV jets - 5TeV w/ PYTHIA
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd300_z.root 			:o_0 :p ex0  +k4 +l1: title=gluon
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd300_z.root 			:o_1 :p ex0  +k2 +l1: title=quark
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd300_z_CMS.root 		:o_0 :l ex0  +k4 +l9: title=gluon R_{g} > 0.1
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd300_z_CMS.root 		:o_1 :l ex0  +k2 +l9: title=quark R_{g} > 0.1
+#x z_{SD}
+#y fraction
+#xrange 0, 0.5
+#maxy 1.5
+#miny 0
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd100_Delta :p +k9 : title=100-120 p_{T}
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_x_LHC_hout.root 		:h_sd300_Delta :p +k6 : title=300-350 p_{T}
+
+
+#normalize self
+#x R_{SD}
+#y dN/dR per jet
+#xrange 0, 0.5
+#maxy 10
+#miny 0
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur title=LHC 5TeV w/ PYTHIA
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd100_Delta.root 		:o_0 :pl ex0  +k4 +l1: title=gluon p_{T} 100-120
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd100_Delta.root 		:o_1 :pl ex0  +k2 +l1: title=quark p_{T} 100-120
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd300_Delta.root 		:o_0 :pl ex0  +k4 +l9: title=gluon p_{T} 300-350
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/sd300_Delta.root 		:o_1 :pl ex0  +k2 +l9: title=quark p_{T} 300-350
+#x R_{SD}
+#y fraction
+#xrange 0.0, 0.5
+#maxy 1.5
+#miny 0
