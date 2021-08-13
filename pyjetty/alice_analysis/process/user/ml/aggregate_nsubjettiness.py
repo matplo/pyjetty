@@ -10,7 +10,7 @@ import numpy as np
 
 def aggregate(config_file, filelist, output_dir):
 
-    n_files_max = 10000
+    n_files_max = 100
 
     # List of arrays to aggregate
     observables = ['X_four_vectors', 'X_Nsub', 'y', 'jet_pt', 'delta_pt', 'matched_pt', 'matched_deltaR', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
@@ -29,6 +29,7 @@ def aggregate(config_file, filelist, output_dir):
     # - different jet R
     # - different constituent subtraction R_max
     output_keys = []
+    output_keys.append('delta_pt_random_cone')
     for event_type in event_types:
         for jetR in jetR_list:
             for jet_pt_bin in jet_pt_bins:
@@ -42,7 +43,7 @@ def aggregate(config_file, filelist, output_dir):
     # See: https://docs.h5py.org/en/stable/vds.html
     
     # First, we need to find the total shape for each observable set
-    shapes, total_shapes = determine_shapes(output_keys, filelist, n_files_max)
+    shapes, total_shapes, N_list, beta_list = determine_shapes(output_keys, filelist, n_files_max)
     print('Determined shapes.')
 
     # Now, create the virtual dataset
@@ -86,25 +87,15 @@ def aggregate(config_file, filelist, output_dir):
             # Add virtual dataset to output file
             hf.create_virtual_dataset(output_key, layout)
 
+        # Write N_list, beta_list
+        hf.create_dataset('N_list', data=np.array(N_list))
+        hf.create_dataset('beta_list', data=np.array(beta_list))
+
     print('Virtual dataset created.')
     print()
     
-    # Write N_list, beta_list
-    if 'X_four_vectors' in observables:
-        output_filename_shuffled = 'nsubjettiness_with_four_vectors_shuffled.h5'
-    else:
-        output_filename_shuffled = 'nsubjettiness_without_four_vectors_shuffled.h5'
-    with h5py.File(filename, 'r') as hf:
-        N_list = list(hf['N_list'][:])
-        beta_list = list(hf['beta_list'][:])
-    with h5py.File(os.path.join(output_dir, output_filename_shuffled), 'w') as hf_shuffled:
-        hf_shuffled.create_dataset('N_list', data=np.array(N_list))
-        hf_shuffled.create_dataset('beta_list', data=np.array(beta_list))
-    
     #  Shuffle data set -- create randomized indices for each set of observables
     idx = {}
-    N_list = None
-    beta_list = None
     for output_key in output_keys:
         print(f'Shuffling dataset for {output_key}')
         
@@ -137,7 +128,6 @@ def aggregate(config_file, filelist, output_dir):
 def determine_shapes(output_keys, filelist, n_files_max):
 
     shapes = {}
-    shapes['delta_pt_random_cone'] = []
     for output_key in output_keys:
         shapes[output_key] = []
 
@@ -149,10 +139,12 @@ def determine_shapes(output_keys, filelist, n_files_max):
             if not accept_file(i, n_files, n_files_max):
                 break
 
-            delta_pt_random_cone_i = hdf['delta_pt_random_cone'][:]
-            shapes['delta_pt_random_cone'].append(hdf['delta_pt_random_cone'][:].shape)
             for output_key in output_keys:
                 shapes[output_key].append(hdf[output_key][:].shape)
+
+            if i==0:
+                N_list = list(hdf['N_list'][:])
+                beta_list = list(hdf['beta_list'][:])
 
     total_shapes = {}
     for key,val in shapes.items():
@@ -164,7 +156,7 @@ def determine_shapes(output_keys, filelist, n_files_max):
         else:
             total_shapes[key] = (total_shape, 800, 4)
 
-    return shapes,total_shapes
+    return shapes, total_shapes, N_list, beta_list
 
 def accept_file(i, n_files, n_files_max, log=True):
     if log:
@@ -177,8 +169,8 @@ def accept_file(i, n_files, n_files_max, log=True):
 def accepted_setting(observable, event_type, R_max):
     
     if 'hard' in event_type and np.isclose(R_max, 0.):
-        if 'delta_pt' not in observable and 'matched' not in observable:
-            return True
+        # if 'delta_pt' not in observable and 'matched' not in observable:
+        return True
 
     if 'combined' in event_type:
         if 'X_four_vectors' in observable:
