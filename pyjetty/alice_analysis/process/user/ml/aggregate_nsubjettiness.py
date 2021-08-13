@@ -94,36 +94,6 @@ def aggregate(config_file, filelist, output_dir):
     print('Virtual dataset created.')
     print()
     
-    #  Shuffle data set -- create randomized indices for each set of observables
-    idx = {}
-    for output_key in output_keys:
-        print(f'Shuffling dataset for {output_key}')
-        
-        suffix = output_key.split('_', 1)[1]
-        if suffix not in idx:
-            idx[suffix] = np.array([])
-        
-        with h5py.File(os.path.join(output_dir, output_filename_unshuffled), 'r') as hf_unshuffled:
-            output = hf_unshuffled[output_key][:]
-            
-            if not np.any(idx[suffix]):
-                idx[suffix] = np.random.permutation(len(output))
-
-            if output.shape[0] == idx[suffix].shape[0]:
-                output_shuffled = output[idx[suffix]]
-                print(f'shuffled {output_key}: {output_shuffled.shape}')
-
-                # Remove nan
-                where_are_nan = np.isnan(output)
-                output[where_are_nan] = 0.
-            elif output.shape[0] > 0:
-                print(f'MISMATCH of shape for {output_key}: {output.shape} vs. {idx[suffix].shape}')
-                
-            with h5py.File(os.path.join(output_dir, output_filename_shuffled), 'w') as hf_shuffled:
-                hf_shuffled.create_dataset(output_key, data=output)
-
-    print('done.')
-
 # Determine shapes of lists in all files
 def determine_shapes(output_keys, filelist, n_files_max):
 
