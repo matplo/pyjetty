@@ -206,9 +206,9 @@ class ProcessppAA(common_base.CommonBase):
                                 hf.create_dataset(f'X_Nsub{suffix}', data=X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
                                 
                                 # Write labels: Pythia 0, Jewel 1
-                                if 'jewel' in self.input_file:
+                                if 'jewel_PbPb' in self.input_file:
                                     y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
-                                elif 'pythia' in self.input_file:
+                                elif 'jewel_pp' in self.input_file:
                                     y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
                                 hf.create_dataset(f'y{suffix}', data=y)
                                 
@@ -273,7 +273,7 @@ class ProcessppAA(common_base.CommonBase):
                 # For the combined jets, they can go outside, since they will be matched to hard jets
                 jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
                 jet_selector_hard = fj.SelectorPtMin(min_jet_pt) & fj.SelectorPtMax(max_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
-                jet_selector_combined = fj.SelectorPtMin(min_jet_pt/2.) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+                jet_selector_combined = fj.SelectorPtMin(min_jet_pt/5.) & fj.SelectorAbsRapMax(self.eta_max - jetR)
             
                 for i, R_max in enumerate(self.max_distance):
                     #print()
