@@ -27,7 +27,7 @@ else
 fi
 
 PREFIX="/rstorage/ml/egml/nsubjettiness/$JOB_ID"
-SUFFIX=$(echo $INPUT_FILE | cut -d/ -f7-9)
+SUFFIX=$(echo $INPUT_FILE | cut -d/ -f6-8)
 echo $SUFFIX
 OUTPUT_DIR="$PREFIX/output/$SUFFIX"
 echo "Output dir: $OUTPUT_DIR"
