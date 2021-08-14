@@ -398,14 +398,14 @@ class PlotRAA(common_base.CommonBase):
                 table.location = 'Figure 5 (right) in Ref. [Public Note]'
                 
         if is_ratio:
-            table.description += ' -- ratio of Pb-Pb to pp collisions.'
+            table.description += r' $-$ ratio of Pb-Pb to pp collisions.'
         elif is_pp:
-            table.description += 'in pp collisions.'
+            table.description += ' in pp collisions.'
         else:
-            table.description += 'in Pb-Pb collisions.'
+            table.description += ' in Pb-Pb collisions.'
                 
         table.description += '\n'
-        table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, Soft Drop $z_{{\mathrm{{cut}}}}=0.2, \beta=0$.'.format(self.min_pt, self.max_pt)
+        table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{} \;\mathrm{{GeV}}/c$, Soft Drop $z_{{\mathrm{{cut}}}}={}, \beta=0$.'.format(self.min_pt, self.max_pt, self.zcut)
         table.description += '\n\nNote: The first bin corresponds to the Soft Drop untagged fraction.'
         
         if is_pp:

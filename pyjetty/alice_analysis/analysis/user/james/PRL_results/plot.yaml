@@ -51,7 +51,7 @@ laura:
     zcut: 0.2
     min_pt: 60
     max_pt: 80
-    file: './PRL_results/laura/Resultszg_PP_4to4_May28.root'
+    file: './PRL_results/laura/Resultszg_PP_4to4_pass3_leadptfix_Feb19.root'
 
     theory:
      - g_zg_sd2_hyb_lres0: 'Pablos, #it{L}_{res} = 0'
@@ -71,7 +71,7 @@ laura:
     min_pt: 60
     max_pt: 80
     xmax: 0.35
-    file: './PRL_results/laura/Resultsrg_PP_4to4_pre_May28.root'
+    file: './PRL_results/laura/Resultsrg_PP_4to4_pass3_pthard4pt10_Mar2.root'
 
     theory:
      - g_rg_sd2_hyb_lres0: 'Pablos, #it{L}_{res} = 0'
