@@ -79,7 +79,7 @@ class AnalyzePPAA(common_base.CommonBase):
                            'Lasso': 'dotted'
                           }
                        
-        self.filename = 'nsubjettiness_with_four_vectors.h5'
+        self.filename = 'nsubjettiness_with_four_vectors_unshuffled.h5'
         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
@@ -195,7 +195,7 @@ class AnalyzePPAA(common_base.CommonBase):
                         self.X_Nsub = None
                         self.pt = None
                         self.delta_pt = None
-                        
+   
                         # Create output dir
                         self.output_dir_i = os.path.join(self.output_dir, f'{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         if not os.path.exists(self.output_dir_i):
@@ -208,12 +208,29 @@ class AnalyzePPAA(common_base.CommonBase):
                             if f'X_four_vectors{key_suffix}' in hf:
                                 self.X_particles = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
                             self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
-                            
+
+                            # Shuffle dataset 
+                            idx = np.random.permutation(len(y_unshuffled))
+                            if y_unshuffled.shape[0] == idx.shape[0]:
+                                self.y = y_unshuffled[idx]
+                                if f'X_four_vectors{key_suffix}' in hf:
+                                    self.X_particles = X_particles_unshuffled[idx]
+                                self.X_Nsub = X_Nsub_unshuffled[idx]
+                            else:
+                                print(f'MISMATCH of shape: {y_unshuffled.shape} vs. {idx.shape}')
+
+                            # Remove nan
+                            self.y[np.isnan(self.y)] = 0.
+                            self.X_particles[np.isnan(self.X_particles)] = 0.
+                            self.X_Nsub[np.isnan(self.X_Nsub)] = 0.
+
                             # Also get some QA info
                             self.qa_results = {}
                             for qa_observable in self.qa_observables:
                                 self.qa_results[qa_observable] = hf[f'{qa_observable}{key_suffix}'][:self.n_total]
+                                self.qa_results[qa_observable][np.isnan(self.qa_results[qa_observable])] = 0.
                             self.delta_pt = hf[f'delta_pt{key_suffix}'][:]
+                            self.delta_pt[np.isnan(self.delta_pt)] = 0.
 
                         # Define formatted labels for features
                         self.feature_labels = []
