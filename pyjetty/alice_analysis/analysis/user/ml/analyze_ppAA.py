@@ -614,9 +614,11 @@ class AnalyzePPAA(common_base.CommonBase):
                                                                            val=self.n_val, test=self.n_test)
         
         # Build architecture
+        opt = keras.optimizers.Adam(learning_rate=0.01)
         efn = energyflow.archs.EFN(input_dim=2,
                                    Phi_sizes=model_settings['Phi_sizes'],
-                                   F_sizes=model_settings['F_sizes'])
+                                   F_sizes=model_settings['F_sizes'],
+                                   optimizer=opt)
         
         # Train model
         history = efn.fit([z_EFN_train,p_EFN_train],
