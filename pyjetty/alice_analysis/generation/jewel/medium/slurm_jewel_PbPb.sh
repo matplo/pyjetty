@@ -22,7 +22,7 @@ echo "NJOB $SLURM_ARRAY_TASK_ID" >> $OUTDIR/$JEWEL_CONFIG
 echo "Running JEWEL PbPb"
 export LD_LIBRARY_PATH=/software/users/james/lhapdf-5.9.1-install/lib
 export LHAPATH=/software/users/james/lhapdf-5.9.1-install/share/lhapdf/PDFsets
-$JEWEL_DIR/jewel-2.2.0-vac $OUTDIR/$JEWEL_CONFIG
+$JEWEL_DIR/$JEWEL_EXECUTABLE $OUTDIR/$JEWEL_CONFIG
 
 # Convert hepmc to ntuple
 module use /software/users/james/heppy/modules
