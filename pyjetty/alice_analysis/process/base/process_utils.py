@@ -51,7 +51,7 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   def is_truth_jet_accepted(self, jet_truth):
     
-    return is_det_jet_accepted(self, jet_truth)
+    return self.is_det_jet_accepted(self, jet_truth)
 
   #---------------------------------------------------------------
   # Compute delta-R (eta-phi) between a PseudoJet and a given eta,phi value
