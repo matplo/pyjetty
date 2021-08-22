@@ -223,6 +223,12 @@ class ProcessppAA(common_base.CommonBase):
                                 
                                 for qa_observable in self.qa_observables:
                                     hf.create_dataset(f'{qa_observable}{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable])
+
+                                # Make some QA plots
+                                self.output_dir_i = os.path.join(self.output_dir, f'{label}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
+                                if not os.path.exists(self.output_dir_i):
+                                    os.makedirs(self.output_dir_i)
+                                self.plot_QA(label, jetR, jet_pt_bin, R_max)
   
             hf.create_dataset('N_list', data=self.N_list)
             hf.create_dataset('beta_list', data=self.beta_list)
@@ -482,6 +488,36 @@ class ProcessppAA(common_base.CommonBase):
                                 jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][key] = np.array(val)
                             
         return jet_variables_numpy
+
+    #---------------------------------------------------------------
+    # Plot QA
+    #---------------------------------------------------------------
+    def plot_QA(self, event_type, jetR, jet_pt_bin, R_max):
+    
+        for qa_observable in self.qa_observables:
+            
+            qa_result = self.jet_qa_variables_numpy[event_type][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable]
+            qa_observable_shape = qa_result.shape
+            if qa_observable_shape[0] == 0:
+                continue
+
+            # Plot distributions
+            plt.xlabel(rf'{qa_observable}', fontsize=14)
+            max = np.amax(qa_result)*1.2
+            bins = np.linspace(0, max, 20)
+            plt.hist(qa_result,
+                     bins,
+                     histtype='step',
+                     density=True,
+                     label = 'pp or AA',
+                     linewidth=2,
+                     linestyle='-',
+                     alpha=0.5)
+            plt.legend(loc='best', fontsize=14, frameon=False)
+            
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir_i, f'{qa_observable}.pdf'))
+            plt.close()   
                                         
     #---------------------------------------------------------------
     # Compute pseudorapidity from four-vector
