@@ -71,9 +71,14 @@ class ProcessppAA(common_base.CommonBase):
         self.nTracks_truth = len(io_hard.track_df.index)
         print('--- {} seconds ---'.format(time.time() - self.start_time))
 
+        # Construct dummy combined event -- we will add thermal particles in event loop
+        # (Note: deep copy of df_fjparticles does not copy underlying objects)
+        df_fjparticles_combined = io_hard.load_data()
+
+        # Merge hard event and background dataframes
         if self.thermal_model:
-            # We will add thermal particles in event loop
-            self.df_fjparticles = df_fjparticles_hard
+            self.df_fjparticles = pd.concat([df_fjparticles_hard, df_fjparticles_combined], axis=1)
+            self.df_fjparticles.columns = ['fj_particles_hard', 'fj_particles_combined']
             print('Done.')
             print()
         else:
@@ -167,8 +172,7 @@ class ProcessppAA(common_base.CommonBase):
         # Fill each of the jet_variables into a list
         fj.ClusterSequence.print_banner()
         print('Finding jets and computing N-subjettiness...')
-        result = [self.analyze_event(fj_particles_hard) for fj_particles_hard in self.df_fjparticles]
-        
+        result = [self.analyze_event(fj_particles_hard, fj_particles_combined) for fj_particles_hard, fj_particles_combined in zip(self.df_fjparticles['fj_particles_hard'], self.df_fjparticles['fj_particles_combined'])]        
         # Transform the dictionary of lists into a dictionary of numpy arrays
         self.jet_variables_numpy = self.transform_to_numpy(self.jet_variables)
         self.four_vectors_numpy = self.transform_to_numpy(self.four_vectors)
@@ -232,7 +236,7 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Process an event (in this case, just a single jet per event)
     #---------------------------------------------------------------
-    def analyze_event(self, fj_particles_hard):
+    def analyze_event(self, fj_particles_hard, fj_particles_combined_beforeCS):
     
         # Check that the entries exist appropriately
         if type(fj_particles_hard) != fj.vectorPJ:
@@ -248,11 +252,9 @@ class ProcessppAA(common_base.CommonBase):
           
           # Form the combined event
           # The hard event tracks are each stored with a unique user_index >= 0
-          fj_particles_combined_beforeCS = []
-          [fj_particles_combined_beforeCS.append(p) for p in fj_particles_hard]
           # The thermal tracks are each stored with a unique user_index < 0
-          [fj_particles_combined_beforeCS.append(p) for p in fj_particles_background]
-          
+          [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_background]
+
         # Compute delta-pt by random cone method
         self.delta_pt_RC(fj_particles_background)
 
