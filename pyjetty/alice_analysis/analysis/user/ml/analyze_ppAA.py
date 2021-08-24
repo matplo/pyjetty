@@ -204,10 +204,10 @@ class AnalyzePPAA(common_base.CommonBase):
                         # Read input variables
                         key_suffix = f'_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
-                            self.y = hf[f'y{key_suffix}'][:self.n_total]
+                            y_unshuffled = hf[f'y{key_suffix}'][:self.n_total]
                             if f'X_four_vectors{key_suffix}' in hf:
-                                self.X_particles = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
-                            self.X_Nsub = hf[f'X_Nsub{key_suffix}'][:self.n_total]
+                                X_particles_unshuffled = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
+                            X_Nsub_unshuffled = hf[f'X_Nsub{key_suffix}'][:self.n_total]
 
                             # Shuffle dataset 
                             idx = np.random.permutation(len(y_unshuffled))
@@ -227,10 +227,15 @@ class AnalyzePPAA(common_base.CommonBase):
                             # Also get some QA info
                             self.qa_results = {}
                             for qa_observable in self.qa_observables:
-                                self.qa_results[qa_observable] = hf[f'{qa_observable}{key_suffix}'][:self.n_total]
+                                qa_result = hf[f'{qa_observable}{key_suffix}'][:self.n_total]
+                                if qa_result.shape[0] == 0:
+                                    continue
+                                self.qa_results[qa_observable] = qa_result[idx]
                                 self.qa_results[qa_observable][np.isnan(self.qa_results[qa_observable])] = 0.
-                            self.delta_pt = hf[f'delta_pt{key_suffix}'][:]
-                            self.delta_pt[np.isnan(self.delta_pt)] = 0.
+                            delta_pt_result = hf[f'delta_pt{key_suffix}'][:]
+                            if delta_pt_result.shape[0] != 0:
+                                self.delta_pt = delta_pt_result[idx]
+                                self.delta_pt[np.isnan(self.delta_pt)] = 0.
 
                         # Define formatted labels for features
                         self.feature_labels = []
@@ -988,7 +993,8 @@ class AnalyzePPAA(common_base.CommonBase):
     def plot_QA(self, event_type, jetR, jet_pt_bin, R_max):
     
         for qa_observable in self.qa_observables:
-            
+            if qa_observable not in self.qa_results:
+                continue
             qa_observable_shape = self.qa_results[qa_observable].shape
             if qa_observable_shape[0] == 0:
                 continue
@@ -1000,7 +1006,7 @@ class AnalyzePPAA(common_base.CommonBase):
             pythia_indices = 1 - self.y
             result_jewel = self.qa_results[qa_observable][jewel_indices.astype(bool)]
             result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
-            
+
             # Plot distributions
             fig, (ax1, ax2) = plt.subplots(nrows=2)
             plt.xlabel(rf'{qa_observable}', fontsize=14)
