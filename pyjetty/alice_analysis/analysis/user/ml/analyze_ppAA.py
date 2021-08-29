@@ -109,7 +109,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.n_test = config['n_test']
         self.n_total = self.n_train + self.n_val + self.n_test
         self.test_frac = 1. * self.n_test / self.n_total
-        self.val_frac = 1. * self.n_val / self.n_total
+        self.val_frac = 1. * self.n_val / (self.n_train + self.n_val)
         
         self.K_list = config['K']
         self.K_ROC_list = config['K_ROC']
@@ -205,16 +205,14 @@ class AnalyzePPAA(common_base.CommonBase):
                         key_suffix = f'_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
                             y_unshuffled = hf[f'y{key_suffix}'][:self.n_total]
-                            if f'X_four_vectors{key_suffix}' in hf:
-                                X_particles_unshuffled = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
+                            X_particles_unshuffled = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
                             X_Nsub_unshuffled = hf[f'X_Nsub{key_suffix}'][:self.n_total]
-
+                            
                             # Shuffle dataset 
                             idx = np.random.permutation(len(y_unshuffled))
                             if y_unshuffled.shape[0] == idx.shape[0]:
                                 self.y = y_unshuffled[idx]
-                                if f'X_four_vectors{key_suffix}' in hf:
-                                    self.X_particles = X_particles_unshuffled[idx]
+                                self.X_particles = X_particles_unshuffled[idx]
                                 self.X_Nsub = X_Nsub_unshuffled[idx]
                             else:
                                 print(f'MISMATCH of shape: {y_unshuffled.shape} vs. {idx.shape}')
@@ -257,7 +255,7 @@ class AnalyzePPAA(common_base.CommonBase):
                             self.training_data[K]['N_list'] = self.N_list[:n]
                             self.training_data[K]['beta_list'] = self.beta_list[:n]
                             self.training_data[K]['feature_labels'] = self.feature_labels[:n]
-                            
+
                         # Set up dict to store roc curves
                         self.roc_curve_dict = {}
                         if 'linear' in self.models:
@@ -471,7 +469,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def fit_neural_network(self, K, model_settings):
         print(f'Training Dense Neural Network, K={K}...')
-        
+     
         # input_shape expects shape of an instance (not including batch size)
         DNN = keras.models.Sequential()
         DNN.add(keras.layers.Flatten(input_shape=[self.training_data[K]['X_Nsub_train'].shape[1]]))
