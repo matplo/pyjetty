@@ -57,6 +57,21 @@ else
     echo_note "TennGen will NOT be build"    
 fi
 
+build_tglaubermc=""
+tengen=$(get_opt "tglaubermc" $@)
+if [ ! -z ${tengen} ]; then
+    build_tglaubermc="-DTGLAUBERMC=TRUE"
+    echo_note "TGlauberMC will be build"
+    if [ ! -d "${THISD}/src/TGlauberMC" ]; then
+        cdir=$PWD
+        cd ${THISD}/src/
+        git clone https://github.com/matplo/TGlauberMC.git
+        cd ${cdir}
+    fi
+else
+    echo_note "TGlauberMC will NOT be build"    
+fi
+
 configure_only=$(get_opt "configure-only" $@)
 
 echo "[i] building in ${build_path}"
@@ -67,6 +82,7 @@ if [ -d ${build_path} ]; then
     cmake -DMAKE_MODULE=TRUE -DBUILD_PYTHON=${build_python_iface} ${build_python_iface} \
             -DCMAKE_INSTALL_PREFIX=${install_path} -DCMAKE_BUILD_TYPE=${build_configuration} \
             ${build_tenngen} \
+            ${build_tglaubermc} \
             ${THISD}
     if [ "x${configure_only}" == "xyes" ]; then
         warning "stopping short of building...- configure-only requested"
