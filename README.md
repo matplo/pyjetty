@@ -28,6 +28,15 @@ notes/tips: use a new shell after building; no need to load or set heppy the pyj
 - edit `cpptools/src/pyjetty.i`, `cpptools/src/CMakeLists.txt` as needed
 - run `./cpptools/scripts/build_cpptools.sh`
 
+# more functionality?
+
+- TennGen background generator (via https://github.com/matplo/TennGen)
+-- install with `$HEPPY_DIR/scripts/pipenv_heppy.sh run <where pyjetty>/cpptools/build.sh --tenngen`
+- TGlauberMC - a Glauber MC implementation (via https://github.com/matplo/TGlauberMC)
+-- install with `$HEPPY_DIR/scripts/pipenv_heppy.sh run <where pyjetty>/cpptools/build.sh --tglaubermc`
+
+Note: to install both use both flags: `--tenngen --tglaubermc`
+
 # contributing
 
 Please fork and make a pull request.
