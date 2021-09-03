@@ -16,3 +16,4 @@ Pipfile.lock
 *.log
 *.run
 *.DS_Store
+.vscode/settings.json
