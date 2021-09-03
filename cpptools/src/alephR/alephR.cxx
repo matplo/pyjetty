@@ -553,7 +553,8 @@ namespace AlephR
 		TFile fout(outputfname, "recreate");
 		fout.cd();
 
-		TTree *t = new TTree("t", "t");
+		TTree *tparts = new TTree("tparts", "tparts");
+		TTree *tevents = new TTree("tevents", "tevents");
 
 		float run = 0;
 		float eventN = 0;
@@ -579,30 +580,32 @@ namespace AlephR
 		float nitc = 0;
 		float nvdet = 0;
 
-		t->Branch("nvdet", 	&nvdet, "nvdet/f");
-		t->Branch("nitc", 	&nitc, "nitc/f");
-		t->Branch("ntpc", 	&ntpc, "ntpc/f");
-		t->Branch("z0", 	&z0, "z0/f");
-		t->Branch("d0", 	&d0, "d0/f");
-		t->Branch("pwflag", &pwflag, "pwflag/f");
-		t->Branch("q", 		&q, "q/f");
-		t->Branch("eta", 	&eta, "eta/f");
-		t->Branch("phi", 	&phi, "phi/f");
-		t->Branch("pt", 	&pt, "pt/f");
-		t->Branch("e", 		&e, "e/f");
-		t->Branch("m", 		&m, "m/f");
-		t->Branch("pz", 	&pz, "pz/f");
-		t->Branch("py", 	&py, "py/f");
-		t->Branch("px", 	&px, "px/f");
+		tparts->Branch("nvdet", 	&nvdet, "nvdet/f");
+		tparts->Branch("nitc", 	&nitc, "nitc/f");
+		tparts->Branch("ntpc", 	&ntpc, "ntpc/f");
+		tparts->Branch("z0", 	&z0, "z0/f");
+		tparts->Branch("d0", 	&d0, "d0/f");
+		tparts->Branch("pwflag", &pwflag, "pwflag/f");
+		tparts->Branch("q", 	&q, "q/f");
+		tparts->Branch("eta", 	&eta, "eta/f");
+		tparts->Branch("phi", 	&phi, "phi/f");
+		tparts->Branch("pt", 	&pt, "pt/f");
+		tparts->Branch("e", 	&e, "e/f");
+		tparts->Branch("m", 	&m, "m/f");
+		tparts->Branch("pz", 	&pz, "pz/f");
+		tparts->Branch("py", 	&py, "py/f");
+		tparts->Branch("px", 	&px, "px/f");
+		tparts->Branch("event", &eventN, "eventN/f");
+		tparts->Branch("run", 	 &run, "run/f");
 
-		t->Branch("ey", 	&ey, "ey/f");
-		t->Branch("ex", 	&ex, "ex/f");
-		t->Branch("vy", 	&vy, "vy/f");
-		t->Branch("vx", 	&vx, "vx/f");
-		t->Branch("vflag", 	&vflag, "vflag/f");
-		t->Branch("ecm", 	&ecm, "ecm/f");
-		t->Branch("event", 	&eventN, "eventN/f");
-		t->Branch("run", 	&run, "run/f");
+		tevents->Branch("ey", 	 &ey, "ey/f");
+		tevents->Branch("ex", 	 &ex, "ex/f");
+		tevents->Branch("vy", 	 &vy, "vy/f");
+		tevents->Branch("vx", 	 &vx, "vx/f");
+		tevents->Branch("vflag", &vflag, "vflag/f");
+		tevents->Branch("ecm", 	 &ecm, "ecm/f");
+		tevents->Branch("event", &eventN, "eventN/f");
+		tevents->Branch("run", 	 &run, "run/f");
 
 		LoopUtil::TPbar pbar(nev);
 
@@ -615,17 +618,20 @@ namespace AlephR
 			TLorentzVector tlv;
 			auto parts = event.get_particles();
 
+			run =  head.run();
+			eventN =  head.n();
+			ecm =  head.e();
+			vflag =  head.vflag();
+			vx =  head.vx();
+			vy =  head.vy();
+			ex =  head.ex();
+			ey =  head.ey();
+
+			tevents->Fill();
+
 			for (const auto &p : parts)
 			{
 				tlv.SetPxPyPzE(p.px(), p.py(), p.pz(), p.e());
-				run =  head.run();
-				eventN =  head.n();
-				ecm =  head.e();
-				vflag =  head.vflag();
-				vx =  head.vx();
-				vy =  head.vy();
-				ex =  head.ex();
-				ey =  head.ey();
 				px =  p.px();
 				py =  p.py();
 				pz =  p.pz();
@@ -641,13 +647,15 @@ namespace AlephR
 				ntpc =  p.ntpc();
 				nitc =  p.nitc();
 				nvdet =  p.nvdet();
-				t->Fill();
+				tparts->Fill();
 			}
 
 			pbar.Update(1);
 		}
 
-		t->Write();
+		tparts->Write();
+		tevents->Write();
+		
 		fout.Write();
 		fout.Purge();
 		fout.Close();
