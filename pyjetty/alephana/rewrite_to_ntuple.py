@@ -136,7 +136,7 @@ def stream_particle(e, p, tw):
 	tw.fill_tree()
 
 
-def test_cxx_gzip(args):
+def test_cxx_gzip_python_stream(args):
 
 	pinfo(args)
 
@@ -158,6 +158,19 @@ def test_cxx_gzip(args):
 				pinfo('no more events to read')
 				break
 	tw.write_and_close()
+
+
+def test_cxx_gzip(args):
+	ROOT.gSystem.Load("libpyjetty_alephR.dylib")
+	pinfo(args)
+	nev = aleph_utils.get_n_events_gzip(args.input)
+	with gzip.open(args.input) as f:
+		_data = f.readlines()
+		data = aleph.StringVector()
+		__ = [data.push_back("{}".format(s.decode("utf-8").strip('\n'))) for s in _data]
+		pinfo(type(data))
+		pinfo('number of lines read', len(data))
+		ROOT.AlephR.write_root_tree_lines(data, args.output, nev);
 
 
 def make_dict_row(e, p, dict_data):
@@ -220,6 +233,8 @@ def write_csv(args):
 		'nvdet']
 	dict_data = []
 
+	ROOT.gSystem.Load("libpyjetty_alephR.dylib")
+
 	nev = aleph_utils.get_n_events_gzip(args.input)
 	with gzip.open(args.input) as f:
 		_data = f.readlines()
@@ -227,11 +242,11 @@ def write_csv(args):
 		__ = [data.push_back("{}".format(s.decode("utf-8").strip('\n'))) for s in _data]
 		pinfo(type(data))
 		pinfo('number of lines read', data.size())
-		reader = aleph.ReaderLines(data)
+		reader = ROOT.Aleph.ReaderLines(data)
 		for i in tqdm(range(nev)):
 			if reader.read_next_event():
 				e = reader.get_event()
-				__ = [ make_dict_row(e, p, dict_data) for p in e.get_particles()]
+				#__ = [ make_dict_row(e, p, dict_data) for p in e.get_particles()]
 			else:
 				pinfo('no more events to read')
 				break
