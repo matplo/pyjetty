@@ -1,11 +1,13 @@
-#ifndef PYJETTY_ALEPH_HH
-#define PYJETTY_ALEPH_HH
+#ifndef PYJETTY_ALEPHR_HH
+#define PYJETTY_ALEPHR_HH
 
 #include <string>
 #include <fstream>
 #include <vector>
 
-namespace Aleph
+#include <TObject.h>
+
+namespace AlephR
 {
 	int dump(const char *fname, int nevents, bool noparts = false);
 
@@ -147,7 +149,7 @@ namespace Aleph
 		Event 			fEvent;
 	};
 
-
+	void write_root_tree_lines(const std::vector<std::string> &data, const char *outputfname, Size_t nev = -1);
 };
 
 #endif

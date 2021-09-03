@@ -26,7 +26,12 @@
 // END_EVENT
 
 #include "strutil.hh"
-#include "aleph.hh"
+#include "looputil.hh"
+
+#include "alephR.hh"
+#include "TFile.h"
+#include "TTree.h"
+#include "TLorentzVector.h"
 
 #include <string>
 #include <fstream>
@@ -34,7 +39,7 @@
 #include <iomanip>
 #include <cmath>
 
-namespace Aleph
+namespace AlephR
 {
 	Particle::Particle()
 			: fpx(0), fpy(0), fpz(0), fm(0), fq(0), fpwflag(0), fd0(0), fz0(0), fntpc(0), fnitc(0), fnvdet(0), fe(calc_e()), fpt(calc_pt())
@@ -542,4 +547,118 @@ namespace Aleph
 		}
 		return false;
 	}
+
+	void write_root_tree_lines(const std::vector<std::string> &data, const char *outputfname, Size_t nev)
+	{
+		TFile fout(outputfname, "recreate");
+		fout.cd();
+
+		TTree *tparts = new TTree("tparts", "tparts");
+		TTree *tevents = new TTree("tevents", "tevents");
+
+		float run = 0;
+		float eventN = 0;
+		float ecm = 0;
+		float vflag = 0;
+		float vx = 0;
+		float vy = 0;
+		float ex = 0;
+		float ey = 0;
+		float px = 0;
+		float py = 0;
+		float pz = 0;
+		float m = 0;
+		float e = 0;
+		float pt = 0;
+		float phi = 0;
+		float eta = 0;
+		float q = 0;
+		float pwflag = 0;
+		float d0 = 0;
+		float z0 = 0;
+		float ntpc = 0;
+		float nitc = 0;
+		float nvdet = 0;
+
+		tparts->Branch("nvdet", 	&nvdet, "nvdet/f");
+		tparts->Branch("nitc", 	&nitc, "nitc/f");
+		tparts->Branch("ntpc", 	&ntpc, "ntpc/f");
+		tparts->Branch("z0", 	&z0, "z0/f");
+		tparts->Branch("d0", 	&d0, "d0/f");
+		tparts->Branch("pwflag", &pwflag, "pwflag/f");
+		tparts->Branch("q", 	&q, "q/f");
+		tparts->Branch("eta", 	&eta, "eta/f");
+		tparts->Branch("phi", 	&phi, "phi/f");
+		tparts->Branch("pt", 	&pt, "pt/f");
+		tparts->Branch("e", 	&e, "e/f");
+		tparts->Branch("m", 	&m, "m/f");
+		tparts->Branch("pz", 	&pz, "pz/f");
+		tparts->Branch("py", 	&py, "py/f");
+		tparts->Branch("px", 	&px, "px/f");
+		tparts->Branch("event", &eventN, "eventN/f");
+		tparts->Branch("run", 	 &run, "run/f");
+
+		tevents->Branch("ey", 	 &ey, "ey/f");
+		tevents->Branch("ex", 	 &ex, "ex/f");
+		tevents->Branch("vy", 	 &vy, "vy/f");
+		tevents->Branch("vx", 	 &vx, "vx/f");
+		tevents->Branch("vflag", &vflag, "vflag/f");
+		tevents->Branch("ecm", 	 &ecm, "ecm/f");
+		tevents->Branch("event", &eventN, "eventN/f");
+		tevents->Branch("run", 	 &run, "run/f");
+
+		LoopUtil::TPbar pbar(nev);
+
+		ReaderLines reader(data);
+
+		while (reader.read_next_event())
+		{
+			auto event = reader.get_event();
+			auto head = event.get_header();
+			TLorentzVector tlv;
+			auto parts = event.get_particles();
+
+			run =  head.run();
+			eventN =  head.n();
+			ecm =  head.e();
+			vflag =  head.vflag();
+			vx =  head.vx();
+			vy =  head.vy();
+			ex =  head.ex();
+			ey =  head.ey();
+
+			tevents->Fill();
+
+			for (const auto &p : parts)
+			{
+				tlv.SetPxPyPzE(p.px(), p.py(), p.pz(), p.e());
+				px =  p.px();
+				py =  p.py();
+				pz =  p.pz();
+				m =  p.m();
+				e =  p.e();
+				pt =  p.pt();
+				phi =  tlv.Phi();
+				eta =  tlv.Eta();
+				q =  p.q();
+				pwflag =  p.pwflag();
+				d0 =  p.d0();
+				z0 =  p.z0();
+				ntpc =  p.ntpc();
+				nitc =  p.nitc();
+				nvdet =  p.nvdet();
+				tparts->Fill();
+			}
+
+			pbar.Update(1);
+		}
+
+		tparts->Write();
+		tevents->Write();
+		
+		fout.Write();
+		fout.Purge();
+		fout.Close();
+	}
+
 };
