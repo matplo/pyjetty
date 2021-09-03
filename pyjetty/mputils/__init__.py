@@ -6,3 +6,4 @@ from .csubtractor import *
 from .data_io import *
 from .jet_analysis import *
 from .memtrace import *
+from .eval_string import *

@@ -133,6 +133,20 @@ namespace Aleph
 		Event 			fEvent;
 	};
 
+	class ReaderLines
+	{
+	public:
+		ReaderLines(const std::vector<std::string> &data);
+		bool read_next_event();
+		const Event& get_event();
+		~ReaderLines();
+	private:
+		ReaderLines();
+		std::vector<std::string> fdata;
+		std::vector<std::string>::iterator iter;
+		Event 			fEvent;
+	};
+
 
 };
 

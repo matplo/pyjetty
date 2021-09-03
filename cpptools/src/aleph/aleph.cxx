@@ -388,4 +388,158 @@ namespace Aleph
 		}
 		return 0;
 	}
+
+	// ----------
+
+	ReaderLines::ReaderLines()
+		: fdata()
+		, iter(fdata.begin())
+	{
+		;
+	}
+
+	ReaderLines::~ReaderLines()
+	{
+		;
+	}
+
+	ReaderLines::ReaderLines(const std::vector<std::string> &data)
+		: fdata(data)
+		, iter(fdata.begin())
+	{
+		;
+	}
+
+	const Event& ReaderLines::get_event() {return fEvent;}
+
+	bool ReaderLines::read_next_event()
+	{
+		std::string line;
+
+		bool reading_parts = false;
+		bool reading_event = false;
+
+		int run    = -99;
+		int event  = -99;
+		double ecm = -99.0;
+		int vflag  = -99;
+		double vx  = -99.0;
+		double vy  = -99.0;
+		double ex  = -99.0;
+		double ey  = -99.0;
+
+		// while (auto itline = next(iter))
+		for (std::vector<std::string>::iterator it = iter; it != fdata.end(); ++it)
+		{
+			iter = it;
+			std::string line = *it;
+			if (line.find("ALEPH_DATA", 0) != std::string::npos)
+			{
+				// std::cout << line << " - start of the event found" << std::endl;
+				if (reading_event)
+				{
+					std::cerr << "Error: something went wrong : new event before finishing the last one" << event << std::endl;
+				}
+				reading_event = true;
+				StrUtil::replace_substring(line, " ", "");
+				StrUtil::replace_substring(line, "EVENT", " EVENT=");
+				StrUtil::replace_substring(line, "ECM", " ECM");
+				StrUtil::replace_substring(line, "GEV", "");
+
+				StrUtil::Args _args(line);
+				run   = _args.getI("ALEPH_DATARUN", 0);
+				event = _args.getI("EVENT", 0);
+				ecm   = _args.getD("ECM", 0.0);
+
+				fEvent.clear();
+			}
+			else
+			{
+				if (reading_event)
+				{
+					if (line.find("Primary vertex info flag", 0) != std::string::npos)
+					{
+						StrUtil::replace_substring(line, "Primary vertex info flag", "vflag");
+						StrUtil::replace_substring(line, " ", "");
+						StrUtil::replace_substring(line, "vx", " vx");
+						StrUtil::replace_substring(line, "vy", " vy");
+						StrUtil::replace_substring(line, "ex", " ex");
+						StrUtil::replace_substring(line, "ey", " ey");
+						reading_parts = true;
+						// std::cout << line << std::endl;
+						StrUtil::Args _args(line);
+						vflag = _args.getI("vflag", -99);
+						vx    = _args.getD("vx", -99.);
+						vy    = _args.getD("vy", -99.);
+						ex    = _args.getD("ex", -99.);
+						ey    = _args.getD("ey", -99.);
+						// std::cout << vflag << " " << std::setw(7) << vx << " " << std::setw(7) << vy << " " << std::setw(7) << ex << " " << std::setw(7) << ey << std::endl;
+					}
+					else if (reading_parts)
+					{
+						if (line.find("px=", 0) == 0)
+						{
+							if (fEvent.get_particles().size() == 0)
+							{
+								fEvent.reset(run, event, ecm, vflag, vx, vy, ex, ey);
+							}
+							StrUtil::replace_substring(line, " ", "");
+							std::vector<std::string> vars = StrUtil::split_to_vector("px=,py=,pz=,m=,charge,pwflag,d0,z0,ntpc,nitc,nvdet", ",");
+							std::vector<std::string> tovars = StrUtil::split_to_vector("px=, py=, pz=, m=, charge=, pwflag=, d0=, z0=, ntpc=, nitc=, nvdet=", ",");
+							for ( unsigned int i = 0; i < vars.size(); i++)
+							{
+								StrUtil::replace_substring(line, vars[i].c_str(), tovars[i].c_str());
+							}
+							StrUtil::Args _args(line);
+							double px     = _args.getD("px", 0);
+							double py     = _args.getD("py", 0);
+							double pz     = _args.getD("pz", 0);
+							double m      = _args.getD("m", 0);
+							double q      = _args.getD("charge", 0);
+							   int pwflag = _args.getI("pwflag", 0);
+							double d0     = _args.getD("d0", 0);
+							double z0     = _args.getD("z0", 0);
+							   int ntpc   = _args.getI("ntpc", 0);
+							   int nitc   = _args.getI("nitc", 0);
+							   int nvdet  = _args.getI("nvdet", 0);
+							Particle p(px, py, pz, m, q, pwflag, d0, z0, ntpc, nitc, nvdet);
+							fEvent.add_particle(p);
+						}
+						else
+						{
+							if (line.find("END_EVENT", 0) != std::string::npos)
+							{
+								// this is ok
+								// std::cout << line << " - end of the event found - while reading particles" << std::endl;
+								iter++;
+							}
+							else
+							{
+								std::cerr << "Error: while reading particles - unknown tag found" << std::endl;
+								std::cerr << "Error: - line is: " << line << std::endl;
+							}
+						}
+					}
+				}
+			}
+			// std::cout << line << std::endl;
+			if (line.find("END_EVENT", 0) != std::string::npos)
+			{
+				// std::cout << line << " - end of the event found" << std::endl;
+				if (reading_event && reading_parts)
+				{
+					reading_event = false;
+					reading_parts = false;
+					return true;
+				}
+				else
+				{
+					std::cerr << "Error: Something awfully wrong with the event structure..." << std::endl;
+					return false;
+					break;
+				}
+			}
+		}
+		return false;
+	}
 };

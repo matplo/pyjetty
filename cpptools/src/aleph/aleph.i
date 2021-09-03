@@ -8,10 +8,8 @@
 
 // Process symbols in header
 
-%include "aleph.hh"
-
 /*
-%typemap(out) std::vector<std::vector<double>>& 
+%typemap(out) vector<vector<double>>& 
 {
     for(int i = 0; i < $1->size(); ++i)
     {       
@@ -25,8 +23,17 @@
 
 namespace std
 {
-	%template(AlephParticleVector) std::vector<Aleph::Particle>;
-	%template(vstring) std::vector <std::string>;
-	%template(vdouble) std::vector <double>;
-	%template(vvdouble) std::vector< std::vector<double> >;
+	%template(AlephParticleVector) vector<Aleph::Particle>;
+
+    %template(IntVector) vector<int>;
+    %template(DoubleVector) vector<double>;
+    %template(VectorDoubleVector) vector< vector<double> >;
+    %template(StringVector) vector<string>;
+    %template(ConstCharVector) vector<const char*>;
+
+	// %template(vstring) vector <string>;
+	// %template(vdouble) vector <double>;
+	// %template(vvdouble) vector< vector<double> >;
 }
+
+%include "aleph.hh"
