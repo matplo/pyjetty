@@ -6,7 +6,7 @@ import fjtools
 
 class JetAnalysis(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, jet_pt_min=0.0, particles=None, explicit_ghosts=False)
+		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, jet_pt_min=0.0, particles=None, explicit_ghosts=True)
 		super(JetAnalysis, self).__init__(**kwargs)
 
 		self.particle_selector = fj.SelectorAbsEtaMax(self.particle_eta_max)
@@ -53,7 +53,7 @@ class JetAnalysisPerJet(MPBase):
 
 class JetAnalysisWithRho(JetAnalysis):
 	def __init__(self, **kwargs):
-		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, particles=None)
+		self.configure_from_args(jet_R=0.4, jet_algorithm=fj.antikt_algorithm, particle_eta_max=0.9, particles=None, explicit_ghosts=True)
 
 		self.bg_rho_range = fj.SelectorAbsEtaMax(self.particle_eta_max)
 		self.bg_jet_def = fj.JetDefinition(fj.kt_algorithm, self.jet_R)
