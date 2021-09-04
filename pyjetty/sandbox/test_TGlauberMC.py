@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import ROOT
 ROOT.gROOT.SetBatch()
-ROOT.gSystem.Load("libpyjetty_TGlauberMC.dylib")
+ROOT.gSystem.Load("libpyjetty_TGlauberMC")
 
 # tgmc = ROOT.TGlauberMC() # //constructor
 # call something from the TGlauberMC

@@ -1,8 +1,11 @@
 #ifdef __CINT__
 
-#pragma link off all globals;
-#pragma link off all classes;
-#pragma link off all functions;
+#pragma link off all global;
+#pragma link off all class;
+#pragma link off all namespace;
+#pragma link off all function;
+#pragma link C++ nestedtypedefs;
+#pragma link C++ nestedclass;
 
 #pragma link C++ namespace AlephR;
 #pragma link C++ class AlephR::Particle;

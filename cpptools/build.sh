@@ -20,7 +20,7 @@ build_path=${THISD}/build
 
 clean=$(get_opt "clean" $@)
 if [ ! -z ${clean} ]; then
-    rm -rf ${build_path}
+    rm -rf ${build_path} ${THISD}/lib ${THISD}/lib64 
 fi
 
 verbose=$(get_opt "verbose" $@)

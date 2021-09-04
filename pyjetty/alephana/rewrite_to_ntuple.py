@@ -161,7 +161,7 @@ def test_cxx_gzip_python_stream(args):
 
 
 def test_cxx_gzip(args):
-	ROOT.gSystem.Load("libpyjetty_alephR.dylib")
+	ROOT.gSystem.Load("libpyjetty_alephR")
 	pinfo(args)
 	nev = aleph_utils.get_n_events_gzip(args.input)
 	with gzip.open(args.input) as f:

@@ -27,5 +27,8 @@ target_link_libraries(${NAME_LIB} PUBLIC ${FASTJET_LIBS} ${ROOT_LIBRARIES} ${ROO
 # install_targets_custom()
 
 # message(STATUS "cmake install libdir=${CMAKE_INSTALL_LIBDIR}")
-install(TARGETS ${NAME_LIB} LIBRARY DESTINATION lib COMPONENT library)
+install(TARGETS ${NAME_LIB} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT library)
 # install(FILES ${HEADERS_LIB} DESTINATION include)
+# postfix MP - on 64 bit archs these files land in lib64 only while SO in lib - not needed using ${CMAKE_INSTALL_LIBDIR} instead of lib
+# install(FILES ${PROJECT_BINARY_DIR}/lib/${libprefix}${DICT}_rdict.pcm DESTINATION lib)
+# install(FILES ${PROJECT_BINARY_DIR}/lib/${libprefix}${DICT}.rootmap DESTINATION lib)
