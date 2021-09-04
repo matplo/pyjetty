@@ -161,16 +161,19 @@ def test_cxx_gzip_python_stream(args):
 
 
 def test_cxx_gzip(args):
+	pinfo('this is cxx with ROOT python iface...')
 	ROOT.gSystem.Load("libpyjetty_alephR")
 	pinfo(args)
 	nev = aleph_utils.get_n_events_gzip(args.input)
 	with gzip.open(args.input) as f:
 		_data = f.readlines()
-		data = aleph.StringVector()
+		# data = aleph.StringVector()
+		# __ = [data.push_back("{}".format(s.decode("utf-8").strip('\n'))) for s in _data]
+		data = ROOT.std.vector('string')(len(_data))
 		__ = [data.push_back("{}".format(s.decode("utf-8").strip('\n'))) for s in _data]
-		pinfo(type(data))
-		pinfo('number of lines read', len(data))
+		pinfo('number of lines read', len(data), type(data))
 		ROOT.AlephR.write_root_tree_lines(data, args.output, nev);
+		pinfo('output is', args.output)
 
 
 def make_dict_row(e, p, dict_data):
