@@ -85,13 +85,14 @@ class TheoryFolding():
         print('         To change this, please, add a parameter theory_obs_bins to the config file')
         print('***********************************************************************************************')
 
-      self.theory_pt_bins  = config['theory_pt_bins' ] # pT binning of theory calculations
-      self.final_pt_bins   = config['final_pt_bins'  ] # pT binning wanted for the final curves
+      self.theory_pt_bins  = config['theory_pt_bins']  # pT binning of theory calculations
+      self.final_pt_bins   = config['final_pt_bins']   # pT binning wanted for the final curves
 
       # response matrices for the folding, and labels describing them
       self.theory_response_fname = config['response_files']
       self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
       self.theory_response_labels = config['response_labels']
+      self.rebin_theory_response = config['rebin_theory_response'] if 'rebin_theory_response' in config else True
 
       # scale factors needed to scale distributions
       self.theory_pt_scale_factors_filepath = os.path.join(self.theory_dir, config['pt_scale_factors_path'])
@@ -131,22 +132,29 @@ class TheoryFolding():
       # Creating a root file to store results
       outfilename = os.path.join( self.theory_dir , 'folded_scet_calculations.root' )
       self.outfile = ROOT.TFile(outfilename,'recreate')
+
       print('===========================================================')
       print('Loading pT scale factors...')
       self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
+
       print('===========================================================')
       print('Loading response matrix for folding theory predictions...')
       self.load_theory_response()
+
       print('===========================================================')
       print('Loading theory curves...')
       self.load_theory_curves()
+
       print('===========================================================')
       print("Folding theory histograms...")
       self.fold_theory()
+
       print('===========================================================')
       print("Applying some final scalings...")
       self.final_processing()
+
       # ------------
+
       # Closing the root file with all results from this code
       self.outfile.Close()
       print('***********************************************************************************************\nDone!')
@@ -201,17 +209,16 @@ class TheoryFolding():
     if not os.path.exists(self.output_dir_theory):
       os.makedirs(self.output_dir_theory)
     roounfold_filename = os.path.join(self.output_dir_theory, 'fRoounfold.root')
+    roounfold_exists = os.path.exists(roounfold_filename)
 
     # Loop over jet R
     for jetR in self.jetR_list:
       # Loop through subconfigurations to fold
       # (e.g. Standard_WTA, Standard_SD_1, ... in the jet-axis analysis, or
       # beta = 1.5, 2, 3, ... in the angularities analysis)
-      for i in range(0,len(self.obs_subconfig_list)):
-
-        obs_setting = self.obs_settings[i]           # labels such as 'Standard_WTA'
+      for i, obs_setting in enumerate(self.obs_settings):
         grooming_setting = self.grooming_settings[i] # grooming parameters
-        label = self.create_label( jetR , obs_setting , grooming_setting ) 
+        label = self.create_label(jetR, obs_setting, grooming_setting) 
 
         # loop over response files (e.g. Pythia, Herwig, ...)
         for ri, response in enumerate(self.theory_response_files):
@@ -220,8 +227,9 @@ class TheoryFolding():
             
             # Load response matrix 
             name_RM = "hResponse_JetPt_"+self.observable+"_"+lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+label
+            print(name_RM)
             thn = response.Get(name_RM)
-            if thn == None:
+            if not thn:
               print('Could not find RM:',name_RM,'in',self.theory_response_fname[ri])
               exit() 
           
@@ -240,38 +248,50 @@ class TheoryFolding():
             ['p_{T}^{initial}', 'p_{T}^{final}', 'obs^{initial}', 'obs^{final}']
             e.g. ['p_{T}^{det}', 'p_{T}^{truth}', 'obs^{det}', 'obs_{truth}']
             '''
-          
-            # If no binning was specified by the user, take the RM binning
-            if ri == 0 and li == 0:
-              if self.theory_obs_bins == None:
-                binning = self.return_histo_binning_1D( thn.Projection(3) )
-                binning = [l for l in binning if l >= 0]
-              else:
-                binning = self.theory_obs_bins
-              setattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+obs_setting, binning)
-          
-            det_pt_bin_array = array('d', self.theory_pt_bins)
-            tru_pt_bin_array = det_pt_bin_array
-            det_obs_bin_array = array('d', binning)
-            tru_obs_bin_array = det_obs_bin_array
-          
-            if grooming_setting and self.use_tagging_fraction:
-              # Add bin for underflow value (tagging fraction)
-              det_obs_bin_array = np.insert(det_obs_bin_array, 0, -0.001)
+
+            roounfold_response = None; roounfold_thn = None;
+            # Stupidity check to make sure we aren't reloading things already in memory
+            if hasattr(self, name_roounfold_obj) and hasattr(self, name_roounfold_thn):
+              continue
+
+            elif roounfold_exists and not self.rebin_theory_response:
+              fRoo = ROOT.TFile(roounfold_filename, 'READ')
+              roounfold_response = fRoo.Get(name_roounfold_obj)
+              roounfold_thn = fRoo.Get(name_roounfold_thn)
+              fRoo.Close()
+
+            else:  # Generated theory folding matrix needs rebinning
+              # If no binning was specified by the user, take the RM binning
+              if ri == 0 and li == 0:
+                if self.theory_obs_bins == None:
+                  binning = self.return_histo_binning_1D( thn.Projection(3) )
+                  binning = [l for l in binning if l >= 0]
+                else:
+                  binning = self.theory_obs_bins
+                setattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+label, binning)
+
+              det_pt_bin_array = array('d', self.theory_pt_bins)
+              tru_pt_bin_array = det_pt_bin_array
+              det_obs_bin_array = array('d', binning)
               tru_obs_bin_array = det_obs_bin_array
           
-            n_dim = 4
-            self.histutils.rebin_thn( roounfold_filename, thn, name_roounfold_thn , name_roounfold_obj, n_dim,
-              len(det_pt_bin_array )-1, det_pt_bin_array ,
-              len(det_obs_bin_array)-1, det_obs_bin_array,
-              len(tru_pt_bin_array )-1, tru_pt_bin_array ,
-              len(tru_obs_bin_array)-1, tru_obs_bin_array,
-              label,0,1, grooming_setting!=None )
+              if grooming_setting and self.use_tagging_fraction:
+                # Add bin for underflow value (tagging fraction)
+                det_obs_bin_array = np.insert(det_obs_bin_array, 0, -0.001)
+                tru_obs_bin_array = det_obs_bin_array
           
-            f_resp = ROOT.TFile(roounfold_filename, 'READ')
-            roounfold_response = f_resp.Get(name_roounfold_obj)
-            roounfold_thn      = f_resp.Get(name_roounfold_thn )
-            f_resp.Close() 
+              n_dim = 4
+              self.histutils.rebin_thn( roounfold_filename, thn, name_roounfold_thn , name_roounfold_obj, n_dim,
+                len(det_pt_bin_array )-1, det_pt_bin_array ,
+                len(det_obs_bin_array)-1, det_obs_bin_array,
+                len(tru_pt_bin_array )-1, tru_pt_bin_array ,
+                len(tru_obs_bin_array)-1, tru_obs_bin_array,
+                label,0,1, grooming_setting!=None )
+          
+              f_resp = ROOT.TFile(roounfold_filename, 'READ')
+              roounfold_response = f_resp.Get(name_roounfold_obj)
+              roounfold_thn      = f_resp.Get(name_roounfold_thn )
+              f_resp.Close() 
           
             setattr(self, name_roounfold_obj, roounfold_response)
             setattr(self, name_roounfold_thn, roounfold_thn     ) 
@@ -280,7 +300,7 @@ class TheoryFolding():
             outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
             if not os.path.exists(outpdfname):
               os.makedirs(outpdfname)
-            outpdfname = os.path.join(outpdfname, 'RM_slices_%s.pdf'%(label) )
+            outpdfname = os.path.join(outpdfname, 'RM_slices_%s_%s.pdf' % (label, self.theory_response_labels[ri]))
             self.plot_RM_slice_histograms( roounfold_thn, outpdfname)
 
             #self.outfile.cd()
@@ -308,36 +328,31 @@ class TheoryFolding():
      # Loop through subconfigurations to fold
      # (e.g. Standard_WTA, Standard_SD_1, ... in the jet-axis analysis, or
      # beta = 1.5, 2, 3, ... in the angularities analysis)
-     for i, subconfig in enumerate(self.obs_subconfig_list):
+     for i, obs_setting in enumerate(self.obs_settings):
 
-       obs_setting = self.obs_settings[i]
        grooming_setting = self.grooming_settings[i]
-       label = self.create_label( jetR , obs_setting , grooming_setting ) 
+       label = self.create_label(jetR, obs_setting, grooming_setting) 
 
        # Retrieve theory histograms to be folded
        th_hists = []
 
-       for sv in range(0,self.theory_scale_vars[jetR][i]):
-         hist_name = 'h2_input_%s_R%s_obs_pT_%s' % ( self.observable , (str)(jetR).replace('.','') , obs_setting )
-         if grooming_setting:
-           hist_name += '_'
-           hist_name += self.utils.grooming_label(grooming_setting)
-         hist_name += '_sv%i' % (sv)
- 
-         th_hist = getattr(self,hist_name)
+       for sv in range(0, self.theory_scale_vars[jetR][i]):
+         hist_name = 'h2_input_%s_obs_pT_%s_sv%i' % (self.observable, label, sv)
+         th_hist = getattr(self, hist_name)
          th_hists.append(th_hist) 
 
        # loop over response files (e.g. Pythia, Herwig, ...)
        for ri, response in enumerate(self.theory_response_files):
 
          for lev in self.response_levels:
-           name_RM = "hResponse_JetPt_"+self.observable+"_"+lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+label
+           name_RM = "hResponse_JetPt_" + self.observable + "_" + lev[0] + "_" + lev[1] + "_MPI" + lev[2] + "_" + label
            name_roounfold_obj = '%s_Roounfold_%s' % (name_RM, self.theory_response_labels[ri])
-           response = getattr(self,name_roounfold_obj)
+           response = getattr(self, name_roounfold_obj)
 
-           for sv in range(0,self.theory_scale_vars[jetR][i]):
+           for sv in range(0, self.theory_scale_vars[jetR][i]):
              h_folded_ch = response.ApplyToTruth(th_hists[sv])
-             folded_hist_name = 'h2_folded_'+self.observable+'_'+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri] , sv )
+             folded_hist_name = 'h2_folded_' + self.observable + '_' + lev[1] + "_MPI" + lev[2] + \
+                                '_R%s_obs_pT_%s_%s_sv%i' % (str(jetR).replace('.',''), label, self.theory_response_labels[ri], sv)
              h_folded_ch.SetNameTitle(folded_hist_name,folded_hist_name)
 
              setattr(self, folded_hist_name, h_folded_ch)
@@ -352,11 +367,10 @@ class TheoryFolding():
      # Loop through subconfigurations to fold
      # (e.g. Standard_WTA, Standard_SD_1, ... in the jet-axis analysis, or
      # beta = 1.5, 2, 3, ... in the angularities analysis)
-     for i, subconfig in enumerate(self.obs_subconfig_list):
+     for i, obs_setting in enumerate(self.obs_settings):
 
-       obs_setting = self.obs_settings[i]
        grooming_setting = self.grooming_settings[i]
-       label = self.create_label( jetR , obs_setting , grooming_setting ) 
+       label = self.create_label(jetR, obs_setting, grooming_setting) 
 
        pt_bins = array('d', self.theory_pt_bins)
 
@@ -366,8 +380,8 @@ class TheoryFolding():
          # ----------------------------------------------------------------------------------------
          # Preparing MPI correction 
          # Grab the two histograms that will be used for the MPI correction
-         name_mpi_off = 'h_'+self.observable+'_JetPt_ch_'+label
-         name_mpi_on = 'h_'+self.observable+'_JetPt_ch_MPIon_'+label
+         name_mpi_off = 'h_JetPt_'+self.observable+'_ch_MPIoff_'+label
+         name_mpi_on = 'h_JetPt_'+self.observable+'_ch_MPIon_'+label
 
          h2_mpi_off = response.Get(name_mpi_off)
          h2_mpi_on = response.Get(name_mpi_on)
@@ -376,7 +390,7 @@ class TheoryFolding():
          if self.theory_obs_bins:
           y_bins = array('d', self.theory_obs_bins)
          else:
-          y_bins = array('d',getattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+obs_setting))
+          y_bins = array('d',getattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+label))
  
          if grooming_setting and self.use_tagging_fraction:
            y_bins = np.insert(y_bins, 0, -0.001)
@@ -404,16 +418,20 @@ class TheoryFolding():
            # Loop over scale variations
            for sv in range(0,self.theory_scale_vars[jetR][i]):
               
-             folded_hist_name = 'h2_folded_'+self.observable+'_'+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri] , sv )
+             folded_hist_name = 'h2_folded_'+self.observable+'_'+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.',''), label, self.theory_response_labels[ri], sv )
              h2_folded_hist = getattr(self,folded_hist_name)
 
-             if lev[2]=='off':          
+             if lev[2]=='off':
+               yesMPI_hist_name = 'h2_folded_'+self.observable+"_"+lev[1]+"_MPIon"+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.',''), label, self.theory_response_labels[ri], sv )
+               h2_folded_hist.SetNameTitle(yesMPI_hist_name,yesMPI_hist_name)
+
                # Copy that won't have MPI corrections
-               h2_folded_hist_noMPI = h2_folded_hist.Clone() 
-               noMPI_hist_name = 'h2_folded_'+self.observable+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri] , sv )
+               h2_folded_hist_noMPI = h2_folded_hist.Clone()
+               noMPI_hist_name = 'h2_folded_'+self.observable+"_"+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.',''), label, self.theory_response_labels[ri], sv )
                h2_folded_hist_noMPI.SetNameTitle(noMPI_hist_name,noMPI_hist_name)
-          
+
                h2_folded_hist.Multiply(h2_mpi_ratio)
+
           
              self.outfile.cd()
              h2_folded_hist.Write()
@@ -425,7 +443,8 @@ class TheoryFolding():
                # Get the bins that correspond to the pT edges given
                min_bin, max_bin = self.bin_position( self.theory_pt_bins, self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1] )
           
-               projection_name = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))            
+               projection_name = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv%i_pT_%i_%i' % \
+                   (self.observable, lev[1], str(jetR).replace('.',''), label, self.theory_response_labels[ri], sv, int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1]))            
                h1_folded_hist = h2_folded_hist.ProjectionY(projection_name,min_bin,max_bin)
                h1_folded_hist.SetTitle(projection_name)
                h1_folded_hist.SetDirectory(0)
@@ -442,7 +461,8 @@ class TheoryFolding():
 
                if lev[2]=='off':
                  # Now doing the same, for the histograms with no MPI corrections
-                 projection_name_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+                 projection_name_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv%i_pT_%i_%i' % \
+                     (self.observable, lev[1], str(jetR).replace('.',''), label, self.theory_response_labels[ri], sv, int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1]))
                  h1_folded_hist_noMPI = h2_folded_hist_noMPI.ProjectionY(projection_name_noMPI,min_bin,max_bin)
                  h1_folded_hist_noMPI.SetTitle(projection_name_noMPI)
                  h1_folded_hist_noMPI.SetDirectory(0)
@@ -456,28 +476,30 @@ class TheoryFolding():
                    h1_folded_hist_noMPI.SetBinError(b+1,0)
          
                  setattr(self,projection_name_noMPI,h1_folded_hist_noMPI)
-          
-           new_obs_lab = obs_setting
+
+           new_obs_lab = obs_setting if type(obs_setting) == str else ''
            if grooming_setting:
-             new_obs_lab += '_'
-             new_obs_lab += self.utils.grooming_label(grooming_setting)
+             new_obs_lab = '_'.join([item for item in [new_obs_lab, self.utils.grooming_label(grooming_setting)] if item])
           
            # Do the loop backwards and find min and max histograms
-           for n_pt in range(0,len(self.final_pt_bins)-1):
+           for n_pt in range(0, len(self.final_pt_bins)-1):
              histo_list = []
              histo_list_noMPI = []
-             for sv in range(0,self.theory_scale_vars[jetR][i]):
-               projection_name = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))   
-               histo_list.append(getattr(self,projection_name)) 
+             for sv in range(0, self.theory_scale_vars[jetR][i]):
+               projection_name = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv%i_pT_%i_%i' % \
+                   (self.observable, lev[1], str(jetR).replace('.',''), label, self.theory_response_labels[ri], sv, int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1]))   
+               histo_list.append(getattr(self,projection_name))
 
-               if lev[2]=='off':          
-                 projection_name_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-                 histo_list_noMPI.append(getattr(self,projection_name_noMPI))
+               if lev[2]=='off':
+                 projection_name_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv%i_pT_%i_%i' % \
+                     (self.observable, lev[1], str(jetR).replace('.',''), label, self.theory_response_labels[ri], sv, int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1]))
+                 histo_list_noMPI.append(getattr(self, projection_name_noMPI))
           
-             hist_min, hist_max = self.min_max( histo_list )
+             hist_min, hist_max = self.min_max(histo_list)
           
              # Create a graph out of these histograms
-             name_central = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+             name_central = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv0_pT_%i_%i' % \
+                 (self.observable, lev[1], str(jetR).replace('.',''), label, self.theory_response_labels[ri], int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1]))
              h_central = getattr(self,name_central)
              graph_cent = self.histo_to_graph(h_central,hist_min,hist_max)
              graph_min = ROOT.TGraph(hist_min)
@@ -496,7 +518,7 @@ class TheoryFolding():
              # Now doing the same, for the histograms with no MPI corrections
              if lev[2]=='off':
                hist_min_noMPI, hist_max_noMPI  = self.min_max( histo_list_noMPI )
-               name_central_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+               name_central_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),label,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
                h_central_noMPI = getattr(self,name_central_noMPI)
                graph_cent_noMPI = self.histo_to_graph(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
                graph_min_noMPI = ROOT.TGraph(hist_min_noMPI)
@@ -523,21 +545,21 @@ class TheoryFolding():
                self.pretty_1D_object(graph_max_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
                self.pretty_1D_object(graph_frac_noMPI, 8,2,1,tit_noMPI, xtit,'frac', True)
           
-             self.pretty_1D_object(graph_cent      ,62,2,1,tit      , xtit, ytit, True)
-             self.pretty_1D_object(graph_min       , 1,1,2,tit      , xtit, ytit)
-             self.pretty_1D_object(graph_max       , 1,1,2,tit      , xtit, ytit)
-             self.pretty_1D_object(graph_frac      ,62,2,1,tit      , xtit,'frac', True)
+             self.pretty_1D_object(graph_cent, 62, 2, 1, tit, xtit, ytit, True)
+             self.pretty_1D_object(graph_min,   1, 1, 2, tit, xtit, ytit)
+             self.pretty_1D_object(graph_max,   1, 1, 2, tit, xtit, ytit)
+             self.pretty_1D_object(graph_frac, 62, 2, 1, tit, xtit, 'frac', True)
           
-             outpdfname = os.path.join(self.output_dir, 'control_plots' , 'processed_plots' )
+             outpdfname = os.path.join(self.output_dir, 'control_plots', 'processed_plots')
              if not os.path.exists(outpdfname):
                os.makedirs(outpdfname)
 
              if lev[2]=='off':
                outpdfname_noMPI = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output_noMPI.pdf'%(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
-               self.plot_processed_functions( graph_cent_noMPI, graph_min_noMPI, graph_max_noMPI, outpdfname_noMPI )
+               self.plot_processed_functions(graph_cent_noMPI, graph_min_noMPI, graph_max_noMPI, outpdfname_noMPI )
 
-             outpdfname       = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output.pdf'      %(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
-             self.plot_processed_functions( graph_cent      , graph_min      , graph_max      , outpdfname       )
+             outpdfname = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output.pdf' % (label, int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1])) )
+             self.plot_processed_functions(graph_cent, graph_min, graph_max, outpdfname)
           
              # Saving results to root file
              self.outfile.cd()
@@ -570,7 +592,7 @@ class TheoryFolding():
   #---------------------------------------------------------------
   # Given a pair of bin-edge values, return their index
   #---------------------------------------------------------------
-  def bin_position( self , list_pt_th , min_p , max_p ):
+  def bin_position( self, list_pt_th, min_p, max_p ):
     min_b = list_pt_th.index(min_p)+1
     max_b = list_pt_th.index(max_p)
     return min_b, max_b
@@ -578,16 +600,14 @@ class TheoryFolding():
   #---------------------------------------------------------------
   # Put together a label commonly used by several functions in code
   #---------------------------------------------------------------
-  def create_label(self,jetR,obs_setting,grooming_setting):
+  def create_label(self, jetR, obs_setting, grooming_setting):
 
-    label = "R%s_" % (str(jetR).replace('.', ''))
-    label += self.subobs_label(obs_setting)
-    label += '_Scaled'
+    label = '_'.join([item for item in ["R%s" % str(jetR), self.subobs_label(obs_setting)] if item])
 
     if grooming_setting:
-      label += '_'
-      label += self.utils.grooming_label(grooming_setting)
+      label += '_' + self.utils.grooming_label(grooming_setting)
 
+    label += "Scaled"
     return label
 
   #---------------------------------------------------------------
@@ -767,17 +787,17 @@ class TheoryFolding():
 
   #----------------------------------------------------------------------
   def subobs_label( self , subobs ):
-    label = ''
-    if type(subobs)==str:
-      label = subobs
-    elif type(subobs)==int:
-      label = '%i' % subobs
-    elif type(subobs)==float:
-      label = str(subobs).replace('.','')
+    if type(subobs) == str:
+      return subobsj
+    elif type(subobs) == int:
+      return '%i' % subobs
+    elif type(subobs) == float:
+      return str(subobs).replace('.','')
+    elif type(subobs) == dict:
+      #return '_'.join([(str(key)+str(val)).replace('.','') for key,val in subobs.items()])
+      return ''
     else:
-      'This option has not been created yet. Bailing out!'
-      exit()
-    return label
+      raise ValueError('This option %s has not been created yet. Bailing out!' % str(type(subobs)))
 
   #----------------------------------------------------------------------
   # Return Grooming Parameters
@@ -989,9 +1009,9 @@ class TheoryFolding():
   #----------------------------------------------------------------------
   def plot_comparison_SCET_gen_input( self, g_scet, jetR , obs_setting , grooming_setting, lev0, lev1, lev2, gen, pTmin, pTmax, outpdfname):
 
-    label = self.create_label( jetR , obs_setting , grooming_setting )
-    name_RM = "hResponse_JetPt_"+self.observable+"_"+lev0+"_"+lev1+"_MPI"+lev2+"_"+label
-    hRM_name = '%s_Rebinned_%s'  % (name_RM, gen)
+    label = self.create_label(jetR, obs_setting, grooming_setting)
+    name_RM = "hResponse_JetPt_" + self.observable + "_" + lev0 + "_" + lev1 + "_MPI" + lev2 + "_" + label
+    hRM_name = '%s_Rebinned_%s' % (name_RM, gen)
 
     hRM = getattr(self,hRM_name)
     hRM.GetAxis(1).SetRangeUser(pTmin,pTmax)
@@ -1002,7 +1022,7 @@ class TheoryFolding():
 
     xtit = self.obs_label
     ytit = '#frac{1}{#sigma} #frac{d#sigma}{d'+xtit+'}'
-    tit = obs_setting
+    tit = obs_setting if type(obs_setting) == str else ''
     if grooming_setting:
       if 'sd' in grooming_setting: 
         tit+=' SD (z_{cut}=%.1f,#beta=%i)'%(grooming_setting['sd'][0],grooming_setting['sd'][1])
@@ -1013,12 +1033,16 @@ class TheoryFolding():
     c1.SetLeftMargin(0.22)
     c1.SetRightMargin(0.03)
     c1.SetBottomMargin(0.15)
+    # Skip first bin setting max
+    skip_first = True
+    maxval = max([h1_gen.GetBinContent(i) for i in range(1+int(skip_first), h1_gen.GetNbinsX())]) 
+    h1_gen.SetMaximum(maxval * 1.3)
     h1_gen.Draw()
     h1_gen.Draw('samehist')
     
     g_scet.Draw('sameLE3')
 
-    leg = ROOT.TLegend(0.5,0.5,0.85,0.85)
+    leg = ROOT.TLegend(0.65,0.7,0.95,0.85)
     leg.SetLineColor(0)
     leg.AddEntry(g_scet,'SCET')
     leg.AddEntry(h1_gen,gen+', '+lev0+', MPI '+lev2)
@@ -1029,6 +1053,7 @@ class TheoryFolding():
     del h1_gen
     del leg
     del c1
+
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':

@@ -38,27 +38,29 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
       scale_var = []
 
       # Loop through subconfigurations to fold (e.g. in the jet-axis analysis there Standard_WTA, Standard_SD_1, ...)
-      for i in range(0,len(self.obs_subconfig_list)):
-        obs_setting = self.obs_settings[i]            # labels such as 'Standard_WTA'
+      for i, obs_setting in enumerate(self.obs_settings):
         grooming_setting = self.grooming_settings[i]  # grooming parameters
-        if grooming_setting and 'SD' in obs_setting:
-          label = obs_setting[:obs_setting.find('SD_')]
-          label += self.utils.grooming_label(grooming_setting)
-        else:
-          label = obs_setting
+        zcut = None; beta = None
+        if grooming_setting and type(obs_setting) == dict and 'zcut' in obs_setting.keys() and 'beta' in obs_setting.keys():
+          zcut = obs_setting["zcut"]
+          beta = obs_setting["beta"]
+          #label = ("zcut%s_B%s" % (str(zcut), str(beta))).replace('.','') 
+          label = self.create_label(jetR, obs_setting, grooming_setting)
+        else: # Not SD grooming
+          continue
 
         pt_bins = array('d', self.theory_pt_bins)
 
         if self.theory_obs_bins:
           obs_bins = array('d', self.theory_obs_bins)   # bins which we want to have in the result
         else:
-          obs_bins = array('d',getattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+obs_setting))
+          obs_bins = array('d', getattr(self, 'binning_' + label))
 
         # Add bin for underflow value (tagging fraction)
         if grooming_setting and self.use_tagging_fraction:
           obs_bins = np.insert(obs_bins, 0, -0.001)
 
-        obs_width = np.subtract(obs_bins[1:],obs_bins[:-1])
+        obs_width = np.subtract(obs_bins[1:], obs_bins[:-1])
 
         # -----------------------------------------------------        
         # Create histograms where theory curves will be stored
@@ -68,8 +70,9 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
         # -----------------------------------------------------
         # opening theory file by file and fill histograms
-        th_path = os.path.join(self.theory_dir,label)
-        print('reading from files in:',th_path)
+        th_sub_dir = "tg_bt%s_zc%s" % (str(beta), str(zcut).replace('.',''))
+        th_path = os.path.join(self.theory_dir, th_sub_dir)
+        print('reading from files in:', th_path)
 
         # loop over pT bins
         for p, pt in enumerate(pt_bins[:-1]):
@@ -78,75 +81,69 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
           # Get scale factor for this pT bin.
           # This reverses the self-normalization of 1/sigma for correct pT scaling when doing projections onto the y-axis.
-          scale_f = self.pt_scale_factor_jetR(pt,pt_bins[p+1],jetR)
+          scale_f = self.pt_scale_factor_jetR(pt, pt_bins[p+1], jetR)
 
           # load theory file, grab the data, and fill histograms with it
-          th_file = 'R_%s_pT_%i-%i.dat' % ( (str)(jetR).replace('.','') , (int)(pt_min) , (int)(pt_max) )
-          th_file = os.path.join(th_path,th_file) 
+          th_file = 'R_%s_pT_%i-%i.dat' % (str(jetR).replace('.',''), int(pt_min), int(pt_max))
+          th_file = os.path.join(th_path, th_file) 
 
           # ------------------------------------------------------------------------------------------------------------
           # Load data from theory file
-          with open( th_file ) as f:
+          with open(th_file) as f:
 
-            lines = [line for line in f.read().split('\n') if line[0] != '#']
+            lines = [line for line in f.read().split('\n') if line and line[0] != '#']
             x_val = [float(line.split()[0]) for line in lines]
 
             n_scale_variations = len(lines[0].split())-1 # number of scale variations
 
             # loop over scale variations and fill histograms
-            for sv in range(0,n_scale_variations):
+            for sv in range(0, n_scale_variations):
               y_val_n = [float(line.split()[sv+1]) for line in lines]
 
               # Interpolate the given values and return the value at the requested bin center
-              y_val_bin_ctr = self.interpolate_values_linear(x_val,y_val_n,obs_bins)
+              y_val_bin_ctr = self.interpolate_values_linear(x_val, y_val_n, obs_bins)
+              # Remove negative numbers
+              y_val_bin_ctr = [0 if val < 0 else val for val in y_val_bin_ctr]
 
-              if p==0:
-                hist_name = 'h2_input_%s_R%s_obs_pT_%s' % ( self.observable , (str)(jetR).replace('.','') , obs_setting )
-                if grooming_setting:
-                  hist_name += '_'
-                  hist_name += self.utils.grooming_label(grooming_setting)
-                hist_name += '_sv%i' % (sv)
-
+              if p == 0:
+                hist_name = 'h2_input_%s_obs_pT_%s_sv%i' % (self.observable, label, sv)
                 hist_name_no_scaling = hist_name + '_no_scaling'
 
-                th_hist                     = ROOT.TH2D(hist_name                    ,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
-                th_hist_no_scaling          = ROOT.TH2D(hist_name_no_scaling         ,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+                th_hist            = ROOT.TH2D(hist_name           , ';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+                th_hist_no_scaling = ROOT.TH2D(hist_name_no_scaling, ';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
 
                 th_hists.append(th_hist)
                 hist_names.append(hist_name)
                 th_hists_no_scaling.append(th_hist_no_scaling)
 
               # Save content into histogram before any scaling has been applied (to compare to the theory curves and make sure everything went fine)
-              for ob in range(0,len(obs_bins)-1):
-                th_hists_no_scaling[sv].SetBinContent(p+1,ob+1,y_val_bin_ctr[ob])
+              for ob in range(0, len(obs_bins)-1):
+                th_hists_no_scaling[sv].SetBinContent(p+1, ob+1, y_val_bin_ctr[ob])
 
               # Multiply by bin width and scale with pT-dependent factor
-              y_val_bin_ctr = np.multiply(y_val_bin_ctr,obs_width)
+              y_val_bin_ctr = np.multiply(y_val_bin_ctr, obs_width)
               integral_y_val_bin_ctr = sum(y_val_bin_ctr)
               y_val_bin_ctr = [ val * scale_f / integral_y_val_bin_ctr for val in y_val_bin_ctr ]
 
               # Save scaled content into the histograms
-              for ob in range(0,len(obs_bins)-1):
-                th_hists[sv].SetBinContent(p+1,ob+1,y_val_bin_ctr[ob])
+              for ob in range(0, len(obs_bins)-1):
+                th_hists[sv].SetBinContent(p+1, ob+1, y_val_bin_ctr[ob])
 
           f.close()
 
         # ------------------------------------------------------------------------------------------------------------  
-        new_obs_lab = obs_setting
-        if grooming_setting:
-          new_obs_lab += '_'
-          new_obs_lab += self.utils.grooming_label(grooming_setting)
+        new_obs_lab = ("zcut%s_B%s" % (str(zcut), str(beta))).replace('.','')
 
         # ------------------------------------------------------------------------------------------------------------  
-        for n_pt in range(0,len(self.final_pt_bins)-1):
+        for n_pt in range(0, len(self.final_pt_bins)-1):
           histo_list = []
-          for sv in range(0,n_scale_variations):
+          for sv in range(0, n_scale_variations):
             projection_name = 'h1_input_%s_R%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
 
             # Determine the bin number that corresponds to the pT edges given           
-            min_bin, max_bin = self.bin_position( self.theory_pt_bins , self.final_pt_bins[n_pt],self.final_pt_bins[n_pt+1] )
+            min_bin, max_bin = self.bin_position( self.theory_pt_bins, self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1] )
 
-            h1_input_hist = th_hists[sv].ProjectionY(projection_name,min_bin,max_bin)
+            h1_input_hist = th_hists[sv].ProjectionY(projection_name, min_bin, max_bin)
             h1_input_hist.SetTitle(projection_name)
             h1_input_hist.SetDirectory(0)
            
@@ -155,8 +152,8 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
             if norm_factor == 0: norm_factor = 1
             h1_input_hist.Scale(1./norm_factor, "width")
            
-            for b in range(0,h1_input_hist.GetNbinsX()):
-              h1_input_hist.SetBinError(b+1,0)
+            for b in range(0, h1_input_hist.GetNbinsX()):
+              h1_input_hist.SetBinError(b+1, 0)
 
             histo_list.append(h1_input_hist)
 
@@ -202,9 +199,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           # loop over response files (e.g. Pythia, Herwig, ...)
           for ri, response in enumerate(self.theory_response_files):
             for lev in self.response_levels:
-              outpdfname_2 = os.path.join(outpdfname, 'comp_gen_input_theory_%s_pT_%i_%i_GeVc_'%(self.create_label(jetR,obs_setting,grooming_setting),(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
+              outpdfname_2 = os.path.join(outpdfname, 'comp_gen_input_theory_%s_pT_%i_%i_GeVc_' % \
+                  (self.create_label(jetR, obs_setting, grooming_setting), int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1])) )
               outpdfname_2 += lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+self.theory_response_labels[ri]+".pdf" 
-              self.plot_comparison_SCET_gen_input( graph_cent, jetR , obs_setting , grooming_setting, lev[0], lev[1], lev[2], self.theory_response_labels[ri], self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1], outpdfname_2)
+              self.plot_comparison_SCET_gen_input(graph_cent, jetR, obs_setting, grooming_setting, lev[0], lev[1], lev[2], \
+                  self.theory_response_labels[ri], self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1], outpdfname_2)
 
           self.outfile.cd()
           h_central .Write()
@@ -225,11 +224,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
         #th_hists_no_scaling[0].Write()
         #th_hists[0].Write()
         
-        outpdfname = os.path.join(self.output_dir, 'control_plots' , 'input' )
+        outpdfname = os.path.join(self.output_dir, 'control_plots', 'input')
         if not os.path.exists(outpdfname):
           os.makedirs(outpdfname)
-        outpdfname = os.path.join(outpdfname, 'theory_input_%s.pdf'%(label) )
-        self.plot_input_theory( th_hists_no_scaling , th_hists , outpdfname )
+        outpdfname = os.path.join(outpdfname, 'theory_input_%s.pdf' % label)
+        self.plot_input_theory(th_hists_no_scaling, th_hists, outpdfname)
 
         scale_var.append(n_scale_variations)
       self.theory_scale_vars[jetR] = scale_var
@@ -237,7 +236,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
   #----------------------------------------------------------------------
   # Plot input theory curves both as histograms and curves
   #----------------------------------------------------------------------
-  def plot_input_theory( self , h_list_no_scaling , h_list , outpdfname ):
+  def plot_input_theory(self, h_list_no_scaling, h_list, outpdfname):
 
     for i in range(0,len(h_list_no_scaling)):
 
