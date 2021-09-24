@@ -42,11 +42,12 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Constructor
     #---------------------------------------------------------------
-    def __init__(self, config_file='', input_file='', output_dir='', **kwargs):
+    def __init__(self, config_file='', input_file='', output_dir='', test=False, **kwargs):
         super(common_base.CommonBase, self).__init__(**kwargs)
        
         self.start_time = time.time()
         
+        self.test = test
         self.config_file = config_file
         self.input_file = input_file
         self.output_dir = output_dir
@@ -59,21 +60,64 @@ class ProcessppAA(common_base.CommonBase):
         # Initialize utils class
         self.utils = process_utils.ProcessUtils()
 
-        # Load dataframe of particle four-vectors for all particles in the event
-        # (separate dataframes for hard process and background)
-        # Use IO helper class to convert truth-level ROOT TTree into
-        # a SeriesGroupBy object of fastjet particles per event
-        tree_dir = 'PWGHF_TreeCreator'
-        io_hard = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
-                                        track_tree_name='tree_Particle_gen', use_ev_id_ext=False)
-        df_fjparticles_hard = io_hard.load_data()
-        self.nEvents_truth = len(df_fjparticles_hard.index)
-        self.nTracks_truth = len(io_hard.track_df.index)
-        print('--- {} seconds ---'.format(time.time() - self.start_time))
+        # If test mode, load quark-gluon dataset -- otherwise, load ROOT TTree of generated events
+        if self.test:
+            # https://energyflow.network/docs/datasets/#quark-and-gluon-jets
+            # X : a three-dimensional numpy array of jets:
+            #     list of jets with list of particles for each jet, with (pt,y,phi,pid) values for each particle
+            # y : a numpy array of quark/gluon jet labels (quark=1 and gluon=0).
+            # The jets are padded with zero-particles in order to make a contiguous array.
+            print()
+            print('Loading qg dataset:')
+            self.X, self.y = energyflow.datasets.qg_jets.load(self.n_total)
+            print('(n_jets, n_particles per jet, n_variables): {}'.format(self.X.shape))
+            print()
 
-        # Construct dummy combined event -- we will add thermal particles in event loop
-        # (Note: deep copy of df_fjparticles does not copy underlying objects)
-        df_fjparticles_combined = io_hard.load_data()
+            # Next, we will transform these into fastjet::PseudoJet objects.
+            # This allows us to use the fastjet contrib to compute Nsubjetiness, and in general it
+            # will be needed in order to perform jet finding on an event (in data or MC).
+
+            # Translate 3D numpy array (100,000 x 556 particles x 4 vars) into a dataframe
+            # Define a unique index for each jet
+            columns = ['pt', 'y', 'phi', 'pid']
+            df_particles = pd.DataFrame(self.X.reshape(-1, 4), columns=columns)
+            df_particles.index = np.repeat(np.arange(self.X.shape[0]), self.X.shape[1]) + 1
+            df_particles.index.name = 'jet_id'
+
+            # Construct dummy combined event -- we will add thermal particles in event loop
+            #df_particles_copy = df_particles.copy(deep=True)
+            
+            # (i) Group the particle dataframe by jet id
+            #     df_particles_grouped is a DataFrameGroupBy object with one particle dataframe per jet
+            df_fjparticles_grouped_hard = df_particles.groupby('jet_id')
+            #df_fjparticles_grouped_combined = df_particles_copy.groupby('jet_id')
+            
+            # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet::PseudoJets
+            # NOTE: for now we neglect the mass -- and assume y=eta
+            # TO DO: Add y to https://github.com/matplo/heppy/blob/master/cpptools/src/fjext/fjtools.cxx
+            # TO DO: Add mass vector using pdg
+            print('Converting particle dataframe to fastjet::PseudoJets...')
+            df_fjparticles_hard = df_fjparticles_grouped_hard.apply(self.get_fjparticles)
+            df_fjparticles_combined = df_fjparticles_hard
+            print('Done.')
+            print()
+
+        else:
+            # Load dataframe of particle four-vectors for all particles in the event
+            # (separate dataframes for hard process and background)
+            # Use IO helper class to convert truth-level ROOT TTree into
+            # a SeriesGroupBy object of fastjet particles per event
+            tree_dir = 'PWGHF_TreeCreator'
+            io_hard = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
+                                            track_tree_name='tree_Particle_gen', use_ev_id_ext=False)
+            df_fjparticles_hard = io_hard.load_data()
+            self.nEvents_truth = len(df_fjparticles_hard.index)
+            self.nTracks_truth = len(io_hard.track_df.index)
+            print('--- {} seconds ---'.format(time.time() - self.start_time))
+
+            # Construct dummy combined event -- we will add thermal particles in event loop
+            # (Note: deep copy of df_fjparticles does not copy underlying objects)
+            df_fjparticles_combined = io_hard.load_data()
 
         # Merge hard event and background dataframes
         if self.thermal_model:
@@ -144,6 +188,8 @@ class ProcessppAA(common_base.CommonBase):
         self.jet_pt_bins = config['jet_pt_bins']
         self.eta_max = config['eta_max']
         self.jet_matching_distance = config['jet_matching_distance']
+        self.n_total = config['n_train'] + config['n_val'] + config['n_test']
+        self.event_index = 0
         
         # Initialize thermal model
         if 'thermal_model' in config:
@@ -180,7 +226,10 @@ class ProcessppAA(common_base.CommonBase):
         print()
         
         # Reformat output for ML algorithms (array with 1 array per jet which contain all N-subjettiness values)
-        X_Nsub = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        if self.test:
+            X_Nsub = {'hard': {}}
+        else:
+            X_Nsub = {'hard': {}, 'combined': {}, 'combined_matched': {}}
         for label in X_Nsub.keys():
             for jetR in self.jetR_list:
                 X_Nsub[label][f'R{jetR}'] = {}
@@ -205,11 +254,12 @@ class ProcessppAA(common_base.CommonBase):
                                 hf.create_dataset(f'X_Nsub{suffix}', data=X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
                                 
                                 # Write labels: Pythia 0, Jewel 1
-                                if 'jewel_PbPb' in self.input_file:
-                                    y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
-                                elif 'jewel_pp' in self.input_file:
-                                    y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
-                                hf.create_dataset(f'y{suffix}', data=y)
+                                if not self.test:
+                                    if 'jewel_PbPb' in self.input_file:
+                                        self.y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
+                                    elif 'jewel_pp' in self.input_file:
+                                        self.y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
+                                hf.create_dataset(f'y{suffix}', data=self.y)
                                 
                                 # Write four-vectors
                                 X = self.four_vectors_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors']
@@ -219,6 +269,11 @@ class ProcessppAA(common_base.CommonBase):
                                 print(f'pt{jet_pt_bin}')
                                 print(f'Rmax{R_max}')
                                 print(X.shape)
+
+                                # If test, compare four-vectors after jet-finding to those before jet-finding
+                                if self.test:
+                                    print(f'four-vectors before jet finding: {self.X}')
+                                    print(f'four-vectors after jet finding: {X}')
                                 
                                 for qa_observable in self.qa_observables:
                                     hf.create_dataset(f'{qa_observable}{suffix}', data=self.jet_qa_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable])
@@ -247,24 +302,24 @@ class ProcessppAA(common_base.CommonBase):
             return
         
         # If thermal model, generate a thermal event and add it to the combined particle list
-        if self.thermal_model:
-          fj_particles_background = self.thermal_generator.load_event()
+        if self.thermal_model and not self.test:
+            fj_particles_background = self.thermal_generator.load_event()
           
-          # Form the combined event
-          # The hard event tracks are each stored with a unique user_index >= 0
-          # The thermal tracks are each stored with a unique user_index < 0
-          [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_background]
+            # Form the combined event
+            # The hard event tracks are each stored with a unique user_index >= 0
+            # The thermal tracks are each stored with a unique user_index < 0
+            [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_background]
 
-        # Compute delta-pt by random cone method
-        self.delta_pt_RC(fj_particles_background)
+            # Compute delta-pt by random cone method
+            self.delta_pt_RC(fj_particles_background)
 
-        # Perform constituent subtraction for each R_max
-        fj_particles_combined = []
-        for i, R_max in enumerate(self.max_distance):
-            if R_max == 0:
-                fj_particles_combined.append(fj_particles_combined_beforeCS)
-            else:
-                fj_particles_combined.append(self.constituent_subtractor[i].process_event(fj_particles_combined_beforeCS))
+            # Perform constituent subtraction for each R_max
+            fj_particles_combined = []
+            for i, R_max in enumerate(self.max_distance):
+                if R_max == 0:
+                    fj_particles_combined.append(fj_particles_combined_beforeCS)
+                else:
+                    fj_particles_combined.append(self.constituent_subtractor[i].process_event(fj_particles_combined_beforeCS))
         
         # Loop through jetR, and process event for each R
         for jetR in self.jetR_list:
@@ -287,14 +342,25 @@ class ProcessppAA(common_base.CommonBase):
                     #print('After constituent subtraction {}: {}'.format(i, len([p.pt() for p in fj_particles_combined[i]])))
 
                     # Do jet finding (re-do each time, to make sure matching info gets reset)
-                    cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
-                    jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
-                    jets_combined_selected = jet_selector_combined(jets_combined)
-                    cs_hard = fj.ClusterSequence(fj_particles_hard, jet_def)
-                    jets_hard = fj.sorted_by_pt(cs_hard.inclusive_jets())
-                    jets_hard_selected = jet_selector_hard(jets_hard)
-                    
+                    if self.test:
+                        # Cluster each jet with R=infinity
+                        jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
+                        cs = fj.ClusterSequence(fj_particles_hard, jet_def)
+                        jets_hard_selected = [fj.sorted_by_pt(cs.inclusive_jets())[0]]
+                        jets_combined_selected = []
+                    else:
+                        cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
+                        jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
+                        jets_combined_selected = jet_selector_combined(jets_combined)
+                        cs_hard = fj.ClusterSequence(fj_particles_hard, jet_def)
+                        jets_hard = fj.sorted_by_pt(cs_hard.inclusive_jets())
+                        jets_hard_selected = jet_selector_hard(jets_hard)
+                        print(f'jets_hard: {jets_hard}')
                     self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = R_max)
+
+        self.event_index += 1
+        if self.event_index%100 == 0:
+            print(f'event: {self.event_index}')
 
     #---------------------------------------------------------------
     # Compute delta-pt by random cone method
@@ -321,37 +387,39 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def analyze_jets(self, jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = None):
 
-        # Fill combined jet info, if inside pt interval
-        for jet_combined in jets_combined_selected:
-            if jet_pt_bin[0] < jet_combined.pt() < jet_pt_bin[1]:
-                self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
-                self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
-            
         # Fill hard jet info
         if np.isclose(R_max, 0.):
             for jet_hard in jets_hard_selected:
                 self.fill_nsubjettiness(jet_hard, jetR, jet_pt_bin, R_max, 'hard')
                 self.fill_four_vectors(jet_hard, jetR, jet_pt_bin, R_max, 'hard')
-                        
-        #----------------------------------
-        # Match jets
 
-        # Loop through jets and set jet matching candidates for each jet in user_info
-        for jet_combined in jets_combined_selected:
-            for jet_hard in jets_hard_selected:
+        if not self.test:
+
+            # Fill combined jet info, if inside pt interval
+            for jet_combined in jets_combined_selected:
+                if jet_pt_bin[0] < jet_combined.pt() < jet_pt_bin[1]:
+                    self.fill_nsubjettiness(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
+                    self.fill_four_vectors(jet_combined, jetR, jet_pt_bin, R_max, 'combined')
+                        
+            #----------------------------------
+            # Match jets
+
+            # Loop through jets and set jet matching candidates for each jet in user_info
+            for jet_combined in jets_combined_selected:
+                for jet_hard in jets_hard_selected:
+                    
+                    # Add a matching candidate to the list if it is within the geometrical cut
+                    deltaR = jet_combined.delta_R(jet_hard)
+                    if deltaR < self.jet_matching_distance*jetR:
+                        process_base.ProcessBase.set_jet_info(None, jet_combined, jet_hard, deltaR)
+                        process_base.ProcessBase.set_jet_info(None, jet_hard, jet_combined, deltaR)
+            
+            # Loop through jets and set accepted matches
+            for jet_combined in jets_combined_selected:
+                process_base.ProcessBase.set_matches_pp(None, jet_combined, None)
                 
-                # Add a matching candidate to the list if it is within the geometrical cut
-                deltaR = jet_combined.delta_R(jet_hard)
-                if deltaR < self.jet_matching_distance*jetR:
-                    process_base.ProcessBase.set_jet_info(None, jet_combined, jet_hard, deltaR)
-                    process_base.ProcessBase.set_jet_info(None, jet_hard, jet_combined, deltaR)
-        
-        # Loop through jets and set accepted matches
-        for jet_combined in jets_combined_selected:
-            process_base.ProcessBase.set_matches_pp(None, jet_combined, None)
-              
-        # Loop through jets and fill output if both det and truth jets are unique match
-        result = [self.fill_jet_matches(jet_combined, jetR, jet_pt_bin, R_max, 'combined_matched') for jet_combined in jets_combined_selected]
+            # Loop through jets and fill output if both det and truth jets are unique match
+            result = [self.fill_jet_matches(jet_combined, jetR, jet_pt_bin, R_max, 'combined_matched') for jet_combined in jets_combined_selected]
                 
     #---------------------------------------------------------------
     # Analyze jets of a given event.
@@ -470,7 +538,10 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def transform_to_numpy(self, jet_variables_list):
 
-        jet_variables_numpy = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        if self.test:
+            jet_variables_numpy = {'hard': {}}
+        else:
+            jet_variables_numpy = {'hard': {}, 'combined': {}, 'combined_matched': {}}
 
         for label in jet_variables_numpy.keys():
             for jetR in self.jetR_list:
@@ -546,6 +617,17 @@ class ProcessppAA(common_base.CommonBase):
             
         return eta
 
+    #---------------------------------------------------------------
+    # Transform particles to fastjet::PseudoJets
+    #---------------------------------------------------------------
+    def get_fjparticles(self, df_particles_grouped):
+
+        user_index_offset = 0
+        return fjext.vectorize_pt_eta_phi(df_particles_grouped['pt'].values,
+                                          df_particles_grouped['y'].values,
+                                          df_particles_grouped['phi'].values,
+                                          user_index_offset)
+
 ##################################################################
 if __name__ == '__main__':
 
@@ -563,6 +645,9 @@ if __name__ == '__main__':
                         type=str, metavar='outputDir',
                         default='./TestOutput',
                         help='Output directory for output to be written to')
+    parser.add_argument('--test', 
+                        help='test mode using qg dataset', 
+                        action='store_true', default=False)
 
     # Parse the arguments
     args = parser.parse_args()
@@ -578,9 +663,9 @@ if __name__ == '__main__':
         sys.exit(0)
 
     # If invalid inputFile is given, exit
-    if not os.path.exists(args.inputFile):
+    if not os.path.exists(args.inputFile) and not args.test:
         print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
         sys.exit(0)
 
-    analysis = ProcessppAA(config_file=args.configFile, input_file=args.inputFile, output_dir=args.outputDir)
+    analysis = ProcessppAA(config_file=args.configFile, input_file=args.inputFile, output_dir=args.outputDir, test=args.test)
     analysis.process_ppAA()
