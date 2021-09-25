@@ -42,7 +42,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Constructor
     #---------------------------------------------------------------
-    def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
+    def __init__(self, input_file='', config_file='', output_dir='', old_pp=False, old_AA=False, debug_level=0, **kwargs):
         super(common_base.CommonBase, self).__init__(**kwargs)
         
         self.config_file = config_file
@@ -50,6 +50,12 @@ class AnalyzePPAA(common_base.CommonBase):
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
         
+        # Settings for tests against old input data
+        self.old_pp = old_pp
+        self.old_AA = old_AA
+        if old_pp or old_AA:
+            self.old_input_file = '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/ml/551797/nsubjettiness_with_four_vectors.h5'
+
         # Initialize config file
         self.initialize_config()
         
@@ -207,7 +213,67 @@ class AnalyzePPAA(common_base.CommonBase):
                             y_unshuffled = hf[f'y{key_suffix}'][:self.n_total]
                             X_particles_unshuffled = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
                             X_Nsub_unshuffled = hf[f'X_Nsub{key_suffix}'][:self.n_total]
-                            
+                            sum = np.sum(y_unshuffled)
+                            print(f'y_unshuffled sum: {sum}')
+                            print(f'y_unshuffled shape: {y_unshuffled.shape}')
+                            print(f'original y: {y_unshuffled}')
+
+                            # If testing against old dataset, load and swap the pp or AA values
+                            if self.old_pp or self.old_AA:
+                                
+                                # Load old dataset, and get appropriate entries
+                                with h5py.File(os.path.join(self.output_dir, self.old_input_file), 'r') as hf_old:
+                                    y_old = hf_old[f'y{key_suffix}'][:self.n_total]
+                                    sum = np.sum(y_old)
+                                    print(f'y_old sum: {sum}')
+                                    print(f'y_old shape: {y_old.shape}')
+
+                                    # Filter desired entries
+                                    filter_array = np.zeros(y_old.shape)
+                                    if self.old_pp:
+                                        filter_array = np.add(filter_array, 1-y_old)
+                                    if self.old_AA:
+                                        filter_array = np.add(filter_array, y_old)
+                                    print(f'original y_old: {y_old}')
+                                    filter_array = filter_array.astype(dtype=bool)
+                                    print(f'filter array: {filter_array}')
+                                    X_particles_old = hf_old[f'X_four_vectors{key_suffix}'][:self.n_total][filter_array]
+                                    X_Nsub_old = hf_old[f'X_Nsub{key_suffix}'][:self.n_total][filter_array]
+
+                                    # Set labels for these compressed entries
+                                    if self.old_pp and self.old_AA:
+                                        y_old_compressed = y_old
+                                    elif self.old_pp:
+                                        y_old_compressed = np.zeros(X_particles_old.shape[0])
+                                    elif self.old_AA:
+                                        y_old_compressed = np.ones(X_particles_old.shape[0])
+                                    sum = np.sum(y_old_compressed)
+                                    print(f'y_old_compressed sum: {sum}')
+                                    print(f'y_old_compressed shape: {y_old_compressed.shape}')
+                                    print(f'y_old_compressed: {y_old_compressed}')
+
+                                    # Remove corresponding entries from new input
+                                    filter_array = np.ones(y_unshuffled.shape, dtype=bool)
+                                    if self.old_pp:
+                                        filter_array = np.add(filter_array, y_unshuffled-1) 
+                                    if self.old_AA:
+                                        filter_array = np.add(filter_array, -1*y_unshuffled) 
+                                    filter_array = filter_array.astype(dtype=bool)
+                                    sum = np.sum(filter_array)
+                                    print(f'filter_array sum: {sum}')
+                                    print(f'filter_array shape: {filter_array.shape}')
+                                    print(f'filter_array: {filter_array}')
+                                    X_particles_unshuffled = np.concatenate((X_particles_unshuffled[filter_array], 
+                                                                             X_particles_old))[:self.n_total]
+                                    X_Nsub_unshuffled = np.concatenate((X_Nsub_unshuffled[filter_array],
+                                                                        X_Nsub_old))[:self.n_total]
+                                    y_unshuffled = np.concatenate((y_unshuffled[filter_array],
+                                                                   y_old_compressed))[:self.n_total]
+                                    sum = np.sum(y_unshuffled)
+                                    print(f'y_new sum: {sum}')
+                                    print(f'y_new shape: {y_unshuffled.shape}')
+                                    print(f'y_new: {y_unshuffled}')
+
                             # Shuffle dataset 
                             idx = np.random.permutation(len(y_unshuffled))
                             if y_unshuffled.shape[0] == idx.shape[0]:
@@ -1135,6 +1201,12 @@ if __name__ == '__main__':
                         type=str, metavar='outputDir',
                         default='./TestOutput',
                         help='Output directory for output to be written to')
+    parser.add_argument('--old_pp', 
+                         help='use old pp aggregated input data', 
+                         action='store_true', default=False)
+    parser.add_argument('--old_AA',
+                         help='use old AA aggregated input data',
+                         action='store_true', default=False)
 
     # Parse the arguments
     args = parser.parse_args()
@@ -1148,5 +1220,5 @@ if __name__ == '__main__':
         print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
         sys.exit(0)
 
-    analysis = AnalyzePPAA(config_file=args.configFile, output_dir=args.outputDir)
+    analysis = AnalyzePPAA(config_file=args.configFile, output_dir=args.outputDir, old_pp=args.old_pp, old_AA=args.old_AA)
     analysis.analyze_pp_aa()
