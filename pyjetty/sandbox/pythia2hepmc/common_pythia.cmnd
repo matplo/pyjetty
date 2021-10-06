@@ -7,3 +7,4 @@ Stat:showProcessLevel = on
 Random:setSeed=on
 Random:seed=-1
 
+Beams:eCM = 5020.

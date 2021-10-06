@@ -1,4 +1,5 @@
 ! List of all modified PYTHIA 8.244 settings.
+Beams:eCM = 5020.000
 HardQCD:all = on
 Next:numberCount = 0
 Next:numberShowEvent = 0
