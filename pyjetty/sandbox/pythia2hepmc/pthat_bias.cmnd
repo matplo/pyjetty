@@ -1,0 +1,5 @@
+PhaseSpace:bias2Selection = on
+PhaseSpace:bias2SelectionPow = 5.7
+PhaseSpace:bias2SelectionRef = 50 
+
+PhaseSpace:pTHatMin = 200.

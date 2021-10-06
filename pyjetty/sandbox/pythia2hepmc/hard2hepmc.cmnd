@@ -1,0 +1,11 @@
+! List of all modified PYTHIA 8.244 settings.
+HardQCD:all = on
+Next:numberCount = 0
+Next:numberShowEvent = 0
+Next:numberShowInfo = 0
+Next:numberShowProcess = 0
+PhaseSpace:bias2Selection = on
+PhaseSpace:bias2SelectionPow = 5.70000
+PhaseSpace:bias2SelectionRef = 50.00000
+PhaseSpace:pTHatMin = 200.00000
+Random:setSeed = on
