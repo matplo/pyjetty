@@ -17,7 +17,11 @@ The analysis workflow is as follows:
    cd pyjetty/alice_analysis/generation/jewel/medium
    sbatch slurm_jewel_PbPb.sh
    ```
-   Then create a filelist manually in `/rstorage/ml/egml/data`, to be used in the next step. (e.g. `find "$PWD" -name "*.root" >files.txt`).
+   Then create a filelist manually in `/rstorage/ml/egml/data`, to be used in the next step:
+   ```
+   find "$PWD" -name "*.root" >files.txt
+   shuf --output=files_randomized.txt files.txt
+   ```
    
 1. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
    ```
