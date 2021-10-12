@@ -20,8 +20,10 @@ The analysis workflow is as follows:
    Then create a filelist manually in `/rstorage/ml/egml/data`, to be used in the next step:
    ```
    find "$PWD" -name "*.root" >files.txt
-   shuf --output=files_randomized.txt files.txt
+   ...
+   cat <pp>/files.txt >> <AA>/files.txt
    ```
+   Note that we do not need to shuffle anything yet.
    
 1. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
    ```
@@ -33,6 +35,8 @@ The analysis workflow is as follows:
    This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
    
    This writes output to `/rstorage/ml/egml/nsubjettiness/<job_id>/files.txt`
+   
+   Shuffle the file list: `shuf --output=files_randomized.txt files.txt`
 
 2. Aggregate the results from each file's processing output
    ```
