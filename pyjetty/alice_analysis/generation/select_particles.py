@@ -9,12 +9,12 @@ import ROOT
 ROOT.gROOT.SetBatch(True)
 
 #---------------------------------------------------------------
-def accept_particle_pythia(part, status, end_vertex, pid, pdg, parton=False):
+def accept_particle_pythia(part, status, end_vertex, pid, pdg, parton=False, select_charged=False):
 
   if parton:
     raise NotImplementedError('Parton tree not implemented yet for PYTHIA') 
 
-  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1], select_charged=select_charged)
   
 #---------------------------------------------------------------
 def accept_particle_herwig(part, status, end_vertex, pid, pdg, parton=False):
