@@ -2,8 +2,8 @@
 
 #SBATCH --job-name="jewel_AA"
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --partition=quick
-#SBATCH --time=2:00:00
+#SBATCH --partition=std
+#SBATCH --time=24:00:00
 #SBATCH --array=1-1000
 #SBATCH --output=/rstorage/ml/egml/data/jewel_PbPb/slurm-%A_%a.out
 

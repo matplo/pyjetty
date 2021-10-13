@@ -257,7 +257,7 @@ class ProcessppAA(common_base.CommonBase):
                                 if not self.test:
                                     if 'jewel_PbPb' in self.input_file:
                                         self.y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
-                                    elif 'jewel_pp' in self.input_file:
+                                    else:
                                         self.y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
                                 hf.create_dataset(f'y{suffix}', data=self.y)
                                 
@@ -355,7 +355,6 @@ class ProcessppAA(common_base.CommonBase):
                         cs_hard = fj.ClusterSequence(fj_particles_hard, jet_def)
                         jets_hard = fj.sorted_by_pt(cs_hard.inclusive_jets())
                         jets_hard_selected = jet_selector_hard(jets_hard)
-                        print(f'jets_hard: {jets_hard}')
                     self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = R_max)
 
         self.event_index += 1

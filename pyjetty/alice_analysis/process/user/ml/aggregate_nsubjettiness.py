@@ -10,7 +10,7 @@ import numpy as np
 
 def aggregate(config_file, filelist, output_dir):
 
-    n_files_max = 1000
+    n_files_max = 100
 
     # List of arrays to aggregate
     observables = ['X_four_vectors', 'X_Nsub', 'y', 'jet_pt', 'delta_pt', 'matched_pt', 'matched_deltaR', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
@@ -22,6 +22,7 @@ def aggregate(config_file, filelist, output_dir):
     jet_pt_bins = config['jet_pt_bins']
     max_distance_list = config['constituent_subtractor']['max_distance']
     event_types = ['hard', 'combined_matched']
+    K_max = max(config['K'])
 
     # Create a list of keys to loop over
     # We have separate training data for:
@@ -43,7 +44,7 @@ def aggregate(config_file, filelist, output_dir):
     # See: https://docs.h5py.org/en/stable/vds.html
     
     # First, we need to find the total shape for each observable set
-    shapes, total_shapes, N_list, beta_list = determine_shapes(output_keys, filelist, n_files_max)
+    shapes, total_shapes, N_list, beta_list = determine_shapes(output_keys, filelist, n_files_max, K_max)
     print('Determined shapes.')
 
     # Now, create the virtual dataset
@@ -95,7 +96,7 @@ def aggregate(config_file, filelist, output_dir):
     print()
     
 # Determine shapes of lists in all files
-def determine_shapes(output_keys, filelist, n_files_max):
+def determine_shapes(output_keys, filelist, n_files_max, K_max):
 
     shapes = {}
     for output_key in output_keys:
@@ -122,10 +123,10 @@ def determine_shapes(output_keys, filelist, n_files_max):
         if len(val[0]) == 1:
             total_shapes[key] = (total_shape,)
         elif len(val[0]) == 2:
-            total_shapes[key] = (total_shape, 146)
+            total_shapes[key] = (total_shape, 3*K_max)
         else:
             total_shapes[key] = (total_shape, 800, 4)
-
+            
     return shapes, total_shapes, N_list, beta_list
 
 def accept_file(i, n_files, n_files_max, log=True):
