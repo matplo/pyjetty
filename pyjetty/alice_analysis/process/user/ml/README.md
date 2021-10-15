@@ -9,12 +9,12 @@ The analysis workflow is as follows:
 
 0. Generate JEWEL events: 
    ```
-   cd pyjetty/alice_analysis/generation/jewel/vac
+   cd ~/pyjetty/pyjetty/alice_analysis/generation/jewel/vac
    sbatch slurm_jewel_pp.sh
    ```
    and 
    ```
-   cd pyjetty/alice_analysis/generation/jewel/medium
+   cd ~/pyjetty/pyjetty/alice_analysis/generation/jewel/medium
    sbatch slurm_jewel_PbPb.sh
    ```
    Then create a filelist manually in `/rstorage/ml/egml/data`, to be used in the next step:
@@ -27,7 +27,7 @@ The analysis workflow is as follows:
    
 1. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
    ```
-   cd pyjetty/alice_analysis/process/user/ml/slurm
+   cd ~/pyjetty/pyjetty/alice_analysis/process/user/ml/slurm
    sbatch slurm_compute_nsubjettiness.sh
    ```
    You should update the skimmed filelist in `slurm_compute_nsubjettiness.sh` if necessary.
@@ -40,14 +40,14 @@ The analysis workflow is as follows:
 
 2. Aggregate the results from each file's processing output
    ```
-   cd pyjetty/alice_analysis/process/user/ml
+   cd ~/pyjetty/pyjetty/alice_analysis/process/user/ml
    python aggregate_nsubjettiness.py -o /rstorage/ml/egml/nsubjettiness/<process_job_id>
    ```
    The `-o` path should point to the directory containing `files.txt` from Step 2. This is the location that the output file, `nsubjettiness.h5`, will be written to. 
    
 3. Fit model and make plots:
    ```
-   cd alice_analysis/analysis/user/ml
+   cd ~/pyjetty/pyjetty/alice_analysis/analysis/user/ml
    python analyze_ppAA.py -c <config> -o <output_dir>
    ```
    The `-o` path should point to the directory containing `nsubjettiness.h5` from Step 3. This is the location that the output plots will be written to. 
