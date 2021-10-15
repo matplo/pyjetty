@@ -123,10 +123,10 @@ def determine_shapes(output_keys, filelist, n_files_max, K_max):
         if len(val[0]) == 1:
             total_shapes[key] = (total_shape,)
         elif len(val[0]) == 2:
-            total_shapes[key] = (total_shape, 3*K_max)
+            total_shapes[key] = (total_shape, 3*K_max-4)
         else:
             total_shapes[key] = (total_shape, 800, 4)
-            
+
     return shapes, total_shapes, N_list, beta_list
 
 def accept_file(i, n_files, n_files_max, log=True):
