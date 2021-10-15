@@ -71,6 +71,8 @@ class HepMC2antupleBase(common_base.CommonBase):
       return select_particles.accept_particle_herwig(part, status, end_vertex, pid, pdg, parton)
     elif gen == 'jewel':
       return select_particles.accept_particle_jewel(part, status, end_vertex, pid, pdg, parton)
+    elif gen == 'jewel_charged':
+      return select_particles.accept_particle_jewel(part, status, end_vertex, pid, pdg, parton, select_charged=True)
     elif gen == 'jetscape':
       return select_particles.accept_particle_jetscape(part, pdg, parton)
     elif gen == 'martini':

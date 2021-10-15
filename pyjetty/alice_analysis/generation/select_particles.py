@@ -26,12 +26,12 @@ def accept_particle_herwig(part, status, end_vertex, pid, pdg, parton=False):
   return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
   
 #---------------------------------------------------------------
-def accept_particle_jewel(part, status, end_vertex, pid, pdg, parton=False):
+def accept_particle_jewel(part, status, end_vertex, pid, pdg, parton=False, select_charged=False):
 
   if parton:
     raise NotImplementedError('Parton tree not implemented yet for JEWEL') 
 
-  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1], select_charged=False)
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1], select_charged=select_charged)
 
 #---------------------------------------------------------------
 def accept_particle_jetscape(part, pdg, parton=False):
@@ -100,13 +100,13 @@ def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, sta
   
   # Check PID for charged particles
   if select_charged:
-    if pdg.GetParticle(part.pid):
+    if pdg.GetParticle(pid):
       #if parton:
       #  print(part, status)
       #  print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
-      if not parton and pdg.GetParticle(part.pid).Charge() == 0:
+      if not parton and pdg.GetParticle(pid).Charge() == 0:
         return False
-      else:
-        return False
+    else:
+      return False
     
   return True
