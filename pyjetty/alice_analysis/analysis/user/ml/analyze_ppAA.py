@@ -210,6 +210,12 @@ class AnalyzePPAA(common_base.CommonBase):
                         # Read input variables
                         key_suffix = f'_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
+
+                            total_jets = hf[f'y{key_suffix}'].size
+                            total_jets_AA = np.sum(hf[f'y{key_suffix}'])
+                            total_jets_pp = total_jets - total_jets_AA 
+                            print(f'Total number of jets available: {total_jets_pp} (pp), {total_jets_AA} (AA)')
+
                             y_unshuffled = hf[f'y{key_suffix}'][:self.n_total]
                             X_particles_unshuffled = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
                             X_Nsub_unshuffled = hf[f'X_Nsub{key_suffix}'][:self.n_total]
