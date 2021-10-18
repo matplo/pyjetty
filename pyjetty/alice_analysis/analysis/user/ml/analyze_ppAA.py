@@ -211,20 +211,51 @@ class AnalyzePPAA(common_base.CommonBase):
                         key_suffix = f'_{event_type}_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
 
-                            total_jets = hf[f'y{key_suffix}'].size
-                            total_jets_AA = np.sum(hf[f'y{key_suffix}'])
+                            # First, get the full input arrays
+                            self.y_total = hf[f'y{key_suffix}'][:400000]
+                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:400000]
+                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:400000]
+
+                            # Check whether any training entries are empty
+                            [print(f'WARNING: input entry {i} is empty') for i,x in enumerate(X_Nsub_total) if not x.any()]
+
+                            # Determine total number of jets
+                            total_jets = int(self.y_total.size)
+                            total_jets_AA = int(np.sum(self.y_total))
                             total_jets_pp = total_jets - total_jets_AA 
                             print(f'Total number of jets available: {total_jets_pp} (pp), {total_jets_AA} (AA)')
 
-                            y_unshuffled = hf[f'y{key_suffix}'][:self.n_total]
-                            X_particles_unshuffled = hf[f'X_four_vectors{key_suffix}'][:self.n_total]
-                            X_Nsub_unshuffled = hf[f'X_Nsub{key_suffix}'][:self.n_total]
-                            sum = np.sum(y_unshuffled)
-                            print(f'y_unshuffled sum: {sum}')
-                            print(f'y_unshuffled shape: {y_unshuffled.shape}')
-                            print(f'original y: {y_unshuffled}')
+                            # If there is an imbalance, remove excess jets
+                            if total_jets_pp / total_jets_AA > 1.:
+                                indices_to_remove = np.where( np.isclose(self.y_total,0) )[0][total_jets_AA:]
+                            elif total_jets_pp / total_jets_AA < 1.:
+                                indices_to_remove = np.where( np.isclose(self.y_total,1) )[0][total_jets_pp:]
+                            y_balanced = np.delete(self.y_total, indices_to_remove)
+                            X_particles_balanced = np.delete(X_particles_total, indices_to_remove, axis=0)
+                            X_Nsub_balanced = np.delete(X_Nsub_total, indices_to_remove, axis=0)
+                            total_jets = int(y_balanced.size)
+                            total_jets_AA = int(np.sum(y_balanced))
+                            total_jets_pp = total_jets - total_jets_AA 
+                            print(f'Total number of jets available after balancing: {total_jets_pp} (pp), {total_jets_AA} (AA)')
 
-                            # If testing against old dataset, load and swap the pp or AA values
+                            # Shuffle dataset 
+                            idx = np.random.permutation(len(y_balanced))
+                            if y_balanced.shape[0] == idx.shape[0]:
+                                y_shuffled = y_balanced[idx]
+                                X_particles_shuffled = X_particles_balanced[idx]
+                                X_Nsub_shuffled = X_Nsub_balanced[idx]
+                            else:
+                                print(f'MISMATCH of shape: {y_shuffled.shape} vs. {idx.shape}')
+
+                            # Truncate the input arrays to the requested size
+                            self.y = y_shuffled[:self.n_total]
+                            self.X_particles = X_particles_shuffled[:self.n_total]
+                            self.X_Nsub = X_Nsub_shuffled[:self.n_total]
+                            print(f'y_shuffled sum: {np.sum(self.y)}')
+                            print(f'y_shuffled shape: {self.y.shape}')
+
+                            # If testing against old dataset, load and swap the pp or AA values 
+                            # (does not support balancing the number of jets at the moment)
                             if self.old_pp or self.old_AA:
                                 
                                 # Load old dataset, and get appropriate entries
@@ -280,19 +311,14 @@ class AnalyzePPAA(common_base.CommonBase):
                                     print(f'y_new shape: {y_unshuffled.shape}')
                                     print(f'y_new: {y_unshuffled}')
 
-                            # Shuffle dataset 
-                            idx = np.random.permutation(len(y_unshuffled))
-                            if y_unshuffled.shape[0] == idx.shape[0]:
-                                self.y = y_unshuffled[idx]
-                                self.X_particles = X_particles_unshuffled[idx]
-                                self.X_Nsub = X_Nsub_unshuffled[idx]
-                            else:
-                                print(f'MISMATCH of shape: {y_unshuffled.shape} vs. {idx.shape}')
-
-                            # Remove nan
-                            self.y[np.isnan(self.y)] = 0.
-                            self.X_particles[np.isnan(self.X_particles)] = 0.
-                            self.X_Nsub[np.isnan(self.X_Nsub)] = 0.
+                                    # Shuffle dataset 
+                                    idx = np.random.permutation(len(y_unshuffled))
+                                    if y_unshuffled.shape[0] == idx.shape[0]:
+                                        self.y = y_unshuffled[idx]
+                                        self.X_particles = X_particles_unshuffled[idx]
+                                        self.X_Nsub = X_Nsub_unshuffled[idx]
+                                    else:
+                                        print(f'MISMATCH of shape: {y_unshuffled.shape} vs. {idx.shape}')
 
                             # Also get some QA info
                             self.qa_results = {}
@@ -300,11 +326,11 @@ class AnalyzePPAA(common_base.CommonBase):
                                 qa_result = hf[f'{qa_observable}{key_suffix}'][:self.n_total]
                                 if qa_result.shape[0] == 0:
                                     continue
-                                self.qa_results[qa_observable] = qa_result[idx]
-                                self.qa_results[qa_observable][np.isnan(self.qa_results[qa_observable])] = 0.
-                            delta_pt_result = hf[f'delta_pt{key_suffix}'][:]
+                                self.qa_results[qa_observable] = qa_result
+                                self.qa_results[qa_observable][np.isnan(self.qa_results[qa_observable])] = -1.
+                            delta_pt_result = hf[f'delta_pt{key_suffix}'][:self.n_total]
                             if delta_pt_result.shape[0] != 0:
-                                self.delta_pt = delta_pt_result[idx]
+                                self.delta_pt = delta_pt_result
                                 self.delta_pt[np.isnan(self.delta_pt)] = 0.
 
                         # Define formatted labels for features
@@ -402,9 +428,9 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.fit_efn(model_settings)
                 
         # Plot traditional observables
-        self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['jet_mass'])
-        self.roc_curve_dict['jet_angularity'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['jet_angularity'])
-        self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['jet_theta_g'])
+        self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_mass'])
+        self.roc_curve_dict['jet_angularity'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_angularity'])
+        self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_theta_g'])
         #self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
 
         # Plot several verisons of AUC vs. K curve
@@ -1069,11 +1095,11 @@ class AnalyzePPAA(common_base.CommonBase):
             if qa_observable_shape[0] == 0:
                 continue
             
-            if  self.y.shape[0] != qa_observable_shape[0]:
-                sys.exit(f'ERROR: {qa_observable}: {qa_observable_shape}, y shape: {self.y.shape}')
+            if  self.y_total[:self.n_total].shape[0] != qa_observable_shape[0]:
+                sys.exit(f'ERROR: {qa_observable}: {qa_observable_shape}, y shape: {self.y_total[self.n_total].shape}')
                
-            jewel_indices = self.y
-            pythia_indices = 1 - self.y
+            jewel_indices = self.y_total[:self.n_total]
+            pythia_indices = 1 - self.y_total[:self.n_total]
             result_jewel = self.qa_results[qa_observable][jewel_indices.astype(bool)]
             result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
 
