@@ -8,5 +8,7 @@ Random:seed=-1
 
 Beams:eCM = 5020.
 HardQCD:all = on
+#PromptPhoton: all = on
 PhaseSpace:pTHatMin = 200.
 PhaseSpace:pTHatMax = -1
+PartonLevel:MPI = off

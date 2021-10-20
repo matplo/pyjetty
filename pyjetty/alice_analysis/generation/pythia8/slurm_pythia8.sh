@@ -4,7 +4,7 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=quick
 #SBATCH --time=2:00:00
-#SBATCH --array=1-1000
+#SBATCH --array=1-500
 #SBATCH --output=/rstorage/ml/egml/data/pythia8/slurm-%A_%a.out
 
 BASE_DIR=/software/users/james/pyjetty/pyjetty/alice_analysis/generation
