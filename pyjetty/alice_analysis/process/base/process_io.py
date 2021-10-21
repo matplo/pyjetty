@@ -89,7 +89,7 @@ class ProcessIO(common_base.CommonBase):
   #             randomly assign proton and kaon mass to some tracks
   #---------------------------------------------------------------
   def load_data(self, m=0.1396, reject_tracks_fraction=0., offset_indices=False,
-                group_by_evid=True, random_mass=False):
+                group_by_evid=True, random_mass=False, min_pt=0.):
     
     self.reject_tracks_fraction = reject_tracks_fraction
     self.reset_dataframes()
@@ -110,7 +110,7 @@ class ProcessIO(common_base.CommonBase):
     if random_mass:
       print('    \033[93mRandomly assigning proton and kaon mass to some tracks.\033[0m') 
 
-    df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid, random_mass)
+    df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid, random_mass, min_pt=min_pt)
 
     return df_fjparticles
   
@@ -276,7 +276,7 @@ class ProcessIO(common_base.CommonBase):
   # Transform the track dataframe into a SeriesGroupBy object
   # of fastjet particles per event.
   #---------------------------------------------------------------
-  def group_fjparticles(self, m, offset_indices=False, group_by_evid=True, random_mass=False):
+  def group_fjparticles(self, m, offset_indices=False, group_by_evid=True, random_mass=False, min_pt=0.):
 
     if group_by_evid:
       print("Transform the track dataframe into a series object of fastjet particles per event...")
@@ -289,7 +289,7 @@ class ProcessIO(common_base.CommonBase):
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
       df_fjparticles = None
       df_fjparticles = track_df_grouped.apply(
-        self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass)
+        self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
     
     else:
       print("Transform the track dataframe into a dataframe of fastjet particles per track...")
@@ -298,21 +298,24 @@ class ProcessIO(common_base.CommonBase):
       df = self.track_df
       df_fjparticles = pandas.DataFrame( 
         {"run_number": df["run_number"], "ev_id": df["ev_id"],
-         "fj_particle": self.get_fjparticles(self.track_df, m, offset_indices, random_mass)} )
+         "fj_particle": self.get_fjparticles(self.track_df, m, offset_indices, random_mass, min_pt=min_pt)} )
 
     return df_fjparticles
 
   #---------------------------------------------------------------
   # Return fastjet:PseudoJets from a given track dataframe
   #---------------------------------------------------------------
-  def get_fjparticles(self, df_tracks, m, offset_indices=False, random_mass=False):
+  def get_fjparticles(self, df_tracks, m, offset_indices=False, random_mass=False, min_pt=0.):
     
     # If offset_indices is true, then offset the user_index by a large negative value
     user_index_offset = 0
     if offset_indices:
         user_index_offset = int(-1e6)
         
-    m_array = np.full((df_tracks['ParticlePt'].values.size), m)
+    # Apply a pt cut
+    df_tracks_accepted = df_tracks[df_tracks.ParticlePt > min_pt]
+
+    m_array = np.full((df_tracks_accepted['ParticlePt'].values.size), m)
 
     # Randomly assign K and p mass for systematic check
     if random_mass:
@@ -328,10 +331,10 @@ class ProcessIO(common_base.CommonBase):
       p_prob = 1 - p_factor / (1 + K_factor + p_factor)   # 1- just to look at diff random vals
       m_array = np.where(rand_val < K_prob, K_mass, m_array)
       m_array = np.where(rand_val > p_prob, p_mass, m_array)
-    
+
     # Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
     fj_particles = fjext.vectorize_pt_eta_phi_m(
-      df_tracks['ParticlePt'].values, df_tracks['ParticleEta'].values,
-      df_tracks['ParticlePhi'].values, m_array, user_index_offset)
+      df_tracks_accepted['ParticlePt'].values, df_tracks_accepted['ParticleEta'].values,
+      df_tracks_accepted['ParticlePhi'].values, m_array, user_index_offset)
     return fj_particles
 
