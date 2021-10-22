@@ -62,11 +62,11 @@ class AnalyzePPAA(common_base.CommonBase):
         alpha_list = self.config['lasso']['alpha']
         self.colors = {'PFN': sns.xkcd_rgb['faded purple'],
                        'EFN': sns.xkcd_rgb['faded red'],
-                       'DNN (K = 5)': sns.xkcd_rgb['watermelon'],
-                       'DNN (K = 10)': sns.xkcd_rgb['light brown'],
-                       'DNN (K = 20)': sns.xkcd_rgb['medium green'],
-                       'DNN (K = 30)': sns.xkcd_rgb['dark sky blue'],
-                       'DNN (K = 40)': sns.xkcd_rgb['faded purple'],
+                       rf'DNN (K = {self.K_list[0]})': sns.xkcd_rgb['watermelon'],
+                       rf'DNN (K = {self.K_list[1]})': sns.xkcd_rgb['light brown'],
+                       rf'DNN (K = {self.K_list[2]})': sns.xkcd_rgb['medium green'],
+                       rf'DNN (K = {self.K_list[3]})': sns.xkcd_rgb['dark sky blue'],
+                       rf'DNN (K = {self.K_list[4]})': sns.xkcd_rgb['faded purple'],
                        'Lasso': sns.xkcd_rgb['watermelon'],
                        rf'Lasso $(\alpha = {alpha_list[0]})$': sns.xkcd_rgb['watermelon'],
                        rf'Lasso $(\alpha = {alpha_list[1]})$': sns.xkcd_rgb['light brown'],
@@ -118,7 +118,6 @@ class AnalyzePPAA(common_base.CommonBase):
         self.val_frac = 1. * self.n_val / (self.n_train + self.n_val)
         
         self.K_list = config['K']
-        self.K_ROC_list = config['K_ROC']
         
         # Initialize model-specific settings
         self.config = config
@@ -212,9 +211,9 @@ class AnalyzePPAA(common_base.CommonBase):
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
 
                             # First, get the full input arrays
-                            self.y_total = hf[f'y{key_suffix}'][:400000]
-                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:400000]
-                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:400000]
+                            self.y_total = hf[f'y{key_suffix}'][:250000]
+                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:250000]
+                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:250000]
 
                             # Check whether any training entries are empty
                             [print(f'WARNING: input entry {i} is empty') for i,x in enumerate(X_Nsub_total) if not x.any()]
@@ -342,7 +341,11 @@ class AnalyzePPAA(common_base.CommonBase):
                         # Split into training and test sets
                         # We will split into validatation sets (for tuning hyperparameters) separately for each model
                         X_Nsub_train, X_Nsub_test, self.y_train, self.y_test = sklearn.model_selection.train_test_split(self.X_Nsub, self.y, test_size=self.test_frac)
-                               
+                        test_jets = int(self.y_test.size)
+                        test_jets_AA = int(np.sum(self.y_test))
+                        test_jets_pp = test_jets - test_jets_AA
+                        print(f'Total number of test jets: {test_jets_pp} (pp), {test_jets_AA} (AA)')
+
                         # Construct training/test sets for each K
                         self.training_data = {}
                         for K in self.K_list:
@@ -449,7 +452,7 @@ class AnalyzePPAA(common_base.CommonBase):
             roc_list = {}
             roc_list['PFN'] = self.roc_curve_dict['PFN']
             roc_list['EFN'] = self.roc_curve_dict['EFN']
-            for K in self.K_ROC_list:
+            for K in self.K_list:
                 roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
@@ -457,14 +460,14 @@ class AnalyzePPAA(common_base.CommonBase):
         if 'pfn' in self.models and 'neural_network' in self.models:
             roc_list = {}
             roc_list['PFN'] = self.roc_curve_dict['PFN']
-            for K in self.K_ROC_list:
+            for K in self.K_list:
                 roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
         
         if 'neural_network' in self.models:
             roc_list = {}
-            for K in self.K_ROC_list:
+            for K in self.K_list:
                 roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
@@ -593,7 +596,7 @@ class AnalyzePPAA(common_base.CommonBase):
                           validation_split=self.val_frac)
                           
         # Plot metrics are a function of epochs
-        if K in self.K_ROC_list:
+        if K in self.K_list:
             self.plot_NN_epochs(model_settings['epochs'], history, 'DNN', K)
         
         # Get predictions for test data set
