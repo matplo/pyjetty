@@ -23,7 +23,7 @@ module list
 # Run PYTHIA
 echo "Running PYTHIA8"
 cd /home/james/pyjetty
-pipenv run python $PYTHIA_DIR/pythia_gen_write_hepmc.py --py-cmnd $PYTHIA_CONFIG --nev 1000 -o $OUTDIR
+pipenv run python $PYTHIA_DIR/pythia_gen_write_hepmc.py --py-cmnd $PYTHIA_CONFIG --nev 1000 --py-seed $SLURM_ARRAY_TASK_ID -o $OUTDIR
 
 # Convert hepmc to ntuple
 pipenv run python $BASE_DIR/hepmc2antuple_tn.py -i $OUTDIR/pythia8.hepmc -o $OUTDIR/pythia8.root --hepmc 2 -g pythia --nev 1000 --no-progress-bar
