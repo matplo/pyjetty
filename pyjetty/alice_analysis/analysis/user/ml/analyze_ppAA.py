@@ -9,7 +9,8 @@ import sys
 import argparse
 import yaml
 import h5py
-import re
+import pickle
+import subprocess
 
 # Data analysis and plotting
 import pandas as pd
@@ -42,7 +43,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Constructor
     #---------------------------------------------------------------
-    def __init__(self, input_file='', config_file='', output_dir='', old_pp=False, old_AA=False, debug_level=0, **kwargs):
+    def __init__(self, config_file='', output_dir='', old_pp=False, old_AA=False, **kwargs):
         super(common_base.CommonBase, self).__init__(**kwargs)
         
         self.config_file = config_file
@@ -58,33 +59,7 @@ class AnalyzePPAA(common_base.CommonBase):
 
         # Initialize config file
         self.initialize_config()
-        
-        alpha_list = self.config['lasso']['alpha']
-        self.colors = {'PFN': sns.xkcd_rgb['faded purple'],
-                       'EFN': sns.xkcd_rgb['faded red'],
-                       rf'DNN (K = {self.K_list[0]})': sns.xkcd_rgb['watermelon'],
-                       rf'DNN (K = {self.K_list[1]})': sns.xkcd_rgb['light brown'],
-                       rf'DNN (K = {self.K_list[2]})': sns.xkcd_rgb['medium green'],
-                       rf'DNN (K = {self.K_list[3]})': sns.xkcd_rgb['dark sky blue'],
-                       rf'DNN (K = {self.K_list[4]})': sns.xkcd_rgb['faded purple'],
-                       'Lasso': sns.xkcd_rgb['watermelon'],
-                       rf'Lasso $(\alpha = {alpha_list[0]})$': sns.xkcd_rgb['watermelon'],
-                       rf'Lasso $(\alpha = {alpha_list[1]})$': sns.xkcd_rgb['light brown'],
-                       rf'Lasso $(\alpha = {alpha_list[2]})$': sns.xkcd_rgb['faded purple'],
-                       'jet_mass': sns.xkcd_rgb['faded red'],
-                       'jet_angularity': sns.xkcd_rgb['medium green'],
-                       'jet_theta_g': sns.xkcd_rgb['medium brown']
-                      }
-        self.linestyles = {'PFN': 'solid',
-                           'EFN': 'solid',
-                           'DNN': 'solid',
-                           'jet_mass': 'dotted',
-                           'jet_angularity': 'dotted',
-                           'jet_theta_g': 'dotted',
-                           'multiplicity': 'dotted',
-                           'Lasso': 'dotted'
-                          }
-                       
+            
         self.filename = 'nsubjettiness_with_four_vectors_unshuffled.h5'
         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
             self.N_list = hf['N_list'][:]
@@ -378,26 +353,13 @@ class AnalyzePPAA(common_base.CommonBase):
                            
                         # Train models
                         self.train_models(event_type, jetR, jet_pt_bin, R_max)
+
+        # Run plotting script
+        print()
+        print('Run plotting script...')
+        cmd = f'python plot_ppAA.py -c {self.config_file} -o {self.output_dir}'
+        subprocess.run(cmd, check=True, shell=True)
           
-        # Plot AUC vs. K for hard vs. combined
-        for jetR in self.jetR_list:
-            for jet_pt_bin in self.jet_pt_bins:
-                for R_max in self.max_distance_list:
-                
-                    if np.isclose(R_max, 0.):
-                        continue
-                
-                    if 'pfn' in self.models and 'neural_network' in self.models:
-                        auc_list = {}
-                        suffix = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
-                        auc_list[f'neural_network{suffix}'] = self.AUC[f'neural_network{suffix}']
-                        auc_list[f'pfn{suffix}'] = self.AUC[f'pfn{suffix}']
-                        suffix = f'_combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
-                        auc_list[f'neural_network{suffix}'] = self.AUC[f'neural_network{suffix}']
-                        auc_list[f'pfn{suffix}'] = self.AUC[f'pfn{suffix}']
-                        outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
-                        self.plot_AUC_convergence(outputdir, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
-    
     #---------------------------------------------------------------
     # Train models
     #---------------------------------------------------------------
@@ -429,69 +391,19 @@ class AnalyzePPAA(common_base.CommonBase):
                 
             if model == 'efn':
                 self.fit_efn(model_settings)
-                
+
         # Plot traditional observables
         self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_mass'])
         self.roc_curve_dict['jet_angularity'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_angularity'])
         self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_theta_g'])
         #self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
-
-        # Plot several verisons of AUC vs. K curve
-        if 'neural_network' in self.models:
-            auc_list = {}
-            auc_list[f'neural_network{self.key_suffix}'] = self.AUC[f'neural_network{self.key_suffix}']
-            self.plot_AUC_convergence(self.output_dir_i, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
-        if 'pfn' in self.models and 'neural_network' in self.models:
-            auc_list = {}
-            auc_list[f'neural_network{self.key_suffix}'] = self.AUC[f'neural_network{self.key_suffix}']
-            auc_list[f'pfn{self.key_suffix}'] = self.AUC[f'pfn{self.key_suffix}']
-            self.plot_AUC_convergence(self.output_dir_i, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
-        
-        # Plot several versions of ROC curves and significance improvement
-        if 'pfn' in self.models and 'neural_network' in self.models and 'efn' in self.models:
-            roc_list = {}
-            roc_list['PFN'] = self.roc_curve_dict['PFN']
-            roc_list['EFN'] = self.roc_curve_dict['EFN']
-            for K in self.K_list:
-                roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
-            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
-            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='1')
-        
-        if 'pfn' in self.models and 'neural_network' in self.models:
-            roc_list = {}
-            roc_list['PFN'] = self.roc_curve_dict['PFN']
-            for K in self.K_list:
-                roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
-            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
-            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='2')
-        
-        if 'neural_network' in self.models:
-            roc_list = {}
-            for K in self.K_list:
-                roc_list[f'DNN (K = {K})'] = self.roc_curve_dict['DNN'][K]
-            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
-            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
-        
-        if 'lasso' in self.models:
-            roc_list = {}
-            roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
-            roc_list['jet_angularity'] = self.roc_curve_dict['jet_angularity']
-            roc_list['jet_theta_g'] = self.roc_curve_dict['jet_theta_g']
-            for alpha in self.config['lasso']['alpha']:
-                roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
-            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
-            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
-        
-        if 'neural_network' in self.models and 'lasso' in self.models:
-            roc_list = {}
-            roc_list[f'DNN (K = {self.K_lasso})'] = self.roc_curve_dict['DNN'][K]
-            roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
-            roc_list['jet_angularity'] = self.roc_curve_dict['jet_angularity']
-            roc_list['jet_theta_g'] = self.roc_curve_dict['jet_theta_g']
-            for alpha in self.config['lasso']['alpha']:
-                roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
-            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
-            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
+                
+        # Save ROC curves to file
+        output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}.pkl')
+        with open(output_filename, 'wb') as f:
+            pickle.dump(self.roc_curve_dict, f)
+            pickle.dump(self.AUC, f)
+            pickle.dump(self.N_terms_lasso, f)
         
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
@@ -950,129 +862,6 @@ class AnalyzePPAA(common_base.CommonBase):
             plt.savefig(os.path.join(self.output_dir_i, f'DNN_epoch_{label}_K{K}.pdf'))
         else:
             plt.savefig(os.path.join(self.output_dir_i, f'PFN_epoch_{label}.pdf'))
-        plt.close()
-
-    #---------------------------------------------------------------
-    # Plot AUC as a function of K
-    #---------------------------------------------------------------
-    def plot_AUC_convergence(self, output_dir, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix):
-    
-        plt.axis([0, self.K_list[-1], 0, 1])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
-        plt.xlabel('K', fontsize=16)
-        plt.ylabel('AUC', fontsize=16)
-
-        for label,value in auc_list.items():
-        
-            if 'hard' in label:
-                color = sns.xkcd_rgb['dark sky blue']
-                label_suffix = ' (no background)'
-            if 'combined' in label:
-                color = sns.xkcd_rgb['medium green']
-                label_suffix = ' (thermal background)'
-
-            if 'pfn' in label:
-                AUC_PFN = value[0]
-                label = f'PFN{label_suffix}'
-                plt.axline((0, AUC_PFN), (1, AUC_PFN), linewidth=4, label=label,
-                           linestyle='solid', alpha=0.5, color=color)
-            elif 'efn' in label:
-                AUC_EFN = value[0]
-                label = f'EFN{label_suffix}'
-                plt.axline((0, AUC_EFN), (1, AUC_EFN), linewidth=4, label=label,
-                           linestyle='solid', alpha=0.5, color=color)
-            elif 'neural_network' in label:
-                label = f'DNN{label_suffix}'
-                plt.plot(self.K_list, value, linewidth=2,
-                         linestyle='solid', alpha=0.9, color=color,
-                         label=label)
-                    
-        plt.legend(loc='lower right', fontsize=12)
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f'AUC_convergence{suffix}.pdf'))
-        plt.close()
-
-    #--------------------------------------------------------------- 
-    # Plot ROC curves
-    #--------------------------------------------------------------- 
-    def plot_roc_curves(self, roc_list, event_type, jetR, jet_pt_bin, R_max, suffix):
-    
-        plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
-        plt.axis([0, 1, 0, 1])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
-        plt.xlabel('False Positive Rate', fontsize=16)
-        plt.ylabel('True Positive Rate', fontsize=16)
-        plt.grid(True)
-    
-        for label,value in roc_list.items():
-            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label:
-                linewidth = 4
-                alpha = 0.5
-                linestyle = self.linestyles[label]
-                color=self.colors[label]
-                if label == 'jet_mass':
-                    label = r'$m_{\mathrm{jet}}$'
-                if label == 'jet_angularity':
-                    label = r'$\lambda_1$'
-                if label == 'jet_theta_g':
-                    label = r'$\theta_{\mathrm{g}}$'
-            elif 'DNN' in label:
-                linewidth = 2
-                alpha = 0.9
-                linestyle = 'solid'
-                color=self.colors[label]
-            elif 'Lasso' in label:
-                linewidth = 2
-                alpha = 0.9
-                linestyle = 'solid'
-                color=self.colors[label]
-                reg_param = float(re.search('= (.*)\)', label).group(1))
-                n_terms = self.N_terms_lasso[reg_param]
-                label += f', {n_terms} terms'
-                
-            FPR = value[0]
-            TPR = value[1]
-            plt.plot(FPR, TPR, linewidth=linewidth, label=label,
-                     linestyle=linestyle, alpha=alpha, color=color)
-                    
-        plt.legend(loc='lower right', fontsize=10)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, f'ROC_{suffix}.pdf'))
-        plt.close()
- 
-    #--------------------------------------------------------------- 
-    # Plot Significance improvement
-    #--------------------------------------------------------------- 
-    def plot_significance_improvement(self, roc_list, event_type, jetR, jet_pt_bin, R_max, suffix):
-    
-        plt.axis([0, 1, 0, 3])
-        plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
-        plt.xlabel('True Positive Rate', fontsize=16)
-        plt.ylabel('Significance improvement', fontsize=16)
-        plt.grid(True)
-            
-        for label,value in roc_list.items():
-            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label:
-                linewidth = 4
-                alpha = 0.5
-                linestyle = self.linestyles[label]
-            elif 'DNN' in label:
-                linewidth = 2
-                alpha = 0.9
-                linestyle = 'solid'
-            elif 'Lasso' in label:
-                linewidth = 4
-                alpha = 0.5
-                linestyle = 'solid'
-                
-            FPR = value[0]
-            TPR = value[1]
-            plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=linewidth, label=label,
-                     linestyle=linestyle, alpha=alpha, color=self.colors[label])
-         
-        plt.legend(loc='best', fontsize=10)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, f'Significance_improvement_{suffix}.pdf'))
         plt.close()
 
     #---------------------------------------------------------------
