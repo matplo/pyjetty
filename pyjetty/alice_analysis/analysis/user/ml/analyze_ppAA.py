@@ -186,9 +186,9 @@ class AnalyzePPAA(common_base.CommonBase):
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
 
                             # First, get the full input arrays
-                            self.y_total = hf[f'y{key_suffix}'][:250000]
-                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:250000]
-                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:250000]
+                            self.y_total = hf[f'y{key_suffix}'][:]
+                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:]
+                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:]
 
                             # Check whether any training entries are empty
                             [print(f'WARNING: input entry {i} is empty') for i,x in enumerate(X_Nsub_total) if not x.any()]

@@ -24,7 +24,10 @@ import fjext
 import fjtools
 
 # Energy flow package
-import energyflow
+try:
+    import energyflow
+except ImportError:
+    pass
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io
@@ -110,14 +113,14 @@ class ProcessppAA(common_base.CommonBase):
             tree_dir = 'PWGHF_TreeCreator'
             io_hard = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                             track_tree_name='tree_Particle_gen', use_ev_id_ext=False)
-            df_fjparticles_hard = io_hard.load_data()
+            df_fjparticles_hard = io_hard.load_data(min_pt=self.min_pt)
             self.nEvents_truth = len(df_fjparticles_hard.index)
             self.nTracks_truth = len(io_hard.track_df.index)
             print('--- {} seconds ---'.format(time.time() - self.start_time))
 
             # Construct dummy combined event -- we will add thermal particles in event loop
             # (Note: deep copy of df_fjparticles does not copy underlying objects)
-            df_fjparticles_combined = io_hard.load_data()
+            df_fjparticles_combined = io_hard.load_data(min_pt=self.min_pt)
 
         # Merge hard event and background dataframes
         if self.thermal_model:
@@ -182,10 +185,12 @@ class ProcessppAA(common_base.CommonBase):
         with open(self.config_file, 'r') as stream:
           config = yaml.safe_load(stream)
           
-        self.K = max(config['K'])
+        self.K = config['K_max']
         
         self.jetR_list = config['jetR']
         self.jet_pt_bins = config['jet_pt_bins']
+        self.photon_jet = config['photon_jet']
+        self.min_pt = config['min_pt']
         self.eta_max = config['eta_max']
         self.jet_matching_distance = config['jet_matching_distance']
         self.n_total = config['n_train'] + config['n_val'] + config['n_test']
@@ -252,6 +257,10 @@ class ProcessppAA(common_base.CommonBase):
                         
                                 # Write Nsubjettiness
                                 hf.create_dataset(f'X_Nsub{suffix}', data=X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
+
+                                # Check whether any training entries are empty
+                                [print(f'WARNING: input entry {i} is empty') for i,x in enumerate(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']) if not x.any()]
+
                                 
                                 # Write labels: Pythia 0, Jewel 1
                                 if not self.test:
@@ -303,7 +312,7 @@ class ProcessppAA(common_base.CommonBase):
         
         # If thermal model, generate a thermal event and add it to the combined particle list
         if self.thermal_model and not self.test:
-            fj_particles_background = self.thermal_generator.load_event()
+            fj_particles_background = [p for p in self.thermal_generator.load_event() if p.pt() > self.min_pt]
           
             # Form the combined event
             # The hard event tracks are each stored with a unique user_index >= 0
@@ -320,20 +329,37 @@ class ProcessppAA(common_base.CommonBase):
                     fj_particles_combined.append(fj_particles_combined_beforeCS)
                 else:
                     fj_particles_combined.append(self.constituent_subtractor[i].process_event(fj_particles_combined_beforeCS))
-        
+
         # Loop through jetR, and process event for each R
         for jetR in self.jetR_list:
              
             for jet_pt_bin in self.jet_pt_bins:
-                min_jet_pt = jet_pt_bin[0]
-                max_jet_pt = jet_pt_bin[1]
                 
                 # Set jet definition and a jet selector
                 # For the hard jets, they should satisfy the pt interval
                 # For the combined jets, they can go outside, since they will be matched to hard jets
                 jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-                jet_selector_hard = fj.SelectorPtMin(min_jet_pt) & fj.SelectorPtMax(max_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
-                jet_selector_combined = fj.SelectorPtMin(min_jet_pt/5.) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+                if self.photon_jet:
+                    min_photon_E = jet_pt_bin[0]
+                    min_jet_pt = jet_pt_bin[1]
+
+                    # Check for photon
+                    found_photon = False
+                    for particle in fj_particles_hard:
+                        if particle.pid() == 22 and particle.pt() > min_photon_E:
+                            found_photon = True
+                            break
+
+                    # Define jets
+                    jet_selector_hard = fj.SelectorPtMin(min_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+                    jet_selector_combined = fj.SelectorPtMin(min_jet_pt/5.) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+
+                else:
+                    min_jet_pt = jet_pt_bin[0]
+                    max_jet_pt = jet_pt_bin[1]
+
+                    jet_selector_hard = fj.SelectorPtMin(min_jet_pt) & fj.SelectorPtMax(max_jet_pt) & fj.SelectorAbsRapMax(self.eta_max - jetR)
+                    jet_selector_combined = fj.SelectorPtMin(min_jet_pt/5.) & fj.SelectorAbsRapMax(self.eta_max - jetR)
             
                 for i, R_max in enumerate(self.max_distance):
                     #print()
@@ -385,6 +411,19 @@ class ProcessppAA(common_base.CommonBase):
     # Analyze jets of a given event.
     #---------------------------------------------------------------
     def analyze_jets(self, jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = None):
+
+        # If photon-jet, look for leading jet that passes criteria
+        if self.photon_jet:
+
+            # Find photon
+            min_photon_E = jet_pt_bin[0]
+            photon = None
+            for particle in fj_particles_hard:
+                if particle.pid() == 22 and particle.pt() > min_photon_E:
+                    photon = particle
+            
+            # Check that jet is in opposite hemisphere, otherwise remove it
+            jets_hard_selected = [jet for jet in jets_hard_selected if np.abs(photon.Delta_R(jet)) > np.pi/2]
 
         # Fill hard jet info
         if np.isclose(R_max, 0.):
