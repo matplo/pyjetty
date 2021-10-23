@@ -141,7 +141,8 @@ class PlotPPAA(common_base.CommonBase):
         with open(roc_filename, 'rb') as f:
             self.roc_curve_dict = pickle.load(f)
             self.AUC = pickle.load(f)
-            self.N_terms_lasso = pickle.load(f)
+            if 'lasso' in self.models:
+                self.N_terms_lasso = pickle.load(f)
 
         # Plot several verisons of AUC vs. K curve
         if 'neural_network' in self.models:

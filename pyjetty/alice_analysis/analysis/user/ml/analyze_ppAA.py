@@ -403,7 +403,8 @@ class AnalyzePPAA(common_base.CommonBase):
         with open(output_filename, 'wb') as f:
             pickle.dump(self.roc_curve_dict, f)
             pickle.dump(self.AUC, f)
-            pickle.dump(self.N_terms_lasso, f)
+            if 'lasso' in self.models:
+                pickle.dump(self.N_terms_lasso, f)
         
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
