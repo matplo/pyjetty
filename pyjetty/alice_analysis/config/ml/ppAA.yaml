@@ -9,7 +9,7 @@ jetR: [0.4]
 jet_pt_bins: [[100.,125.]]
 eta_max: 2.
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
-min_pt: 1.
+min_pt: 0.
 
 # Option for photon-jet -- WIP
 # If true, then jet_pt interval above becomes [photon_E_min, jet_pt_min]
@@ -34,7 +34,7 @@ constituent_subtractor:
 # Define Nsubjettiness observable basis sets to train DNN 
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
-K: [2, 4, 6, 10, 20]
+K: [5, 10, 20, 30, 40]
 
 # Load labeled data -- max currently jet_pt=[100,200]:~15k, jet_pt=[200,500]:~20k
 n_train: 150000
@@ -42,7 +42,7 @@ n_val: 30000
 n_test: 30000
 
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso
-models: [neural_network, lasso]
+models: [neural_network, pfn, efn, lasso]
 
 linear:
 

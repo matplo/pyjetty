@@ -648,7 +648,7 @@ class AnalyzePPAA(common_base.CommonBase):
                                                                            val=self.n_val, test=self.n_test)
         
         # Build architecture
-        opt = keras.optimizers.Adam(learning_rate=0.01)
+        opt = keras.optimizers.Adam(lr=0.01) # if error, change name to learning_rate
         efn = energyflow.archs.EFN(input_dim=2,
                                    Phi_sizes=model_settings['Phi_sizes'],
                                    F_sizes=model_settings['F_sizes'],
