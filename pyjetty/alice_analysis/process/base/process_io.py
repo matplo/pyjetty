@@ -36,7 +36,7 @@ class ProcessIO(common_base.CommonBase):
                track_tree_name='tree_Particle', event_tree_name='tree_event_char',
                output_dir='', is_pp=True, min_cent=0., max_cent=10.,
                use_ev_id_ext=True, is_jetscape=False, holes=False,
-               event_plane_range=None, **kwargs):
+               event_plane_range=None, skip_event_tree=False, **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
@@ -50,6 +50,7 @@ class ProcessIO(common_base.CommonBase):
     self.is_jetscape = is_jetscape
     self.holes = holes
     self.event_plane_range = event_plane_range
+    self.skip_event_tree = skip_event_tree
     if len(output_dir) and output_dir[-1] != '/':
       self.output_dir += '/'
     self.reset_dataframes()
@@ -123,33 +124,34 @@ class ProcessIO(common_base.CommonBase):
   def load_dataframe(self):
 
     # Load event tree into dataframe
-    event_tree = None
-    event_df = None
-    event_tree_name = self.tree_dir + self.event_tree_name
-    with uproot.open(self.input_file)[event_tree_name] as event_tree:
-      if not event_tree:
-        raise ValueError("Tree %s not found in file %s" % (event_tree_name, self.input_file))
-      self.event_df_orig = uproot.concatenate(event_tree, self.event_columns, library="pd")
+    if not self.skip_event_tree:
+      event_tree = None
+      event_df = None
+      event_tree_name = self.tree_dir + self.event_tree_name
+      with uproot.open(self.input_file)[event_tree_name] as event_tree:
+        if not event_tree:
+          raise ValueError("Tree %s not found in file %s" % (event_tree_name, self.input_file))
+        self.event_df_orig = uproot.concatenate(event_tree, self.event_columns, library="pd")
     
-    # Check if there are duplicated event ids
-    #print(self.event_df_orig)
-    #d = self.event_df_orig.duplicated(self.unique_identifier, keep=False)
-    #print(self.event_df_orig[d])
-    n_duplicates = sum(self.event_df_orig.duplicated(self.unique_identifier))
-    if n_duplicates > 0:
-      raise ValueError(
-        "There appear to be %i duplicate events in the event dataframe" % n_duplicates)
-    
-    # Apply event selection
-    self.event_df_orig.reset_index(drop=True)
-    if self.is_pp:
-      event_criteria = 'is_ev_rej == 0'
-    else:
-      event_criteria = 'is_ev_rej == 0 and centrality > @self.min_centrality and centrality < @self.max_centrality'
-    if self.event_plane_range:
-      event_criteria += ' and event_plane_angle > @self.event_plane_range[0] and event_plane_angle < @self.event_plane_range[1]'
-    event_df = self.event_df_orig.query(event_criteria)
-    event_df.reset_index(drop=True)
+      # Check if there are duplicated event ids
+      #print(self.event_df_orig)
+      #d = self.event_df_orig.duplicated(self.unique_identifier, keep=False)
+      #print(self.event_df_orig[d])
+      n_duplicates = sum(self.event_df_orig.duplicated(self.unique_identifier))
+      if n_duplicates > 0:
+        raise ValueError(
+          "There appear to be %i duplicate events in the event dataframe" % n_duplicates)
+      
+      # Apply event selection
+      self.event_df_orig.reset_index(drop=True)
+      if self.is_pp:
+        event_criteria = 'is_ev_rej == 0'
+      else:
+        event_criteria = 'is_ev_rej == 0 and centrality > @self.min_centrality and centrality < @self.max_centrality'
+      if self.event_plane_range:
+        event_criteria += ' and event_plane_angle > @self.event_plane_range[0] and event_plane_angle < @self.event_plane_range[1]'
+      event_df = self.event_df_orig.query(event_criteria)
+      event_df.reset_index(drop=True)
 
     # Load track tree into dataframe
     track_tree = None
@@ -179,7 +181,10 @@ class ProcessIO(common_base.CommonBase):
         "There appear to be %i duplicate particles in the track dataframe" % n_duplicates)
 
     # Merge event info into track tree
-    self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)
+    if self.skip_event_tree:
+      self.track_df = track_df_orig
+    else:
+      self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)
     
     # Check if there are duplicated tracks in the merge dataframe
     #print(self.track_df)
