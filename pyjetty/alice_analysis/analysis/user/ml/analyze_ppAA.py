@@ -93,6 +93,9 @@ class AnalyzePPAA(common_base.CommonBase):
         self.val_frac = 1. * self.n_val / (self.n_train + self.n_val)
         
         self.K_list = config['K']
+
+        self.pp_generator = config['pp_generator']
+        self.AA_generator = config['AA_generator']
         
         # Initialize model-specific settings
         self.config = config
@@ -136,6 +139,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['F_sizes'] = tuple(config[model]['F_sizes'])
                 self.model_settings[model]['epochs'] = config[model]['epochs']
                 self.model_settings[model]['batch_size'] = config[model]['batch_size']
+                self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
                 
             if model == 'lasso':
                 self.K_lasso = config[model]['K_lasso']
@@ -443,9 +447,9 @@ class AnalyzePPAA(common_base.CommonBase):
         
         # Compare AUC on train set and test set
         AUC_train = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
-        print(f'AUC = {AUC_train} (train set)')
-        AUC_test = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
-        print(f'AUC = {AUC_test} (test set)')
+        print(f'AUC = {AUC_train} (cross-val train set)')
+        #AUC_test = sklearn.metrics.roc_auc_score(self.y_train, y_predict_train)
+        #print(f'AUC = {AUC_test} (test set)')
         print()
 
         # Compute ROC curve: the roc_curve() function expects labels and scores
@@ -648,7 +652,7 @@ class AnalyzePPAA(common_base.CommonBase):
                                                                            val=self.n_val, test=self.n_test)
         
         # Build architecture
-        opt = keras.optimizers.Adam(lr=0.01) # if error, change name to learning_rate
+        opt = keras.optimizers.Adam(lr=model_settings['learning_rate']) # if error, change name to learning_rate
         efn = energyflow.archs.EFN(input_dim=2,
                                    Phi_sizes=model_settings['Phi_sizes'],
                                    F_sizes=model_settings['F_sizes'],
@@ -905,7 +909,7 @@ class AnalyzePPAA(common_base.CommonBase):
                                    bins,
                                    histtype='step',
                                    density=True,
-                                   label = 'JEWEL',
+                                   label = self.AA_generator,
                                    linewidth=2,
                                    linestyle='-',
                                    alpha=0.5)
@@ -913,7 +917,7 @@ class AnalyzePPAA(common_base.CommonBase):
                                     bins,
                                     histtype='step',
                                     density=True,
-                                    label = 'PYTHIA',
+                                    label = self.pp_generator,
                                     linewidth=2,
                                     linestyle='-',
                                     alpha=0.5)
@@ -995,8 +999,8 @@ class AnalyzePPAA(common_base.CommonBase):
         df_pythia = pd.DataFrame(X_Nsub_pythia, columns=self.training_data[K]['feature_labels'])
         
         # Add label columns to each df to differentiate them for plotting
-        df_jewel['generator'] = np.repeat('JEWEL', X_Nsub_jewel.shape[0])
-        df_pythia['generator'] = np.repeat('PYTHIA', X_Nsub_pythia.shape[0])
+        df_jewel['generator'] = np.repeat(self.AA_generator, X_Nsub_jewel.shape[0])
+        df_pythia['generator'] = np.repeat(self.pp_generator, X_Nsub_pythia.shape[0])
                 
         # Plot scatter matrix
         df = df_jewel.append(df_pythia)

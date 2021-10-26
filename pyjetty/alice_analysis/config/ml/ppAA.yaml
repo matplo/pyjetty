@@ -41,6 +41,10 @@ n_train: 150000
 n_val: 30000
 n_test: 30000
 
+# Generator labels
+pp_generator: 'PYTHIA8'
+AA_generator: 'JEWEL'
+
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso
 models: [neural_network, pfn, efn, lasso]
 
@@ -94,6 +98,7 @@ efn:
     F_sizes: [100, 100, 100]
 
     # Network training parameters
+    learning_rate: 0.001
     epochs: 30                   # number of training epochs
     batch_size: 500
     
