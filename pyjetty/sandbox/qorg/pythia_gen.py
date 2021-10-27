@@ -49,7 +49,7 @@ def main():
 	args = parser.parse_args()
 
 	if args.hepmc:
-		hepmc2_output_base = "pythia_gen_qor.hepmc"
+		hepmc2_output_base = "pythia_gen_qorg.hepmc"
 		hepmc2_output_name = None
 		hepmc2_writer = None
 		hepmc2_fileno = 0
@@ -58,7 +58,7 @@ def main():
 		if root_avail is None:
 			print('[error] unable to load ROOT so --ml is defunct')
 			args.ml = False
-		ml_root_output_base = "pythia_gen_qor.root"
+		ml_root_output_base = "pythia_gen_qorg.root"
 		ml_root_output_name = None
 		ml_root_file = None
 		ml_root_ntuple_parts = None
@@ -118,7 +118,7 @@ def main():
 				ml_root_ntuple_parts.Fill(run_number, event_number, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
 
 	pythia.stat()
-	pythia.settings.writeFile(format_output_file('pythia_gen_qor.cmnd', -1, args))
+	pythia.settings.writeFile(format_output_file('pythia_gen_qorg.cmnd', -1, args))
 
 	if args.ml:
 		if ml_root_file:
