@@ -94,8 +94,8 @@ class AnalyzePPAA(common_base.CommonBase):
         
         self.K_list = config['K']
 
-        self.pp_generator = config['pp_generator']
-        self.AA_generator = config['AA_generator']
+        self.pp_label = config['pp_label']
+        self.AA_label = config['AA_label']
         
         # Initialize model-specific settings
         self.config = config
@@ -909,7 +909,7 @@ class AnalyzePPAA(common_base.CommonBase):
                                    bins,
                                    histtype='step',
                                    density=True,
-                                   label = self.AA_generator,
+                                   label = self.AA_label,
                                    linewidth=2,
                                    linestyle='-',
                                    alpha=0.5)
@@ -917,7 +917,7 @@ class AnalyzePPAA(common_base.CommonBase):
                                     bins,
                                     histtype='step',
                                     density=True,
-                                    label = self.pp_generator,
+                                    label = self.pp_label,
                                     linewidth=2,
                                     linestyle='-',
                                     alpha=0.5)
@@ -999,8 +999,8 @@ class AnalyzePPAA(common_base.CommonBase):
         df_pythia = pd.DataFrame(X_Nsub_pythia, columns=self.training_data[K]['feature_labels'])
         
         # Add label columns to each df to differentiate them for plotting
-        df_jewel['generator'] = np.repeat(self.AA_generator, X_Nsub_jewel.shape[0])
-        df_pythia['generator'] = np.repeat(self.pp_generator, X_Nsub_pythia.shape[0])
+        df_jewel['generator'] = np.repeat(self.AA_label, X_Nsub_jewel.shape[0])
+        df_pythia['generator'] = np.repeat(self.pp_label, X_Nsub_pythia.shape[0])
                 
         # Plot scatter matrix
         df = df_jewel.append(df_pythia)

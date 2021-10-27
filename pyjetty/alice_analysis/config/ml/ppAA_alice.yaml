@@ -5,28 +5,29 @@
 #------------------------------------------------------------------------------
 
 K_max: 50
-jetR: [0.4]
-jet_pt_bins: [[100.,125.]]
-eta_max: 2.
+jetR: [0.2]
+jet_pt_bins: [[40.,60.], [60.,80.], [80,120.]]
+eta_max: 0.9
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+reject_tracks_fraction: 0.02
 min_pt: 0.
-leading_track_pt: 0.
-
-# Option for photon-jet -- WIP
-# If true, then jet_pt interval above becomes [photon_E_min, jet_pt_min]
+leading_track_pt: 5.
 photon_jet: False
 
-thermal_model: 
-  beta: 0.4
-  N_avg: 10000
-  sigma_N: 500
+#thermal_model: 
+#  beta: 0.4
+#  N_avg: 2500
+#  sigma_N: 500
 
 constituent_subtractor:
-  max_distance: [0, 0.25]
+  max_distance: [0.25]
   alpha: 0
   bge_rho_grid_size: 1.0
   max_pt_correct: 100
   ghost_area: 0.01
+
+emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
 
 #------------------------------------------------------------------------------
 # All parameters below are only used in the analysis script
@@ -38,13 +39,13 @@ constituent_subtractor:
 K: [5, 10, 20, 30, 40]
 
 # Load labeled data
-n_train: 150000
-n_val: 30000
-n_test: 30000
+n_train: 20000
+n_val: 4000
+n_test: 4000
 
 # Classification labels
-pp_label: 'PYTHIA8'
-AA_label: 'JEWEL'
+pp_label: 'pp'
+AA_label: 'Pb-Pb'
 
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso
 models: [neural_network, pfn, efn, lasso]
