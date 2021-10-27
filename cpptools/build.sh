@@ -74,6 +74,14 @@ fi
 
 configure_only=$(get_opt "configure-only" $@)
 
+RFEAT=$(root-config --features)
+echo $RFEAT
+cxxstd=cxx14
+if grep -q "$cxxstd" <<< "$RFEAT"; then
+    CXX_STD=-DCMAKE_CXX_STANDARD=14
+    warning "setting $CXX_STD because or ROOT w/ cxx14"
+fi
+
 echo "[i] building in ${build_path}"
 mkdir -p ${build_path}
 if [ -d ${build_path} ]; then
@@ -83,13 +91,14 @@ if [ -d ${build_path} ]; then
             -DCMAKE_INSTALL_PREFIX=${install_path} -DCMAKE_BUILD_TYPE=${build_configuration} \
             ${build_tenngen} \
             ${build_tglaubermc} \
+	    ${CXX_STD} \
             ${THISD}
     if [ "x${configure_only}" == "xyes" ]; then
         warning "stopping short of building...- configure-only requested"
         exit 0
     fi
     separator "build"
-    cmake --build . --target all -- -j $(n_cores) && cmake --build . --target install
+    cmake  --build . --target all -- -j $(n_cores) && cmake --build . --target install
     # separator "install"
 else
 	error "unable to access build path: ${build_path}"
