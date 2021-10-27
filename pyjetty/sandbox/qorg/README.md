@@ -4,8 +4,7 @@
 
 ## script runs
 
-````
-
+```
   # quarks and gluons
   ${THISD}/pythia_gen.py                     --py-noue --py-pthatmin 100. --py-seed ${seed} --ml --nev ${nev}
 
@@ -14,7 +13,6 @@
 
   # only ff->qq or ff->qqbar
 	${THISD}/pythia_gen.py --py-hardQCDquarks --py-noue --py-pthatmin 100. --py-seed ${seed} --ml --nev ${nev}
-
 ```
 
 ## notes
@@ -27,6 +25,7 @@
 ### pythia settings
 
 - any q or glue
+
 ```
 ! List of all modified PYTHIA 8.244 settings.
 HardQCD:all = on
@@ -42,6 +41,7 @@ Random:setSeed = on
 ```
 
 - only gluons 
+
 ```
 ! List of all modified PYTHIA 8.244 settings.
 HardQCD:gg2gg = on
@@ -58,6 +58,7 @@ Random:setSeed = on
 ```
 
 - only quarks 
+
 ```
 ! List of all modified PYTHIA 8.244 settings.
 HardQCD:gg2qqbar = on
