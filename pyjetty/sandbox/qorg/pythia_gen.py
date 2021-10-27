@@ -87,7 +87,7 @@ def main():
 				if hepmc2_writer:
 					del hepmc2_writer
 				hepmc2_output_name = format_output_file(hepmc2_output_base, hepmc2_fileno, args)
-				print('[i] new file', hepmc2_output_name)
+				# print('[i] new file', hepmc2_output_name)
 				hepmc2_writer = pythiaext.Pythia8HepMC2Wrapper(hepmc2_output_name)
 				hepmc2_fileno = hepmc2_fileno + 1
 			if args.ml:
@@ -105,7 +105,7 @@ def main():
 				ml_root_ntuple_parts = ROOT.TNtuple('tree_Particle_gen', 'particles from PYTHIA8 - {} jets'.format(parton_type_from_args(args)), 
 								'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
 				ml_root_ntuple_ev = ROOT.TNtuple('tree_Event_gen', 'event info from PYTHIA8 - {} jets'.format(parton_type_from_args(args)), 
-								'run_number:ev_id:xsec')
+								'run_number:ev_id:xsec:code')
 				ml_root_fileno = ml_root_fileno + 1
 
 		if args.hepmc:
@@ -113,7 +113,7 @@ def main():
 
 		if args.ml:
 			parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
-			ml_root_ntuple_ev.Fill(run_number, event_number, pythia.info.sigmaGen())
+			ml_root_ntuple_ev.Fill(run_number, event_number, pythia.info.sigmaGen(), pythia.info.code())
 			for p in parts_pythia_h:
 				ml_root_ntuple_parts.Fill(run_number, event_number, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
 
