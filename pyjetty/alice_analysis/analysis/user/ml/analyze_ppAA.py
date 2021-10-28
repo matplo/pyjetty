@@ -149,6 +149,11 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['n_iter'] = config[model]['n_iter']
                 self.model_settings[model]['cv'] = config[model]['cv']
                 self.model_settings[model]['random_state'] = config[model]['random_state']
+                
+            if model == 'efp':
+                self.dmax = config[model]['dmax']
+                self.measure = config[model]['measure']
+                self.beta_efp = config[model]['beta']             
 
     #---------------------------------------------------------------
     # Main processing function
@@ -346,6 +351,8 @@ class AnalyzePPAA(common_base.CommonBase):
                             self.roc_curve_dict['DNN'] = {}
                         if 'lasso' in self.models:
                             self.roc_curve_dict['Lasso'] = {}
+                        if 'efp' in self.models:
+                            self.roc_curve_dict['efp'] = {}
 
                         # Plot the input data
                         jet_pt_bin_rounded = [int(pt) for pt in jet_pt_bin]
@@ -395,6 +402,9 @@ class AnalyzePPAA(common_base.CommonBase):
                 
             if model == 'efn':
                 self.fit_efn(model_settings)
+                
+            if model == 'efp':
+                self.fit_efp(model_settings)
 
         # Plot traditional observables
         self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_mass'])
@@ -773,7 +783,61 @@ class AnalyzePPAA(common_base.CommonBase):
                     n_terms += 1
             print(f'Observable: {observable}')
             self.N_terms_lasso[alpha] = n_terms
+            
+    #---------------------------------------------------------------
+    # Fit ML model -- 7. Energy Flow Polynomials (EFP)
+    #---------------------------------------------------------------
+    def fit_efp(self, model_settings):
+    
+        # Load labels and convert labels to categorical
+        Y_EFP = self.y #Note not "to_categorical" here... 
+                        
+        # Load data, four vectors. Format: (pT,y,phi,m=0). Note: no PID yet which would be 5th entry... check later!
+        # To make sure, don't need any further preprocessing like for EFNs?
+        X_EFP = self.X_particles
 
+        # Switch here to Jesse's quark/gluon data set.
+        #X_EFP, Y_EFP = energyflow.datasets.qg_jets.load(self.n_train + self.n_val + self.n_test)
+        
+        # Will calculate EFPs
+        # Need to check beta dependence !!
+        print('Calculating d <= {} EFPs for {} jets... '.format(self.dmax, self.n_train + self.n_val + self.n_test), end='')
+        
+        # Specify parameters of EFPs
+        efpset = energyflow.EFPSet(('d<=', self.dmax), measure=self.measure, beta=self.beta_efp)
+        
+        # Convert to list of np.arrays of jets in format (pT,y,phi,mass or PID) -> dim: (# jets, # particles in jets, #4)
+        # and remove zero entries
+        masked_X_EFP = [x[x[:,0] > 0] for x in X_EFP]
+        
+        # Now compute EFPs
+        X_EFP = efpset.batch_compute(masked_X_EFP)
+        print('Done')     
+
+        # Loop over different values of the EFP degree here.
+        for d in range(1, self.dmax+1):
+        
+            # Build linear model architecture (take from energyflow package)
+            model = energyflow.archs.LinearClassifier(linclass_type='lda')
+    
+            # Select EFPs with degree <= d
+            X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+    
+            # Do train/val/test split (Note: validation set not used here.)
+            (X_EFP_train, X_EFP_val, X_EFP_test, Y_EFP_train, Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
+    
+            # train model
+            history = model.fit(X_EFP_train, Y_EFP_train)
+    
+            # get predictions on test data
+            preds_EFP = model.predict(X_EFP_test)        
+        
+            # Get AUC and ROC curve + make plot
+            auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
+            print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
+        
+        exit()
+        
     #---------------------------------------------------------------
     # Return N,beta from N-subjettiness index
     #---------------------------------------------------------------

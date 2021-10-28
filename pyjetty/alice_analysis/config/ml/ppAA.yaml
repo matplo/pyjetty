@@ -38,16 +38,16 @@ constituent_subtractor:
 K: [5, 10, 20, 30, 40]
 
 # Load labeled data
-n_train: 150000
-n_val: 30000
-n_test: 30000
+n_train: 89000
+n_val: 1000
+n_test: 10000
 
 # Classification labels
 pp_label: 'PYTHIA8'
 AA_label: 'JEWEL'
 
-# Select model: linear, random_forest, neural_network, pfn, efn, lasso
-models: [neural_network, pfn, efn, lasso]
+# Select model: linear, random_forest, neural_network, pfn, efn, lasso, efp
+models: [efp]
 
 linear:
 
@@ -118,3 +118,13 @@ lasso:
     cv: 5                        # number of cross-validation folds
     
     random_state: null           # seed for shuffling data (set to an int to have reproducible results)
+    
+efp:
+
+    # efp parameters
+    dmax: 5
+    measure: 'hadr'
+    beta: 0.5
+
+
+
