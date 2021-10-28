@@ -139,13 +139,16 @@ class ProcessppAA(common_base.CommonBase):
                 # (separate dataframes for hard process and background)
                 # Use IO helper class to convert truth-level ROOT TTree into
                 # a SeriesGroupBy object of fastjet particles per event
-                tree_dir = 'PWGHF_TreeCreator'
+                is_jetscape = 'Jetscape' in self.input_file
                 skip_event_tree = 'pyquen' in self.input_file or 'pythia_gen_qorg' in self.input_file
+                tree_dir = 'PWGHF_TreeCreator'
                 if skip_event_tree:
                     tree_dir = ''
+
                 io_hard = process_io.ProcessIO(input_file=self.input_file, tree_dir=tree_dir,
                                                 track_tree_name='tree_Particle_gen', use_ev_id_ext=False,
-                                                skip_event_tree=skip_event_tree)
+                                                skip_event_tree=skip_event_tree, 
+                                                is_jetscape=is_jetscape, holes=False)
                 df_fjparticles_hard = io_hard.load_data(min_pt=self.min_pt)
                 self.nEvents_truth = len(df_fjparticles_hard.index)
                 self.nTracks_truth = len(io_hard.track_df.index)
@@ -316,7 +319,7 @@ class ProcessppAA(common_base.CommonBase):
                                     self.y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
                                 else:
                                     if not self.test:
-                                        if 'jewel_PbPb' in self.input_file or 'pyquen' in self.input_file or 'qorg_glue' in self.input_file:
+                                        if 'jewel_PbPb' in self.input_file or 'pyquen' in self.input_file or 'qorg_glue' in self.input_file or 'Jetscape' in self.input_file:
                                             self.y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
                                         else:
                                             self.y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])

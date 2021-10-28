@@ -4,10 +4,10 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=quick
 #SBATCH --time=2:00:00
-#SBATCH --array=1-300
+#SBATCH --array=1-200
 #SBATCH --output=/rstorage/ml/egml/nsubjettiness/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/ml/egml/data/py8qorg/files.txt'
+FILE_PATHS='/rstorage/ml/egml/data/py8qorg/pThat500/quark-gluon/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
