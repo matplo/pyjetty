@@ -30,16 +30,12 @@ OUTPUT_DIR="/rstorage/generators/jewel_alice/tree_fastsim/$JOB_ID/$OUTPUT_SUFFIX
 echo "Output dir: $OUTPUT_DIR"
 mkdir -p $OUTPUT_DIR
 
-pip list
-
 # Load modules
 module use /software/users/james/heppy/modules
 module load heppy/1.0
 module use /software/users/james/pyjetty/modules
 module load pyjetty/1.0
 module list
-
-pip list
 
 # Run main script
 cd /software/users/james/pyjetty/pyjetty/alice_analysis/process/user/fastsim
