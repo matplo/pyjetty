@@ -493,8 +493,9 @@ class ProcessppAA(common_base.CommonBase):
                             four_vectors_in_cone_afterCS += [np.array([0,0,0,0])]*(n_max-len(four_vectors_in_cone_afterCS))
 
                             # Append list of four-vectors to output
-                            self.four_vectors['combined'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_beforeCS'].append(four_vectors_in_cone_beforeCS)
-                            self.four_vectors['combined'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS'].append(four_vectors_in_cone_afterCS)
+                            # Note: need to store with "hard" so that labels are correct 
+                            self.four_vectors['hard'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_beforeCS'].append(four_vectors_in_cone_beforeCS)
+                            self.four_vectors['hard'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS'].append(four_vectors_in_cone_afterCS)
 
         self.event_index += 1
         if self.event_index%100 == 0:
