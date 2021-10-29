@@ -7,7 +7,7 @@
 #SBATCH --array=1-100
 #SBATCH --output=/rstorage/ml/egml/nsubjettiness/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/ml/egml/data/files_pthat100_pyquen.txt'
+FILE_PATHS='/rstorage/ml/egml/data/pyquen/1_0_1_100k_0fm/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 

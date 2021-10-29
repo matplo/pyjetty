@@ -200,7 +200,9 @@ class ProcessppAA(common_base.CommonBase):
                                 beta = self.beta_list[i]
                                 self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'] = []
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
-                            
+                            self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_beforeCS'] = []
+                            self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS'] = []
+
                             # Some QA
                             self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
                             for qa_observable in self.qa_observables:
@@ -334,6 +336,12 @@ class ProcessppAA(common_base.CommonBase):
                                 print(f'Rmax{R_max}')
                                 print(X.shape)
 
+                                # Write cone four-vectors for constituent subtraction study
+                                X_beforeCS = self.four_vectors_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_beforeCS']
+                                hf.create_dataset(f'cone_four_vectors_beforeCS{suffix}', data=X_beforeCS)
+                                X_afterCS = self.four_vectors_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS']
+                                hf.create_dataset(f'cone_four_vectors_afterCS{suffix}', data=X_afterCS)
+
                                 # If test, compare four-vectors after jet-finding to those before jet-finding
                                 if self.test:
                                     print(f'four-vectors before jet finding: {self.X}')
@@ -453,10 +461,40 @@ class ProcessppAA(common_base.CommonBase):
                             cs_hard = fj.ClusterSequence(fj_particles_hard, jet_def)
                             jets_hard = fj.sorted_by_pt(cs_hard.inclusive_jets())
                             jets_hard_selected = jet_selector_hard(jets_hard)
+
                         else:
                             jets_hard_selected = None
         
                     self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = R_max)
+
+                    # Study the effect of constituent subtraction in a fixed cone surrounding the leading hard jet
+                    # Loop through hard jets, and record four-vectors before and after constituent subtraction
+                    if R_max > 0:
+                        for jet in jets_hard_selected:
+
+                            four_vectors_in_cone_beforeCS = []
+                            four_vectors_in_cone_afterCS = []
+
+                            for p in fj_particles_combined_beforeCS:
+                                if jet.delta_R(p) < jetR:
+                                    four_vectors_in_cone_beforeCS.append(np.array([p.perp(), p.rapidity(), p.phi_02pi(), 0.]))
+
+                            for p in fj_particles_combined[i]:
+                                if jet.delta_R(p) < jetR:
+                                    four_vectors_in_cone_afterCS.append(np.array([p.perp(), p.rapidity(), p.phi_02pi(), 0.]))
+
+                            # Zero pad such that all jets have the same number of four-vectors
+                            n_max = 800
+                            if len(four_vectors_in_cone_beforeCS) > n_max:
+                                sys.exit(f'ERROR: particle list has {len(four_vectors_in_cone_beforeCS)} entries before zero-padding')
+                            four_vectors_in_cone_beforeCS += [np.array([0,0,0,0])]*(n_max-len(four_vectors_in_cone_beforeCS))
+                            if len(four_vectors_in_cone_afterCS) > n_max:
+                                sys.exit(f'ERROR: particle list has {len(four_vectors_in_cone_afterCS)} entries before zero-padding')
+                            four_vectors_in_cone_afterCS += [np.array([0,0,0,0])]*(n_max-len(four_vectors_in_cone_afterCS))
+
+                            # Append list of four-vectors to output
+                            self.four_vectors['combined'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_beforeCS'].append(four_vectors_in_cone_beforeCS)
+                            self.four_vectors['combined'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS'].append(four_vectors_in_cone_afterCS)
 
         self.event_index += 1
         if self.event_index%100 == 0:
