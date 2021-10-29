@@ -62,6 +62,9 @@ class AnalyzePPAA(common_base.CommonBase):
             
         self.filename = 'nsubjettiness_with_four_vectors_unshuffled.h5'
         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
+            keys_are = list(hf.keys())
+#            print(keys_are)
+#            exit()
             self.N_list = hf['N_list'][:]
             self.beta_list = hf['beta_list'][:]
             self.delta_pt_random_cone = hf['delta_pt_random_cone'][:]
@@ -835,8 +838,12 @@ class AnalyzePPAA(common_base.CommonBase):
             # Get AUC and ROC curve + make plot
             auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
             print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
-        
-        exit()
+            
+            # Store AUC
+            self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
+            
+            # Get & store ROC curve
+            self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
         
     #---------------------------------------------------------------
     # Return N,beta from N-subjettiness index

@@ -6,7 +6,7 @@
 
 K_max: 50
 jetR: [0.4]
-jet_pt_bins: [[100.,125.]]
+jet_pt_bins: [[100.,125.]] #[[500.,550.]] 
 eta_max: 2.
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 min_pt: 0.
@@ -38,8 +38,8 @@ constituent_subtractor:
 K: [5, 10, 20, 30, 40]
 
 # Load labeled data
-n_train: 89000
-n_val: 1000
+n_train: 80000
+n_val: 10000
 n_test: 10000
 
 # Classification labels
@@ -100,7 +100,7 @@ efn:
 
     # Network training parameters
     learning_rate: 0.001
-    epochs: 30                   # number of training epochs
+    epochs: 5                   # number of training epochs
     batch_size: 500
     
 lasso:
@@ -125,6 +125,3 @@ efp:
     dmax: 5
     measure: 'hadr'
     beta: 0.5
-
-
-

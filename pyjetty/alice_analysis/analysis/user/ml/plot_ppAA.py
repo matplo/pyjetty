@@ -79,6 +79,7 @@ class PlotPPAA(common_base.CommonBase):
         self.K_list = config['K']
         self.models = config['models']
         self.K_lasso = config['lasso']['K_lasso']
+        self.dmax = config['efp']['dmax']
         
         # Initialize model-specific settings
         self.config = config
@@ -200,6 +201,12 @@ class PlotPPAA(common_base.CommonBase):
                 roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
+            
+        if 'efp' in self.models:
+            roc_list = {}
+            for d in range(1, self.dmax+1):
+                roc_list[f'EFP (d = {d})'] = self.roc_curve_dict['efp'][d]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
 
     #--------------------------------------------------------------- 
     # Plot ROC curves
@@ -238,6 +245,11 @@ class PlotPPAA(common_base.CommonBase):
                 reg_param = float(re.search('= (.*)\)', label).group(1))
                 n_terms = self.N_terms_lasso[reg_param]
                 label += f', {n_terms} terms'
+            else:
+                linewidth = 2
+                alpha = 0.9
+                linestyle = 'solid'
+                color=sns.xkcd_rgb['medium green']
                 
             FPR = value[0]
             TPR = value[1]
@@ -273,6 +285,11 @@ class PlotPPAA(common_base.CommonBase):
                 linewidth = 4
                 alpha = 0.5
                 linestyle = 'solid'
+            else:
+                linewidth = 2
+                alpha = 0.9
+                linestyle = 'solid'
+                color=sns.xkcd_rgb['medium green']
                 
             FPR = value[0]
             TPR = value[1]
