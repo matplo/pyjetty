@@ -1,0 +1,85 @@
+# Processing parameters
+jetR: [0.2, 0.4]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+# Uncomment for data // comment for MC
+reject_tracks_fraction: 0
+
+# Mass assumption for track/jet reconstruction
+track_mass: 0.13957         # Pion mass in GeV/c^2
+track_random_mass: True     # Whether to randomly assign K and p mass to some tracks
+
+# Background subtraction parameters for Pb-Pb
+constituent_subtractor:
+  max_distance: 
+    0.2: [0.05, 0.1, 0.5]
+    0.4: [0.05, 0.25, 0.7]
+  main_R_max:
+    0.2: 0.1
+    0.4: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+# Parameters needed for MC processing in Pb-Pb
+#dry_run: False
+#fast_simulation: False
+#emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
+#mc_fraction_threshold: 0.5
+# Uncommend for MC // comment for data
+#reject_tracks_fraction: 0.02
+
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  common_settings:
+    xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
+
+  ############################################################################
+  # Different alpha configurations
+  config_1:
+    alpha: 1
+
+  config_1.5:
+    alpha: 1.5
+
+  config_2:
+    alpha: 2
+
+  config_3:
+    alpha: 3
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_1_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 1
+
+  config_1.5_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 1.5
+
+  config_2_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 2
+
+  config_3_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 3

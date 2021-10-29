@@ -63,13 +63,17 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
           if self.is_pp:
             self.create_ang_histograms(observable, jetR, obs_label)
           else:
-            for R_max in self.max_distance:
+            max_distance = self.max_distance if isinstance(self.max_distance, list) else \
+                           self.max_distance[jetR]
+            for R_max in max_distance:
               self.create_ang_histograms(observable, jetR, obs_label, R_max)
               if R_max == self.main_R_max:
                 self.create_ang_histograms(observable, jetR, obs_label, str(R_max)+'_matched')
 
           if self.thermal_model:
-            for R_max in self.max_distance:
+            max_distance = self.max_distance if isinstance(self.max_distance, list) else \
+                           self.max_distance[jetR]
+            for R_max in max_distance:
               name = 'h_%s_JetPt_R%s_%s_Rmax%s' % (observable, jetR, obs_label, R_max)
               h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1)
               h.GetXaxis().SetTitle('#it{p}_{T}^{ch jet}')

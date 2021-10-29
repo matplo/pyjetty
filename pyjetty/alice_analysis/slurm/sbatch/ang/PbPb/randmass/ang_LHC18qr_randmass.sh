@@ -29,7 +29,7 @@ fi
 # Define output path from relevant sub-path of input file
 OUTPUT_PREFIX="AnalysisResults/ang/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
-OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f8-10)
+OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f7-9)
 #echo $OUTPUT_SUFFIX
 OUTPUT_DIR="/rstorage/alice/$OUTPUT_PREFIX/$OUTPUT_SUFFIX/"
 mkdir -p $OUTPUT_DIR
@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /home/ezra/pyjetty/pyjetty/alice_analysis/
-python process/user/ang/process_mc_ang.py -c config/ang/PbPb/process_angularity_PbPb_embedding.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+python process/user/ang/process_data_ang.py -c config/ang/PbPb/process_angularity_PbPb_randmass.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/ang/${JOB_ID}
