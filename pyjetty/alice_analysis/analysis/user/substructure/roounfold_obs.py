@@ -51,7 +51,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.suffix = suffix
 
     self.initialize_config()
-    
+
     self.histutils = ROOT.RUtil.HistUtils()
 
     self.get_responses(rebin_response)
@@ -71,7 +71,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     # Create output directories for unfolding plots
     self.create_output_dirs()
-    
+
     self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
                        ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
                        ROOT.kOrange-3]
@@ -156,10 +156,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         n_obs_bins_truth = len(obs_bins_truth) - 1
         det_obs_bin_array = array('d',obs_bins_det)
         truth_obs_bin_array = array('d',obs_bins_truth)
-        
+
         self.xmin = self.obs_config_dict[config_name]['obs_bins_truth'][0]
         self.xmax = self.obs_config_dict[config_name]['obs_bins_truth'][-1]
-        
+
         # For SD, fill underflow bin to include untagged fraction in the unfolding
         # If underflow is activated, create a new underflow bin for the observable
         if grooming_setting:
@@ -168,7 +168,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
             n_obs_bins_det += 1
             truth_obs_bin_array.insert(0, truth_obs_bin_array[0] - 0.1)
             n_obs_bins_truth += 1
-        
+
         setattr(self, 'n_bins_det_{}'.format(obs_label), n_obs_bins_det)
         setattr(self, 'n_bins_truth_{}'.format(obs_label), n_obs_bins_truth)
         setattr(self, 'det_bin_array_{}'.format(obs_label), det_obs_bin_array)
@@ -190,7 +190,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       self.reg_param_name = 'n_iter'
       self.errorType = ROOT.RooUnfold.kCovToy
-      
+
       # Get shape variation parameter for closure test
       self.prior_variation_option = config['prior_variation_option']
       self.shape_variation_parameter1 = config['prior1_variation_parameter']
@@ -230,7 +230,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         det_bin_array = getattr(self, 'det_bin_array_{}'.format(obs_label))
         n_bins_truth = getattr(self, 'n_bins_truth_{}'.format(obs_label))
         truth_bin_array = getattr(self, 'truth_bin_array_{}'.format(obs_label))
-        
+
         # For SD, fill underflow bin to include untagged fraction in the unfolding
         # If underflow is activated, create a new underflow bin for the observable
         if grooming_setting:
@@ -247,10 +247,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           thn.SetName(name_thn)
         except AttributeError:
           # Give a more helpful error message for debugging
-          raise AttributeError("%s not found in file %s" % (name_thn, response_file_name))
+          raise AttributeError("%s not found in file %s" % (name_thn, self.input_file_response))
         setattr(self, name_thn, thn)
         if rebin_response:
-        
+
           # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
           label = 'R{}_{}'.format(jetR, obs_label)
           if use_histutils:
@@ -278,12 +278,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         # Get data histogram
         hData = self.fData.Get(name_data)
-        
+
         # If thermal model, smear input spectrum
         if self.thermal_model:
             measuredErrors = self.getMeasuredErrors(hData)
             self.smearSpectrum(hData, measuredErrors)
-        
+
         # Re-bin the data histogram
         if use_histutils:
           h = self.histutils.rebin_th2(hData, name_data, det_pt_bin_array, n_pt_bins_det,
@@ -291,7 +291,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         else:
           h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array,
                                     n_bins_det, det_bin_array, move_underflow=move_underflow)
-                              
+
         h.SetDirectory(0)
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
         setattr(self, name, h)
@@ -321,7 +321,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       dirs.append('Unfolded_ratio_to_final')
     if self.thermal_model:
       dirs.append('Test_ThermalClosure')
-      
+
     for i in dirs:
       output_dir = os.path.join(self.output_dir, i)
       setattr(self, 'output_dir_{}'.format(i), output_dir)
@@ -348,7 +348,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     # Plot various slices of the response matrix (from the THn)
     self.plot_RM_slices(jetR, obs_label, grooming_setting)
-    
+
     # Plot the kinematic efficiency from the response THn, and save it as an attribute
     self.plot_kinematic_efficiency(jetR, obs_label, obs_setting, grooming_setting)
 
@@ -444,16 +444,16 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       # Plot unfolded distribution for each successive iteration
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth)
-                           
+
       # Plot ratio of unfolded result for each successive iteration
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, option = 'ratio')
-                           
+
       # Plot ratio of each iteration to final iteration (only if manual reg param)
       if not self.use_max_reg_param:
           self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                                min_pt_truth, max_pt_truth, option = 'ratio_to_final', reg_param_final=reg_param_final)
-                               
+
       # Plot statistical uncertainties for each iteration
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, option = 'stat_uncert')
@@ -506,7 +506,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           h.Divide(h_previous)
         else:
           continue
-          
+
       elif option == 'ratio_to_final':
           print(reg_param_final)
           h_final = self.get_unfolded_result(jetR, obs_label, reg_param_final, min_pt_truth,
@@ -516,7 +516,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       elif option == 'stat_uncert':
         h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth,
                                                    max_pt_truth, option)
-                                                   
+
       elif option == '' and i == reg_param_final + 2:
         # Get input distribution
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
@@ -603,7 +603,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       label = '{} = {}'.format(self.reg_param_name, i)
       leg.AddEntry(h, label, 'Pe')
-      
+
       # Plot input spectrum
       if h_data and i == reg_param_final + 2:
         h_data.SetLineColor(1)
@@ -611,7 +611,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         h_data.SetLineWidth(4)
         h_data.Draw('L hist same')
         leg.AddEntry(h_data, 'input data', 'L')
-            
+
     leg.Draw()
 
     # Draw horizontal line at y = 1
@@ -761,7 +761,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h.SetMarkerSize(1.5)
       h.SetLineStyle(1)
       h.SetLineWidth(2)
-      
+
       myBlankHisto.SetMaximum(10*h.GetMaximum())
       myBlankHisto.SetMinimum(0.1*h.GetMinimum())
 
@@ -948,7 +948,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       max_pt_truth = truth_pt_bin_array[bin+1]
 
       self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting)
-      
+
     # Plot pt-response (summed over substructure observable)
     self.plot_pt_response(jetR, obs_label, hResponse)
 
@@ -972,7 +972,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                                               int(max_pt_truth)))
 
     hResponse_Obs_Normalized = self.utils.normalize_response_matrix(hResponse_Obs)
-    
+
     # Set z-maximum in Soft Drop case, since otherwise the untagged bin will dominate the scale
     if grooming_setting and 'sd' in grooming_setting:
       hResponse_Obs_Normalized.SetMaximum(0.3)
@@ -994,7 +994,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
     hResponse4D.GetAxis(1).SetRangeUser(truth_pt_bin_array[0], truth_pt_bin_array[-1])
-    
+
     det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
     hResponse4D.GetAxis(0).SetRangeUser(det_pt_bin_array[0], det_pt_bin_array[-1])
 
@@ -1018,7 +1018,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     nBinsX = covariance_matrix.GetNrows()
     nBinsY = covariance_matrix.GetNcols()
-    
+
     correlation_coefficient_matrix = ROOT.TH2D('correlation_coefficient_matrix', 'correlation_coefficient_matrix', nBinsX, 0, nBinsX, nBinsY, 0, nBinsY)
     correlation_coefficient_matrix.GetXaxis().SetTitle('bin #')
     correlation_coefficient_matrix.GetYaxis().SetTitle('bin #')
@@ -1030,7 +1030,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       for ybin in range(0, nBinsY):
         varianceY = covariance_matrix(ybin, ybin)
         sigmaY = np.sqrt(varianceY)
-        
+
         covXY = covariance_matrix(xbin, ybin)
         if sigmaX > 0 and sigmaY > 0:
           Cxy = covXY / (sigmaX * sigmaY)
@@ -1076,14 +1076,14 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       # Unfold the smeared det-level result with response, and compare to truth-level MC.
       self.statistical_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
-      
+
       # Scale the shape of the det-level and truth-level spectra (by the same scaling as the prior),
       # and compare the unfolded MC det-level result to truth-level MC.
       self.shape_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
-      
+
     # Plot thermal closure test
     if self.thermal_model:
-    
+
       self.plot_thermal_closure_test(jetR, obs_label, obs_setting, grooming_setting, reg_param_final)
 
   #################################################################################################
@@ -1094,7 +1094,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
     hUnfolded = getattr(self, 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i)).Clone()
     hUnfolded.SetName('hUnfolded_{}_R{}_{}_{}-clone'.format(self.observable, jetR, obs_label, i))
-    
+
     # Undo the kinematic efficiency correction -- we don't want to apply it for the refolding test
     if not self.use_miss_fake:
         hKinematicEfficiency = getattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label))
@@ -1269,10 +1269,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   # and compare the unfolded MC det-level result to truth-level MC.
   #################################################################################################
   def shape_closure_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
-  
+
     self.shape_closure_test_single(i, jetR, obs_label, obs_setting, grooming_setting,
                                    self.shape_variation_parameter1)
-                                   
+
     self.shape_closure_test_single(i, jetR, obs_label, obs_setting, grooming_setting,
                                    self.shape_variation_parameter2)
 
@@ -1286,7 +1286,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     response = getattr(self, 'roounfold_response_R{}_{}'.format(jetR, obs_label))
     hMC_Det_original = getattr(self, 'hMC_Det_R{}_{}'.format(jetR, obs_label))
     hMC_Det = hMC_Det_original.Clone('{}_shape'.format(hMC_Det_original.GetName()))
-    
+
     hMC_Truth_original = getattr(self, 'hMC_Truth_R{}_{}'.format(jetR, obs_label))
     hMC_Truth = hMC_Truth_original.Clone('{}_shape'.format(hMC_Truth_original.GetName()))
 
@@ -1315,27 +1315,27 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   # Plot thermal closure test: unfolded result / truth
   #################################################################################################
   def plot_thermal_closure_test(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final):
-  
+
     # Get MC truth
     hMC_Truth = getattr(self, 'hMC_Truth_R{}_{}'.format(jetR, obs_label))
-  
+
     # Loop through pt bins
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
     for bin in range(1, n_pt_bins_truth-1):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
-      
+
       # Get unfolded result
       hUnfolded_obs = self.get_unfolded_result(jetR, obs_label, reg_param_final, min_pt_truth,
                                                max_pt_truth, scaling_option='')
-      
+
       # Get MC truth projection
       hMC_Truth.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
       hMCTruth_obs = hMC_Truth.ProjectionY()
       hMCTruth_obs.SetName('hMCTruth_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, reg_param_final,
                                                                  min_pt_truth, max_pt_truth))
-      
+
       # Plot ratio
       legendTitle = ''
       h1LegendLabel = 'Unfolded result'
@@ -1479,7 +1479,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     h2.SetLineColor(4)
     h2.SetLineWidth(2)
     h2.SetLineStyle(1)
-    
+
     # First scale by bin width -- then normalize by integral
     # (where integral weights by bin width)
     h2.Scale(1., scalingOptions)
@@ -1493,7 +1493,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h3.SetLineColor(2)
       h3.SetLineWidth(2)
       h3.SetLineStyle(1)
-      
+
       # First scale by bin width -- then normalize by integral
       # (where integral weights by bin width)
       h3.Scale(1., scalingOptions)
@@ -1553,7 +1553,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       hRatio3.SetMarkerStyle(21)
       hRatio3.SetMarkerColor(2)
       hRatio3.Draw("P E same")
-      
+
     line = ROOT.TLine(self.xmin,1,self.xmax,1)
     line.SetLineColor(1)
     line.SetLineStyle(2)
@@ -1595,7 +1595,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     c.SaveAs(outputFilename)
     c.Close()
-    
+
     if 'ThermalClosure' in outputFilename:
       fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_setting, grooming_setting, int(min_pt_det), int(max_pt_det))
       outf_name = os.path.join(getattr(self, 'output_dir_Test_ThermalClosure'), fname)
