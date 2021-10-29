@@ -242,8 +242,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
         # Rebin if requested, and write to file
         use_histutils = True
-        thn = self.fResponse.Get(name_thn)
-        thn.SetName(name_thn)
+        try:
+          thn = self.fResponse.Get(name_thn)
+          thn.SetName(name_thn)
+        except AttributeError:
+          # Give a more helpful error message for debugging
+          raise AttributeError("%s not found in file %s" % (name_thn, response_file_name))
         setattr(self, name_thn, thn)
         if rebin_response:
         
