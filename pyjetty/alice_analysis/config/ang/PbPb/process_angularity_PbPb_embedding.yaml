@@ -6,7 +6,8 @@ debug_level: 0
 
 process_observables: ['ang']
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
-reject_tracks_fraction: 0
+# Uncomment for data // comment for MC
+#reject_tracks_fraction: 0
 
 # Background subtraction parameters for Pb-Pb
 constituent_subtractor:
@@ -21,6 +22,14 @@ constituent_subtractor:
   bge_rho_grid_size: 1.0
   max_pt_correct: 100
   ghost_area: 0.01
+
+# Parameters needed for MC processing in Pb-Pb
+dry_run: False
+fast_simulation: False
+emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
+mc_fraction_threshold: 0.5
+# Uncommend for MC // comment for data
+reject_tracks_fraction: 0.02
 
 
 ###############################################################################
