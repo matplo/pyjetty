@@ -4,10 +4,10 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-2000
+#SBATCH --array=1-1500
 #SBATCH --output=/rstorage/ml/egml/nsubjettiness/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/ml/egml/data/files.txt'
+FILE_PATHS='/rstorage/ml/egml/data/files_pthat100.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 

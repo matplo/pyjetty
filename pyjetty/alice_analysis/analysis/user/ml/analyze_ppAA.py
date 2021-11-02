@@ -93,6 +93,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.val_frac = 1. * self.n_val / (self.n_train + self.n_val)
         
         self.K_list = config['K']
+        self.constituent_subtraction_study = config['constituent_subtraction_study']
 
         self.pp_label = config['pp_label']
         self.AA_label = config['AA_label']
@@ -159,9 +160,8 @@ class AnalyzePPAA(common_base.CommonBase):
     # Main processing function
     #---------------------------------------------------------------
     def analyze_pp_aa(self):
-    
+
         # Loop through combinations of event type, jetR, and R_max
-        self.AUC = {}
         for event_type in self.event_types:
             for jetR in self.jetR_list:
                 for jet_pt_bin in self.jet_pt_bins:
@@ -364,13 +364,19 @@ class AnalyzePPAA(common_base.CommonBase):
                            
                         # Train models
                         self.train_models(event_type, jetR, jet_pt_bin, R_max)
+        
+        # If enabled, train PFN with four-vectors in cone before and after constituent subtraction
+        # (need four-vectors from "combined" event type, and labels from "hard" event type, so we do this separately from above loop)
+        self.AUC = {}
+        if self.constituent_subtraction_study:
+            self.perform_constituent_subtraction_study()
 
         # Run plotting script
         print()
         print('Run plotting script...')
         cmd = f'python plot_ppAA.py -c {self.config_file} -o {self.output_dir}'
         subprocess.run(cmd, check=True, shell=True)
-          
+
     #---------------------------------------------------------------
     # Train models
     #---------------------------------------------------------------
@@ -398,7 +404,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.fit_lasso(model_settings)
             
             if model == 'pfn':
-                self.fit_pfn(model_settings)
+                self.fit_pfn(model_settings, self.y, self.X_particles)
                 
             if model == 'efn':
                 self.fit_efn(model_settings)
@@ -540,13 +546,13 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Fit ML model -- 4. Deep Set/Particle Flow Networks
     #---------------------------------------------------------------
-    def fit_pfn(self, model_settings):
+    def fit_pfn(self, model_settings, y, X_particles, roc_label='PFN', auc_label='pfn'):
     
         # Convert labels to categorical
-        Y_PFN = energyflow.utils.to_categorical(self.y, num_classes=2)
+        Y_PFN = energyflow.utils.to_categorical(y, num_classes=2)
                         
         # (pT,y,phi,m=0)
-        X_PFN = self.X_particles
+        X_PFN = X_particles
         
         # Preprocess by centering jets and normalizing pts
         for x_PFN in X_PFN:
@@ -562,8 +568,8 @@ class AnalyzePPAA(common_base.CommonBase):
         X_PFN = X_PFN[:,:,:3]
         
         # Check shape
-        if self.y.shape[0] != X_PFN.shape[0]:
-            print(f'Number of labels {self.y.shape} does not match number of jets {X_PFN.shape} ! ')
+        if y.shape[0] != X_PFN.shape[0]:
+            print(f'Number of labels {y.shape} does not match number of jets {X_PFN.shape} ! ')
 
         # Split data into train, val and test sets
         (X_PFN_train, X_PFN_val, X_PFN_test, Y_PFN_train, Y_PFN_val, Y_PFN_test) = energyflow.utils.data_split(X_PFN, Y_PFN,
@@ -582,7 +588,7 @@ class AnalyzePPAA(common_base.CommonBase):
                           verbose=1)
                           
         # Plot metrics are a function of epochs
-        self.plot_NN_epochs(model_settings['epochs'], history, 'PFN')
+        self.plot_NN_epochs(model_settings['epochs'], history, roc_label)
         
         # Get predictions on test data
         preds_PFN = pfn.predict(X_PFN_test, batch_size=1000)
@@ -590,9 +596,9 @@ class AnalyzePPAA(common_base.CommonBase):
         # Get AUC and ROC curve + make plot
         auc_PFN = sklearn.metrics.roc_auc_score(Y_PFN_test[:,1], preds_PFN[:,1])
         print('Particle Flow Networks/Deep Sets: AUC = {} (test set)'.format(auc_PFN))
-        self.AUC[f'pfn{self.key_suffix}'].append(auc_PFN)
+        self.AUC[f'{auc_label}{self.key_suffix}'].append(auc_PFN)
         
-        self.roc_curve_dict['PFN'] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
+        self.roc_curve_dict[roc_label] = sklearn.metrics.roc_curve(Y_PFN_test[:,1], preds_PFN[:,1])
         
     #---------------------------------------------------------------
     # Fit ML model -- 5. (IRC safe) Energy Flow Networks
@@ -837,7 +843,144 @@ class AnalyzePPAA(common_base.CommonBase):
             print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
         
         exit()
-        
+
+    #---------------------------------------------------------------
+    # Perform constituent subtraction study
+    #---------------------------------------------------------------
+    def perform_constituent_subtraction_study(self):
+        print()
+        print('Performing constituent subtraction study...')
+        print()
+
+        # Set output dir
+        jetR = self.jetR_list[0]
+        jet_pt_bin = self.jet_pt_bins[0]
+        R_max = self.max_distance_list[-1]
+        self.output_dir_i = os.path.join(self.output_dir, f'hard_R{jetR}_pt{jet_pt_bin}_Rmax0')
+
+        # Get the labels from the hard event, and the four-vectors from the combined event
+        key_suffix_hard = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
+        key_suffix_combined = f'_combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+        self.key_suffix = key_suffix_hard
+        with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
+
+            # First, get the full input arrays
+            y_total = hf[f'y{key_suffix_hard}'][:]
+            X_particles_hard_total = hf[f'cone_four_vectors_hard{key_suffix_combined}'][:]
+            X_particles_beforeCS_total = hf[f'cone_four_vectors_beforeCS{key_suffix_combined}'][:]
+            X_particles_afterCS_total = hf[f'cone_four_vectors_afterCS{key_suffix_combined}'][:]
+
+            # Determine total number of jets
+            total_jets = int(y_total.size)
+            total_jets_AA = int(np.sum(y_total))
+            total_jets_pp = total_jets - total_jets_AA 
+            print(f'Total number of jets available: {total_jets_pp} (pp), {total_jets_AA} (AA)')
+
+            # If there is an imbalance, remove excess jets
+            if total_jets_pp / total_jets_AA > 1.:
+                indices_to_remove = np.where( np.isclose(y_total,0) )[0][total_jets_AA:]
+            elif total_jets_pp / total_jets_AA < 1.:
+                indices_to_remove = np.where( np.isclose(y_total,1) )[0][total_jets_pp:]
+            y_balanced = np.delete(y_total, indices_to_remove)
+            X_particles_hard_balanced = np.delete(X_particles_hard_total, indices_to_remove, axis=0)
+            X_particles_beforeCS_balanced = np.delete(X_particles_beforeCS_total, indices_to_remove, axis=0)
+            X_particles_afterCS_balanced = np.delete(X_particles_afterCS_total, indices_to_remove, axis=0)
+
+            total_jets = int(y_balanced.size)
+            total_jets_AA = int(np.sum(y_balanced))
+            total_jets_pp = total_jets - total_jets_AA 
+            print(f'Total number of jets available after balancing: {total_jets_pp} (pp), {total_jets_AA} (AA)')
+
+            # Shuffle dataset 
+            idx = np.random.permutation(len(y_balanced))
+            if y_balanced.shape[0] == idx.shape[0]:
+                y_shuffled = y_balanced[idx]
+                X_particles_hard_shuffled = X_particles_hard_balanced[idx]
+                X_particles_beforeCS_shuffled = X_particles_beforeCS_balanced[idx]
+                X_particles_afterCS_shuffled = X_particles_afterCS_balanced[idx]
+            else:
+                print(f'MISMATCH of shape: {y_shuffled.shape} vs. {idx.shape}')
+
+            # Truncate the input arrays to the requested size
+            y = y_shuffled[:self.n_total]
+            X_particles_hard = X_particles_hard_shuffled[:self.n_total]
+            X_particles_beforeCS = X_particles_beforeCS_shuffled[:self.n_total]
+            X_particles_afterCS = X_particles_afterCS_shuffled[:self.n_total]
+            print(f'y_shuffled sum: {np.sum(y)}')
+            print(f'y_shuffled shape: {y.shape}')
+
+        # Plot the number of nonzero particles for each of the 3 sets of four-vectors
+        self.plot_constituent_subtraction_multiplicity(X_particles_hard, X_particles_beforeCS, X_particles_afterCS)
+
+        # Train models
+        self.roc_curve_dict = {}
+        self.AUC[f'pfn{self.key_suffix}'] = []
+
+        model_settings = self.model_settings['pfn']
+        self.fit_pfn(model_settings, y, X_particles_hard, roc_label='PFN_hard')
+        self.fit_pfn(model_settings, y, X_particles_beforeCS, roc_label='PFN_beforeCS')
+        self.fit_pfn(model_settings, y, X_particles_afterCS, roc_label='PFN_afterCS')
+
+        # Save ROC curves to file
+        output_filename = os.path.join(self.output_dir_i, f'ROC_constituent_subtraction.pkl')
+        with open(output_filename, 'wb') as f:
+            pickle.dump(self.roc_curve_dict, f)
+
+    #---------------------------------------------------------------
+    # Plot multiplicity before and after constituent subtraction
+    #---------------------------------------------------------------
+    def plot_constituent_subtraction_multiplicity(self, X_particles_hard, X_particles_beforeCS, X_particles_afterCS):
+
+        n_particles_hard = self.jet_multiplicity(X_particles_hard)
+        n_particles_beforeCS = self.jet_multiplicity(X_particles_beforeCS)
+        n_particles_afterCS = self.jet_multiplicity(X_particles_afterCS)
+
+        max = np.amax(n_particles_beforeCS)*1.2
+        bins = np.linspace(0, max, 50)
+        plt.hist(n_particles_hard,
+                 bins,
+                 histtype='step',
+                 density=True,
+                 label = 'hard',
+                 linewidth=2,
+                 linestyle='-',
+                 alpha=0.5)
+        plt.hist(n_particles_beforeCS,
+                 bins,
+                 histtype='step',
+                 density=True,
+                 label = 'before CS',
+                 linewidth=2,
+                 linestyle='-',
+                 alpha=0.5)
+        plt.hist(n_particles_afterCS,
+                 bins,
+                 histtype='step',
+                 density=True,
+                 label = 'after CS',
+                 linewidth=2,
+                 linestyle='-',
+                 alpha=0.5)
+        plt.xlabel(rf'jet multiplicity', fontsize=14)
+        legend = plt.legend(loc='best', fontsize=14, frameon=False)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir_i, f'constituent_subtraction_multiplicity.pdf'))
+        plt.close()
+
+    #---------------------------------------------------------------
+    # Get multiplicity of 3d array of four-vectors
+    #---------------------------------------------------------------
+    def jet_multiplicity(self, X_particles): 
+
+        n_particles_hard = []
+        for jet in X_particles[:int(X_particles.shape[0]/100.)]:
+            n_particles = 0
+            for four_vector in jet:
+                if not np.isclose(np.sum(np.absolute(four_vector)), 0.):
+                    n_particles += 1
+            n_particles_hard.append(n_particles)
+        return n_particles_hard
+
     #---------------------------------------------------------------
     # Return N,beta from N-subjettiness index
     #---------------------------------------------------------------

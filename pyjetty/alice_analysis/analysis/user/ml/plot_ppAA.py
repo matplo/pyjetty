@@ -51,7 +51,10 @@ class PlotPPAA(common_base.CommonBase):
                        rf'Lasso $(\alpha = {alpha_list[2]})$': sns.xkcd_rgb['faded purple'],
                        'jet_mass': sns.xkcd_rgb['faded red'],
                        'jet_angularity': sns.xkcd_rgb['medium green'],
-                       'jet_theta_g': sns.xkcd_rgb['medium brown']
+                       'jet_theta_g': sns.xkcd_rgb['medium brown'],
+                       'PFN_hard': sns.xkcd_rgb['faded purple'],
+                       'PFN_beforeCS': sns.xkcd_rgb['faded red'],
+                       'PFN_afterCS': sns.xkcd_rgb['medium green']
                       }
         self.linestyles = {'PFN': 'solid',
                            'EFN': 'solid',
@@ -60,7 +63,10 @@ class PlotPPAA(common_base.CommonBase):
                            'jet_angularity': 'dotted',
                            'jet_theta_g': 'dotted',
                            'multiplicity': 'dotted',
-                           'Lasso': 'dotted'
+                           'Lasso': 'dotted',
+                           'PFN_hard': 'solid',
+                           'PFN_beforeCS': 'solid',
+                           'PFN_afterCS': 'solid'
                           }
         
     #---------------------------------------------------------------
@@ -79,6 +85,7 @@ class PlotPPAA(common_base.CommonBase):
         self.K_list = config['K']
         self.models = config['models']
         self.K_lasso = config['lasso']['K_lasso']
+        self.constituent_subtraction_study = config['constituent_subtraction_study']
         
         # Initialize model-specific settings
         self.config = config
@@ -111,7 +118,7 @@ class PlotPPAA(common_base.CommonBase):
                         # Train models
                         self.plot_models(event_type, jetR, jet_pt_bin, R_max)
 
-        # Plot AUC vs. K for hard vs. combined
+        # Plots for hard vs. combined
         for jetR in self.jetR_list:
             for jet_pt_bin in self.jet_pt_bins:
                 for R_max in self.max_distance_list:
@@ -119,6 +126,7 @@ class PlotPPAA(common_base.CommonBase):
                     if np.isclose(R_max, 0.):
                         continue
                 
+                    # Plot AUC vs. K
                     if 'pfn' in self.models and 'neural_network' in self.models:
                         auc_list = {}
                         suffix = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
@@ -129,7 +137,47 @@ class PlotPPAA(common_base.CommonBase):
                         auc_list[f'pfn{suffix}'] = self.AUC[f'pfn{suffix}']
                         outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         self.plot_AUC_convergence(outputdir, auc_list, event_type, jetR, jet_pt_bin, R_max, suffix='3')
-          
+
+                    # Plot PFN/EFN
+                    if 'pfn' in self.models and 'efn' in self.models:
+
+                        suffix_Rmax0 = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
+                        roc_filename = os.path.join(self.output_dir_i, f'ROC{suffix}.pkl')
+                        with open(roc_filename, 'rb') as f_Rmax0:
+                            roc_curve_dict_Rmax0 = pickle.load(f)
+
+                        suffix_Rmax025 = f'_combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                        roc_filename = os.path.join(self.output_dir_i, f'ROC{suffix}.pkl')
+                        with open(roc_filename, 'rb') as f_Rmax025:
+                            roc_curve_dict_Rmax025 = pickle.load(f)
+
+                        roc_list = {}
+                        roc_list[f'PFN{suffix_Rmax0}'] = roc_curve_dict_Rmax0['PFN']
+                        roc_list[f'EFN{suffix_Rmax0}'] = roc_curve_dict_Rmax0['EFN']
+                        roc_list[f'PFN{suffix_Rmax025}'] = roc_curve_dict_Rmax025['PFN']
+                        roc_list[f'EFN{suffix_Rmax025}'] = roc_curve_dict_Rmax025['EFN']
+                        
+                        outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
+                        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='6')
+
+        # Plot ROC curves of constituent subtraction study
+        if self.constituent_subtraction_study:
+
+            jetR = self.jetR_list[0]
+            jet_pt_bin = self.jet_pt_bins[0]
+            R_max = self.max_distance_list[-1]
+            self.output_dir_i = os.path.join(self.output_dir, f'hard_R{jetR}_pt{jet_pt_bin}_Rmax0')
+                
+            self.key_suffix = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+            roc_filename = os.path.join(self.output_dir_i, f'ROC_constituent_subtraction.pkl')
+            with open(roc_filename, 'rb') as f:
+                roc_curve_dict = pickle.load(f)
+
+            roc_list = {}
+            for key in roc_curve_dict.keys():
+                roc_list[key] = roc_curve_dict[key]
+                self.plot_roc_curves(roc_list, 'hard', jetR, jet_pt_bin, R_max, suffix='7')
+            
     #---------------------------------------------------------------
     # Plot models
     #---------------------------------------------------------------
@@ -214,7 +262,8 @@ class PlotPPAA(common_base.CommonBase):
         plt.grid(True)
     
         for label,value in roc_list.items():
-            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label:
+            index=0
+            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label:
                 linewidth = 4
                 alpha = 0.5
                 linestyle = self.linestyles[label]

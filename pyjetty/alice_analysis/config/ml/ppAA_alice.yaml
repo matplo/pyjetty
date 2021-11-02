@@ -6,7 +6,7 @@
 
 K_max: 50
 jetR: [0.2]
-jet_pt_bins: [[40.,60.], [60.,80.], [80,120.]]
+jet_pt_bins: [[30., 40.], [40.,60.], [60.,80.], [80,120.]]
 eta_max: 0.9
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 mc_fraction_threshold: 0.5
@@ -49,6 +49,9 @@ AA_label: 'Pb-Pb'
 
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso
 models: [neural_network, pfn, efn, lasso]
+
+# Option to perform constituent subtraction study, using four-vectors in cone
+constituent_subtraction_study: False         # Must also activate pfn above
 
 linear:
 

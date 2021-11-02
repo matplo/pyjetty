@@ -35,19 +35,22 @@ constituent_subtractor:
 # Define Nsubjettiness observable basis sets to train DNN 
 # The K-body phase space is (3K-4)-dimensional
 # Note: N-subjettiness plot only works up to K=6 (1810.05165 used K=24)
-K: [5, 10, 20, 30, 40]
+K: [5,15,20,25,30]
 
 # Load labeled data
-n_train: 89000
-n_val: 1000
-n_test: 10000
+n_train: 150000
+n_val: 30000
+n_test: 30000
 
 # Classification labels
 pp_label: 'PYTHIA8'
 AA_label: 'JEWEL'
 
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso, efp
-models: [efp]
+models: [neural_network, pfn, efn, lasso, efp]
+
+# Option to perform constituent subtraction study, using four-vectors in cone
+constituent_subtraction_study: False          # Must also activate pfn above
 
 linear:
 
@@ -88,7 +91,7 @@ pfn:
     F_sizes: [100, 100, 100]
 
     # Network training parameters
-    epochs: 30                   # number of training epochs
+    epochs: 10                   # number of training epochs
     batch_size: 500
     use_pids: True               # Use PID information
     
@@ -100,7 +103,7 @@ efn:
 
     # Network training parameters
     learning_rate: 0.001
-    epochs: 30                   # number of training epochs
+    epochs: 10                   # number of training epochs
     batch_size: 500
     
 lasso:
