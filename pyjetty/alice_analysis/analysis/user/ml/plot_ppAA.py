@@ -40,6 +40,10 @@ class PlotPPAA(common_base.CommonBase):
         alpha_list = self.config['lasso']['alpha']
         self.colors = {'PFN': sns.xkcd_rgb['faded purple'],
                        'EFN': sns.xkcd_rgb['faded red'],
+                       'PFN_hard': sns.xkcd_rgb['faded purple'],
+                       'EFN_hard': sns.xkcd_rgb['faded red'],
+                       'PFN_background': sns.xkcd_rgb['dark sky blue'],
+                       'EFN_background': sns.xkcd_rgb['medium green'],
                        rf'DNN (K = {self.K_list[0]})': sns.xkcd_rgb['watermelon'],
                        rf'DNN (K = {self.K_list[1]})': sns.xkcd_rgb['light brown'],
                        rf'DNN (K = {self.K_list[2]})': sns.xkcd_rgb['medium green'],
@@ -54,7 +58,12 @@ class PlotPPAA(common_base.CommonBase):
                        'jet_theta_g': sns.xkcd_rgb['medium brown'],
                        'PFN_hard': sns.xkcd_rgb['faded purple'],
                        'PFN_beforeCS': sns.xkcd_rgb['faded red'],
-                       'PFN_afterCS': sns.xkcd_rgb['medium green']
+                       'PFN_afterCS': sns.xkcd_rgb['medium green'],
+                       'EFP (d = 3)': sns.xkcd_rgb['watermelon'],
+                       'EFP (d = 4)': sns.xkcd_rgb['light brown'],
+                       'EFP (d = 5)': sns.xkcd_rgb['medium green'],
+                       'EFP (d = 6)': sns.xkcd_rgb['dark sky blue'],
+                       'EFP (d = 7)': sns.xkcd_rgb['faded purple']
                       }
         self.linestyles = {'PFN': 'solid',
                            'EFN': 'solid',
@@ -66,7 +75,10 @@ class PlotPPAA(common_base.CommonBase):
                            'Lasso': 'dotted',
                            'PFN_hard': 'solid',
                            'PFN_beforeCS': 'solid',
-                           'PFN_afterCS': 'solid'
+                           'PFN_afterCS': 'solid',
+                           'EFN_hard': 'solid',
+                           'PFN_background': 'solid',
+                           'EFN_background': 'solid'
                           }
         
     #---------------------------------------------------------------
@@ -85,6 +97,7 @@ class PlotPPAA(common_base.CommonBase):
         self.K_list = config['K']
         self.models = config['models']
         self.K_lasso = config['lasso']['K_lasso']
+        self.dmax = config['efp']['dmax']
         self.constituent_subtraction_study = config['constituent_subtraction_study']
         
         # Initialize model-specific settings
@@ -125,6 +138,10 @@ class PlotPPAA(common_base.CommonBase):
                 
                     if np.isclose(R_max, 0.):
                         continue
+
+                    output_dir_hard = os.path.join(self.output_dir, f'hard_R{jetR}_pt{jet_pt_bin}_Rmax0')
+                    output_dir_combined = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
+
                 
                     # Plot AUC vs. K
                     if 'pfn' in self.models and 'neural_network' in self.models:
@@ -142,20 +159,20 @@ class PlotPPAA(common_base.CommonBase):
                     if 'pfn' in self.models and 'efn' in self.models:
 
                         suffix_Rmax0 = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
-                        roc_filename = os.path.join(self.output_dir_i, f'ROC{suffix}.pkl')
+                        roc_filename = os.path.join(output_dir_hard, f'ROC{suffix_Rmax0}.pkl')
                         with open(roc_filename, 'rb') as f_Rmax0:
-                            roc_curve_dict_Rmax0 = pickle.load(f)
+                            roc_curve_dict_Rmax0 = pickle.load(f_Rmax0)
 
                         suffix_Rmax025 = f'_combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
-                        roc_filename = os.path.join(self.output_dir_i, f'ROC{suffix}.pkl')
+                        roc_filename = os.path.join(output_dir_combined, f'ROC{suffix_Rmax025}.pkl')
                         with open(roc_filename, 'rb') as f_Rmax025:
-                            roc_curve_dict_Rmax025 = pickle.load(f)
+                            roc_curve_dict_Rmax025 = pickle.load(f_Rmax025)
 
                         roc_list = {}
-                        roc_list[f'PFN{suffix_Rmax0}'] = roc_curve_dict_Rmax0['PFN']
-                        roc_list[f'EFN{suffix_Rmax0}'] = roc_curve_dict_Rmax0['EFN']
-                        roc_list[f'PFN{suffix_Rmax025}'] = roc_curve_dict_Rmax025['PFN']
-                        roc_list[f'EFN{suffix_Rmax025}'] = roc_curve_dict_Rmax025['EFN']
+                        roc_list[f'PFN_hard'] = roc_curve_dict_Rmax0['PFN']
+                        roc_list[f'EFN_hard'] = roc_curve_dict_Rmax0['EFN']
+                        roc_list[f'PFN_background'] = roc_curve_dict_Rmax025['PFN']
+                        roc_list[f'EFN_background'] = roc_curve_dict_Rmax025['EFN']
                         
                         outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='6')
@@ -230,9 +247,10 @@ class PlotPPAA(common_base.CommonBase):
         
         if 'lasso' in self.models:
             roc_list = {}
-            roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
+            #roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
             roc_list['jet_angularity'] = self.roc_curve_dict['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict['jet_theta_g']
+            #roc_list['hadron_z'] = self.roc_curve_dict['hadron_z']
             for alpha in self.config['lasso']['alpha']:
                 roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='4')
@@ -241,13 +259,19 @@ class PlotPPAA(common_base.CommonBase):
         if 'neural_network' in self.models and 'lasso' in self.models:
             roc_list = {}
             roc_list[f'DNN (K = {self.K_lasso})'] = self.roc_curve_dict['DNN'][K]
-            roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
+            #roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
             roc_list['jet_angularity'] = self.roc_curve_dict['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict['jet_theta_g']
             for alpha in self.config['lasso']['alpha']:
                 roc_list[rf'Lasso $(\alpha = {alpha})$'] = self.roc_curve_dict['Lasso'][self.K_lasso][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='5')
+
+        if 'efp' in self.models:
+             roc_list = {}
+             for d in range(3, self.dmax+1):
+                 roc_list[f'EFP (d = {d})'] = self.roc_curve_dict['efp'][d]
+             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='8')
 
     #--------------------------------------------------------------- 
     # Plot ROC curves
@@ -263,7 +287,7 @@ class PlotPPAA(common_base.CommonBase):
     
         for label,value in roc_list.items():
             index=0
-            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label:
+            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label or 'EFN' in label:
                 linewidth = 4
                 alpha = 0.5
                 linestyle = self.linestyles[label]
@@ -274,7 +298,7 @@ class PlotPPAA(common_base.CommonBase):
                     label = r'$\lambda_1$'
                 if label == 'jet_theta_g':
                     label = r'$\theta_{\mathrm{g}}$'
-            elif 'DNN' in label:
+            elif 'DNN' in label or 'EFP' in label:
                 linewidth = 2
                 alpha = 0.9
                 linestyle = 'solid'
@@ -287,7 +311,12 @@ class PlotPPAA(common_base.CommonBase):
                 reg_param = float(re.search('= (.*)\)', label).group(1))
                 n_terms = self.N_terms_lasso[reg_param]
                 label += f', {n_terms} terms'
-                
+            else:
+                linewidth = 2
+                linestyle = 'solid'
+                alpha = 0.9
+                color = sns.xkcd_rgb['almost black']
+  
             FPR = value[0]
             TPR = value[1]
             plt.plot(FPR, TPR, linewidth=linewidth, label=label,

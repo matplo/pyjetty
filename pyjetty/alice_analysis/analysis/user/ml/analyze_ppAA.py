@@ -416,8 +416,12 @@ class AnalyzePPAA(common_base.CommonBase):
         self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_mass'])
         self.roc_curve_dict['jet_angularity'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_angularity'])
         self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_theta_g'])
-        #self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
-                
+        self.roc_curve_dict['hadron_z'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['hadron_z'])
+        self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
+        self.roc_curve_dict['multiplicity_0150'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0150'])
+        self.roc_curve_dict['multiplicity_0500'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0500'])
+        self.roc_curve_dict['multiplicity_1000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_1000'])
+
         # Save ROC curves to file
         output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}.pkl')
         with open(output_filename, 'wb') as f:
@@ -841,8 +845,12 @@ class AnalyzePPAA(common_base.CommonBase):
             # Get AUC and ROC curve + make plot
             auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
             print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
-        
-        exit()
+
+            # Store AUC
+            self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
+
+            # Get & store ROC curve
+            self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
 
     #---------------------------------------------------------------
     # Perform constituent subtraction study

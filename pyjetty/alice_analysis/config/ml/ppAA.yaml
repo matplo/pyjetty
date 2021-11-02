@@ -48,6 +48,7 @@ AA_label: 'JEWEL'
 
 # Select model: linear, random_forest, neural_network, pfn, efn, lasso, efp
 models: [neural_network, pfn, efn, lasso, efp]
+# pfn_cs
 
 # Option to perform constituent subtraction study, using four-vectors in cone
 constituent_subtraction_study: False          # Must also activate pfn above
@@ -125,7 +126,7 @@ lasso:
 efp:
 
     # efp parameters
-    dmax: 5
+    dmax: 7
     measure: 'hadr'
     beta: 0.5
 
