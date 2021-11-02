@@ -162,6 +162,7 @@ class AnalyzePPAA(common_base.CommonBase):
     def analyze_pp_aa(self):
 
         # Loop through combinations of event type, jetR, and R_max
+        self.AUC = {}
         for event_type in self.event_types:
             for jetR in self.jetR_list:
                 for jet_pt_bin in self.jet_pt_bins:
@@ -367,7 +368,6 @@ class AnalyzePPAA(common_base.CommonBase):
         
         # If enabled, train PFN with four-vectors in cone before and after constituent subtraction
         # (need four-vectors from "combined" event type, and labels from "hard" event type, so we do this separately from above loop)
-        self.AUC = {}
         if self.constituent_subtraction_study:
             self.perform_constituent_subtraction_study()
 
