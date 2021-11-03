@@ -219,7 +219,7 @@ class ProcessIO(common_base.CommonBase):
         # Create tree with truth particle info
         title = 'tree_Particle_gen'
         print("Length of truth track tree: %i" % len(self.track_df))
-        f[title] = uproot.newtree(branchdict, title=title)
+        f.mktree(name=title, branch_types=branchdict, title=title)
         if is_jetscape:
             f[title].extend( { "run_number": self.track_df["run_number"],
                                "ev_id": self.track_df["ev_id"],
@@ -237,7 +237,7 @@ class ProcessIO(common_base.CommonBase):
       # Create tree with detector-level particle info
       title = 'tree_Particle'
       print("Length of detector-level track tree: %i" % len(df))
-      f[title] = uproot.newtree(branchdict, title=title)
+      f.mktree(name=title, branch_types=branchdict, title=title)
       if is_jetscape:
         f[title].extend( { "run_number": df["run_number"],
                            "ev_id": df["ev_id"],
@@ -257,7 +257,7 @@ class ProcessIO(common_base.CommonBase):
       branchdict = {"is_ev_rej": int, "run_number": int, "ev_id": int, "z_vtx_reco": float}
       if is_jetscape:
         branchdict["event_plane_angle"] = float
-      f[title] = uproot.newtree(branchdict, title=title)
+      f.mktree(name=title, branch_types=branchdict, title=title)
       if is_jetscape:
         f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
                         "run_number": self.event_df_orig["run_number"], 
