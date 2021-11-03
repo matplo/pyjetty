@@ -149,14 +149,14 @@ class ProcessppAA(common_base.CommonBase):
                                                 track_tree_name='tree_Particle_gen', use_ev_id_ext=False,
                                                 skip_event_tree=skip_event_tree, 
                                                 is_jetscape=is_jetscape, holes=False)
-                df_fjparticles_hard = io_hard.load_data(min_pt=self.min_pt)
+                df_fjparticles_hard = io_hard.load_data(min_pt=0.)
                 self.nEvents_truth = len(df_fjparticles_hard.index)
                 self.nTracks_truth = len(io_hard.track_df.index)
                 print('--- {} seconds ---'.format(time.time() - self.start_time))
 
                 # Construct dummy combined event -- we will add thermal particles in event loop
                 # (Note: deep copy of df_fjparticles does not copy underlying objects)
-                df_fjparticles_combined = io_hard.load_data(min_pt=self.min_pt)
+                df_fjparticles_combined = io_hard.load_data(min_pt=0.)
 
             # Merge hard event and background dataframes
             if self.thermal_model:
@@ -205,7 +205,7 @@ class ProcessppAA(common_base.CommonBase):
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS'] = []
 
                             # Some QA
-                            self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
+                            self.qa_observables = ['delta_pt', 'matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'thrust', 'LHA', 'pTD', 'jet_mass', 'jet_theta_g', 'zg', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
                             for qa_observable in self.qa_observables:
                                 self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][qa_observable] = []
 
@@ -393,7 +393,7 @@ class ProcessppAA(common_base.CommonBase):
 
             # If thermal model, generate a thermal event and add it to the combined particle list
             elif self.thermal_model:
-                fj_particles_background = [p for p in self.thermal_generator.load_event() if p.pt() > self.min_pt]
+                fj_particles_background = [p for p in self.thermal_generator.load_event()]
           
             # Form the combined event
             # The hard event tracks are each stored with a unique user_index >= 0
@@ -658,6 +658,24 @@ class ProcessppAA(common_base.CommonBase):
         kappa = 1
         angularity = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
         self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_angularity'].append(angularity)
+
+        # thrust
+        alpha = 2
+        kappa = 1
+        angularity = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['thrust'].append(angularity)
+
+        # LHA
+        alpha = 0.5
+        kappa = 1
+        angularity = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['LHA'].append(angularity)
+
+        # pTD
+        alpha = 0
+        kappa = 2
+        angularity = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['pTD'].append(angularity)
         
         # mass
         self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_mass'].append(jet.m())
@@ -669,6 +687,10 @@ class ProcessppAA(common_base.CommonBase):
         jet_groomed_lund = gshop.soft_drop(beta, zcut, jetR)
         theta_g = jet_groomed_lund.Delta() / jetR
         self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_theta_g'].append(theta_g)
+
+        # zg
+        zg = jet_groomed_lund.z()
+        self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['zg'].append(zg)
         
         # subjet z
         subjetR = 0.1
@@ -710,11 +732,12 @@ class ProcessppAA(common_base.CommonBase):
         particle_list = []
         for i,particle in enumerate(jet.constituents()):
             #particle_list.append(np.array([particle.E(), particle.px(), particle.py(), particle.pz()]))
-            particle_list.append(np.array([particle.perp(), particle.rapidity(), particle.phi_02pi(), 0.]))
+            if particle.perp() > self.min_pt:
+                particle_list.append(np.array([particle.perp(), particle.rapidity(), particle.phi_02pi(), 0.]))
         
         # Zero pad such that all jets have the same number of four-vectors
         n_max = 800
-        if len(particle_list) > n_max:
+        if len(particle_list) > n_max or len(particle_list) == 0:
             sys.exit('ERROR: particle list has {len(particle_list)} entries before zero-padding')
         particle_list += [np.array([0,0,0,0])]*(n_max-len(particle_list))
         
