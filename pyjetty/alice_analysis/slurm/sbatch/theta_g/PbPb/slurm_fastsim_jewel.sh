@@ -1,13 +1,13 @@
 #! /bin/bash
 
-#SBATCH --job-name=fastsim-jewel
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
+#SBATCH --job-name=jewel-processing
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=2
 #SBATCH --partition=long
 #SBATCH --time=24:00:00
 #SBATCH --array=1-8000
-#SBATCH --output=/rstorage/generators/jewel_alice/tree_fastsim/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/generators/jewel_alice/tree_gen/746611/files.txt'
+FILE_PATHS='/rstorage/generators/jewel_alice/tree_fastsim/798301/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
