@@ -126,9 +126,17 @@ lasso:
 efp:
 
     # efp parameters
-    dmax: 7
-    measure: 'hadr'
-    beta: 0.5
+    dmax: 7                      # maximal degree of the EFPs
+    measure: 'hadr'              # 
+    beta: 0.5                    # Exponent of the pairwise distance
+    linear_efp: False            # Use linear model: True, DNN: False
 
+    # DNN hyperparameters
+    learning_rate: 0.001         # (cf 1810.05165)
+    loss: 'binary_crossentropy'  # loss function - use categorical_crossentropy instead ?
+    metrics: ['accuracy']        # measure accuracy during training
+    batch_size: 1000
+    epochs: 30                   # number of training epochs
+    random_state: null           # seed for shuffling data (set to an int to have reproducible results)
 
 

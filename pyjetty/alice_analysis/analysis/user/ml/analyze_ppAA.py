@@ -154,7 +154,14 @@ class AnalyzePPAA(common_base.CommonBase):
             if model == 'efp':
                 self.dmax = config[model]['dmax']
                 self.measure = config[model]['measure']
-                self.beta_efp = config[model]['beta']             
+                self.beta_efp = config[model]['beta'] 
+                self.linear_efp = config[model]['linear_efp']
+                self.model_settings[model]['loss'] = config[model]['loss']
+                self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
+                self.model_settings[model]['epochs'] = config[model]['epochs']
+                self.model_settings[model]['batch_size'] = config[model]['batch_size']
+                self.model_settings[model]['metrics'] = config[model]['metrics']
+                self.model_settings[model]['random_state'] = config[model]['random_state']
 
     #---------------------------------------------------------------
     # Main processing function
@@ -831,30 +838,77 @@ class AnalyzePPAA(common_base.CommonBase):
         # Loop over different values of the EFP degree here.
         for d in range(1, self.dmax+1):
         
-            # Build linear model architecture (take from energyflow package)
-            model = energyflow.archs.LinearClassifier(linclass_type='lda')
-    
-            # Select EFPs with degree <= d
-            X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
-    
-            # Do train/val/test split (Note: validation set not used here.)
-            (X_EFP_train, X_EFP_val, X_EFP_test, Y_EFP_train, Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
-    
-            # train model
-            history = model.fit(X_EFP_train, Y_EFP_train)
-    
-            # get predictions on test data
-            preds_EFP = model.predict(X_EFP_test)        
+            # Train linear model with EFPs
+            if self.linear_efp:
+                # Build linear model architecture (take from energyflow package)
+                model = energyflow.archs.LinearClassifier(linclass_type='lda')
         
-            # Get AUC and ROC curve + make plot
-            auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
-            print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
+                # Select EFPs with degree <= d
+                X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+        
+                # Do train/val/test split (Note: validation set not used here.)
+                (X_EFP_train, X_EFP_val, X_EFP_test, Y_EFP_train, Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
+        
+                # train model
+                history = model.fit(X_EFP_train, Y_EFP_train)
+        
+                # get predictions on test data
+                preds_EFP = model.predict(X_EFP_test)        
+            
+                # Get AUC and ROC curve + make plot
+                auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
+                print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
+    
+                # Store AUC
+                self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
+    
+                # Get & store ROC curve
+                self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
+            
+            # Train DNN with EFPs
+            else:
+                # Select EFPs with degree <= d
+                X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+        
+                # Do train/val/test split (Note: separate val_set generated in DNN training.)
+                (X_EFP_train, X_EFP_val, 
+                 X_EFP_test, Y_EFP_train, 
+                 Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
 
-            # Store AUC
-            self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
+                # input_shape expects shape of an instance (not including batch size)
+                DNN = keras.models.Sequential()
+                DNN.add(keras.layers.Flatten(input_shape=[X_EFP_train.shape[1]]))
+                DNN.add(keras.layers.Dense(300,activation='relu'))
+                DNN.add(keras.layers.Dense(300,activation='relu'))
+                DNN.add(keras.layers.Dense(100,activation='relu'))
+                DNN.add(keras.layers.Dense(1,activation='sigmoid'))
+                
+                # Compile DNN
+                opt = keras.optimizers.Adam(lr=model_settings['learning_rate'])
+                DNN.compile(loss=model_settings['loss'],
+                            optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
+                            metrics=model_settings['metrics'])
 
-            # Get & store ROC curve
-            self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
+                # Train DNN - use validation_split to split into validation set
+                # Use same settings as for N-subjettiness observables
+                history = DNN.fit(X_EFP_train,
+                                  Y_EFP_train,
+                                  batch_size=model_settings['batch_size'],
+                                  epochs=model_settings['epochs'],
+                                  validation_split=self.val_frac)
+                
+                # Get predictions for test data set
+                preds_EFP_DNN = DNN.predict(X_EFP_test).reshape(-1)
+                
+                # Get AUC
+                auc_EFP_DNN = sklearn.metrics.roc_auc_score(Y_EFP_test, preds_EFP_DNN)
+                print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP_DNN))
+                
+                # Store AUC
+                self.AUC[f'efp{self.key_suffix}'].append(auc_EFP_DNN)
+                
+                # Get & store ROC curve
+                self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP_DNN)
 
     #---------------------------------------------------------------
     # Perform constituent subtraction study
