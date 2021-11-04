@@ -54,6 +54,12 @@ class PlotPPAA(common_base.CommonBase):
                        rf'Lasso $(\alpha = {alpha_list[1]})$': sns.xkcd_rgb['light brown'],
                        rf'Lasso $(\alpha = {alpha_list[2]})$': sns.xkcd_rgb['faded purple'],
                        'jet_mass': sns.xkcd_rgb['faded red'],
+                       'LHA': sns.xkcd_rgb['faded red'],
+                       'thrust': sns.xkcd_rgb['faded red'],
+                       'hadron_z': sns.xkcd_rgb['faded red'],
+                       'zg': sns.xkcd_rgb['faded red'],
+                       'pTD': sns.xkcd_rgb['faded red'],
+                       'multiplicity_0150': sns.xkcd_rgb['faded red'],
                        'jet_angularity': sns.xkcd_rgb['medium green'],
                        'jet_theta_g': sns.xkcd_rgb['medium brown'],
                        'PFN_hard': sns.xkcd_rgb['faded purple'],
@@ -71,7 +77,12 @@ class PlotPPAA(common_base.CommonBase):
                            'jet_mass': 'dotted',
                            'jet_angularity': 'dotted',
                            'jet_theta_g': 'dotted',
-                           'multiplicity': 'dotted',
+                           'LHA': 'dotted',
+                           'thrust': 'dotted',
+                           'hadron_z': 'dotted',
+                           'zg': 'dotted',
+                           'pTD': 'dotted',
+                           'multiplicity_0150': 'dotted',
                            'Lasso': 'dotted',
                            'PFN_hard': 'solid',
                            'PFN_beforeCS': 'solid',
@@ -177,6 +188,26 @@ class PlotPPAA(common_base.CommonBase):
                         outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='6')
 
+                    # Plot PFN only
+                    if 'pfn' in self.models:
+
+                        suffix_Rmax0 = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
+                        roc_filename = os.path.join(output_dir_hard, f'ROC{suffix_Rmax0}.pkl')
+                        with open(roc_filename, 'rb') as f_Rmax0:
+                            roc_curve_dict_Rmax0 = pickle.load(f_Rmax0)
+
+                        suffix_Rmax025 = f'_combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
+                        roc_filename = os.path.join(output_dir_combined, f'ROC{suffix_Rmax025}.pkl')
+                        with open(roc_filename, 'rb') as f_Rmax025:
+                            roc_curve_dict_Rmax025 = pickle.load(f_Rmax025)
+
+                        roc_list = {}
+                        roc_list[f'PFN_hard'] = roc_curve_dict_Rmax0['PFN']
+                        roc_list[f'PFN_background'] = roc_curve_dict_Rmax025['PFN']
+                        
+                        outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
+                        self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='9')
+
         # Plot ROC curves of constituent subtraction study
         if self.constituent_subtraction_study:
 
@@ -259,7 +290,7 @@ class PlotPPAA(common_base.CommonBase):
         if 'neural_network' in self.models and 'lasso' in self.models:
             roc_list = {}
             roc_list[f'DNN (K = {self.K_lasso})'] = self.roc_curve_dict['DNN'][K]
-            #roc_list['jet_mass'] = self.roc_curve_dict['jet_mass']
+            roc_list['thrust'] = self.roc_curve_dict['thrust']
             roc_list['jet_angularity'] = self.roc_curve_dict['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict['jet_theta_g']
             for alpha in self.config['lasso']['alpha']:
@@ -272,6 +303,13 @@ class PlotPPAA(common_base.CommonBase):
              for d in range(3, self.dmax+1):
                  roc_list[f'EFP (d = {d})'] = self.roc_curve_dict['efp'][d]
              self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='8')
+
+        # Plot several versions of ROC curves and significance improvement
+        if 'pfn' in self.models and 'efn' in self.models:
+            roc_list = {}
+            roc_list['PFN'] = self.roc_curve_dict['PFN']
+            roc_list['EFN'] = self.roc_curve_dict['EFN']
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max, suffix='10')
 
     #--------------------------------------------------------------- 
     # Plot ROC curves
@@ -287,7 +325,7 @@ class PlotPPAA(common_base.CommonBase):
     
         for label,value in roc_list.items():
             index=0
-            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label or 'EFN' in label:
+            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'LHA', 'thrust', 'pTD', 'hadron_z', 'zg', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label or 'EFN' in label:
                 linewidth = 4
                 alpha = 0.5
                 linestyle = self.linestyles[label]

@@ -66,7 +66,7 @@ class AnalyzePPAA(common_base.CommonBase):
             self.beta_list = hf['beta_list'][:]
             self.delta_pt_random_cone = hf['delta_pt_random_cone'][:]
         
-        self.qa_observables = ['matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'jet_mass', 'jet_theta_g', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
+        self.qa_observables = ['matched_pt', 'matched_deltaR', 'jet_pt', 'jet_angularity', 'thrust', 'LHA', 'pTD', 'jet_mass', 'jet_theta_g', 'zg', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
 
         print(self)
         print()
@@ -415,6 +415,10 @@ class AnalyzePPAA(common_base.CommonBase):
         # Plot traditional observables
         self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_mass'])
         self.roc_curve_dict['jet_angularity'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_angularity'])
+        self.roc_curve_dict['thrust'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['thrust'])
+        self.roc_curve_dict['LHA'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['LHA'])
+        self.roc_curve_dict['pTD'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['pTD'])
+        self.roc_curve_dict['zg'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['zg'])
         self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_theta_g'])
         self.roc_curve_dict['hadron_z'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['hadron_z'])
         self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
