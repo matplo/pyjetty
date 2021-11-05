@@ -771,10 +771,6 @@ class AnalyzePPAA(common_base.CommonBase):
                     validation_errors.append(sklearn.metrics.mean_squared_error(y_predict_val, y_val))
             else:
                 # Cross-validation
-                
-                print(X_train_lasso)
-                print(y_train_lasso)
-                
                 lasso_clf.fit(X_train_lasso, y_train_lasso)
                 scores = sklearn.model_selection.cross_val_score(lasso_clf, X_train_lasso, y_train_lasso,
                                                                             scoring='neg_mean_squared_error',
@@ -878,9 +874,6 @@ class AnalyzePPAA(common_base.CommonBase):
                 # Get AUC and ROC curve + make plot
                 auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
                 print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
-    
-                print(Y_EFP_test)
-                print(preds_EFP[:,1])
     
                 # Store AUC
                 self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
