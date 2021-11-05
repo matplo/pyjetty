@@ -129,7 +129,7 @@ efp:
     dmax: 7                      # maximal degree of the EFPs
     measure: 'hadr'              # 
     beta: 0.5                    # Exponent of the pairwise distance
-    linear_efp: False            # Use linear model: True, DNN: False
+    linear_efp: True             # Use linear model: True, DNN: False
 
     # DNN hyperparameters
     learning_rate: 0.001         # (cf 1810.05165)
@@ -139,4 +139,21 @@ efp:
     epochs: 30                   # number of training epochs
     random_state: null           # seed for shuffling data (set to an int to have reproducible results)
 
+efp_lasso:
+
+    # efp parameters
+    dmax: 3                      # maximal degree of the EFPs -> max number of observables used for Lasso regression
+    measure: 'hadr'              # 
+    beta: 0.5                    # Exponent of the pairwise distance
+
+    # Lasso
+    alpha: [0.001, 0.01, 0.03]   # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    max_iter: 10000              # max number of epochs
+    tol: 1e-6                    # criteria to stop training
+
+    # Hyperparameter tuning
+    n_iter: 3                    # number of random hyperparameter sets to try
+    cv: 5                        # number of cross-validation folds
+    
+    random_state: null           # seed for shuffling data (set to an int to have reproducible results)
 
