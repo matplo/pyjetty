@@ -154,7 +154,25 @@ class AnalyzePPAA(common_base.CommonBase):
             if model == 'efp':
                 self.dmax = config[model]['dmax']
                 self.measure = config[model]['measure']
-                self.beta_efp = config[model]['beta']             
+                self.beta_efp = config[model]['beta'] 
+                self.linear_efp = config[model]['linear_efp']
+                self.model_settings[model]['loss'] = config[model]['loss']
+                self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
+                self.model_settings[model]['epochs'] = config[model]['epochs']
+                self.model_settings[model]['batch_size'] = config[model]['batch_size']
+                self.model_settings[model]['metrics'] = config[model]['metrics']
+                self.model_settings[model]['random_state'] = config[model]['random_state']
+                
+            if model == 'efp_lasso':
+                self.dmax = config[model]['dmax']
+                self.measure = config[model]['measure']
+                self.beta_efp = config[model]['beta']
+                self.model_settings[model]['alpha'] = config[model]['alpha']
+                self.model_settings[model]['max_iter'] = config[model]['max_iter']
+                self.model_settings[model]['tol'] = float(config[model]['tol'])
+                self.model_settings[model]['n_iter'] = config[model]['n_iter']
+                self.model_settings[model]['cv'] = config[model]['cv']
+                self.model_settings[model]['random_state'] = config[model]['random_state']
 
     #---------------------------------------------------------------
     # Main processing function
@@ -354,6 +372,8 @@ class AnalyzePPAA(common_base.CommonBase):
                             self.roc_curve_dict['Lasso'] = {}
                         if 'efp' in self.models:
                             self.roc_curve_dict['efp'] = {}
+                        if 'efp_lasso' in self.models:
+                            self.roc_curve_dict['efp_lasso'] = {}
 
                         # Plot the input data
                         jet_pt_bin_rounded = [int(pt) for pt in jet_pt_bin]
@@ -411,6 +431,9 @@ class AnalyzePPAA(common_base.CommonBase):
                 
             if model == 'efp':
                 self.fit_efp(model_settings)
+                
+            if model == 'efp_lasso':
+                self.fit_efp_lasso(model_settings)
 
         # Plot traditional observables
         self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_mass'])
@@ -797,7 +820,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     n_terms += 1
             print(f'Observable: {observable}')
             self.N_terms_lasso[alpha] = n_terms
-            
+        
     #---------------------------------------------------------------
     # Fit ML model -- 7. Energy Flow Polynomials (EFP)
     #---------------------------------------------------------------
@@ -831,31 +854,164 @@ class AnalyzePPAA(common_base.CommonBase):
         # Loop over different values of the EFP degree here.
         for d in range(1, self.dmax+1):
         
-            # Build linear model architecture (take from energyflow package)
-            model = energyflow.archs.LinearClassifier(linclass_type='lda')
-    
-            # Select EFPs with degree <= d
-            X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
-    
-            # Do train/val/test split (Note: validation set not used here.)
-            (X_EFP_train, X_EFP_val, X_EFP_test, Y_EFP_train, Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
-    
-            # train model
-            history = model.fit(X_EFP_train, Y_EFP_train)
-    
-            # get predictions on test data
-            preds_EFP = model.predict(X_EFP_test)        
+            # Train linear model with EFPs
+            if self.linear_efp:
+                # Build linear model architecture (take from energyflow package)
+                model = energyflow.archs.LinearClassifier(linclass_type='lda')
         
-            # Get AUC and ROC curve + make plot
-            auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
-            print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
+                # Select EFPs with degree <= d
+                X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+        
+                # Do train/val/test split (Note: validation set not used here.)
+                (X_EFP_train, X_EFP_val, X_EFP_test, Y_EFP_train, Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
+        
+                # train model
+                history = model.fit(X_EFP_train, Y_EFP_train)
+        
+                # get predictions on test data
+                preds_EFP = model.predict(X_EFP_test)        
+            
+                # Get AUC and ROC curve + make plot
+                auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
+                print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
+    
+                # Store AUC
+                self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
+    
+                # Get & store ROC curve
+                self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
+            
+            # Train DNN with EFPs
+            else:
+                # Select EFPs with degree <= d
+                X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+        
+                # Do train/val/test split (Note: separate val_set generated in DNN training.)
+                (X_EFP_train, X_EFP_val, 
+                 X_EFP_test, Y_EFP_train, 
+                 Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
 
-            # Store AUC
-            self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
+                print(X_EFP_train.shape[1])
+                
+                # input_shape expects shape of an instance (not including batch size)
+                DNN = keras.models.Sequential()
+                DNN.add(keras.layers.Flatten(input_shape=[X_EFP_train.shape[1]]))
+                DNN.add(keras.layers.Dense(300,activation='relu'))
+                DNN.add(keras.layers.Dense(300,activation='relu'))
+                DNN.add(keras.layers.Dense(100,activation='relu'))
+                DNN.add(keras.layers.Dense(1,activation='sigmoid'))
+                
+                # Compile DNN
+                opt = keras.optimizers.Adam(lr=model_settings['learning_rate'])
+                DNN.compile(loss=model_settings['loss'],
+                            optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
+                            metrics=model_settings['metrics'])
 
-            # Get & store ROC curve
-            self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
+                # Train DNN - use validation_split to split into validation set
+                # Use same settings as for N-subjettiness observables
+                history = DNN.fit(X_EFP_train,
+                                  Y_EFP_train,
+                                  batch_size=model_settings['batch_size'],
+                                  epochs=model_settings['epochs'],
+                                  validation_split=self.val_frac)
+                
+                # Get predictions for test data set
+                preds_EFP_DNN = DNN.predict(X_EFP_test).reshape(-1)
+                
+                # Get AUC
+                auc_EFP_DNN = sklearn.metrics.roc_auc_score(Y_EFP_test, preds_EFP_DNN)
+                print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP_DNN))
+                
+                # Store AUC
+                self.AUC[f'efp{self.key_suffix}'].append(auc_EFP_DNN)
+                
+                # Get & store ROC curve
+                self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP_DNN)
+                
+    #---------------------------------------------------------------
+    # Fit ML model -- 8. Energy Flow Polynomials (EFP)
+    #---------------------------------------------------------------
+    def fit_efp_lasso(self, model_settings):
+    
+        # Load labels and convert labels to categorical
+        Y_EFP = self.y #Note not "to_categorical" here... 
+                        
+        # Load data, four vectors. Format: (pT,y,phi,m=0). Note: no PID yet which would be 5th entry... check later!
+        # To make sure, don't need any further preprocessing like for EFNs?
+        X_EFP = self.X_particles
 
+        # Switch here to Jesse's quark/gluon data set.
+        #X_EFP, Y_EFP = energyflow.datasets.qg_jets.load(self.n_train + self.n_val + self.n_test)
+        
+        # Will calculate EFPs
+        # Need to check beta dependence !!
+        print('Calculating d <= {} EFPs for {} jets... '.format(self.dmax, self.n_train + self.n_val + self.n_test), end='')
+        
+        # Specify parameters of EFPs
+        efpset = energyflow.EFPSet(('d<=', self.dmax), measure=self.measure, beta=self.beta_efp)
+        
+        # Convert to list of np.arrays of jets in format (pT,y,phi,mass or PID) -> dim: (# jets, # particles in jets, #4)
+        # and remove zero entries
+        masked_X_EFP = [x[x[:,0] > 0] for x in X_EFP] # note: list, not np.array
+        
+        # Now compute EFPs
+        X_EFP = efpset.batch_compute(masked_X_EFP) # output is a np.array again
+        
+        # Remove the 0th EFP (=1)
+        X_EFP = X_EFP[:,1:]
+        print('Done')
+        print('Shape of X_EFP is: {}'.format(X_EFP.shape),end='')
+        
+        # Do train/val/test split (Note: validation set not used here.)
+        (X_EFP_train, X_EFP_val, 
+         X_EFP_test, Y_EFP_train, 
+         Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP, Y_EFP, val=self.n_val, test=self.n_test)
+        
+        # Loop through values of regularization parameter
+        self.roc_curve_dict['efp_lasso'] = {}
+        self.N_terms_lasso = {}
+        for alpha in model_settings['alpha']:
+            print(f'Fitting lasso regression with alpha = {alpha}')
+        
+            lasso_clf = sklearn.linear_model.Lasso(alpha=alpha, max_iter=model_settings['max_iter'],
+                                                   tol=model_settings['tol'])
+                
+            # Cross-validation
+            lasso_clf.fit(X_EFP_train, Y_EFP_train)
+            scores = sklearn.model_selection.cross_val_score(lasso_clf, X_EFP_train, Y_EFP_train,
+                                                                        scoring='neg_mean_squared_error',
+                                                                        cv=model_settings['cv'])
+            print(f'cross-validation scores: {scores}')
+            y_predict_train = lasso_clf.predict(X_EFP_train)
+            rmse = sklearn.metrics.mean_squared_error(Y_EFP_train, y_predict_train)
+            print(f'training rmse: {rmse}')
+            
+            # Compute AUC on test set
+            y_predict_test = lasso_clf.predict(X_EFP_test)
+            auc_lasso_test = sklearn.metrics.roc_auc_score(Y_EFP_test, y_predict_test)
+            rmse_lasso_test = sklearn.metrics.mean_squared_error(Y_EFP_test, y_predict_test)
+            print(f'AUC = {auc_lasso_test} (test set)')
+            print(f'test rmse: {rmse_lasso_test}')
+            
+            # ROC curve
+            self.roc_curve_dict['efp_lasso'][alpha] = sklearn.metrics.roc_curve(Y_EFP_test, y_predict_test)
+            
+            # Print out observable
+            #observable = ''
+            #n_terms = 0
+            #coeffs = lasso_clf.coef_
+            #nonzero_coeffs = coeffs[np.absolute(coeffs)>1e-10]
+            #mean_coeff = np.mean(np.absolute(nonzero_coeffs))
+            #coeffs = np.divide(coeffs, mean_coeff)
+            #for i,_ in enumerate(coeffs):
+            #    coeff = np.round(coeffs[i], 3)
+            #    if not np.isclose(coeff, 0., atol=1e-10):
+            #        N,beta = self.N_beta_from_index(i)
+            #        observable += rf'(\tau_{{{N}}}^{{{beta}}})^{{{coeff}}} '
+            #        n_terms += 1
+            #print(f'Observable: {observable}')
+            #self.N_terms_lasso[alpha] = n_terms        
+        
     #---------------------------------------------------------------
     # Perform constituent subtraction study
     #---------------------------------------------------------------
