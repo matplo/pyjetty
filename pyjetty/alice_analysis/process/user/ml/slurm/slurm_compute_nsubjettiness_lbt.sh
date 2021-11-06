@@ -2,8 +2,8 @@
 
 #SBATCH --job-name=ml-compute
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --partition=test
-#SBATCH --time=1:00:00
+#SBATCH --partition=std
+#SBATCH --time=24:00:00
 #SBATCH --array=1-272
 #SBATCH --output=/rstorage/ml/egml/nsubjettiness/slurm-%A_%a.out
 
