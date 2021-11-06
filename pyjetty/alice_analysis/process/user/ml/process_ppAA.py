@@ -9,6 +9,7 @@ import sys
 import argparse
 import yaml
 import h5py
+import pickle
 import time
 
 # Data analysis and plotting
@@ -45,12 +46,13 @@ class ProcessppAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Constructor
     #---------------------------------------------------------------
-    def __init__(self, config_file='', input_file='', output_dir='', test=False, **kwargs):
+    def __init__(self, config_file='', input_file='', output_dir='', test=False, skim=False, **kwargs):
         super(common_base.CommonBase, self).__init__(**kwargs)
        
         self.start_time = time.time()
         
         self.test = test
+        self.skim = skim
         self.config_file = config_file
         self.input_file = input_file
         self.output_dir = output_dir
@@ -132,6 +134,41 @@ class ProcessppAA(common_base.CommonBase):
                 df_fjparticles_combined = df_fjparticles_hard
                 print('Done.')
                 print()
+
+            #---------------------------------------------------------------
+            # Load skimmed events from pkl file
+            elif self.skim:
+
+                print()
+                print('Loading particle dataframes')
+                with open(self.input_file, 'rb') as f:
+                    df_particles_hard = pickle.load(f)
+                print('Done.')
+                print()
+
+                # Apply eta cut
+                #print(f'df_particles_hard (before filtering pseudorapidity): {df_particles_hard.describe()}')
+                df_particles_hard = self.apply_eta_cut(df_particles_hard)
+                print(f'df_particles_hard (after filtering pseudorapidity): {df_particles_hard.describe()}')
+
+                # Construct dummy combined event -- we will add thermal particles in event loop
+                print('Loading particle dataframe again, for dummy combined event')
+                with open(self.input_file, 'rb') as file:
+                    df_particles_combined = pickle.load(file)
+                print('Done.')
+                print()
+
+                # Next, we will transform these into fastjet::PseudoJet objects.
+                
+                # (i) Group the particle dataframe by event id
+                #     df_particles_grouped is a DataFrameGroupBy object with one particle dataframe per event
+                df_particles_hard_grouped = df_particles_hard.groupby('event_id')
+                df_particles_combined_grouped = df_particles_combined.groupby('event_id')
+                
+                # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet::PseudoJets
+                print('Converting particle dataframes to fastjet::PseudoJets...')
+                df_fjparticles_hard = df_particles_hard_grouped.apply(self.get_fjparticles_px_py_pz)
+                df_fjparticles_combined = df_particles_combined_grouped.apply(self.get_fjparticles_px_py_pz)
 
             #---------------------------------------------------------------
             else:
@@ -322,7 +359,7 @@ class ProcessppAA(common_base.CommonBase):
                                     self.y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
                                 else:
                                     if not self.test:
-                                        if 'jewel_PbPb' in self.input_file or 'pyquen' in self.input_file or 'qorg_glue' in self.input_file or 'Jetscape' in self.input_file:
+                                        if 'jewel_PbPb' in self.input_file or 'pyquen' in self.input_file or 'qorg_glue' in self.input_file or 'Jetscape' in self.input_file or 'lbt' in self.input_file:
                                             self.y = np.ones(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
                                         else:
                                             self.y = np.zeros(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].shape[0])
@@ -839,6 +876,30 @@ class ProcessppAA(common_base.CommonBase):
                                           df_particles_grouped['phi'].values,
                                           user_index_offset)
 
+    #---------------------------------------------------------------
+    # Construct fastjet::PseudoJets from four-vectors
+    #---------------------------------------------------------------
+    def get_fjparticles_px_py_pz_e(self, df_particles_grouped):
+                                                 
+        user_index_offset = 0
+        return fjext.vectorize_px_py_pz_e(df_particles_grouped['px'].values,
+                                          df_particles_grouped['py'].values,
+                                          df_particles_grouped['pz'].values,
+                                          df_particles_grouped['E'].values,
+                                          user_index_offset)
+
+    #---------------------------------------------------------------
+    # Construct fastjet::PseudoJets from four-vectors
+    # Sets m=0
+    #---------------------------------------------------------------
+    def get_fjparticles_px_py_pz(self, df_particles_grouped):
+                                                 
+        user_index_offset = 0
+        return fjext.vectorize_px_py_pz(df_particles_grouped['px'].values,
+                                        df_particles_grouped['py'].values,
+                                        df_particles_grouped['pz'].values,
+                                        user_index_offset)
+
 ##################################################################
 if __name__ == '__main__':
 
@@ -859,6 +920,9 @@ if __name__ == '__main__':
     parser.add_argument('--test', 
                         help='test mode using qg dataset', 
                         action='store_true', default=False)
+    parser.add_argument('--skim', 
+                        help='events are from skimmed production from yue shi', 
+                        action='store_true', default=False)
 
     # Parse the arguments
     args = parser.parse_args()
@@ -878,5 +942,5 @@ if __name__ == '__main__':
         print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
         sys.exit(0)
 
-    analysis = ProcessppAA(config_file=args.configFile, input_file=args.inputFile, output_dir=args.outputDir, test=args.test)
+    analysis = ProcessppAA(config_file=args.configFile, input_file=args.inputFile, output_dir=args.outputDir, test=args.test, skim=args.skim)
     analysis.process_ppAA()

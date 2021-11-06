@@ -20,15 +20,31 @@ def skim(input_file, output_dir):
     with h5py.File(input_file, 'r') as hdf:
         
         # Get four-vectors from file
-        particles_hard = np.array(hdf.get('event_hard_p'))
-        particles_background = np.array(hdf.get('event_ue_p'))
-        status = np.array(hdf.get('event_hard_status_hepevt'))
-        
-        # Write 4-vectors into a dataframe
-        df_particles_hard = construct_dataframe(particles_hard, is_hard=True, status=status)
-        df_particles_background = construct_dataframe(particles_background)
-        print(f'df_particles_hard: {df_particles_hard.describe()}')
-        print(f'df_particles_background: {df_particles_background.describe()}')
+        #print(f'hdf5 keys: {list(hdf.keys())}')
+        event_key = 'event_hard_p'
+        event_shape = hdf[event_key].shape
+        print(f'event_hard_p shape: {event_shape}')
+
+        status_key = 'event_hard_status_hepevt'
+        status_shape = hdf[status_key].shape
+        print(f'event_hard_status_hepevt shape: {status_shape}')
+
+        particles_hard = np.empty(event_shape)
+        status = np.empty(status_shape)
+
+        n_events = hdf[event_key].shape[0]
+        for i in range(n_events):
+            if i%10 == 0:
+                print(f'event {i}/{n_events}')
+
+            particles_hard[i] = np.array(hdf[event_key][i,:,:])
+            status[i] = np.array(hdf[status_key][i,:])
+
+    # Write 4-vectors into a dataframe
+    df_particles_hard = construct_dataframe(particles_hard, is_hard=True, status=status)
+    #df_particles_background = construct_dataframe(particles_background)
+    print(f'df_particles_hard: {df_particles_hard.describe()}')
+    #print(f'df_particles_background: {df_particles_background.describe()}')
 
     # Write result to a new hdf5 file
     input_filename = input_file.rsplit('/', 1)[-1].replace('.h5', '')
@@ -36,7 +52,7 @@ def skim(input_file, output_dir):
     print(f'writing to new file: {output_filename}')
     with open(output_filename, 'wb') as f:
         pickle.dump(df_particles_hard, f)
-        pickle.dump(df_particles_background, f)
+        #pickle.dump(df_particles_background, f)
     print('done.')
  
 # ---------------------------------------------------------
@@ -45,16 +61,16 @@ def skim(input_file, output_dir):
 def construct_dataframe(particles, is_hard=False, status=None):
 
     # particles has format: (event, px/py/pz/E, particle index)
-    #print(particles)
-    
+    #print(f'particles: {particles}')
+
     # Change format: event, particle, 4-vector
     dataset = np.transpose(np.array(particles),(0,2,1))
-    #print(dataset)
+    #print(f'dataset: {dataset}')
     
     # Reorder 4-vector from (px,py,pz,E) to (E,px,py,pz)
     dataset[:,:,[0,1,2,3]] = dataset[:,:,[3,0,1,2]]
-    #print(dataset)
-    #print(dataset.shape)
+    #print(f'dataset: {dataset}')
+    #print(f'dataset shape: {dataset}')
     
     # Translate 3D numpy array into a dataframe
     # Define a unique index for each jet
@@ -62,20 +78,20 @@ def construct_dataframe(particles, is_hard=False, status=None):
     df_particles = pd.DataFrame(dataset.reshape(-1, 4), columns=columns)
     df_particles.index = np.repeat(np.arange(dataset.shape[0]), dataset.shape[1]) + 1
     df_particles.index.name = 'event_id'
-    #print(df_particles)
+    #print(f'df_particles: {df_particles}')
 
     # For the hard particles, we need to select the final-state particles
     if is_hard:
-        #print(status)
-        #print(status.flatten())
+        #print(f'status: {status}')
+        #print(f'status.flatten: {status.flatten()}')
         df_particles['status'] = status.flatten()
         df_particles = df_particles.query('status == 1')
         df_particles = df_particles.drop(columns=['status'])
-        #print(df_particles)
+        #print(f'df_particles: {df_particles}')
         
     # Drop entries with nan
     df_particles = df_particles[df_particles['E'].notna()]
-    #print(df_particles)
+    #print(f'df_particles: {df_particles}')
         
     return df_particles
 
