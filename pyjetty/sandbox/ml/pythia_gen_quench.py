@@ -33,10 +33,10 @@ def main():
 	fj.ClusterSequence.print_banner()
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 
-	if args.nev < 10:
-		args.nev = 10
-	for i in tqdm.tqdm(range(args.nev)):
+	pbar = tqdm.tqdm(range(args.nev))
+	for i in pbar:
 		if not pythia.next():
+			pbar.update(-1)
 			continue
 
 		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, False)
@@ -46,6 +46,8 @@ def main():
 
 		if len(jets_h) < 1:
 			continue
+
+		# do your things with jets here...
 
 	pythia.stat()
 	pythia.settings.writeFile(args.py_cmnd_out)
