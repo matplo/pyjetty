@@ -34,11 +34,14 @@ def skim(input_file, output_dir):
 
         n_events = hdf[event_key].shape[0]
         for i in range(n_events):
-            if i%10 == 0:
-                print(f'event {i}/{n_events}')
-
             particles_hard[i] = np.array(hdf[event_key][i,:,:])
             status[i] = np.array(hdf[status_key][i,:])
+
+            if i%10 == 0:
+                print(f'event {i}/{n_events}')
+                unique, counts = np.unique(status[i], return_counts=True)
+                print(f'status codes: {dict(zip(unique, counts))}' )
+                print()
 
     # Write 4-vectors into a dataframe
     df_particles_hard = construct_dataframe(particles_hard, is_hard=True, status=status)
