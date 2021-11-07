@@ -126,8 +126,8 @@ systematics_list:
   - subtraction1
   - subtraction2
   - thermal_closure
-# - fastsim_generator0
-# - fastsim_generator1
+  - fastsim_generator0
+  - fastsim_generator1
 # - event_plane
   
 # Prior variation parameters
@@ -147,7 +147,7 @@ trkeff_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_
 # Model uncertainty from fastsim (compare JETSCAPE fastsim to PYTHIA)
 fastsim_response:
 - '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_fastsim_pythia/488839/AnalysisResultsFinal.root'
-- '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_fastsim_jetscape/488051/AnalysisResultsFinal.root'
+- '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_fastsim_jewel/806310/AnalysisResultsFinal.root'
 
 event_plane_response: '/Users/jamesmulligan/Analysis_theta_g/AnalysisResults/LHC20g4_fastsim_jetscape_EP/489362/AnalysisResultsFinal.root'
 
