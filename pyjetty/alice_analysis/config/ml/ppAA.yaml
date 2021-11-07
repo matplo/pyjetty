@@ -116,11 +116,11 @@ nsubjettiness_lasso:
     # Model hyperparameters
     alpha: [0.3, 0.5, 1., 1.5, 2.]        # Constant multiplying the L1 term. 0 corresponds to the standard regression
     alpha_plot: [0.5, 1., 2.]
-    max_iter: 10000               # max number of epochs
-    tol: 1e-6                     # criteria to stop training
+    max_iter: 10000              # max number of epochs
+    tol: 1e-6                    # criteria to stop training
 
     # Hyperparameter tuning
-    n_iter: 10                    # number of random hyperparameter sets to try
+    n_iter: 10                   # number of random hyperparameter sets to try
     cv: 5                        # number of cross-validation folds
     
     random_state: null           # seed for shuffling data (set to an int to have reproducible results)
@@ -149,7 +149,7 @@ efp_lasso:
     beta: 0.5                    # Exponent of the pairwise distance
 
     # Lasso
-    alpha: [0.001, 0.01, 0.03]   # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    alpha: [1.e-5, 1.e-4, 0.001]   # Constant multiplying the L1 term. 0 corresponds to the standard regression
     max_iter: 10000              # max number of epochs
     tol: 1e-6                    # criteria to stop training
 

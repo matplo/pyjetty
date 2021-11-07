@@ -453,9 +453,11 @@ class AnalyzePPAA(common_base.CommonBase):
             pickle.dump(self.roc_curve_dict_lasso, f)
             if 'nsubjettiness_lasso' in self.models:
                 pickle.dump(self.N_terms_lasso_nsubjettiness, f)
+                pickle.dump(self.observable_lasso_nsubjettiness, f)
             if 'efp_lasso' in self.models:
                 pickle.dump(self.N_terms_lasso_efp, f)
-        
+                pickle.dump(self.observable_lasso_efp, f)
+
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
     #   - Linear model (SVM by default, w/o kernel) with SGD training
@@ -747,6 +749,7 @@ class AnalyzePPAA(common_base.CommonBase):
         # Loop through values of regularization parameter
         self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso] = {}
         self.N_terms_lasso_nsubjettiness = {}
+        self.observable_lasso_nsubjettiness = {}
         for alpha in model_settings['alpha']:
             print(f'Fitting lasso regression with alpha = {alpha}')
         
@@ -819,7 +822,8 @@ class AnalyzePPAA(common_base.CommonBase):
                     n_terms += 1
             print(f'Observable: {observable}')
             self.N_terms_lasso_nsubjettiness[alpha] = n_terms
-        
+            self.observable_lasso_nsubjettiness[alpha] = observable
+
     #---------------------------------------------------------------
     # Fit ML model -- 7. Energy Flow Polynomials (EFP)
     #---------------------------------------------------------------
@@ -944,6 +948,7 @@ class AnalyzePPAA(common_base.CommonBase):
         
         # Will calculate EFPs
         # Need to check beta dependence !!
+        print()
         print('Calculating d <= {} EFPs for {} jets... '.format(self.dmax, self.n_train + self.n_val + self.n_test), end='')
         
         # Specify parameters of EFPs
@@ -953,13 +958,20 @@ class AnalyzePPAA(common_base.CommonBase):
         # and remove zero entries
         masked_X_EFP = [x[x[:,0] > 0] for x in X_EFP] # note: list, not np.array
         
-        # Now compute EFPs
+        # Now compute EFPs -- this includes both connected and disconnected graphs
         X_EFP = efpset.batch_compute(masked_X_EFP) # output is a np.array again
         
         # Remove the 0th EFP (=1)
         X_EFP = X_EFP[:,1:]
         print('Done')
-        print('Shape of X_EFP is: {}'.format(X_EFP.shape),end='')
+        print(f'Shape of X_EFP is: {X_EFP.shape}')
+        print(f'There are {X_EFP.shape[1]} terms for d<={self.dmax} (connected + disconnected, and excluding d=0)')
+
+        # Record which EFPs correspond to which indices
+        # Note: graph images are available here: https://github.com/pkomiske/EnergyFlow/tree/images/graphs
+        graphs = efpset.graphs()[1:]
+        for i,efp in enumerate(graphs):
+            print(f'  efp {i} -- edges: {efp}')
         
         # Do train/val/test split (Note: validation set not used here.)
         (X_EFP_train, X_EFP_val, 
@@ -969,7 +981,9 @@ class AnalyzePPAA(common_base.CommonBase):
         # Loop through values of regularization parameter
         self.roc_curve_dict_lasso['efp'] = {}
         self.N_terms_lasso_efp = {}
+        self.observable_lasso_efp = {}
         for alpha in model_settings['alpha']:
+            print()
             print(f'Fitting lasso regression with alpha = {alpha}')
         
             lasso_clf = sklearn.linear_model.Lasso(alpha=alpha, max_iter=model_settings['max_iter'],
@@ -996,20 +1010,22 @@ class AnalyzePPAA(common_base.CommonBase):
             self.roc_curve_dict_lasso['efp'][alpha] = sklearn.metrics.roc_curve(Y_EFP_test, y_predict_test)
             
             # Print out observable
-            #observable = ''
-            #n_terms = 0
-            #coeffs = lasso_clf.coef_
-            #nonzero_coeffs = coeffs[np.absolute(coeffs)>1e-10]
-            #mean_coeff = np.mean(np.absolute(nonzero_coeffs))
-            #coeffs = np.divide(coeffs, mean_coeff)
-            #for i,_ in enumerate(coeffs):
-            #    coeff = np.round(coeffs[i], 3)
-            #    if not np.isclose(coeff, 0., atol=1e-10):
-            #        N,beta = self.N_beta_from_index(i)
-            #        observable += rf'(\tau_{{{N}}}^{{{beta}}})^{{{coeff}}} '
-            #        n_terms += 1
-            #print(f'Observable: {observable}')
-            #self.N_terms_lasso[alpha] = n_terms        
+            observable = ''
+            n_terms = 0
+            coeffs = lasso_clf.coef_
+            nonzero_coeffs = coeffs[np.absolute(coeffs)>1e-10]
+            mean_coeff = np.mean(np.absolute(nonzero_coeffs))
+            coeffs = np.divide(coeffs, mean_coeff)
+            for i,_ in enumerate(coeffs):
+                coeff = np.round(coeffs[i], 3)
+                if not np.isclose(coeff, 0., atol=1e-10):
+                    if n_terms > 0:
+                        observable += ' + '
+                    observable += f'{coeff} * {graphs[i]}'
+                    n_terms += 1
+            print(f'Observable: {observable}')
+            self.N_terms_lasso_efp[alpha] = n_terms      
+            self.observable_lasso_efp[alpha] = observable
         
     #---------------------------------------------------------------
     # Perform constituent subtraction study
