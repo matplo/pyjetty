@@ -142,7 +142,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
                 
-            if model == 'lasso':
+            if model == 'nsubjettiness_lasso':
                 self.K_lasso = config[model]['K_lasso']
                 self.model_settings[model]['alpha'] = config[model]['alpha']
                 self.model_settings[model]['max_iter'] = config[model]['max_iter']
@@ -214,9 +214,9 @@ class AnalyzePPAA(common_base.CommonBase):
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
 
                             # First, get the full input arrays
-                            self.y_total = hf[f'y{key_suffix}'][:]
-                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:]
-                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:]
+                            self.y_total = hf[f'y{key_suffix}'][:2*self.n_total]
+                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:2*self.n_total]
+                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:2*self.n_total]
 
                             # Check whether any training entries are empty
                             [print(f'WARNING: input entry {i} is empty') for i,x in enumerate(X_Nsub_total) if not x.any()]
@@ -362,18 +362,19 @@ class AnalyzePPAA(common_base.CommonBase):
 
                         # Set up dict to store roc curves
                         self.roc_curve_dict = {}
+                        self.roc_curve_dict_lasso = {}
                         if 'linear' in self.models:
                             self.roc_curve_dict['SGDClassifier'] = {}
                         if 'random_forest' in self.models:
                             self.roc_curve_dict['RandomForest'] = {}
                         if 'neural_network' in self.models:
                             self.roc_curve_dict['DNN'] = {}
-                        if 'lasso' in self.models:
-                            self.roc_curve_dict['Lasso'] = {}
+                        if 'nsubjettiness_lasso' in self.models:
+                            self.roc_curve_dict_lasso['nsubjettiness'] = {}
                         if 'efp' in self.models:
                             self.roc_curve_dict['efp'] = {}
                         if 'efp_lasso' in self.models:
-                            self.roc_curve_dict['efp_lasso'] = {}
+                            self.roc_curve_dict_lasso['efp'] = {}
 
                         # Plot the input data
                         jet_pt_bin_rounded = [int(pt) for pt in jet_pt_bin]
@@ -420,8 +421,8 @@ class AnalyzePPAA(common_base.CommonBase):
                 if model == 'neural_network':
                     self.fit_neural_network(K, model_settings)
                 
-            if model == 'lasso':
-                self.fit_lasso(model_settings)
+            if model == 'nsubjettiness_lasso':
+                self.fit_nsubjettiness_lasso(model_settings)
             
             if model == 'pfn':
                 self.fit_pfn(model_settings, self.y, self.X_particles)
@@ -436,26 +437,24 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.fit_efp_lasso(model_settings)
 
         # Plot traditional observables
-        self.roc_curve_dict['jet_mass'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_mass'])
-        self.roc_curve_dict['jet_angularity'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_angularity'])
-        self.roc_curve_dict['thrust'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['thrust'])
-        self.roc_curve_dict['LHA'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['LHA'])
-        self.roc_curve_dict['pTD'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['pTD'])
-        self.roc_curve_dict['zg'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['zg'])
-        self.roc_curve_dict['jet_theta_g'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['jet_theta_g'])
-        self.roc_curve_dict['hadron_z'] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results['hadron_z'])
-        self.roc_curve_dict['multiplicity_0000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0000'])
-        self.roc_curve_dict['multiplicity_0150'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0150'])
-        self.roc_curve_dict['multiplicity_0500'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_0500'])
-        self.roc_curve_dict['multiplicity_1000'] = sklearn.metrics.roc_curve(self.y, -self.qa_results['multiplicity_1000'])
+        for observable in self.qa_observables:
+            if 'matched' not in observable:
+                self.roc_curve_dict_lasso[observable] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results[observable])
 
         # Save ROC curves to file
         output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}.pkl')
         with open(output_filename, 'wb') as f:
             pickle.dump(self.roc_curve_dict, f)
             pickle.dump(self.AUC, f)
-            if 'lasso' in self.models:
-                pickle.dump(self.N_terms_lasso, f)
+
+        # Separate lasso from others, so that we can re-run it quickly
+        output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}_lasso.pkl')
+        with open(output_filename, 'wb') as f:
+            pickle.dump(self.roc_curve_dict_lasso, f)
+            if 'nsubjettiness_lasso' in self.models:
+                pickle.dump(self.N_terms_lasso_nsubjettiness, f)
+            if 'efp_lasso' in self.models:
+                pickle.dump(self.N_terms_lasso_efp, f)
         
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
@@ -731,7 +730,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #   The parameter alpha multiplies to L1 term
     #   If convergence error: can increase max_iter and/or tol, and/or set normalize=True
     #---------------------------------------------------------------
-    def fit_lasso(self, model_settings):
+    def fit_nsubjettiness_lasso(self, model_settings):
         print(f'Training Lasso regression...')
         
         # Take the logarithm of the data and labels, such that the product observable becomes a sum
@@ -746,8 +745,8 @@ class AnalyzePPAA(common_base.CommonBase):
         y_test_lasso_roc = self.y_test
         
         # Loop through values of regularization parameter
-        self.roc_curve_dict['Lasso'][self.K_lasso] = {}
-        self.N_terms_lasso = {}
+        self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso] = {}
+        self.N_terms_lasso_nsubjettiness = {}
         for alpha in model_settings['alpha']:
             print(f'Fitting lasso regression with alpha = {alpha}')
         
@@ -788,7 +787,7 @@ class AnalyzePPAA(common_base.CommonBase):
             print(f'test rmse: {rmse_lasso_test}')
             
             # ROC curve
-            self.roc_curve_dict['Lasso'][self.K_lasso][alpha] = sklearn.metrics.roc_curve(y_test_lasso_roc, y_predict_test)
+            self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso][alpha] = sklearn.metrics.roc_curve(y_test_lasso_roc, y_predict_test)
             
             if plot_learning_curve:
                 plt.axis([0, train_sizes[-1], 0, 10])
@@ -819,7 +818,7 @@ class AnalyzePPAA(common_base.CommonBase):
                     observable += rf'(\tau_{{{N}}}^{{{beta}}})^{{{coeff}}} '
                     n_terms += 1
             print(f'Observable: {observable}')
-            self.N_terms_lasso[alpha] = n_terms
+            self.N_terms_lasso_nsubjettiness[alpha] = n_terms
         
     #---------------------------------------------------------------
     # Fit ML model -- 7. Energy Flow Polynomials (EFP)
@@ -968,8 +967,8 @@ class AnalyzePPAA(common_base.CommonBase):
          Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP, Y_EFP, val=self.n_val, test=self.n_test)
         
         # Loop through values of regularization parameter
-        self.roc_curve_dict['efp_lasso'] = {}
-        self.N_terms_lasso = {}
+        self.roc_curve_dict_lasso['efp'] = {}
+        self.N_terms_lasso_efp = {}
         for alpha in model_settings['alpha']:
             print(f'Fitting lasso regression with alpha = {alpha}')
         
@@ -994,7 +993,7 @@ class AnalyzePPAA(common_base.CommonBase):
             print(f'test rmse: {rmse_lasso_test}')
             
             # ROC curve
-            self.roc_curve_dict['efp_lasso'][alpha] = sklearn.metrics.roc_curve(Y_EFP_test, y_predict_test)
+            self.roc_curve_dict_lasso['efp'][alpha] = sklearn.metrics.roc_curve(Y_EFP_test, y_predict_test)
             
             # Print out observable
             #observable = ''
