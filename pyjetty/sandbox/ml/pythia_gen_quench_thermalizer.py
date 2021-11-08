@@ -100,6 +100,8 @@ def main():
 					tn[i].Fill(run_number, event_number, _p.perp(), _p.eta(), _p.phi(), 111)
 			else:
 				jets_h = jets_hv
+				for _p in parts_pythia_h_selected:
+					tn[i].Fill(run_number, event_number, _p.perp(), _p.eta(), _p.phi(), 111)
 
 			for j in jets_h:
 				hpt[i].Fill(j.perp())
