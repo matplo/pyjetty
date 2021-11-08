@@ -191,7 +191,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['random_state'] = config[model]['random_state']
                 
             if model == 'efp_lasso':
-                self.dmax = config[model]['dmax']
+                self.dmax_lasso = config[model]['dmax']
                 self.measure = config[model]['measure']
                 self.beta_efp = config[model]['beta']
                 self.model_settings[model]['alpha'] = config[model]['alpha']
@@ -350,7 +350,8 @@ class AnalyzePPAA(common_base.CommonBase):
                                         print(f'MISMATCH of shape: {y_unshuffled.shape} vs. {idx.shape}')
                             
                             # Create a second set of four-vectors in which a min-pt cut is applied -- the labels can stay the same
-                            self.X_particles_min_pt = filter_four_vectors(np.copy(self.X_particles), min_pt=self.min_pt)
+                            if 'pfn' in self.models:
+                                self.X_particles_min_pt = filter_four_vectors(np.copy(self.X_particles), min_pt=self.min_pt)
 
                             # Also get some QA info
                             self.qa_results = {}
@@ -476,21 +477,23 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.roc_curve_dict_lasso[observable] = sklearn.metrics.roc_curve(self.y_total[:self.n_total], -self.qa_results[observable])
 
         # Save ROC curves to file
-        output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}.pkl')
-        with open(output_filename, 'wb') as f:
-            pickle.dump(self.roc_curve_dict, f)
-            pickle.dump(self.AUC, f)
+        if 'neural_network' in self.models or 'efp' in self.models or 'pfn' in self.models or 'efn' in self.models:
+            output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}.pkl')
+            with open(output_filename, 'wb') as f:
+                pickle.dump(self.roc_curve_dict, f)
+                pickle.dump(self.AUC, f)
 
         # Separate lasso from others, so that we can re-run it quickly
-        output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}_lasso.pkl')
-        with open(output_filename, 'wb') as f:
-            pickle.dump(self.roc_curve_dict_lasso, f)
-            if 'nsubjettiness_lasso' in self.models:
-                pickle.dump(self.N_terms_lasso_nsubjettiness, f)
-                pickle.dump(self.observable_lasso_nsubjettiness, f)
-            if 'efp_lasso' in self.models:
-                pickle.dump(self.N_terms_lasso_efp, f)
-                pickle.dump(self.observable_lasso_efp, f)
+        if 'nsubjettiness_lasso' in self.models or 'efp_lasso' in self.models:
+            output_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}_lasso.pkl')
+            with open(output_filename, 'wb') as f_lasso:
+                pickle.dump(self.roc_curve_dict_lasso, f_lasso)
+                if 'nsubjettiness_lasso' in self.models:
+                    pickle.dump(self.N_terms_lasso_nsubjettiness, f_lasso)
+                    pickle.dump(self.observable_lasso_nsubjettiness, f_lasso)
+                if 'efp_lasso' in self.models:
+                    pickle.dump(self.N_terms_lasso_efp, f_lasso)
+                    pickle.dump(self.observable_lasso_efp, f_lasso)
 
     #---------------------------------------------------------------
     # Fit ML model -- 1. SGDClassifier
@@ -983,10 +986,10 @@ class AnalyzePPAA(common_base.CommonBase):
         # Will calculate EFPs
         # Need to check beta dependence !!
         print()
-        print('Calculating d <= {} EFPs for {} jets... '.format(self.dmax, self.n_train + self.n_val + self.n_test), end='')
+        print('Calculating d <= {} EFPs for {} jets... '.format(self.dmax_lasso, self.n_train + self.n_val + self.n_test), end='')
         
         # Specify parameters of EFPs
-        efpset = energyflow.EFPSet(('d<=', self.dmax), measure=self.measure, beta=self.beta_efp)
+        efpset = energyflow.EFPSet(('d<=', self.dmax_lasso), measure=self.measure, beta=self.beta_efp)
         
         # Convert to list of np.arrays of jets in format (pT,y,phi,mass or PID) -> dim: (# jets, # particles in jets, #4)
         # and remove zero entries
@@ -999,7 +1002,7 @@ class AnalyzePPAA(common_base.CommonBase):
         X_EFP = X_EFP[:,1:]
         print('Done')
         print(f'Shape of X_EFP is: {X_EFP.shape}')
-        print(f'There are {X_EFP.shape[1]} terms for d<={self.dmax} (connected + disconnected, and excluding d=0)')
+        print(f'There are {X_EFP.shape[1]} terms for d<={self.dmax_lasso} (connected + disconnected, and excluding d=0)')
 
         # Record which EFPs correspond to which indices
         # Note: graph images are available here: https://github.com/pkomiske/EnergyFlow/tree/images/graphs

@@ -147,7 +147,7 @@ efp:
 efp_lasso:
 
     # efp parameters
-    dmax: 5                      # maximal degree of the EFPs -> max number of observables used for Lasso regression
+    dmax: 7                      # maximal degree of the EFPs -> max number of observables used for Lasso regression
     measure: 'hadr'              # 
     beta: 0.5                    # Exponent of the pairwise distance
 
