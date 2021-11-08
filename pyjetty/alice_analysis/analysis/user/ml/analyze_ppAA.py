@@ -11,6 +11,7 @@ import yaml
 import h5py
 import pickle
 import subprocess
+from numba import jit, prange
 
 # Data analysis and plotting
 import pandas as pd
@@ -36,6 +37,30 @@ from tensorflow import keras
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
+
+#--------------------------------------------------------------- 
+# Create a copy of four-vectors with a min-pt cut
+#---------------------------------------------------------------        
+@jit(nopython=True) 
+def filter_four_vectors(X_particles, min_pt=0.):
+
+    n_jets = X_particles.shape[0]
+    n_particles = 800
+    
+    for i in prange(n_jets):
+        jet = X_particles[i]
+
+        new_jet_index = 0
+        new_jet = np.zeros(jet.shape)
+
+        for j in prange(n_particles):
+            if jet[j][0] > min_pt:
+                 new_jet[new_jet_index] = jet[j]
+                 new_jet_index += 1
+        
+        X_particles[i] = new_jet.copy()
+
+    return X_particles
 
 ################################################################
 class AnalyzePPAA(common_base.CommonBase):
@@ -134,6 +159,8 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['epochs'] = config[model]['epochs']
                 self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 self.model_settings[model]['use_pids'] = config[model]['use_pids']
+                self.min_pt = config[model]['min_pt']
+
                 
             if model == 'efn':
                 self.model_settings[model]['Phi_sizes'] = tuple(config[model]['Phi_sizes'])
@@ -214,9 +241,9 @@ class AnalyzePPAA(common_base.CommonBase):
                         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
 
                             # First, get the full input arrays
-                            self.y_total = hf[f'y{key_suffix}'][:2*self.n_total]
-                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:2*self.n_total]
-                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:2*self.n_total]
+                            self.y_total = hf[f'y{key_suffix}'][:3*self.n_total]
+                            X_particles_total = hf[f'X_four_vectors{key_suffix}'][:3*self.n_total]
+                            X_Nsub_total = hf[f'X_Nsub{key_suffix}'][:3*self.n_total]
 
                             # Check whether any training entries are empty
                             [print(f'WARNING: input entry {i} is empty') for i,x in enumerate(X_Nsub_total) if not x.any()]
@@ -321,6 +348,9 @@ class AnalyzePPAA(common_base.CommonBase):
                                         self.X_Nsub = X_Nsub_unshuffled[idx]
                                     else:
                                         print(f'MISMATCH of shape: {y_unshuffled.shape} vs. {idx.shape}')
+                            
+                            # Create a second set of four-vectors in which a min-pt cut is applied -- the labels can stay the same
+                            self.X_particles_min_pt = filter_four_vectors(np.copy(self.X_particles), min_pt=self.min_pt)
 
                             # Also get some QA info
                             self.qa_results = {}
@@ -426,6 +456,10 @@ class AnalyzePPAA(common_base.CommonBase):
             
             if model == 'pfn':
                 self.fit_pfn(model_settings, self.y, self.X_particles)
+
+                auc_label = 'PFN_min_pt'
+                self.AUC[f'{auc_label}{self.key_suffix}'] = []
+                self.fit_pfn(model_settings, self.y, self.X_particles_min_pt, roc_label='PFN_min_pt', auc_label=auc_label)
                 
             if model == 'efn':
                 self.fit_efn(model_settings)

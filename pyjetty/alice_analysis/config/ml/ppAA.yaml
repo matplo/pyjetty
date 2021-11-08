@@ -47,8 +47,8 @@ pp_label: 'PYTHIA8'
 AA_label: 'JEWEL'
 
 # Select model: linear, random_forest, neural_network, nsubjettiness_lasso, efp_lasso, efp, pfn, efn,
-models: [nsubjettiness_lasso, efp_lasso]
-#models: [neural_network, efp, pfn, efn]
+#models: [nsubjettiness_lasso, efp_lasso]
+models: [neural_network, efp, pfn, efn, nsubjettiness_lasso, efp_lasso]
 # pfn_cs
 
 # Option to perform constituent subtraction study, using four-vectors in cone
@@ -96,6 +96,9 @@ pfn:
     epochs: 10                   # number of training epochs
     batch_size: 500
     use_pids: True               # Use PID information
+
+    # Train using constituent min_pt=0 and again using the min_pt specified here
+    min_pt: 1.
     
 efn:
 
@@ -144,7 +147,7 @@ efp:
 efp_lasso:
 
     # efp parameters
-    dmax: 3                      # maximal degree of the EFPs -> max number of observables used for Lasso regression
+    dmax: 5                      # maximal degree of the EFPs -> max number of observables used for Lasso regression
     measure: 'hadr'              # 
     beta: 0.5                    # Exponent of the pairwise distance
 
