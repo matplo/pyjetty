@@ -7,6 +7,7 @@
 #pragma link C++ class RUtil::Test+;
 #pragma link C++ class RUtil::HistUtils+;
 #pragma link C++ class RUtil::ParticleGrid+;
+#pragma link C++ class RUtil::Thermalizer+;
 
 // #pragma link off all class;
 // #pragma link off all function;

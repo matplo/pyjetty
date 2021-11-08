@@ -39,28 +39,16 @@ def main():
 	fj.ClusterSequence.print_banner()
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 
-	qweights = [0.05, 0.1, 0.2, 0.3]
+	qweights = [1./iw/10. for iw in reversed(range(1, 3)) ]
 	qweights.insert(0, 0)
 
 	rout = ROOT.TFile('gen_quench_out.root', 'recreate')
 	hpt = []
-	thf = []
 	for i, w in enumerate(qweights):
 		hname = 'hpt_{}'.format(i)
 		htitle = 'hpt w={}'.format(w)
-		rout.cd()
-		h = ROOT.TH1F(hname, htitle, 10, mputils.logbins(10, 500, 10))
+		h = ROOT.TH1F(hname, htitle, 10, mputils.logbins(10, 1000, 10))
 		hpt.append(h)
-		if w <= 0:
-			w = 1e-3
-		hname = 'th_{}'.format(i)
-		htitle = 'thf w={}'.format(w)
-		rout.cd()
-		th = ROOT.TF1(hname, 'gaus', -5 * w , 5 * w)
-		th.SetParameter(0, 1)
-		th.SetParameter(1, 0)
-		th.SetParameter(2, w)
-		thf.append(th)
 
 	pbar = tqdm.tqdm(range(args.nev))
 	for i in pbar:
@@ -71,32 +59,30 @@ def main():
 		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, False)
 		parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
 
-		jets_hv = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_h_selected)))
-		if len(jets_hv) < 1:
+		jets_h = fj.sorted_by_pt(jet_selector(jet_def(parts_pythia_h_selected)))
+
+		if len(jets_h) < 1:
 			continue
 
-		jets_h = None
 		# do your things with jets here...
-		for i, w in enumerate(qweights):
-			if w > 0:
-				_pthermal = []
-				for p in parts_pythia_h_selected:
-					_pth0 = fj.PseudoJet()
-					_pth0.reset_PtYPhiM(p.perp() * (1.-w), p.rap(), p.phi(), p.m())
-					_pthermal.append(_pth0)
-					_pth1 = fj.PseudoJet()
-					_pth1.reset_PtYPhiM(p.perp() * (0.+w), p.rap() + thf[i].GetRandom(-3 * w , 3 * w), p.phi() + thf[i].GetRandom(-3 * w , 3 * w), p.m())
-					_pthermal.append(_pth1)
-				jets_h = fj.sorted_by_pt(jet_selector(jet_def(_pthermal)))
-			else:
-				jets_h = jets_hv
-
-			for j in jets_h:
-				hpt[i].Fill(j.perp())
+		for j in jets_h:
+			for i, w in enumerate(qweights):
+				if w > 0:
+					_j = j * w
+				else:
+					_j = j
+				jpt = 0
+				print(j.perp(), _j.perp(), w)
+				for p in j.constituents():
+					if w > 0:
+						bp = p.unboost(_j)
+					else:
+						bp = p
+					print(' -', w, p.perp(), bp.perp())
+					jpt = jpt + bp.perp()
+				hpt[i].Fill(jpt)
 
 	rout.cd()
-	for _f in thf:
-		_f.Write()
 	rout.Write()
 	rout.Close()
 
