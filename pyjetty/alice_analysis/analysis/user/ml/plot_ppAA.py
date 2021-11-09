@@ -142,8 +142,8 @@ class PlotPPAA(common_base.CommonBase):
 
                         roc_list = {}
                         roc_list[f'PFN_hard'] = roc_curve_dict_Rmax0['PFN']
-                        roc_list[f'PFN_hard_min_pt'] = roc_curve_dict_Rmax0['PFN_min_pt']
                         roc_list[f'PFN_background'] = roc_curve_dict_Rmax025['PFN']
+                        roc_list[f'PFN_hard_min_pt'] = roc_curve_dict_Rmax0['PFN_min_pt']
                         
                         outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
@@ -210,7 +210,7 @@ class PlotPPAA(common_base.CommonBase):
             roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
             roc_list['jet_angularity'] = self.roc_curve_dict_lasso['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
-            roc_list['zg'] = self.roc_curve_dict_lasso['jet_theta_g']
+            roc_list['zg'] = self.roc_curve_dict_lasso['zg']
             alpha_nsubjettiness = self.nsubjettiness_alpha_list[0]
             roc_list[rf'Lasso $(\alpha = {alpha_nsubjettiness})$, N-subjettiness'] = self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso_nsubjettiness][alpha_nsubjettiness]
             alpha_efp = self.efp_alpha_list[0]
@@ -270,44 +270,61 @@ class PlotPPAA(common_base.CommonBase):
                 alpha = 0.5
                 linestyle = self.linestyle(label)
                 color=self.color(label)
+                legend_fontsize = 12
                 if label == 'jet_mass':
                     label = r'$m_{\mathrm{jet}}$'
                 if label == 'jet_angularity':
                     label = r'$\lambda_1$'
                 if label == 'jet_theta_g':
                     label = r'$\theta_{\mathrm{g}}$'
+                if label == 'zg':
+                    label = r'$z_{\mathrm{g}}$'
                 if label == 'PFN':
                     label = 'Particle Flow Network'
                 if label == 'EFN':
                     label = 'Energy Flow Network'
-            elif 'DNN' in label or 'EFP' in label:
-                linewidth = 2
-                alpha = 0.9
-                linestyle = 'solid'
-                color=self.color(label)
+                if label == 'PFN_hard':
+                    label = 'Jet'
+                if label == 'PFN_hard_min_pt':
+                    label = rf'Jet ($p_{{ \rm{{T}} }}^{{ \rm{{particle}} }} > 1$ GeV)'
+                if label == 'PFN_background':
+                    label = 'Jet + Background'
             elif 'Lasso' in label:
-                linewidth = 2
-                alpha = 0.9
+                linewidth = 4
+                alpha = 0.5
                 linestyle = 'solid'
                 color=self.color(label)
+                legend_fontsize = 10
                 reg_param = float(re.search('= (.*)\)', label).group(1))
                 if 'N-subjettiness' in label:
                     n_terms = self.N_terms_lasso_nsubjettiness[reg_param]
                 elif 'EFP' in label:
                     n_terms = self.N_terms_lasso_efp[reg_param]
+
+                if 'N-subjettiness' in label:
+                    label = rf'$\prod_{{N,\beta}} \left( \tau_N^{{\beta}} \right) ^{{c_{{N,\beta}} }}$'
+                elif 'EFP' in label:
+                    label = rf'$\sum_{{G}} c_{{G}} \rm{{EFP}}_{{G}}$'
                 label += f', {n_terms} terms'
+            elif 'DNN' in label or 'EFP' in label:
+                linewidth = 2
+                alpha = 0.9
+                linestyle = 'solid'
+                color=self.color(label)
+                legend_fontsize = 12
             else:
                 linewidth = 2
                 linestyle = 'solid'
                 alpha = 0.9
                 color = sns.xkcd_rgb['almost black']
+                legend_fontsize = 12
   
             FPR = value[0]
             TPR = value[1]
             plt.plot(FPR, TPR, linewidth=linewidth, label=label,
                      linestyle=linestyle, alpha=alpha, color=color)
                     
-        plt.legend(loc='lower right', fontsize=12)
+        plt.legend(loc='lower right', fontsize=legend_fontsize)
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir_i, f'ROC_{self.roc_plot_index}.pdf'))
         plt.close()
