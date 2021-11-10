@@ -23,8 +23,9 @@ import ROOT
 ROOT.gROOT.SetBatch(1)
 ROOT.gSystem.Load('libpyjetty_rutil')
 
-class MyOutput(object):
-	def __init__(self, foutnamebase, qweights = [2,4,6,10]):
+
+class MyOutputFile(object):
+	def __init__(self, foutnamebase, qweight = 0):
 		self.foutnamebase = foutnamebase
 		self.current_file_number = 0
 		self.current_fname = ''
@@ -32,8 +33,7 @@ class MyOutput(object):
 		self.hpt = None
 		self.hz = None
 		self.tn = None
-		self.qweights = []
-		__ = [self.qweights.append(w) for w in qweights]
+		self.qweight = qweight
 
 	def close_current(self):
 		if self.rout:
@@ -41,32 +41,29 @@ class MyOutput(object):
 			self.rout.Write()
 			self.rout.Close()
 			self.rout = None
-
 		
 	def new_file(self):
 		self.close_current()
 		if self.rout is None:
 			self.current_file_number += 1
-			self.current_fname = '{}_{}.root'.format(os.path.splitext(self.foutnamebase)[0], self.current_file_number, '.root')
+			self.current_fname = '{}_w{}_f{}.root'.format(os.path.splitext(self.foutnamebase)[0], self.qweight, self.current_file_number, '.root')
 			self.rout = ROOT.TFile(self.current_fname, 'recreate')
-			self.hpt = []
-			self.hz = []
-			self.tn = []
-			for i, w in enumerate(self.qweights):
-				hname = 'hpt_{}'.format(i)
-				htitle = 'hpt w={}'.format(w)
-				self.rout.cd()
-				# h = ROOT.TH1F(hname, htitle, 10, mputils.logbins(10, 500, 10))
-				h = ROOT.TH1F(hname, htitle, 10, 0, 250)
-				self.hpt.append(h)
-				hname = 'hpz_{}'.format(i)
-				htitle = 'hpz w={}'.format(w)
-				h = ROOT.TH1F(hname, htitle, 10, 0, 1)
-				self.hz.append(h)
-				hname = 'th_{}'.format(i)
-				htitle = 'thf w={}'.format(w)
-				_tn = ROOT.TNtuple('tree_Particle_gen_{}'.format(w), 'particles from thermalizer {}'.format(w), 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
-				self.tn.append(_tn)
+			hname = 'hpt_{}'.format(self.qweight)
+			htitle = 'hpt w={}'.format(self.qweight)
+			self.rout.cd()
+
+			# h = ROOT.TH1F(hname, htitle, 10, mputils.logbins(10, 500, 10))
+			self.hpt = ROOT.TH1F(hname, htitle, 10, 0, 250)
+			hname = 'hpz_{}'.format(self.qweight)
+			htitle = 'hpz w={}'.format(self.qweight)
+
+			self.hz = ROOT.TH1F(hname, htitle, 10, 0, 1)
+			hname = 'th_{}'.format(self.qweight)
+			htitle = 'thf w={}'.format(self.qweight)
+
+			self.tn = ROOT.TNtuple(	'tree_Particle_gen', 
+								'particles from thermalizer {}'.format(self.qweight), 
+							   	'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
 		else:
 			print('[e] unable to open new file - previous one still non None', file=sys.stderr)
 			rout = None
@@ -80,6 +77,33 @@ class MyOutput(object):
 			print('[e] unable to open new file .IsOpen() is False', file=sys.stderr)
 			return False
 		return True
+
+
+class MyOutput(object):
+	def __init__(self, foutnamebase, qweights = [0,2,4,6,10]):
+		self.qweights = []
+		__ = [self.qweights.append(w) for w in qweights]
+		_pairs = []
+		for w in self.qweights:
+			_f = MyOutputFile(foutnamebase, w)
+			_pairs.append((w,_f))
+		self.files = dict(_pairs)
+
+	def new_files(self):
+		rvalue = True
+		for w in self.qweights:
+			rvalue = rvalue and self.files[w].new_file()
+		return rvalue
+
+	def close(self):
+		for w in self.qweights:
+			self.files[w].close_current()
+
+	def list_files(self):
+		_list = []
+		for w in self.qweights:
+			_list.append(self.files[w].current_fname)
+		return _list
 
 
 def main():
@@ -99,12 +123,11 @@ def main():
 	fj.ClusterSequence.print_banner()
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 
-	qweights = [2, 4, 6, 10] # n-parts quenched
+	qweights = [0, 2, 4, 6, 10] # n-parts quenched
 
-	qweights.insert(0, 0)
 	output = MyOutput('gen_quench_out.root', qweights)
-	if output.new_file():
-		print('[i] new file:', output.current_fname)
+	if output.new_files():
+		print('[i] new files with', output.list_files())
 	else:
 		return
 
@@ -128,8 +151,8 @@ def main():
 			continue
 
 		if event_number > 0 and event_number % 100 == 0:
-			if output.new_file():
-				print('[i] new file:', output.current_fname)
+			if output.new_files():
+				print('[i] new files:', output.list_files())
 			else:
 				print('[e] no new file. stop here.')
 				break
@@ -138,7 +161,7 @@ def main():
 		pbar.update(1)
 
 		jets_h = None
-		# do your things with jets here...
+		# do your things with jets/events here...
 		for i, w in enumerate(qweights):
 			if w > 0:
 				_pthermal = []
@@ -148,20 +171,20 @@ def main():
 				# print(i, 'len', len(_pthermal), 'from', len(parts_pythia_h_selected))
 				jets_h = fj.sorted_by_pt(jet_selector(jet_def(_pthermal)))
 				for _p in _pthermal:
-					output.tn[i].Fill(run_number, event_number, _p.perp(), _p.eta(), _p.phi(), 111)
+					output.files[w].tn.Fill(run_number, event_number, _p.perp(), _p.eta(), _p.phi(), 111)
 			else:
 				jets_h = jets_hv
 				for _p in parts_pythia_h_selected:
-					output.tn[i].Fill(run_number, event_number, _p.perp(), _p.eta(), _p.phi(), 111)
+					output.files[w].tn.Fill(run_number, event_number, _p.perp(), _p.eta(), _p.phi(), 111)
 
 			for j in jets_h:
-				output.hpt[i].Fill(j.perp())
+				output.files[w].hpt.Fill(j.perp())
 				if j.perp() > 100 and j.perp() < 125:
 					for c in j.constituents():
-						output.hz[i].Fill(c.perp() / j.perp())
+						output.files[w].hz.Fill(c.perp() / j.perp())
 
 	pbar.close()
-	output.close_current()
+	output.close()
 
 	pythia.stat()
 	pythia.settings.writeFile(args.py_cmnd_out)
