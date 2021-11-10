@@ -150,7 +150,7 @@ def main():
 		if len(jets_hv) < 1:
 			continue
 
-		if event_number > 0 and event_number % 100 == 0:
+		if event_number > 0 and event_number % 1000 == 0:
 			if output.new_files():
 				print('[i] new files:', output.list_files())
 			else:
