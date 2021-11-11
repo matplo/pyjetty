@@ -117,7 +117,7 @@ nsubjettiness_lasso:
     K_lasso: 20
 
     # Model hyperparameters
-    alpha: [0.3, 0.5, 1., 1.5, 2.]        # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    alpha: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]        # Constant multiplying the L1 term. 0 corresponds to the standard regression
     alpha_plot: [0.5, 1., 2.]
     max_iter: 10000              # max number of epochs
     tol: 1e-6                    # criteria to stop training
@@ -131,7 +131,7 @@ nsubjettiness_lasso:
 efp:
 
     # efp parameters
-    dmax: 7                      # maximal degree of the EFPs
+    dmax: 8                      # maximal degree of the EFPs
     measure: 'hadr'              # 
     beta: 0.5                    # Exponent of the pairwise distance
     linear_efp: True             # Use linear model: True, DNN: False
@@ -147,12 +147,13 @@ efp:
 efp_lasso:
 
     # efp parameters
-    dmax: 7                      # maximal degree of the EFPs -> max number of observables used for Lasso regression
+    dmax: 8                      # maximal degree of the EFPs -> max number of observables used for Lasso regression
     measure: 'hadr'              # 
     beta: 0.5                    # Exponent of the pairwise distance
 
     # Lasso
-    alpha: [1.e-5, 1.e-4, 0.001]   # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    #alpha: [1.e-5, 1.e-4, 0.001]   # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    alpha: [0.001, 0.005, 0.01, 0.05, 0.1]
     max_iter: 10000              # max number of epochs
     tol: 1e-6                    # criteria to stop training
 
@@ -161,4 +162,3 @@ efp_lasso:
     cv: 5                        # number of cross-validation folds
     
     random_state: null           # seed for shuffling data (set to an int to have reproducible results)
-

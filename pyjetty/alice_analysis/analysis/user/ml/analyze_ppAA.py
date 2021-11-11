@@ -590,8 +590,12 @@ class AnalyzePPAA(common_base.CommonBase):
                     optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
                     metrics=model_settings['metrics'])
 
+        # Preprocessing: zero mean unit variance
+        X_Nsub_train = sklearn.preprocessing.scale(self.training_data[K]['X_Nsub_train'])
+        X_Nsub_test = sklearn.preprocessing.scale(self.training_data[K]['X_Nsub_test'])
+
         # Train DNN - use validation_split to split into validation set
-        history = DNN.fit(self.training_data[K]['X_Nsub_train'],
+        history = DNN.fit(X_Nsub_train,
                           self.y_train,
                           batch_size=model_settings['batch_size'],
                           epochs=model_settings['epochs'],
@@ -602,7 +606,7 @@ class AnalyzePPAA(common_base.CommonBase):
             self.plot_NN_epochs(model_settings['epochs'], history, 'DNN', K)
         
         # Get predictions for test data set
-        y_Nsub_test_preds_DNN = DNN.predict(self.training_data[K]['X_Nsub_test']).reshape(-1)
+        y_Nsub_test_preds_DNN = DNN.predict(X_Nsub_test).reshape(-1)
         
         # Get AUC
         Nsub_auc_DNN = sklearn.metrics.roc_auc_score(self.y_test, y_Nsub_test_preds_DNN)
@@ -776,7 +780,11 @@ class AnalyzePPAA(common_base.CommonBase):
         # and the exponents in the product observable become the regression weights
         X_train_lasso = np.log(self.training_data[self.K_lasso]['X_Nsub_train']+0.0001)
         X_test_lasso = np.log(self.training_data[self.K_lasso]['X_Nsub_test']+0.0001)
-        
+
+        # Preprocessing: zero mean unit variance
+        X_train_lasso = sklearn.preprocessing.scale(X_train_lasso)
+        X_test_lasso = sklearn.preprocessing.scale(X_test_lasso)
+
         # Not taking log of test labels to make ROC curve later which requires integers for the test data
         eps = .01
         y_train_lasso = np.log(eps + (1. - 2. * eps) * self.y_train)
@@ -901,6 +909,9 @@ class AnalyzePPAA(common_base.CommonBase):
         
                 # Select EFPs with degree <= d
                 X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+
+                # Preprocessing: zero mean unit variance
+                X_EFP_d = sklearn.preprocessing.scale(X_EFP_d)
         
                 # Do train/val/test split (Note: validation set not used here.)
                 (X_EFP_train, X_EFP_val, X_EFP_test, Y_EFP_train, Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
@@ -1003,6 +1014,9 @@ class AnalyzePPAA(common_base.CommonBase):
         print('Done')
         print(f'Shape of X_EFP is: {X_EFP.shape}')
         print(f'There are {X_EFP.shape[1]} terms for d<={self.dmax_lasso} (connected + disconnected, and excluding d=0)')
+
+        # Preprocessing: zero mean unit variance
+        X_EFP = sklearn.preprocessing.scale(X_EFP)
 
         # Record which EFPs correspond to which indices
         # Note: graph images are available here: https://github.com/pkomiske/EnergyFlow/tree/images/graphs

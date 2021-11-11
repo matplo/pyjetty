@@ -104,14 +104,15 @@ class PlotPPAA(common_base.CommonBase):
                             self.AUC = pickle.load(f)
 
                         lasso_filename = os.path.join(self.output_dir_i, f'ROC{self.key_suffix}_lasso.pkl')
-                        with open(lasso_filename, 'rb') as f_lasso:
-                            self.roc_curve_dict_lasso = pickle.load(f_lasso)
-                            if 'nsubjettiness_lasso' in self.models:
-                                self.N_terms_lasso_nsubjettiness = pickle.load(f_lasso)
-                                self.observable_lasso_nsubjettiness = pickle.load(f_lasso)
-                            if 'efp_lasso' in self.models:
-                                self.N_terms_lasso_efp = pickle.load(f_lasso)
-                                self.observable_lasso_efp = pickle.load(f_lasso)
+                        if os.path.exists(lasso_filename):
+                            with open(lasso_filename, 'rb') as f_lasso:
+                                self.roc_curve_dict_lasso = pickle.load(f_lasso)
+                                if 'nsubjettiness_lasso' in self.models:
+                                    self.N_terms_lasso_nsubjettiness = pickle.load(f_lasso)
+                                    self.observable_lasso_nsubjettiness = pickle.load(f_lasso)
+                                if 'efp_lasso' in self.models:
+                                    self.N_terms_lasso_efp = pickle.load(f_lasso)
+                                    self.observable_lasso_efp = pickle.load(f_lasso)
 
                         # Plot models for a single setting
                         self.plot_models(event_type, jetR, jet_pt_bin, R_max)
