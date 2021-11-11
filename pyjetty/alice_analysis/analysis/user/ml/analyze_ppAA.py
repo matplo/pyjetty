@@ -1347,14 +1347,6 @@ class AnalyzePPAA(common_base.CommonBase):
             result_jewel = self.qa_results[qa_observable][jewel_indices.astype(bool)]
             result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
 
-            # Plot distributions
-            plot_ratio = False
-            if plot_ratio:
-                fig, (ax1, ax2) = plt.subplots(nrows=2)
-            else:
-                fig, ax1 = plt.subplots()
-            max = np.amax(result_pythia)
-
             # Set some labels
             print(qa_observable)
             if qa_observable == 'jet_theta_g':
@@ -1372,35 +1364,25 @@ class AnalyzePPAA(common_base.CommonBase):
             else:
                 ylabel = ''
                 xlabel = rf'{qa_observable}'
-                bins = np.linspace(0, max, 20)
+                bins = np.linspace(0, np.amax(result_pythia), 20)
             plt.xlabel(xlabel, fontsize=14)
-            plt.ylabel(ylabel, fontsize=14)
+            plt.ylabel(ylabel, fontsize=16)
 
-            n_jewel,_,_ = ax1.hist(result_jewel,
-                                   bins,
-                                   histtype='stepfilled',
-                                   density=True,
-                                   label = self.AA_label,
-                                   linewidth=2,
-                                   linestyle='-',
-                                   alpha=0.5)
-            n_pythia,_,_ = ax1.hist(result_pythia,
-                                    bins,
-                                    histtype='stepfilled',
-                                    density=True,
-                                    label = self.pp_label,
-                                    linewidth=2,
-                                    linestyle='-',
-                                    alpha=0.5)
-            legend = ax1.legend(loc='best', fontsize=14, frameon=False)
-
-            # Plot ratio
-            if plot_ratio:
-                ratio = n_jewel/n_pythia
-                ratio[np.isnan(ratio)] = 0
-                x = (bins[1:] + bins[:-1]) / 2
-                ax2.plot(x, ratio)
+            # Construct dataframes for histplot
+            df_jewel = pd.DataFrame(result_jewel, columns=[xlabel])
+            df_pythia = pd.DataFrame(result_pythia, columns=[xlabel])
             
+            # Add label columns to each df to differentiate them for plotting
+            df_jewel['generator'] = np.repeat(self.AA_label, result_jewel.shape[0])
+            df_pythia['generator'] = np.repeat(self.pp_label, result_pythia.shape[0])
+            df = df_jewel.append(df_pythia, ignore_index=True)
+            print(df)
+
+            # Histplot
+            h = sns.histplot(df, x=xlabel, hue='generator', stat='density', bins=bins, element='step', common_norm=False)
+            h.legend_.set_title(None)
+            plt.setp(h.get_legend().get_texts(), fontsize='14') # for legend text
+
             plt.tight_layout()
             plt.savefig(os.path.join(self.output_dir_i, f'{qa_observable}.pdf'))
             plt.close()
