@@ -410,10 +410,11 @@ class AnalyzePPAA(common_base.CommonBase):
                         # Plot the input data
                         jet_pt_bin_rounded = [int(pt) for pt in jet_pt_bin]
                         self.plot_QA(event_type, jetR, jet_pt_bin_rounded, R_max)
-                        
-                        for K in self.K_list:
-                            if K <= 4:
-                                self.plot_training_data(K)
+
+                        # Plot first few K (before and after scaling)
+                        if 'neural_network' in self.models and K < 5:
+                            self.plot_nsubjettiness_distributions(K, self.training_data[K_plot]['X_Nsub_train'], 'before_scaling')
+                            self.plot_nsubjettiness_distributions(K, sklearn.preprocessing.scale(self.training_data[K_plot]['X_Nsub_train']), 'after_scaling')
                            
                         # Train models
                         self.train_models(event_type, jetR, jet_pt_bin, R_max)
@@ -909,6 +910,11 @@ class AnalyzePPAA(common_base.CommonBase):
         
                 # Select EFPs with degree <= d
                 X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+
+                # Plot EFPs
+                if d == 2:
+                    self.plot_efp_distributions(d, X_EFP_d, efpset, suffix='before_scaling')
+                    self.plot_efp_distributions(d, sklearn.preprocessing.scale(X_EFP_d), efpset, suffix='after_scaling')
 
                 # Preprocessing: zero mean unit variance
                 X_EFP_d = sklearn.preprocessing.scale(X_EFP_d)
@@ -1416,24 +1422,19 @@ class AnalyzePPAA(common_base.CommonBase):
             plt.close()
         
     #---------------------------------------------------------------
-    # Main processing function
+    # Plot nsubjettiness
     #---------------------------------------------------------------
-    def plot_training_data(self, K):
+    def plot_nsubjettiness_distributions(self, K, X_train, suffix=''):
             
-        # Print fraction of AA jets
-        if K == min(self.K_list):
-            print('Fraction of AA jets: {}'.format(np.sum(self.y_train)/self.y_train.size))
-            print()
-        
-        print(f'Plotting input data, K={K}...')
+        print(f'Plotting input nsubjettiness data, K={K}...')
         print()
         
         # Separate PYTHIA/JEWEL
         jewel_indices = self.y_train
         pythia_indices = 1 - self.y_train
-        n_plot = int(self.n_train/10) # Plot a subset to save time/space
-        X_Nsub_jewel = self.training_data[K]['X_Nsub_train'][jewel_indices.astype(bool)][:n_plot]
-        X_Nsub_pythia = self.training_data[K]['X_Nsub_train'][pythia_indices.astype(bool)][:n_plot]
+        n_plot = int(self.n_train) # Plot a subset to save time/space
+        X_Nsub_jewel = X_train[jewel_indices.astype(bool)][:n_plot]
+        X_Nsub_pythia = X_train[pythia_indices.astype(bool)][:n_plot]
 
         # Construct dataframes for scatter matrix plotting
         df_jewel = pd.DataFrame(X_Nsub_jewel, columns=self.training_data[K]['feature_labels'])
@@ -1442,20 +1443,63 @@ class AnalyzePPAA(common_base.CommonBase):
         # Add label columns to each df to differentiate them for plotting
         df_jewel['generator'] = np.repeat(self.AA_label, X_Nsub_jewel.shape[0])
         df_pythia['generator'] = np.repeat(self.pp_label, X_Nsub_pythia.shape[0])
-                
+        df = df_jewel.append(df_pythia, ignore_index=True)
+
         # Plot scatter matrix
-        df = df_jewel.append(df_pythia)
-        g = sns.pairplot(df, corner=True, hue='generator')
+        g = sns.pairplot(df, corner=True, hue='generator', plot_kws={'alpha':0.1})
         #g.legend.set_bbox_to_anchor((0.75, 0.75))
         #plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.png'), dpi=50)
-        plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.pdf'))
+        plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}_{suffix}.pdf'))
         plt.close()
         
         # Plot correlation matrix
         df.drop(columns=['generator'])
         corr_matrix = df.corr()
         sns.heatmap(corr_matrix)
-        plt.savefig(os.path.join(self.output_dir_i, f'training_data_correlation_matrix_K{K}.pdf'))
+        plt.savefig(os.path.join(self.output_dir_i, f'training_data_correlation_matrix_K{K}_{suffix}.pdf'))
+        plt.close()
+
+            
+    #---------------------------------------------------------------
+    # Plot EFPs
+    #---------------------------------------------------------------
+    def plot_efp_distributions(self, d, X_EFP_d, efpset, suffix='before_scaling'):
+            
+        print(f'Plotting input EFP data, d={d}...')
+        print()
+
+        # Separate PYTHIA/JEWEL
+        X_EFP_d = X_EFP_d[:,1:]
+        jewel_indices = self.y
+        pythia_indices = 1 - self.y
+        n_plot = int(self.n_train) # Plot a subset to save time/space
+        X_jewel = X_EFP_d[jewel_indices.astype(bool)][:n_plot]
+        X_pythia = X_EFP_d[pythia_indices.astype(bool)][:n_plot]
+
+        # Get labels
+        graphs = [str(x) for x in efpset.graphs()[1:]]
+
+        # Construct dataframes for scatter matrix plotting
+        df_jewel = pd.DataFrame(X_jewel, columns=graphs)
+        df_pythia = pd.DataFrame(X_pythia, columns=graphs)
+        
+        # Add label columns to each df to differentiate them for plotting
+        df_jewel['generator'] = np.repeat(self.AA_label, X_jewel.shape[0])
+        df_pythia['generator'] = np.repeat(self.pp_label, X_pythia.shape[0])
+        df = df_jewel.append(df_pythia, ignore_index=True)
+
+        # Plot scatter matrix
+        g = sns.pairplot(df, corner=True, hue='generator', plot_kws={'alpha':0.1})
+        #g.legend.set_bbox_to_anchor((0.75, 0.75))
+        #plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.png'), dpi=50)
+        plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_d{d}_{suffix}.pdf'))
+        plt.close()
+        
+        # Plot correlation matrix
+        df.drop(columns=['generator'])
+        corr_matrix = df.corr()
+        sns.heatmap(corr_matrix)
+        plt.savefig(os.path.join(self.output_dir_i, f'training_data_correlation_matrix_d{d}_{suffix}.pdf'))
         plt.close()
             
 ##################################################################

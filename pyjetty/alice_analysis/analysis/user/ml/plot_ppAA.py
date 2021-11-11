@@ -65,6 +65,7 @@ class PlotPPAA(common_base.CommonBase):
         
         # Initialize model-specific settings
         self.nsubjettiness_alpha_list = config['nsubjettiness_lasso']['alpha']
+        self.nsubjettiness_alpha_plot_list = config['nsubjettiness_lasso']['alpha_plot']
         self.K_lasso_nsubjettiness = config['nsubjettiness_lasso']['K_lasso']
 
         self.dmax = config['efp']['dmax']
@@ -204,6 +205,17 @@ class PlotPPAA(common_base.CommonBase):
                  roc_list[f'EFP (d = {d})'] = self.roc_curve_dict['efp'][d]
              self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
+        if 'neural_network' in self.models and 'nsubjettiness_lasso' in self.models:
+            roc_list = {}
+            roc_list[f'DNN (K = {self.K_lasso_nsubjettiness})'] = self.roc_curve_dict['DNN'][self.K_lasso_nsubjettiness]
+            roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
+            roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
+            roc_list['zg'] = self.roc_curve_dict_lasso['zg']
+            for alpha_nsubjettiness in self.nsubjettiness_alpha_plot_list:
+                roc_list[rf'Lasso $(\alpha = {alpha_nsubjettiness})$, N-subjettiness'] = self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso_nsubjettiness][alpha_nsubjettiness]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
+            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
+
         if 'neural_network' in self.models and 'nsubjettiness_lasso' in self.models and 'efp' in self.models and 'efp_lasso' in self.models:
             roc_list = {}
             roc_list[f'DNN (K = {self.K_lasso_nsubjettiness})'] = self.roc_curve_dict['DNN'][self.K_lasso_nsubjettiness]
@@ -276,6 +288,8 @@ class PlotPPAA(common_base.CommonBase):
                     label = r'$m_{\mathrm{jet}}$'
                 if label == 'jet_angularity':
                     label = r'$\lambda_1$'
+                if label == 'thrust':
+                    label = r'$\lambda_2$ (thrust)'
                 if label == 'jet_theta_g':
                     label = r'$\theta_{\mathrm{g}}$'
                 if label == 'zg':
