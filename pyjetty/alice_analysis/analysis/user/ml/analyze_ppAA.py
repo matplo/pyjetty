@@ -1348,13 +1348,37 @@ class AnalyzePPAA(common_base.CommonBase):
             result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
 
             # Plot distributions
-            fig, (ax1, ax2) = plt.subplots(nrows=2)
-            plt.xlabel(rf'{qa_observable}', fontsize=14)
-            max = np.amax(result_pythia)*1.2
-            bins = np.linspace(0, max, 20)
+            plot_ratio = False
+            if plot_ratio:
+                fig, (ax1, ax2) = plt.subplots(nrows=2)
+            else:
+                fig, ax1 = plt.subplots()
+            max = np.amax(result_pythia)
+
+            # Set some labels
+            print(qa_observable)
+            if qa_observable == 'jet_theta_g':
+                xlabel = rf'$\theta_{{\rm{{g}} }}$'
+                ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{d\theta_{{\rm{{g}} }} }}$'
+                bins = np.linspace(0, 1., 50)
+            elif qa_observable == 'thrust':
+                xlabel = rf'$\lambda_2$'
+                ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{d\lambda_2 }} }}$'
+                bins = np.linspace(0, 0.3, 50)
+            elif qa_observable == 'zg':
+                xlabel = rf'$z_{{\rm{{g}} }}$'
+                ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{dz_{{\rm{{g}} }} }}$'
+                bins = np.linspace(0.2, 0.5, 15)
+            else:
+                ylabel = ''
+                xlabel = rf'{qa_observable}'
+                bins = np.linspace(0, max, 20)
+            plt.xlabel(xlabel, fontsize=14)
+            plt.ylabel(ylabel, fontsize=14)
+
             n_jewel,_,_ = ax1.hist(result_jewel,
                                    bins,
-                                   histtype='step',
+                                   histtype='stepfilled',
                                    density=True,
                                    label = self.AA_label,
                                    linewidth=2,
@@ -1362,7 +1386,7 @@ class AnalyzePPAA(common_base.CommonBase):
                                    alpha=0.5)
             n_pythia,_,_ = ax1.hist(result_pythia,
                                     bins,
-                                    histtype='step',
+                                    histtype='stepfilled',
                                     density=True,
                                     label = self.pp_label,
                                     linewidth=2,
@@ -1371,10 +1395,11 @@ class AnalyzePPAA(common_base.CommonBase):
             legend = ax1.legend(loc='best', fontsize=14, frameon=False)
 
             # Plot ratio
-            ratio = n_jewel/n_pythia
-            ratio[np.isnan(ratio)] = 0
-            x = (bins[1:] + bins[:-1]) / 2
-            ax2.plot(x, ratio)
+            if plot_ratio:
+                ratio = n_jewel/n_pythia
+                ratio[np.isnan(ratio)] = 0
+                x = (bins[1:] + bins[:-1]) / 2
+                ax2.plot(x, ratio)
             
             plt.tight_layout()
             plt.savefig(os.path.join(self.output_dir_i, f'{qa_observable}.pdf'))
