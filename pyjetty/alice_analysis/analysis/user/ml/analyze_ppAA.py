@@ -871,39 +871,58 @@ class AnalyzePPAA(common_base.CommonBase):
             self.observable_lasso_nsubjettiness[alpha] = observable
 
             # Plot observable
+            product_observable = np.exp( np.dot(X_train_lasso, coeffs) )
             xlabel = rf'$\mathcal{{O}} = {observable}$'
             ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{ d \mathcal{{O}} }}$'
-
             if n_terms < 5:
-                plt.xlabel(xlabel, fontsize=12)
+                xfontsize=12
             else:
-                plt.xlabel(xlabel, fontsize=8)
-            plt.ylabel(ylabel, fontsize=16)
+                xfontsize=8
+            self.plot_observable(product_observable, xlabel=xlabel, ylabel=ylabel, filename=f'nsubjettiness_lasso_{alpha}.pdf')
 
-            n_plot = int(self.n_train)
-            jewel_indices = self.y_train
-            pythia_indices = 1 - self.y_train
+            # Plot tau_(N-1)_1 directly
+            observable = rf'$\tau_{{{19}}}^{{{1}}}$'
+            index = 3*self.K_lasso - 6
+            tau_19_1 = self.training_data[self.K_lasso]['X_Nsub_train'][:,index]
+            self.plot_observable(tau_19_1, xlabel=observable, filename='tau_19_1.pdf')
 
-            product_observable = np.exp( np.dot(X_train_lasso, coeffs) )
-            product_observable_jewel = product_observable[jewel_indices.astype(bool)][:n_plot]
-            product_observable_pythia = product_observable[pythia_indices.astype(bool)][:n_plot]
+            # Plot 1/tau_(N-1)_1
+            observable = rf'$1/\tau_{{{19}}}^{{{1}}}$'
+            index = 3*self.K_lasso - 6
+            tau_19_1 = np.reciprocal(self.training_data[self.K_lasso]['X_Nsub_train'][:,index] + 0.0001)
+            self.plot_observable(tau_19_1, xlabel=observable, filename='tau_19_1_inv.pdf')
 
-            df_jewel = pd.DataFrame(product_observable_jewel, columns=[observable])
-            df_pythia = pd.DataFrame(product_observable_pythia, columns=[observable])
+    #---------------------------------------------------------------
+    # Plot JEWEL vs. PYTHIA
+    #---------------------------------------------------------------
+    def plot_observable(self, X, xlabel='', ylabel='', filename='', xfontsize=12, yfontsize=16):
+            
+        jewel_indices = self.y_train
+        pythia_indices = 1 - self.y_train
 
-            df_jewel['generator'] = np.repeat(self.AA_label, product_observable_jewel.shape[0])
-            df_pythia['generator'] = np.repeat(self.pp_label, product_observable_pythia.shape[0])
-            df = df_jewel.append(df_pythia, ignore_index=True)
+        observable_jewel = X[jewel_indices.astype(bool)]
+        observable_pythia = X[pythia_indices.astype(bool)]
 
-            bins = np.linspace(0, np.amax(product_observable_pythia), 50)
-            h = sns.histplot(df, x=observable, hue='generator', stat='density', bins=bins, element='step', common_norm=False)
+        df_jewel = pd.DataFrame(observable_jewel, columns=[xlabel])
+        df_pythia = pd.DataFrame(observable_pythia, columns=[xlabel])
+
+        df_jewel['generator'] = np.repeat(self.AA_label, observable_jewel.shape[0])
+        df_pythia['generator'] = np.repeat(self.pp_label, observable_pythia.shape[0])
+        df = df_jewel.append(df_pythia, ignore_index=True)
+
+        bins = np.linspace(0, np.amax(observable_pythia), 50)
+        h = sns.histplot(df, x=xlabel, hue='generator', stat='density', bins=bins, element='step', common_norm=False)
+        if h.legend_:
             h.legend_.set_bbox_to_anchor((0.75, 0.75))
             h.legend_.set_title(None)
             plt.setp(h.get_legend().get_texts(), fontsize='14') # for legend text
 
-            plt.tight_layout()
-            plt.savefig(os.path.join(self.output_dir_i, f'nsubjettiness_lasso_{alpha}.pdf'))
-            plt.close()
+        plt.xlabel(xlabel, fontsize=xfontsize)
+        plt.ylabel(ylabel, fontsize=yfontsize)
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.output_dir_i, f'{filename}'))
+        plt.close()
 
     #---------------------------------------------------------------
     # Fit ML model -- 7. Energy Flow Polynomials (EFP)
