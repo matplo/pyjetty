@@ -870,6 +870,41 @@ class AnalyzePPAA(common_base.CommonBase):
             self.N_terms_lasso_nsubjettiness[alpha] = n_terms
             self.observable_lasso_nsubjettiness[alpha] = observable
 
+            # Plot observable
+            xlabel = rf'$\mathcal{{O}} = {observable}$'
+            ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{ d \mathcal{{O}} }}$'
+
+            if n_terms < 5:
+                plt.xlabel(xlabel, fontsize=12)
+            else:
+                plt.xlabel(xlabel, fontsize=8)
+            plt.ylabel(ylabel, fontsize=16)
+
+            n_plot = int(self.n_train)
+            jewel_indices = self.y_train
+            pythia_indices = 1 - self.y_train
+
+            product_observable = np.exp( np.dot(X_train_lasso, coeffs) )
+            product_observable_jewel = product_observable[jewel_indices.astype(bool)][:n_plot]
+            product_observable_pythia = product_observable[pythia_indices.astype(bool)][:n_plot]
+
+            df_jewel = pd.DataFrame(product_observable_jewel, columns=[observable])
+            df_pythia = pd.DataFrame(product_observable_pythia, columns=[observable])
+
+            df_jewel['generator'] = np.repeat(self.AA_label, product_observable_jewel.shape[0])
+            df_pythia['generator'] = np.repeat(self.pp_label, product_observable_pythia.shape[0])
+            df = df_jewel.append(df_pythia, ignore_index=True)
+
+            bins = np.linspace(0, np.amax(product_observable_pythia), 50)
+            h = sns.histplot(df, x=observable, hue='generator', stat='density', bins=bins, element='step', common_norm=False)
+            h.legend_.set_bbox_to_anchor((0.75, 0.75))
+            h.legend_.set_title(None)
+            plt.setp(h.get_legend().get_texts(), fontsize='14') # for legend text
+
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.output_dir_i, f'nsubjettiness_lasso_{alpha}.pdf'))
+            plt.close()
+
     #---------------------------------------------------------------
     # Fit ML model -- 7. Energy Flow Polynomials (EFP)
     #---------------------------------------------------------------
@@ -1348,7 +1383,6 @@ class AnalyzePPAA(common_base.CommonBase):
             result_pythia = self.qa_results[qa_observable][pythia_indices.astype(bool)]
 
             # Set some labels
-            print(qa_observable)
             if qa_observable == 'jet_theta_g':
                 xlabel = rf'$\theta_{{\rm{{g}} }}$'
                 ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{d\theta_{{\rm{{g}} }} }}$'
@@ -1376,7 +1410,6 @@ class AnalyzePPAA(common_base.CommonBase):
             df_jewel['generator'] = np.repeat(self.AA_label, result_jewel.shape[0])
             df_pythia['generator'] = np.repeat(self.pp_label, result_pythia.shape[0])
             df = df_jewel.append(df_pythia, ignore_index=True)
-            print(df)
 
             # Histplot
             h = sns.histplot(df, x=xlabel, hue='generator', stat='density', bins=bins, element='step', common_norm=False)
