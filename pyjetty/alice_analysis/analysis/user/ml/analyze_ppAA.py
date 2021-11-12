@@ -183,6 +183,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.measure = config[model]['measure']
                 self.beta_efp = config[model]['beta'] 
                 self.linear_efp = config[model]['linear_efp']
+                self.dnn_efp = config[model]['dnn_efp']
                 self.model_settings[model]['loss'] = config[model]['loss']
                 self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
                 self.model_settings[model]['epochs'] = config[model]['epochs']
@@ -403,7 +404,8 @@ class AnalyzePPAA(common_base.CommonBase):
                         if 'nsubjettiness_lasso' in self.models:
                             self.roc_curve_dict_lasso['nsubjettiness'] = {}
                         if 'efp' in self.models:
-                            self.roc_curve_dict['efp'] = {}
+                            self.roc_curve_dict['efp_linear'] = {}
+                            self.roc_curve_dict['efp_dnn'] = {}
                         if 'efp_lasso' in self.models:
                             self.roc_curve_dict_lasso['efp'] = {}
 
@@ -573,7 +575,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def fit_neural_network(self, K, model_settings):
         print(f'Training Dense Neural Network, K={K}...')
-     
+
         # input_shape expects shape of an instance (not including batch size)
         DNN = keras.models.Sequential()
         DNN.add(keras.layers.Flatten(input_shape=[self.training_data[K]['X_Nsub_train'].shape[1]]))
@@ -602,9 +604,8 @@ class AnalyzePPAA(common_base.CommonBase):
                           epochs=model_settings['epochs'],
                           validation_split=self.val_frac)
                           
-        # Plot metrics are a function of epochs
-        if K in self.K_list:
-            self.plot_NN_epochs(model_settings['epochs'], history, 'DNN', K)
+        # Plot metrics as a function of epochs
+        self.plot_NN_epochs(model_settings['epochs'], history, 'DNN', K)
         
         # Get predictions for test data set
         y_Nsub_test_preds_DNN = DNN.predict(X_Nsub_test).reshape(-1)
@@ -956,26 +957,29 @@ class AnalyzePPAA(common_base.CommonBase):
 
         # Loop over different values of the EFP degree here.
         for d in range(1, self.dmax+1):
+
+            # Select EFPs with degree <= d
+            X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
+
+            # Plot EFPs
+            if d == 2:
+                self.plot_efp_distributions(d, X_EFP_d, efpset, suffix='before_scaling')
+                self.plot_efp_distributions(d, sklearn.preprocessing.scale(X_EFP_d), efpset, suffix='after_scaling')
+
+            # Preprocessing: zero mean unit variance
+            X_EFP_d = sklearn.preprocessing.scale(X_EFP_d)
+
+            # Do train/val/test split (Note: separate val_set generated in DNN training.)
+            (X_EFP_train, X_EFP_val, 
+             X_EFP_test, Y_EFP_train, 
+             Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
         
             # Train linear model with EFPs
             if self.linear_efp:
+
                 # Build linear model architecture (take from energyflow package)
                 model = energyflow.archs.LinearClassifier(linclass_type='lda')
-        
-                # Select EFPs with degree <= d
-                X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
 
-                # Plot EFPs
-                if d == 2:
-                    self.plot_efp_distributions(d, X_EFP_d, efpset, suffix='before_scaling')
-                    self.plot_efp_distributions(d, sklearn.preprocessing.scale(X_EFP_d), efpset, suffix='after_scaling')
-
-                # Preprocessing: zero mean unit variance
-                X_EFP_d = sklearn.preprocessing.scale(X_EFP_d)
-        
-                # Do train/val/test split (Note: validation set not used here.)
-                (X_EFP_train, X_EFP_val, X_EFP_test, Y_EFP_train, Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
-        
                 # train model
                 history = model.fit(X_EFP_train, Y_EFP_train)
         
@@ -984,25 +988,16 @@ class AnalyzePPAA(common_base.CommonBase):
             
                 # Get AUC and ROC curve + make plot
                 auc_EFP = sklearn.metrics.roc_auc_score(Y_EFP_test,preds_EFP[:,1])
-                print('Energy Flow Polynomials w/ degree {}: AUC = {} (test set)'.format(d,auc_EFP))
+                print(f'Energy Flow Polynomials w/ degree {d} ({X_EFP_d.shape[1]} terms): AUC = {auc_EFP} (test set)')
     
                 # Store AUC
                 self.AUC[f'efp{self.key_suffix}'].append(auc_EFP)
     
                 # Get & store ROC curve
-                self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
+                self.roc_curve_dict['efp_linear'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP[:,1])
             
             # Train DNN with EFPs
-            else:
-                # Select EFPs with degree <= d
-                X_EFP_d = X_EFP[:,efpset.sel(('d<=', d))]
-        
-                # Do train/val/test split (Note: separate val_set generated in DNN training.)
-                (X_EFP_train, X_EFP_val, 
-                 X_EFP_test, Y_EFP_train, 
-                 Y_EFP_val, Y_EFP_test) = energyflow.utils.data_split(X_EFP_d, Y_EFP, val=self.n_val, test=self.n_test)
-
-                print(X_EFP_train.shape[1])
+            if self.dnn_efp:
                 
                 # input_shape expects shape of an instance (not including batch size)
                 DNN = keras.models.Sequential()
@@ -1026,6 +1021,9 @@ class AnalyzePPAA(common_base.CommonBase):
                                   epochs=model_settings['epochs'],
                                   validation_split=self.val_frac)
                 
+                # Plot metrics as a function of epochs
+                self.plot_NN_epochs(model_settings['epochs'], history, 'EFP', d) 
+
                 # Get predictions for test data set
                 preds_EFP_DNN = DNN.predict(X_EFP_test).reshape(-1)
                 
@@ -1037,7 +1035,7 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.AUC[f'efp{self.key_suffix}'].append(auc_EFP_DNN)
                 
                 # Get & store ROC curve
-                self.roc_curve_dict['efp'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP_DNN)
+                self.roc_curve_dict['efp_dnn'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP_DNN)
                 
     #---------------------------------------------------------------
     # Fit ML model -- 8. Energy Flow Polynomials (EFP)
@@ -1531,12 +1529,11 @@ class AnalyzePPAA(common_base.CommonBase):
         X_EFP_d = X_EFP_d[:,1:]
         jewel_indices = self.y
         pythia_indices = 1 - self.y
-        n_plot = int(self.n_train) # Plot a subset to save time/space
-        X_jewel = X_EFP_d[jewel_indices.astype(bool)][:n_plot]
-        X_pythia = X_EFP_d[pythia_indices.astype(bool)][:n_plot]
+        X_jewel = X_EFP_d[jewel_indices.astype(bool)]
+        X_pythia = X_EFP_d[pythia_indices.astype(bool)]
 
         # Get labels
-        graphs = [str(x) for x in efpset.graphs()[1:]]
+        graphs = [str(x) for x in efpset.graphs()[1:5]]
 
         # Construct dataframes for scatter matrix plotting
         df_jewel = pd.DataFrame(X_jewel, columns=graphs)

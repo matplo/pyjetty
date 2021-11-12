@@ -117,8 +117,8 @@ nsubjettiness_lasso:
     K_lasso: 20
 
     # Model hyperparameters
-    alpha: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]        # Constant multiplying the L1 term. 0 corresponds to the standard regression
-    alpha_plot: [0.3, 0.5, 0.9]
+    alpha: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]        # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    alpha_plot: [0.3, 0.5, 0.7]
     max_iter: 10000              # max number of epochs
     tol: 1e-6                    # criteria to stop training
 
@@ -134,7 +134,7 @@ efp:
     dmax: 7                      # maximal degree of the EFPs
     measure: 'hadr'              # 
     beta: 0.5                    # Exponent of the pairwise distance
-    linear_efp: True             # Use linear model: True, DNN: False
+    linear_efp: True             # Use linear model: True
 
     # DNN hyperparameters
     learning_rate: 0.001         # (cf 1810.05165)
@@ -143,6 +143,7 @@ efp:
     batch_size: 1000
     epochs: 30                   # number of training epochs
     random_state: null           # seed for shuffling data (set to an int to have reproducible results)
+    dnn_efp: True                # Use DNN: True
 
 efp_lasso:
 
