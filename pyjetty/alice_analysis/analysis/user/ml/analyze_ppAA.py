@@ -862,6 +862,9 @@ class AnalyzePPAA(common_base.CommonBase):
             coeffs = lasso_clf.coef_
             nonzero_coeffs = coeffs[np.absolute(coeffs)>1e-10]
             mean_coeff = np.mean(np.absolute(nonzero_coeffs))
+            if np.mean(nonzero_coeffs) < 0:
+                mean_coeff *= -1
+            print(f'mean_coeff: {mean_coeff}')
             coeffs = np.divide(coeffs, mean_coeff)
             for i,_ in enumerate(coeffs):
                 coeff = np.round(coeffs[i], 3)
@@ -914,9 +917,9 @@ class AnalyzePPAA(common_base.CommonBase):
         df = df_jewel.append(df_pythia, ignore_index=True)
 
         bins = np.linspace(0, np.amax(observable_pythia), 50)
-        h = sns.histplot(df, x=xlabel, hue='generator', stat='density', bins=bins, element='step', common_norm=False)
+        h = sns.histplot(df, x=xlabel, hue='generator', stat='density', bins=bins, element='step', common_norm=False, log_scale=[False,True])
         if h.legend_:
-            h.legend_.set_bbox_to_anchor((0.75, 0.75))
+            h.legend_.set_bbox_to_anchor((0.85, 0.85))
             h.legend_.set_title(None)
             plt.setp(h.get_legend().get_texts(), fontsize='14') # for legend text
 
@@ -1167,6 +1170,8 @@ class AnalyzePPAA(common_base.CommonBase):
             coeffs = lasso_clf.coef_
             nonzero_coeffs = coeffs[np.absolute(coeffs)>1e-10]
             mean_coeff = np.mean(np.absolute(nonzero_coeffs))
+            if np.mean(nonzero_coeffs) < 0:
+                mean_coeff *= -1
             coeffs = np.divide(coeffs, mean_coeff)
             for i,_ in enumerate(coeffs):
                 coeff = np.round(coeffs[i], 3)
