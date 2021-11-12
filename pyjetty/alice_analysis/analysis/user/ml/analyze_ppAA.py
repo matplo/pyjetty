@@ -12,6 +12,7 @@ import h5py
 import pickle
 import subprocess
 from numba import jit, prange
+import functools
 
 # Data analysis and plotting
 import pandas as pd
@@ -34,6 +35,7 @@ import sklearn.pipeline
 # Tensorflow and Keras
 import tensorflow as tf
 from tensorflow import keras
+import keras_tuner
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
@@ -999,33 +1001,48 @@ class AnalyzePPAA(common_base.CommonBase):
             # Train DNN with EFPs
             if self.dnn_efp:
                 
-                # input_shape expects shape of an instance (not including batch size)
-                DNN = keras.models.Sequential()
-                DNN.add(keras.layers.Flatten(input_shape=[X_EFP_train.shape[1]]))
-                DNN.add(keras.layers.Dense(300,activation='relu'))
-                DNN.add(keras.layers.Dense(300,activation='relu'))
-                DNN.add(keras.layers.Dense(100,activation='relu'))
-                DNN.add(keras.layers.Dense(1,activation='sigmoid'))
-                
-                # Compile DNN
-                opt = keras.optimizers.Adam(lr=model_settings['learning_rate'])
-                DNN.compile(loss=model_settings['loss'],
-                            optimizer=opt,                       # For Stochastic gradient descent use: "sgd"
-                            metrics=model_settings['metrics'])
+                # Hyperparameter optimizaiton with keras tuner
+                tuner = keras_tuner.Hyperband(functools.partial(self.model_builder, input_shape=[X_EFP_d.shape[1]], model_settings=model_settings),
+                                              objective='val_accuracy',
+                                              max_epochs=10,
+                                              factor=3,
+                                              directory='my_dir',
+                                              project_name='intro_to_kt')
 
-                # Train DNN - use validation_split to split into validation set
-                # Use same settings as for N-subjettiness observables
-                history = DNN.fit(X_EFP_train,
-                                  Y_EFP_train,
-                                  batch_size=model_settings['batch_size'],
-                                  epochs=model_settings['epochs'],
-                                  validation_split=self.val_frac)
+                tuner.search(X_EFP_train, Y_EFP_train, 
+                             batch_size=model_settings['batch_size'],
+                             epochs=model_settings['epochs'], 
+                             validation_split=self.val_frac)
                 
+                # Get the optimal hyperparameters
+                best_hps=tuner.get_best_hyperparameters(num_trials=1)[0]
+                units1 = best_hps.get('units1')
+                units2 = best_hps.get('units2')
+                units3 = best_hps.get('units3')
+                learning_rate = best_hps.get('learning_rate')
+                print()
+                print(f'Best hyperparameters:')
+                print(f'   units: ({units1}, {units2}, {units3})')
+                print(f'   learning_rate: {learning_rate}')
+                print()
+
+                # Build the model with the optimal hyperparameters and train it on the data for 50 epochs
+                model = tuner.hypermodel.build(best_hps)
+                history = model.fit(X_EFP_train, Y_EFP_train, epochs=50, validation_split=self.val_frac)
+
+                val_acc_per_epoch = history.history['val_accuracy']
+                best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
+                print('Best epoch: %d' % (best_epoch,))
+
+                # Retrain the model with optimal number of epochs
+                hypermodel = tuner.hypermodel.build(best_hps)
+                history = hypermodel.fit(X_EFP_train, Y_EFP_train, epochs=best_epoch, validation_split=self.val_frac)
+
                 # Plot metrics as a function of epochs
-                self.plot_NN_epochs(model_settings['epochs'], history, 'EFP', d) 
+                self.plot_NN_epochs(best_epoch, history, 'EFP', d) 
 
                 # Get predictions for test data set
-                preds_EFP_DNN = DNN.predict(X_EFP_test).reshape(-1)
+                preds_EFP_DNN = hypermodel.predict(X_EFP_test).reshape(-1)
                 
                 # Get AUC
                 auc_EFP_DNN = sklearn.metrics.roc_auc_score(Y_EFP_test, preds_EFP_DNN)
@@ -1036,7 +1053,33 @@ class AnalyzePPAA(common_base.CommonBase):
                 
                 # Get & store ROC curve
                 self.roc_curve_dict['efp_dnn'][d] = sklearn.metrics.roc_curve(Y_EFP_test, preds_EFP_DNN)
-                
+
+    #---------------------------------------------------------------
+    # Construct model for hyperparameter tuning with keras tuner
+    #---------------------------------------------------------------
+    def model_builder(self, hp, input_shape, model_settings):
+
+        model = keras.models.Sequential()
+        model.add(keras.layers.Flatten(input_shape=input_shape))
+
+        # Tune size of first dense layer
+        hp_units1 = hp.Int('units1', min_value=32, max_value=512, step=32)
+        hp_units2 = hp.Int('units2', min_value=32, max_value=512, step=32)
+        hp_units3 = hp.Int('units3', min_value=32, max_value=512, step=32)
+        model.add(keras.layers.Dense(units=hp_units1, activation='relu'))
+        model.add(keras.layers.Dense(units=hp_units2, activation='relu'))
+        model.add(keras.layers.Dense(units=hp_units3, activation='relu'))
+        model.add(keras.layers.Dense(1,activation='sigmoid'))
+
+        # Tune the learning rate for the optimizer
+        hp_learning_rate = hp.Choice('learning_rate', values=[1., 0.1, 0.01, 1.e-3, 1.e-4])
+
+        model.compile(optimizer=keras.optimizers.Adam(learning_rate=hp_learning_rate),
+                      loss=model_settings['loss'],
+                      metrics=model_settings['metrics'])
+
+        return model
+
     #---------------------------------------------------------------
     # Fit ML model -- 8. Energy Flow Polynomials (EFP)
     #---------------------------------------------------------------
@@ -1341,9 +1384,14 @@ class AnalyzePPAA(common_base.CommonBase):
     
         epoch_list = range(1, n_epochs+1)
         loss = history.history['loss']
-        acc = history.history['acc']
         val_loss = history.history['val_loss']
-        val_acc = history.history['val_acc']
+
+        if 'acc' in history.history:
+            acc = history.history['acc']
+            val_acc = history.history['val_acc']
+        else:
+            acc = history.history['accuracy']
+            val_acc = history.history['val_accuracy']
         
         plt.axis([0, n_epochs, 0, 1])
         plt.xlabel('epochs', fontsize=16)
