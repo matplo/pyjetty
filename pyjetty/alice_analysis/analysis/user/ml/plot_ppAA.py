@@ -60,20 +60,19 @@ class PlotPPAA(common_base.CommonBase):
 
         self.models = config['models']
         self.K_list = config['K']
+        self.dmax = config['dmax']
+        self.efp_measure = config['efp_measure']
+        self.efp_beta = config['efp_beta']
 
         self.constituent_subtraction_study = config['constituent_subtraction_study']
         
         # Initialize model-specific settings
-        self.nsubjettiness_alpha_list = config['nsubjettiness_lasso']['alpha']
-        self.nsubjettiness_alpha_plot_list = config['nsubjettiness_lasso']['alpha_plot']
-        self.K_lasso_nsubjettiness = config['nsubjettiness_lasso']['K_lasso']
-        
-        self.linear_efp = config['efp']['linear_efp']
-        self.dnn_efp = config['efp']['dnn_efp']
+        self.nsubjettiness_alpha_list = config['nsub_lasso']['alpha']
+        self.nsubjettiness_alpha_plot_list = config['nsub_lasso']['alpha_plot']
+        self.K_lasso_nsubjettiness = config['nsub_lasso']['K_lasso']
 
-        self.dmax = config['efp']['dmax']
-        self.d_lasso_efp = config['efp_lasso']['dmax']
         self.efp_alpha_list = config['efp_lasso']['alpha']
+        self.d_lasso_efp = config['efp_lasso']['d_lasso']
 
     #---------------------------------------------------------------
     # Main processing function
@@ -111,12 +110,8 @@ class PlotPPAA(common_base.CommonBase):
                         if os.path.exists(lasso_filename):
                             with open(lasso_filename, 'rb') as f_lasso:
                                 self.roc_curve_dict_lasso = pickle.load(f_lasso)
-                                if 'nsubjettiness_lasso' in self.models:
-                                    self.N_terms_lasso_nsubjettiness = pickle.load(f_lasso)
-                                    self.observable_lasso_nsubjettiness = pickle.load(f_lasso)
-                                if 'efp_lasso' in self.models:
-                                    self.N_terms_lasso_efp = pickle.load(f_lasso)
-                                    self.observable_lasso_efp = pickle.load(f_lasso)
+                                self.N_terms_lasso = pickle.load(f_lasso)
+                                self.observable_lasso = pickle.load(f_lasso)
 
                         # Plot models for a single setting
                         self.plot_models(event_type, jetR, jet_pt_bin, R_max)
@@ -146,21 +141,21 @@ class PlotPPAA(common_base.CommonBase):
                             roc_curve_dict_Rmax025 = pickle.load(f_Rmax025)
 
                         roc_list = {}
-                        roc_list[f'PFN_hard'] = roc_curve_dict_Rmax0['PFN']
-                        roc_list[f'PFN_background'] = roc_curve_dict_Rmax025['PFN']
-                        roc_list[f'PFN_hard_min_pt'] = roc_curve_dict_Rmax0['PFN_min_pt']
+                        roc_list[f'PFN_hard'] = roc_curve_dict_Rmax0['pfn']
+                        roc_list[f'PFN_background'] = roc_curve_dict_Rmax025['pfn']
+                        roc_list[f'PFN_hard_min_pt'] = roc_curve_dict_Rmax0['pfn_min_pt']
                         
                         outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
                     # Plot AUC vs. K
-                    if 'pfn' in self.models and 'neural_network' in self.models:
+                    if 'pfn' in self.models and 'nsub_dnn' in self.models:
                         auc_list = {}
                         suffix = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
-                        auc_list[f'neural_network{suffix}'] = self.AUC[f'neural_network{suffix}']
+                        auc_list[f'nsub_dnn{suffix}'] = self.AUC[f'nsub_dnn{suffix}']
                         auc_list[f'pfn{suffix}'] = self.AUC[f'pfn{suffix}']
                         suffix = f'_combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}'
-                        auc_list[f'neural_network{suffix}'] = self.AUC[f'neural_network{suffix}']
+                        auc_list[f'nsub_dnn{suffix}'] = self.AUC[f'nsub_dnn{suffix}']
                         auc_list[f'pfn{suffix}'] = self.AUC[f'pfn{suffix}']
                         outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         self.plot_AUC_convergence(outputdir, auc_list, event_type, jetR, jet_pt_bin, R_max)
@@ -190,72 +185,80 @@ class PlotPPAA(common_base.CommonBase):
 
         if 'pfn' in self.models and 'efn' in self.models:
             roc_list = {}
-            roc_list['PFN'] = self.roc_curve_dict['PFN']
-            roc_list['EFN'] = self.roc_curve_dict['EFN']
+            roc_list['PFN'] = self.roc_curve_dict['pfn']
+            roc_list['EFN'] = self.roc_curve_dict['efn']
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
-        if 'pfn' in self.models and 'neural_network' in self.models:
+        if 'pfn' in self.models and 'nsub_dnn' in self.models:
             roc_list = {}
-            roc_list['PFN'] = self.roc_curve_dict['PFN']
+            roc_list['PFN'] = self.roc_curve_dict['pfn']
             for K in self.K_list:
-                roc_list[f'Nsub (K = {K}), DNN'] = self.roc_curve_dict['DNN'][K]
+                roc_list[f'Nsub (K = {K}), DNN'] = self.roc_curve_dict['nsub_dnn'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
         
-        if 'efp' in self.models and self.linear_efp:
+        if 'efp_linear' in self.models:
              roc_list = {}
              for d in range(3, self.dmax+1):
                  roc_list[f'EFP (d = {d}), Linear'] = self.roc_curve_dict['efp_linear'][d]
              self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
-        if 'efp' in self.models and self.dnn_efp:
-             roc_list = {}
-             for d in range(3, self.dmax+1):
-                 roc_list[f'EFP (d = {d}), DNN'] = self.roc_curve_dict['efp_dnn'][d]
-             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
-
-        if 'neural_network' in self.models and 'nsubjettiness_lasso' in self.models:
+        if 'nsub_lasso' in self.models and 'efp_lasso' in self.models:
             roc_list = {}
-            roc_list[f'Nsub (K = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['DNN'][self.K_lasso_nsubjettiness]
             roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
             roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
             roc_list['zg'] = self.roc_curve_dict_lasso['zg']
-            for alpha_nsubjettiness in self.nsubjettiness_alpha_plot_list:
-                roc_list[rf'Lasso $(\alpha = {alpha_nsubjettiness})$, N-subjettiness'] = self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso_nsubjettiness][alpha_nsubjettiness]
+            for alpha in self.nsubjettiness_alpha_plot_list:
+                roc_list[rf'Lasso $(\alpha = {alpha})$, Nsub'] = self.roc_curve_dict_lasso['nsub_lasso'][alpha]
+            alpha_efp = self.efp_alpha_list[1]
+            roc_list[rf'Lasso $(\alpha = {alpha_efp})$, EFP'] = self.roc_curve_dict_lasso['efp_lasso'][alpha_efp]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
-        if 'neural_network' in self.models and 'nsubjettiness_lasso' in self.models and 'efp' in self.models and 'efp_lasso' in self.models:
+        if 'nsub_dnn' in self.models and 'nsub_lasso' in self.models and 'efp_dnn' in self.models and 'efp_lasso' in self.models:
             roc_list = {}
-            roc_list[f'Nsub (K = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['DNN'][self.K_lasso_nsubjettiness]
+            roc_list[f'Nsub (K = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['nsub_dnn'][self.K_lasso_nsubjettiness]
             roc_list[f'EFP (d = {self.d_lasso_efp})'] = self.roc_curve_dict['efp_linear'][self.d_lasso_efp]
             roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
             roc_list['jet_angularity'] = self.roc_curve_dict_lasso['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
             roc_list['zg'] = self.roc_curve_dict_lasso['zg']
             alpha_nsubjettiness = self.nsubjettiness_alpha_list[0]
-            roc_list[rf'Lasso $(\alpha = {alpha_nsubjettiness})$, N-subjettiness'] = self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso_nsubjettiness][alpha_nsubjettiness]
+            roc_list[rf'Lasso $(\alpha = {alpha_nsubjettiness})$, Nsub'] = self.roc_curve_dict_lasso['nsub_lasso'][alpha_nsubjettiness]
             alpha_efp = self.efp_alpha_list[0]
-            roc_list[rf'Lasso $(\alpha = {alpha_efp})$, EFP'] = self.roc_curve_dict_lasso['efp'][alpha_efp]
+            roc_list[rf'Lasso $(\alpha = {alpha_efp})$, EFP'] = self.roc_curve_dict_lasso['efp_lasso'][alpha_efp]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
-        if 'neural_network' in self.models:
+        if 'efp_dnn' in self.models:
+             roc_list = {}
+             for d in range(3, self.dmax+1):
+                 roc_list[f'EFP (d = {d}), DNN'] = self.roc_curve_dict['efp_dnn'][d]
+             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
+
+        if 'nsub_dnn' in self.models:
             roc_list = {}
             for K in self.K_list:
-                roc_list[f'Nsub (K = {K}), DNN'] = self.roc_curve_dict['DNN'][K]
+                roc_list[f'Nsub (K = {K}), DNN'] = self.roc_curve_dict['nsub_dnn'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
-        
-        if 'neural_network' in self.models and 'nsubjettiness_lasso' in self.models:
+
+        if 'nsub_linear' in self.models:
             roc_list = {}
-            roc_list[f'Nsub (K = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['DNN'][self.K_lasso_nsubjettiness]
+            for K in self.K_list:
+                roc_list[f'Nsub (K = {K}), Linear'] = self.roc_curve_dict['nsub_linear'][K]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
+            self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
+
+        if 'nsub_dnn' in self.models and 'nsub_lasso' in self.models:
+            roc_list = {}
+            roc_list[f'Nsub (K = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['nsub_dnn'][self.K_lasso_nsubjettiness]
             roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
             roc_list['jet_angularity'] = self.roc_curve_dict_lasso['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
-            roc_list['zg'] = self.roc_curve_dict_lasso['jet_theta_g']
+            roc_list['zg'] = self.roc_curve_dict_lasso['zg']
             for alpha in self.nsubjettiness_alpha_list:
-                roc_list[rf'Lasso $(\alpha = {alpha})$, N-subjettiness'] = self.roc_curve_dict_lasso['nsubjettiness'][self.K_lasso_nsubjettiness][alpha]
+                roc_list[rf'Lasso $(\alpha = {alpha})$, Nsub'] = self.roc_curve_dict_lasso['nsub_lasso'][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
@@ -265,9 +268,9 @@ class PlotPPAA(common_base.CommonBase):
             roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
             roc_list['jet_angularity'] = self.roc_curve_dict_lasso['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
-            roc_list['zg'] = self.roc_curve_dict_lasso['jet_theta_g']
+            roc_list['zg'] = self.roc_curve_dict_lasso['zg']
             for alpha in self.efp_alpha_list:
-                roc_list[rf'Lasso $(\alpha = {alpha})$, EFP'] = self.roc_curve_dict_lasso['efp'][alpha]
+                roc_list[rf'Lasso $(\alpha = {alpha})$, EFP'] = self.roc_curve_dict_lasso['efp_lasso'][alpha]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
@@ -286,6 +289,7 @@ class PlotPPAA(common_base.CommonBase):
         plt.grid(True)
     
         for label,value in roc_list.items():
+
             index=0
             if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'LHA', 'thrust', 'pTD', 'hadron_z', 'zg', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label or 'EFN' in label:
                 linewidth = 4
@@ -320,12 +324,12 @@ class PlotPPAA(common_base.CommonBase):
                 color=self.color(label)
                 legend_fontsize = 10
                 reg_param = float(re.search('= (.*)\)', label).group(1))
-                if 'N-subjettiness' in label:
-                    n_terms = self.N_terms_lasso_nsubjettiness[reg_param]
+                if 'Nsub' in label:
+                    n_terms = self.N_terms_lasso['nsub_lasso'][reg_param]
                 elif 'EFP' in label:
-                    n_terms = self.N_terms_lasso_efp[reg_param]
+                    n_terms = self.N_terms_lasso['efp_lasso'][reg_param]
 
-                if 'N-subjettiness' in label:
+                if 'Nsub' in label:
                     label = rf'$\prod_{{N,\beta}} \left( \tau_N^{{\beta}} \right) ^{{c_{{N,\beta}} }}$'
                 elif 'EFP' in label:
                     label = rf'$\sum_{{G}} c_{{G}} \rm{{EFP}}_{{G}}$'
@@ -447,17 +451,17 @@ class PlotPPAA(common_base.CommonBase):
     def color(self, label):
 
         color = None
-        if label in ['PFN', 'PFN_hard', rf'DNN (K = {self.K_list[4]})', 'EFP (d = 7)', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_list[2]})$']:
+        if label in ['thrust', 'PFN', 'PFN_hard', rf'Nsub (K = {self.K_list[4]}), DNN', 'EFP (d = 7), Linear']:
             color = sns.xkcd_rgb['faded purple'] 
-        elif label in ['EFN', 'EFN_hard', 'PFN_beforeCS', 'jet_mass', 'LHA', 'thrust', 'hadron_z', 'zg', 'pTD', 'multiplicity_0150']:
+        elif label in ['EFN', 'EFN_hard', 'PFN_beforeCS', 'jet_mass', 'LHA', 'hadron_z', 'zg', 'pTD', 'multiplicity_0150']:
             color = sns.xkcd_rgb['faded red']    
-        elif label in ['PFN_background', rf'DNN (K = {self.K_list[3]})', 'EFP (d = 6)']:
+        elif label in ['PFN_background', rf'Nsub (K = {self.K_list[3]}), DNN', 'EFP (d = 6), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[1]})$, Nsub']:
             color = sns.xkcd_rgb['dark sky blue']    
-        elif label in ['EFN_background', 'PFN_afterCS', 'PFN_hard_min_pt', rf'Nsub (K = {self.K_list[2]}), DNN', 'EFP (d = 5), Linear', 'jet_angularity']:
+        elif label in ['EFN_background', 'PFN_afterCS', 'PFN_hard_min_pt', rf'Nsub (K = {self.K_list[2]}), DNN', 'EFP (d = 5), Linear', 'jet_angularity', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[0]})$, Nsub']:
             color = sns.xkcd_rgb['medium green']  
-        elif label in [rf'Nsub (K = {self.K_list[0]}), DNN', 'EFP (d = 3), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_list[0]})$']:
+        elif label in [rf'Nsub (K = {self.K_list[0]}), DNN', 'EFP (d = 3), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[1]})$, EFP']:
             color = sns.xkcd_rgb['watermelon'] 
-        elif label in [rf'Nsub (K = {self.K_list[1]}),  DNN', 'EFP (d = 4), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_list[1]})$']:
+        elif label in [rf'Nsub (K = {self.K_list[1]}), DNN', 'EFP (d = 4), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[0]})$, EFP']:
             color = sns.xkcd_rgb['light brown'] 
         elif label in ['jet_theta_g']:
             color = sns.xkcd_rgb['medium brown']
