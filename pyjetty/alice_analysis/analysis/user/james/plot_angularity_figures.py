@@ -33,7 +33,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         #------------------------------------------------------
         
-        self.jetR = 0.4
+        self.jetR = 0.2
 
         self.base_dir = '/Users/jamesmulligan/Analysis_Angularity/plot-angularity/v2'
         self.file = 'fFinalResults.root'
@@ -432,7 +432,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             system2.SetTextSize(size*scale_factor)
             system2.Draw()
 
-            system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    |#it{{#eta}}_{{jet}}| = {}'.format(R, 0.9-R))
+            system3 = ROOT.TLatex(x,ymax-3*dy, '#it{{R}} = {}    |#it{{#eta}}_{{jet}}| < {}'.format(R, 0.9-R))
             system3.SetNDC()
             system3.SetTextSize(size*scale_factor)
             system3.Draw()
