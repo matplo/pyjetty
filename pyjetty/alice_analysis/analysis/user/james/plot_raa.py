@@ -124,7 +124,34 @@ class PlotRAA(common_base.CommonBase):
         self.h_main_AA = self.file_AA.Get(self.main_result_name)
         self.h_sys_AA = self.file_AA.Get(self.sys_total_name)
         self.h_tagging_fraction_AA = self.file_AA.Get(self.h_tagging_fraction_name)
-        
+
+        # Add JEWEL systematic, if applicable
+        if 'jewel_systematic' in result:
+            jewel_filename = result['jewel_systematic']
+            self.file_jewel = ROOT.TFile(jewel_filename, 'READ')
+            if self.observable == 'zg':
+                sys_jewel_name = f'hSystematic_{self.observable}_generator_R{self.jetR}_{self.obs_label}_n6_{self.min_pt}-{self.max_pt}'
+            else:
+                sys_jewel_name = f'hSystematic_{self.observable}_generator_R{self.jetR}_{self.obs_label}_n3_{self.min_pt}-{self.max_pt}'
+            self.h_sys_jewel = self.file_jewel.Get(sys_jewel_name)
+            for bin in range(1, self.h_sys_AA.GetNbinsX()+1):
+                if not np.isclose(self.h_sys_AA.GetBinCenter(bin), self.h_sys_jewel.GetBinCenter(bin)):
+                    sys.exit('ERROR: JEWEL systematic and data do not align')
+                content = self.h_sys_AA.GetBinContent(bin)
+                jewel_error_percent = self.h_sys_jewel.GetBinContent(bin)
+                jewel_error = jewel_error_percent/100. * content
+                old_systematic = self.h_sys_AA.GetBinError(bin)
+                new_systematic = np.sqrt(jewel_error*jewel_error + old_systematic*old_systematic)
+                self.h_sys_AA.SetBinError(bin, new_systematic)
+                #print(self.h_sys_AA.GetBinCenter(bin))
+                #print(f'content: {content}')
+                #print(f'jewel_error_percent: {jewel_error_percent}')
+                #print(f'jewel_error: {jewel_error}')
+                #print(f'old_systematic: {old_systematic}')
+                #print(f'new_systematic: {new_systematic}')
+                #print()
+                self.plot_systematic_uncertainties()
+
         # Option: Translate theta_g to R_g
         if self.observable == 'theta_g' and self.plot_axis_rg:
             self.h_main_pp = self.translate_rg_theta_g(self.h_main_pp, 'rg')
@@ -992,6 +1019,71 @@ class PlotRAA(common_base.CommonBase):
             y_err_rebinned.append(h_rebinned.GetBinError(i+1))
           
         return (np.array(x_rebinned), np.array(y_rebinned), np.array(y_err_rebinned))
+
+    #----------------------------------------------------------------------
+    def plot_systematic_uncertainties(self):
+
+        name = 'cSys'
+        c = ROOT.TCanvas(name, name, 600, 450)
+        c.Draw()
+
+        c.cd()
+        myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+        myPad.SetLeftMargin(0.2)
+        myPad.SetTopMargin(0.07)
+        myPad.SetRightMargin(0.04)
+        myPad.SetBottomMargin(0.13)
+        myPad.Draw()
+        myPad.cd()
+
+        leg = ROOT.TLegend(0.67,0.75,0.8,0.92)
+        self.utils.setup_legend(leg,0.04)
+
+        h_systematic_total = self.h_sys_AA.Clone(f'{self.h_sys_AA.GetName()}_systotal')
+        for bin in range(1, self.h_sys_jewel.GetNbinsX()+1):
+            content = self.h_sys_AA.GetBinContent(bin)
+            uncertainty = self.h_sys_AA.GetBinError(bin)
+            h_systematic_total.SetBinContent(bin, np.abs(uncertainty/content*100.))
+            h_systematic_total.SetBinError(bin, 0)
+        h_systematic_total.SetTitle('')
+        h_systematic_total.SetXTitle( getattr(self, 'xtitle') )
+        h_systematic_total.GetXaxis().SetRange(2, h_systematic_total.GetNbinsX())
+        h_systematic_total.GetYaxis().SetTitleOffset(1.5)
+        h_systematic_total.SetYTitle('Systematic uncertainty (%)')
+        h_systematic_total.SetMaximum(2.7*h_systematic_total.GetMaximum(50))
+        h_systematic_total.SetMinimum(1e-3)
+        h_systematic_total.SetLineColor(self.theory_colors_james[1])
+        h_systematic_total.SetLineStyle(1)
+        h_systematic_total.SetLineWidth(2)
+        h_systematic_total.Draw("hist X0")
+        leg.AddEntry(h_systematic_total, 'Total', 'l')
+
+        self.h_sys_jewel.SetMarkerSize(0)
+        self.h_sys_jewel.SetLineColor(self.theory_colors_james[2])
+        self.h_sys_jewel.SetLineStyle(1)
+        self.h_sys_jewel.SetLineWidth(2)
+        self.h_sys_jewel.DrawCopy('X0 same')
+        self.h_sys_jewel.Scale(-1)
+        self.h_sys_jewel.DrawCopy('X0 same')
+        leg.AddEntry(self.h_sys_jewel, 'jet quenching model', 'l')
+
+        leg.Draw()
+
+        text_latex = ROOT.TLatex()
+        text_latex.SetNDC()
+        text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt)
+        text_latex.DrawLatex(0.3, 0.85, text)
+
+        text_latex = ROOT.TLatex()
+        text_latex.SetNDC()
+        text = '#it{R} = ' + str(self.jetR)
+        text_latex.DrawLatex(0.3, 0.78, text)
+
+        text_latex.DrawLatex(0.3, 0.64, self.formatted_grooming_label.format(self.zcut))
+
+        outputFilename = os.path.join(self.output_dir, f'hSystematics_{self.observable}_R{self.utils.remove_periods(self.jetR)}_{self.obs_label}_{int(self.min_pt)}-{int(self.max_pt)}.pdf')
+        c.SaveAs(outputFilename)
+        c.Close()
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':

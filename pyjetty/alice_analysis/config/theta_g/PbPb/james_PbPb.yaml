@@ -66,8 +66,8 @@ theta_g:
     obs_bins_det: [0., 0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.7, 1.0]
     
     obs_bins_det_sys_binning: [0., 0.06, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.33, 0.36, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 1.0]
-    #reg_param:
-    #  0.2: 3
+    reg_param:
+      0.2: 3
 
 # Observable block
 zg:
@@ -103,7 +103,7 @@ zg:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/334797-02'
+output_dir: '/Users/jamesmulligan/Analysis_theta_g/roounfold_output/PbPb/334797-02-jewel'
 roounfold_path: '/Users/jamesmulligan/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.dylib'
 
 analysis_observable: 'zg'
