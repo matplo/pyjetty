@@ -125,6 +125,7 @@ class AnalyzePPAA(common_base.CommonBase):
         self.val_frac = 1. * self.n_val / (self.n_train + self.n_val)
         
         self.K_list = config['K']
+        self.K_max = config['K_max']
         self.dmax = config['dmax']
         self.efp_measure = config['efp_measure']
         self.efp_beta = config['efp_beta']
@@ -188,6 +189,23 @@ class AnalyzePPAA(common_base.CommonBase):
                 self.model_settings[model]['batch_size'] = config[model]['batch_size']
                 self.model_settings[model]['learning_rate'] = config[model]['learning_rate']
 
+        if self.constituent_subtraction_study:
+
+            self.model_settings['pfn'] = {}
+            self.model_settings['pfn']['Phi_sizes'] = tuple(config['pfn']['Phi_sizes'])
+            self.model_settings['pfn']['F_sizes'] = tuple(config['pfn']['F_sizes'])
+            self.model_settings['pfn']['epochs'] = config['pfn']['epochs']
+            self.model_settings['pfn']['batch_size'] = config['pfn']['batch_size']
+            self.model_settings['pfn']['use_pids'] = config['pfn']['use_pids']
+            self.min_pt = config['pfn']['min_pt']
+
+            self.model_settings['nsub_dnn'] = {}
+            self.model_settings['nsub_dnn']['loss'] = config['nsub_dnn']['loss']
+            self.model_settings['nsub_dnn']['learning_rate'] = config['nsub_dnn']['learning_rate']
+            self.model_settings['nsub_dnn']['epochs'] = config['nsub_dnn']['epochs']
+            self.model_settings['nsub_dnn']['batch_size'] = config['nsub_dnn']['batch_size']
+            self.model_settings['nsub_dnn']['metrics'] = config['nsub_dnn']['metrics']
+
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
@@ -199,6 +217,10 @@ class AnalyzePPAA(common_base.CommonBase):
             for jetR in self.jetR_list:
                 for jet_pt_bin in self.jet_pt_bins:
                     for R_max in self.max_distance_list:
+
+                        # Skip if no models are selected
+                        if not self.models:
+                            continue
                     
                         # For hard event, skip constituent subtraction variations
                         if event_type=='hard' and not np.isclose(R_max, 0.):
@@ -458,8 +480,8 @@ class AnalyzePPAA(common_base.CommonBase):
                         # Train models
                         self.train_models(event_type, jetR, jet_pt_bin, R_max)
         
-        # If enabled, train PFN with four-vectors in cone before and after constituent subtraction
-        # (need four-vectors from "combined" event type, and labels from "hard" event type, so we do this separately from above loop)
+        # If enabled, train models with input in cone before and after constituent subtraction
+        # (need input from "combined" event type, and labels from "hard" event type, so we do this separately from above loop)
         if self.constituent_subtraction_study:
             self.perform_constituent_subtraction_study()
 
@@ -1096,18 +1118,20 @@ class AnalyzePPAA(common_base.CommonBase):
         self.roc_curve_dict[model] = sklearn.metrics.roc_curve(Y_EFN_test[:,1], preds_EFN[:,1])
         
     #---------------------------------------------------------------
-    # Perform constituent subtraction study
+    # Perform constituent subtraction study with PFN
     #---------------------------------------------------------------
     def perform_constituent_subtraction_study(self):
         print()
         print('Performing constituent subtraction study...')
-        print()
+        print()        
 
-        # Set output dir
+        # Create output dir
         jetR = self.jetR_list[0]
         jet_pt_bin = self.jet_pt_bins[0]
         R_max = self.max_distance_list[-1]
-        self.output_dir_i = os.path.join(self.output_dir, f'hard_R{jetR}_pt{jet_pt_bin}_Rmax0')
+        self.output_dir_i = os.path.join(self.output_dir, f'constituent_subtraction_R{jetR}_pt{jet_pt_bin}_Rmax0')
+        if not os.path.exists(self.output_dir_i):
+            os.makedirs(self.output_dir_i)
 
         # Get the labels from the hard event, and the four-vectors from the combined event
         key_suffix_hard = f'_hard_R{jetR}_pt{jet_pt_bin}_Rmax0'
@@ -1116,10 +1140,15 @@ class AnalyzePPAA(common_base.CommonBase):
         with h5py.File(os.path.join(self.output_dir, self.filename), 'r') as hf:
 
             # First, get the full input arrays
-            y_total = hf[f'y{key_suffix_hard}'][:]
-            X_particles_hard_total = hf[f'cone_four_vectors_hard{key_suffix_combined}'][:]
-            X_particles_beforeCS_total = hf[f'cone_four_vectors_beforeCS{key_suffix_combined}'][:]
-            X_particles_afterCS_total = hf[f'cone_four_vectors_afterCS{key_suffix_combined}'][:]
+            y_total = hf[f'y{key_suffix_hard}'][:3*self.n_total]
+            if self.constituent_subtraction_study['pfn']:
+                X_particles_hard_total = hf[f'cone_four_vectors_hard{key_suffix_combined}'][:3*self.n_total]
+                X_particles_beforeCS_total = hf[f'cone_four_vectors_beforeCS{key_suffix_combined}'][:3*self.n_total]
+                X_particles_afterCS_total = hf[f'cone_four_vectors_afterCS{key_suffix_combined}'][:3*self.n_total]
+            if self.constituent_subtraction_study['nsub']:
+                X_nsub_hard_total = hf[f'cone_nsub_hard{key_suffix_combined}'][:3*self.n_total]
+                X_nsub_beforeCS_total = hf[f'cone_nsub_beforeCS{key_suffix_combined}'][:3*self.n_total]
+                X_nsub_afterCS_total = hf[f'cone_nsub_afterCS{key_suffix_combined}'][:3*self.n_total]
 
             # Determine total number of jets
             total_jets = int(y_total.size)
@@ -1133,9 +1162,14 @@ class AnalyzePPAA(common_base.CommonBase):
             elif total_jets_pp / total_jets_AA < 1.:
                 indices_to_remove = np.where( np.isclose(y_total,1) )[0][total_jets_pp:]
             y_balanced = np.delete(y_total, indices_to_remove)
-            X_particles_hard_balanced = np.delete(X_particles_hard_total, indices_to_remove, axis=0)
-            X_particles_beforeCS_balanced = np.delete(X_particles_beforeCS_total, indices_to_remove, axis=0)
-            X_particles_afterCS_balanced = np.delete(X_particles_afterCS_total, indices_to_remove, axis=0)
+            if self.constituent_subtraction_study['pfn']:
+                X_particles_hard_balanced = np.delete(X_particles_hard_total, indices_to_remove, axis=0)
+                X_particles_beforeCS_balanced = np.delete(X_particles_beforeCS_total, indices_to_remove, axis=0)
+                X_particles_afterCS_balanced = np.delete(X_particles_afterCS_total, indices_to_remove, axis=0)
+            if self.constituent_subtraction_study['nsub']:
+                X_nsub_hard_balanced = np.delete(X_nsub_hard_total, indices_to_remove, axis=0)
+                X_nsub_beforeCS_balanced = np.delete(X_nsub_beforeCS_total, indices_to_remove, axis=0)
+                X_nsub_afterCS_balanced = np.delete(X_nsub_afterCS_total, indices_to_remove, axis=0)
 
             total_jets = int(y_balanced.size)
             total_jets_AA = int(np.sum(y_balanced))
@@ -1146,31 +1180,87 @@ class AnalyzePPAA(common_base.CommonBase):
             idx = np.random.permutation(len(y_balanced))
             if y_balanced.shape[0] == idx.shape[0]:
                 y_shuffled = y_balanced[idx]
-                X_particles_hard_shuffled = X_particles_hard_balanced[idx]
-                X_particles_beforeCS_shuffled = X_particles_beforeCS_balanced[idx]
-                X_particles_afterCS_shuffled = X_particles_afterCS_balanced[idx]
+                if self.constituent_subtraction_study['pfn']:
+                    X_particles_hard_shuffled = X_particles_hard_balanced[idx]
+                    X_particles_beforeCS_shuffled = X_particles_beforeCS_balanced[idx]
+                    X_particles_afterCS_shuffled = X_particles_afterCS_balanced[idx]
+                if self.constituent_subtraction_study['nsub']:
+                    X_nsub_hard_shuffled = X_nsub_hard_balanced[idx]
+                    X_nsub_beforeCS_shuffled = X_nsub_beforeCS_balanced[idx]
+                    X_nsub_afterCS_shuffled = X_nsub_afterCS_balanced[idx]
             else:
                 print(f'MISMATCH of shape: {y_balanced.shape} vs. {idx.shape}')
 
             # Truncate the input arrays to the requested size
             y = y_shuffled[:self.n_total]
-            X_particles_hard = X_particles_hard_shuffled[:self.n_total]
-            X_particles_beforeCS = X_particles_beforeCS_shuffled[:self.n_total]
-            X_particles_afterCS = X_particles_afterCS_shuffled[:self.n_total]
+            if self.constituent_subtraction_study['pfn']:
+                X_particles_hard = X_particles_hard_shuffled[:self.n_total]
+                X_particles_beforeCS = X_particles_beforeCS_shuffled[:self.n_total]
+                X_particles_afterCS = X_particles_afterCS_shuffled[:self.n_total]
+            if self.constituent_subtraction_study['nsub']:
+                X_nsub_hard = X_nsub_hard_shuffled[:self.n_total]
+                X_nsub_beforeCS = X_nsub_beforeCS_shuffled[:self.n_total]
+                X_nsub_afterCS = X_nsub_afterCS_shuffled[:self.n_total]
             print(f'y_shuffled sum: {np.sum(y)}')
             print(f'y_shuffled shape: {y.shape}')
 
+            # Create a second set of four-vectors in which a min-pt cut is applied -- the labels can stay the same
+            if self.constituent_subtraction_study['pfn']:
+                X_particles_hard_min_pt = filter_four_vectors(np.copy(X_particles_hard), min_pt=self.min_pt)
+                X_particles_beforeCS_min_pt = filter_four_vectors(np.copy(X_particles_beforeCS), min_pt=self.min_pt)
+                X_particles_afterCS_min_pt = filter_four_vectors(np.copy(X_particles_afterCS), min_pt=self.min_pt)
+
+            # Split N-subjettiness input into training and test sets
+            if self.constituent_subtraction_study['nsub']:
+                X_nsub_hard_train, X_nsub_hard_test, y_train, y_test = sklearn.model_selection.train_test_split(X_nsub_hard, y, test_size=self.test_frac)
+                X_nsub_beforeCS_train, X_nsub_beforeCS_test, _,_ = sklearn.model_selection.train_test_split(X_nsub_beforeCS, y, test_size=self.test_frac)
+                X_nsub_afterCS_train, X_nsub_afterCS_test, _,_ = sklearn.model_selection.train_test_split(X_nsub_afterCS, y, test_size=self.test_frac)
+
         # Plot the number of nonzero particles for each of the 3 sets of four-vectors
-        self.plot_constituent_subtraction_multiplicity(X_particles_hard, X_particles_beforeCS, X_particles_afterCS)
+        if self.constituent_subtraction_study['pfn']:
+            self.plot_constituent_subtraction_multiplicity(X_particles_hard, X_particles_beforeCS, X_particles_afterCS, 'pfn')
+            self.plot_constituent_subtraction_multiplicity(X_particles_hard_min_pt, X_particles_beforeCS_min_pt, X_particles_afterCS_min_pt, 'pfn_min_pt')
+
+        # Plot first few K    
+        if self.constituent_subtraction_study['nsub']:
+            self.plot_nsubjettiness_distributions(3, X_nsub_hard_train[:,5], 'hard')
+            self.plot_nsubjettiness_distributions(3, X_nsub_beforeCS_train[:,5], 'beforeCS')
+            self.plot_nsubjettiness_distributions(3, X_nsub_afterCS_train[:,5], 'afterCS')
+
+        # ------------------------------------------
+
+        # Set up dict to store roc curves
+        self.roc_curve_dict = {}
+        if self.constituent_subtraction_study['pfn']:
+            models = ['pfn_hard', 'pfn_beforeCS', 'pfn_afterCS', 'pfn_hard_min_pt', 'pfn_beforeCS_min_pt', 'pfn_afterCS_min_pt']
+            for model in models:
+                self.roc_curve_dict[model] = {}
+                self.AUC[f'{model}{self.key_suffix}'] = []
+        if self.constituent_subtraction_study['nsub']:
+            models = ['nsub_hard', 'nsub_beforeCS', 'nsub_afterCS']
+            for model in models:
+                self.roc_curve_dict[model] = {}
+                self.AUC[f'{model}{self.key_suffix}'] = []
 
         # Train models
-        self.roc_curve_dict = {}
-        self.AUC[f'pfn{self.key_suffix}'] = []
+        if self.constituent_subtraction_study['pfn']:
 
-        model_settings = self.model_settings['pfn']
-        self.fit_pfn(model_settings, y, X_particles_hard, roc_label='PFN_hard')
-        self.fit_pfn(model_settings, y, X_particles_beforeCS, roc_label='PFN_beforeCS')
-        self.fit_pfn(model_settings, y, X_particles_afterCS, roc_label='PFN_afterCS')
+            model_settings = self.model_settings['pfn']
+
+            self.fit_pfn('pfn_hard', model_settings, y, X_particles_hard)
+            self.fit_pfn('pfn_beforeCS', model_settings, y, X_particles_beforeCS)
+            self.fit_pfn('pfn_afterCS', model_settings, y, X_particles_afterCS)
+
+            self.fit_pfn('pfn_hard_min_pt', model_settings, y, X_particles_hard_min_pt)
+            self.fit_pfn('pfn_beforeCS_min_pt', model_settings, y, X_particles_beforeCS_min_pt)
+            self.fit_pfn('pfn_afterCS_min_pt', model_settings, y, X_particles_afterCS_min_pt)
+
+        if self.constituent_subtraction_study['nsub']:
+            model_settings = self.model_settings['nsub_dnn']
+
+            self.fit_dnn(X_nsub_hard_train, y_train, X_nsub_hard_test, y_test, 'nsub_hard', model_settings, dim_label='K', dim=self.K_max)
+            self.fit_dnn(X_nsub_beforeCS_train, y_train, X_nsub_beforeCS_test, y_test, 'nsub_beforeCS', model_settings, dim_label='K', dim=self.K_max)
+            self.fit_dnn(X_nsub_afterCS_train, y_train, X_nsub_afterCS_test, y_test, 'nsub_afterCS', model_settings, dim_label='K', dim=self.K_max)
 
         # Save ROC curves to file
         output_filename = os.path.join(self.output_dir_i, f'ROC_constituent_subtraction.pkl')
@@ -1180,7 +1270,7 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Plot multiplicity before and after constituent subtraction
     #---------------------------------------------------------------
-    def plot_constituent_subtraction_multiplicity(self, X_particles_hard, X_particles_beforeCS, X_particles_afterCS):
+    def plot_constituent_subtraction_multiplicity(self, X_particles_hard, X_particles_beforeCS, X_particles_afterCS, label):
 
         n_particles_hard = self.jet_multiplicity(X_particles_hard)
         n_particles_beforeCS = self.jet_multiplicity(X_particles_beforeCS)
@@ -1215,7 +1305,7 @@ class AnalyzePPAA(common_base.CommonBase):
         plt.xlabel(rf'jet multiplicity', fontsize=14)
         legend = plt.legend(loc='best', fontsize=14, frameon=False)
         plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir_i, f'constituent_subtraction_multiplicity.pdf'))
+        plt.savefig(os.path.join(self.output_dir_i, f'constituent_subtraction_multiplicity_{label}.pdf'))
         plt.close()
 
     #---------------------------------------------------------------
