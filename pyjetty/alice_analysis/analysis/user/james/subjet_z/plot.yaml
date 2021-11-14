@@ -1,8 +1,8 @@
 # Theory predictions for z_r, 0-10%
 
 # Data
-file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04/leading_subjet_z/final_results/fFinalResults.root'
-file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04/leading_subjet_z/final_results/fFinalResults.root'
+file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04-paper/leading_subjet_z/final_results/fFinalResults.root'
+file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper/leading_subjet_z/final_results/fFinalResults.root'
 
 # JETSCAPE
 jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/501204/5020_PP_Colorless/AnalysisResultsFinal.root'

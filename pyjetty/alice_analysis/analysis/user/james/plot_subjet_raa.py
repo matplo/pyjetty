@@ -58,7 +58,7 @@ class PlotRAA(common_base.CommonBase):
         self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
         self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
          
-        self.figure_approval_status = 'Preliminary'
+        self.figure_approval_status = ''
         
         self.xtitle = '#it{z}_{#it{r}}'
 
