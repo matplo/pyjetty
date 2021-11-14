@@ -603,8 +603,18 @@ class RunAnalysis(common_base.CommonBase):
     for systematic in self.systematics_list:
 
       if final:
+
+        # ** For subjet JEWEL systematic, set a larger reg param so that it can converge
+        reg_param_original = reg_param
+        if not self.is_pp and 'subjet_z' in self.observable and 'generator1' in systematic:
+          reg_param = self.max_reg_param
+
         h_systematic_ratio = self.retrieve_systematic(systematic, jetR, obs_label,
                                                       reg_param, min_pt_truth, max_pt_truth)
+
+        # ** Reset reg param
+        reg_param = reg_param_original
+
       else:
         h_systematic_ratio = self.construct_systematic(systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
                                                        reg_param, min_pt_truth, max_pt_truth, maxbin)
@@ -630,26 +640,25 @@ class RunAnalysis(common_base.CommonBase):
     h_list.append(hSystematic_Unfolding)
 
     # Construct total systematic uncertainty: Add all systematic uncertainties in quadrature
-    if not final:
-      name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
-        self.utils.remove_periods(jetR), obs_label,
-        reg_param, int(min_pt_truth), int(max_pt_truth))
-      hSystematic_Total = self.add_in_quadrature(h_list, new_name=name)
-      setattr(self, name, hSystematic_Total)
+    name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
+                    self.utils.remove_periods(jetR), obs_label,
+                    reg_param, int(min_pt_truth), int(max_pt_truth))
+    hSystematic_Total = self.add_in_quadrature(h_list, new_name=name)
+    setattr(self, name, hSystematic_Total)
 
-      # Attach total systematic to main result, and save as an attribute
-      name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
-        self.observable, jetR, obs_label, reg_param,
-        int(min_pt_truth), int(max_pt_truth))
-      if grooming_setting and maxbin:
-        hResult_sys = self.truncate_hist(hMain.Clone(), maxbin+1, name)
-      else:
-        hResult_sys = self.truncate_hist(hMain.Clone(), maxbin, name)
-      hResult_sys.SetDirectory(0)
-      self.AttachErrToHist(hResult_sys, hSystematic_Total)
-      setattr(self, name, hResult_sys)
-
+    # Attach total systematic to main result, and save as an attribute
+    name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
+                    self.observable, jetR, obs_label, reg_param,
+                    int(min_pt_truth), int(max_pt_truth))
+    if grooming_setting and maxbin:
+      hResult_sys = self.truncate_hist(hMain.Clone(), maxbin+1, name)
     else:
+      hResult_sys = self.truncate_hist(hMain.Clone(), maxbin, name)
+    hResult_sys.SetDirectory(0)
+    self.AttachErrToHist(hResult_sys, hSystematic_Total)
+    setattr(self, name, hResult_sys)
+
+    if final:
       # Save main result under name without reg param
       name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
         self.observable, jetR, obs_label, reg_param, 
@@ -659,12 +668,6 @@ class RunAnalysis(common_base.CommonBase):
         self.observable, jetR, obs_label,
         int(min_pt_truth), int(max_pt_truth))
       setattr(self, name, hResult_sys)
-
-      # Get total uncertainty plot from memory and save if desired
-      name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
-        self.utils.remove_periods(jetR), obs_label,
-        reg_param, int(min_pt_truth), int(max_pt_truth))
-      hSystematic_Total = getattr(self, name)
       
       if self.debug_level > 0:
         name = 'hSystematic_Total_R{}_{}_{}-{}{}'.format(
