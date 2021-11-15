@@ -214,28 +214,47 @@ class ProcessppAA(common_base.CommonBase):
         self.beta_list += [1,2]
         
         # Construct dictionary to store all jet quantities of interest
-        self.jet_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
-        self.four_vectors = {'hard': {}, 'combined': {}, 'combined_matched': {}}
         self.jet_qa_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        self.four_vectors = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        self.nsub_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        self.nsub_cone_hard_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        self.nsub_cone_beforeCS_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+        self.nsub_cone_afterCS_variables = {'hard': {}, 'combined': {}, 'combined_matched': {}}
         self.delta_pt_random_cone = []
-        for label in self.jet_variables.keys():
+        for label in self.nsub_variables.keys():
             for jetR in self.jetR_list:
-                self.jet_variables[label][f'R{jetR}'] = {}
-                self.four_vectors[label][f'R{jetR}'] = {}
                 self.jet_qa_variables[label][f'R{jetR}'] = {}
+                self.four_vectors[label][f'R{jetR}'] = {}
+                self.nsub_variables[label][f'R{jetR}'] = {}
+                self.nsub_cone_hard_variables[label][f'R{jetR}'] = {}
+                self.nsub_cone_beforeCS_variables[label][f'R{jetR}'] = {}
+                self.nsub_cone_afterCS_variables[label][f'R{jetR}'] = {}
+
                 for jet_pt_bin in self.jet_pt_bins:
-                    self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
-                    self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
                     self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    self.nsub_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    self.nsub_cone_hard_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    self.nsub_cone_beforeCS_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    self.nsub_cone_afterCS_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+
                     for R_max in self.max_distance:
                         
                         if 'combined' in label or np.isclose(R_max, 0.):
-                            self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
-                            self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
                             self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            self.nsub_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            self.nsub_cone_hard_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            self.nsub_cone_beforeCS_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+                            self.nsub_cone_afterCS_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = {}
+
                             for i,N in enumerate(self.N_list):
                                 beta = self.beta_list[i]
-                                self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'] = []
+                                self.nsub_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'] = []
+                                self.nsub_cone_hard_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_hard_N{N}_beta{beta}'] = []
+                                self.nsub_cone_beforeCS_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_beforeCS_N{N}_beta{beta}'] = []
+                                self.nsub_cone_afterCS_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_afterCS_N{N}_beta{beta}'] = []
+
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_constituent_four_vectors'] = []
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_hard'] = []
                             self.four_vectors[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_beforeCS'] = []
@@ -305,7 +324,7 @@ class ProcessppAA(common_base.CommonBase):
     # Main processing function
     #---------------------------------------------------------------
     def process_ppAA(self):
-    
+
         # Loop over events and do jet finding
         # Fill each of the jet_variables into a list
         fj.ClusterSequence.print_banner()
@@ -316,9 +335,13 @@ class ProcessppAA(common_base.CommonBase):
             result = [self.analyze_event(fj_particles_hard, fj_particles_combined) for fj_particles_hard, fj_particles_combined in zip(self.df_fjparticles['fj_particles_hard'], self.df_fjparticles['fj_particles_combined'])]        
         
         # Transform the dictionary of lists into a dictionary of numpy arrays
-        self.jet_variables_numpy = self.transform_to_numpy(self.jet_variables)
-        self.four_vectors_numpy = self.transform_to_numpy(self.four_vectors)
         self.jet_qa_variables_numpy = self.transform_to_numpy(self.jet_qa_variables)
+        self.four_vectors_numpy = self.transform_to_numpy(self.four_vectors)
+        self.nsub_variables_numpy = self.transform_to_numpy(self.nsub_variables)
+        self.nsub_cone_hard_variables_numpy = self.transform_to_numpy(self.nsub_cone_hard_variables)
+        self.nsub_cone_beforeCS_variables_numpy = self.transform_to_numpy(self.nsub_cone_beforeCS_variables)
+        self.nsub_cone_afterCS_variables_numpy = self.transform_to_numpy(self.nsub_cone_afterCS_variables)
+
         print()
         
         # Reformat output for ML algorithms (array with 1 array per jet which contain all N-subjettiness values)
@@ -326,16 +349,30 @@ class ProcessppAA(common_base.CommonBase):
             X_Nsub = {'hard': {}}
         else:
             X_Nsub = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+            X_Nsub_cone_hard = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+            X_Nsub_cone_beforeCS = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+            X_Nsub_cone_afterCS = {'hard': {}, 'combined': {}, 'combined_matched': {}}
+
         for label in X_Nsub.keys():
             for jetR in self.jetR_list:
                 X_Nsub[label][f'R{jetR}'] = {}
+                X_Nsub_cone_hard[label][f'R{jetR}'] = {}
+                X_Nsub_cone_beforeCS[label][f'R{jetR}'] = {}
+                X_Nsub_cone_afterCS[label][f'R{jetR}'] = {}
+
                 for jet_pt_bin in self.jet_pt_bins:
                     X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    X_Nsub_cone_hard[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    X_Nsub_cone_beforeCS[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+                    X_Nsub_cone_afterCS[label][f'R{jetR}'][f'pt{jet_pt_bin}'] = {}
+
                     for R_max in self.max_distance:
                         if 'combined' in label or np.isclose(R_max, 0.):
-                            X_Nsub_reformatted = np.array([list(self.jet_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].values())])[0].T
-                            X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = X_Nsub_reformatted
-            
+                            X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = np.array([list(self.nsub_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].values())])[0].T
+                            X_Nsub_cone_hard[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = np.array([list(self.nsub_cone_hard_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].values())])[0].T
+                            X_Nsub_cone_beforeCS[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = np.array([list(self.nsub_cone_beforeCS_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].values())])[0].T
+                            X_Nsub_cone_afterCS[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'] = np.array([list(self.nsub_cone_afterCS_variables_numpy[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'].values())])[0].T
+
         # Write jet arrays to file
         with h5py.File(os.path.join(self.output_dir, 'nsubjettiness.h5'), 'w') as hf:
             for label in X_Nsub.keys():
@@ -348,6 +385,9 @@ class ProcessppAA(common_base.CommonBase):
                         
                                 # Write Nsubjettiness
                                 hf.create_dataset(f'X_Nsub{suffix}', data=X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
+                                hf.create_dataset(f'X_Nsub_cone_hard{suffix}', data=X_Nsub_cone_hard[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
+                                hf.create_dataset(f'X_Nsub_cone_beforeCS{suffix}', data=X_Nsub_cone_beforeCS[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
+                                hf.create_dataset(f'X_Nsub_cone_afterCS{suffix}', data=X_Nsub_cone_afterCS[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'])
 
                                 # Check whether any training entries are empty
                                 [print(f'WARNING: input entry {i} is empty') for i,x in enumerate(X_Nsub[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']) if not x.any()]
@@ -418,6 +458,10 @@ class ProcessppAA(common_base.CommonBase):
         if not self.thermal_model and type(fj_particles_combined_beforeCS) != fj.vectorPJ:
             print('fj_particles type mismatch -- skipping event')
             return
+
+        # Uncomment for debugging
+        #if self.event_index > 10:
+        #    return
         
         # Embed if necessary
         if self.pp_data or self.thermal_model and not self.test:
@@ -514,9 +558,10 @@ class ProcessppAA(common_base.CommonBase):
                     self.analyze_jets(jets_combined_selected, jets_hard_selected, jetR, jet_pt_bin, R_max = R_max)
 
                     # Study the effect of constituent subtraction in a fixed cone surrounding the leading hard jet
-                    # Loop through hard jets, and record four-vectors before and after constituent subtraction
                     if self.is_mc:
                         if R_max > 0:
+
+                            # Loop through hard jets, and record four-vectors before and after constituent subtraction
                             for jet in jets_hard_selected:
 
                                 four_vectors_in_cone_hard = []
@@ -553,6 +598,52 @@ class ProcessppAA(common_base.CommonBase):
                                 self.four_vectors['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_hard'].append(four_vectors_in_cone_hard)
                                 self.four_vectors['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_beforeCS'].append(four_vectors_in_cone_beforeCS)
                                 self.four_vectors['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS'].append(four_vectors_in_cone_afterCS)
+
+                                # Also compute N-subjettiness for each of the cones
+                                jet_particles = []
+                                for p in fj_particles_hard:
+                                    if jet.delta_R(p) < jetR:
+                                        jet_particles.append(p)
+                                jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
+                                cs = fj.ClusterSequence(jet_particles, jet_def)
+                                jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
+                                axis_definition = fjcontrib.KT_Axes()
+                                for j,N in enumerate(self.N_list):
+                                    beta = self.beta_list[j]
+                                    measure_definition = fjcontrib.UnnormalizedMeasure(beta)
+                                    n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
+                                    n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
+                                    self.nsub_cone_hard_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_hard_N{N}_beta{beta}'].append(n_subjettiness)
+
+                                jet_particles = []
+                                for p in fj_particles_combined_beforeCS:
+                                    if jet.delta_R(p) < jetR:
+                                        jet_particles.append(p)
+                                jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
+                                cs = fj.ClusterSequence(jet_particles, jet_def)
+                                jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
+                                axis_definition = fjcontrib.KT_Axes()
+                                for j,N in enumerate(self.N_list):
+                                    beta = self.beta_list[j]
+                                    measure_definition = fjcontrib.UnnormalizedMeasure(beta)
+                                    n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
+                                    n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
+                                    self.nsub_cone_beforeCS_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_beforeCS_N{N}_beta{beta}'].append(n_subjettiness)
+
+                                jet_particles = []
+                                for p in fj_particles_combined[i]:
+                                    if jet.delta_R(p) < jetR:
+                                        jet_particles.append(p)
+                                jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
+                                cs = fj.ClusterSequence(jet_particles, jet_def)
+                                jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
+                                axis_definition = fjcontrib.KT_Axes()
+                                for j,N in enumerate(self.N_list):
+                                    beta = self.beta_list[j]
+                                    measure_definition = fjcontrib.UnnormalizedMeasure(beta)
+                                    n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
+                                    n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
+                                    self.nsub_cone_afterCS_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_afterCS_N{N}_beta{beta}'].append(n_subjettiness)
 
         self.event_index += 1
         if self.event_index%100 == 0:
@@ -685,7 +776,7 @@ class ProcessppAA(common_base.CommonBase):
             measure_definition = fjcontrib.UnnormalizedMeasure(beta)
             n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
             n_subjettiness = n_subjettiness_calculator.result(jet)/jet.pt()
-            self.jet_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'].append(n_subjettiness)
+            self.nsub_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'n_subjettiness_N{N}_beta{beta}'].append(n_subjettiness)
             
         # Fill some jet QA
         self.jet_qa_variables[label][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['jet_pt'].append(jet.pt())

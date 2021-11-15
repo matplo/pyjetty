@@ -4,7 +4,7 @@
 # These parameters are used in the process script
 #------------------------------------------------------------------------------
 
-K_max: 50
+K_max: 100
 jetR: [0.4]
 jet_pt_bins: [[100.,125.]]
 eta_max: 2.
