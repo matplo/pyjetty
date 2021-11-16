@@ -3,7 +3,7 @@
 import numpy as np
 import argparse
 import os
-import pyjetty.alihfjets.D0Analysis.DmesonJetAna.FinalCodes.process_io_data_hf as hfdio
+import pyjetty.alihfjets.dev.hfjet.process_io_data_hf as hfdio
 from pyjetty.mputils import perror, pinfo, pwarning, treewriter, jet_analysis
 
 
