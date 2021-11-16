@@ -101,9 +101,9 @@ class PlotRAA(common_base.CommonBase):
             self.file_distributions = ROOT.TFile(self.file_AA_ratio_distributions_name, 'READ')
 
             self.main_result_name_01 = f'hmain_{self.observable}_R{self.jetR}_0.1_{self.min_pt}-{self.max_pt}'
-            self.sys_total_name_01 = f'hmain_{self.observable}_R{self.jetR}_0.1_{self.min_pt}-{self.max_pt}'
+            self.sys_total_name_01 = f'hResult_{self.observable}_systotal_R{self.jetR}_0.1_{self.min_pt}-{self.max_pt}'
             self.main_result_name_02 = f'hmain_{self.observable}_R{self.jetR}_0.2_{self.min_pt}-{self.max_pt}'
-            self.sys_total_name_02 = f'hmain_{self.observable}_R{self.jetR}_0.2_{self.min_pt}-{self.max_pt}'
+            self.sys_total_name_02 = f'hResult_{self.observable}_systotal_R{self.jetR}_0.2_{self.min_pt}-{self.max_pt}'
             
             h_main_AA = self.file_distributions.Get(self.main_result_name_01)
             h_sys_AA = self.file_distributions.Get(self.sys_total_name_01)
@@ -148,7 +148,7 @@ class PlotRAA(common_base.CommonBase):
         integral_pp = self.h_main_pp.Integral(1, self.n_bins, 'width')
         self.h_main_pp.Scale(1./integral_pp)
         self.h_sys_pp.Scale(1./integral_pp)
-        
+
         # Also store the integral over the reported range except for the last bin,
         # in order to normalize in-medium jet function prediction
         self.integral_AA_truncated = self.h_main_AA.Integral(1, self.n_bins-1, 'width')
@@ -284,7 +284,12 @@ class PlotRAA(common_base.CommonBase):
               
         myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
         if self.obs_label == '0.1-0.2':
-            myBlankHisto2.SetYTitle('#frac{#it{r}=0.1}{#it{r}=0.2}')
+            #myBlankHisto2.SetYTitle('#frac{#it{r}=0.1}{#it{r}=0.2}')
+            term1 = f'#frac{{ #it{{#sigma}}_{{ {self.xtitle} > {self.bins[0]} }}^{{ #it{{r}}=0.2 }} }}{{ #it{{#sigma}}_{{ {self.xtitle} > {self.bins[0]} }}^{{ #it{{r}}=0.1 }} }}'
+            term2 = f'#frac{{ d#it{{#sigma}} / d{self.xtitle}^{{#it{{r}}=0.1}} }}{{ d#it{{#sigma}} / d{self.xtitle}^{{#it{{r}}=0.2}} }}'
+            myBlankHisto2.SetYTitle(f'{term1} {term2}')
+
+            
             pad2.SetLogy()
         else:
             myBlankHisto2.SetYTitle('#frac{Pb#font[122]{-}Pb}{pp}')
@@ -385,7 +390,10 @@ class PlotRAA(common_base.CommonBase):
         
         x = 0.25
         text_latex.SetTextSize(0.065)
-        text = '#bf{{ALICE}} {}'.format(self.figure_approval_status) + '  Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1])
+        if self.obs_label == '0.1-0.2':
+            text = '#bf{{ALICE}} {}'.format(self.figure_approval_status) + '  Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1])
+        else:
+            text = '#bf{{ALICE}} {}'.format(self.figure_approval_status)
         text_latex.DrawLatex(x, 0.83, text)
         
         text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -411,7 +419,7 @@ class PlotRAA(common_base.CommonBase):
 
         c.SaveAs(self.output_filename)
         c.Close()
-
+            
     #---------------------------------------------------------------
     # Initialize theory predictions
     #---------------------------------------------------------------

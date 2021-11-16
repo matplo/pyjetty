@@ -121,7 +121,7 @@ class ComputeRatioSystematics(common_base.CommonBase):
     #       So we will just keep the final values from the individual results.
     self.reg_param_numerator = 3
     self.reg_param_denominator = 3
-    self.reg_param_generator = 10
+    self.reg_param_generator = 15
 
     #-----------------------------------------
     # Form the ratio of the main result (and save it to file)

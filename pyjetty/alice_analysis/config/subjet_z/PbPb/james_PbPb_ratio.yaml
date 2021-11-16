@@ -40,7 +40,7 @@ leading_subjet_z:
     xtitle: '#it{z_{r}}'
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#it{z_{r}}}'
     pt_bins_reported: [100, 150]
-    max_reg_param: 10
+    max_reg_param: 30
     plot_overlay_list:
       - ['config1', 'config2']
       
