@@ -4,6 +4,10 @@
 file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04-paper/leading_subjet_z/final_results/fFinalResults.root'
 file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper/leading_subjet_z/final_results/fFinalResults.root'
 
+file_AA_ratio: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio/leading_subjet_z/final_results/fFinalResults_ratio.root'
+file_AA_ratio_sys: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio/leading_subjet_z/ratio_systematics/fSystematics.root'
+file_AA_ratio_distributions: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio/leading_subjet_z/final_results/fFinalResults.root'
+
 # JETSCAPE
 jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
 jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/501204/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
@@ -21,7 +25,7 @@ jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/
 # data (excluding the last bin)
 # We also ignore the uncertainties for now, since they are very small -- we rather plot a thick line
 
-result2:
+result1:
   observable: 'leading_subjet_z'
   jetR: 0.4
   obs_label: 0.1
@@ -35,7 +39,7 @@ result2:
     ratio: [0.8025013764250916, 0.8607006464495582, 0.925785871252152, 1.0222304075663715, 1.2176525429541643]
     uncertainty: [0.018772942469200263, 0.012432583518591953, 0.005973620925846246, 0.0028134697128204466, 0.019198510957898898]
 
-result3:
+result2:
   observable: 'leading_subjet_z'
   jetR: 0.4
   obs_label: 0.2
@@ -48,3 +52,11 @@ result3:
     y_vac: [0.14347122358081812, 0.13242651312460496, 0.1284936227978856, 0.19853112415040758, 0.397077484581548]
     ratio: [0.8535124111866775, 0.893598144580025, 0.9321469568800401, 0.9808024054984383, 1.1199678429429485]
     uncertainty: [0.014694528009061231, 0.009941774859060507, 0.00588644921871969, 0.0011806044097186254, 0.01111838686064225]
+
+result_ratio:
+  observable: 'leading_subjet_z'
+  jetR: 0.4
+  obs_label: '0.1-0.2'
+  min_pt: 100
+  max_pt: 150
+  bins: [0.7, 0.75, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.0]

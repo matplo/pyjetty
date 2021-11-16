@@ -32,12 +32,10 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def initialize(self):
 
-        self.output_dir = './PRL_results'
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        self.output_dir = '.'
 
         # Load config file
-        config_file = './PRL_results/plot.yaml'
+        config_file = './plot.yaml'
         with open(config_file, 'r') as stream:
             config = yaml.safe_load(stream)
 

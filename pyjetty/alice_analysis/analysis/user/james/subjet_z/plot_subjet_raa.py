@@ -31,16 +31,17 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def initialize(self):
 
-        self.output_dir = './subjet_z'
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        self.output_dir = '.'
 
         # Load config file
-        config_file = './subjet_z/plot.yaml'
+        config_file = './plot.yaml'
         with open(config_file, 'r') as stream:
             config = yaml.safe_load(stream)
             self.file_pp_name = config['file_pp']
             self.file_AA_name = config['file_AA']
+            self.file_AA_ratio_name = config['file_AA_ratio']
+            self.file_AA_ratio_sys_name = config['file_AA_ratio_sys']
+            self.file_AA_ratio_distributions_name = config['file_AA_ratio_distributions']
             self.file_jetscape_pp_name = config['jetscape_pp']
             self.file_jetscape_AA_name = config['jetscape_AA']
         self.config_results = [config[name] for name in config if 'result' in name ]
@@ -48,12 +49,12 @@ class PlotRAA(common_base.CommonBase):
         self.plot_data = True
         self.plot_theory = True
 
-        self.colors = [600-6, 632-4]
+        self.colors = [ROOT.kBlue-6, ROOT.kRed-4]
         self.ratio_color = ROOT.kGray+3
         self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12')
         
-        self.theory_colors = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kPink+1,ROOT.kBlue-10, ROOT.kAzure-4, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kCyan-2]
+        self.theory_colors = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kPink+1,ROOT.kBlue-10, ROOT.kAzure-4, ROOT.kOrange+6, ROOT.kRed-7]
         
         self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
         self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
@@ -95,24 +96,47 @@ class PlotRAA(common_base.CommonBase):
         self.n_bins = len(self.bins) - 1
 
         # Get hists from ROOT file
-        self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
-        self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
-        
-        self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
-        self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
+        if self.obs_label == '0.1-0.2':
 
-        h_main_AA = self.file_AA.Get(self.main_result_name)
-        h_sys_AA = self.file_AA.Get(self.sys_total_name)
-        #print(bins)
-        #print([h_main_AA.GetXaxis().GetXbins().GetArray()[i] for i in range(n_bins+1)])
-        self.h_main_AA = h_main_AA.Rebin(self.n_bins, f'{h_main_AA.GetName()}_rebinned', self.bins)
-        self.h_sys_AA = h_sys_AA.Rebin(self.n_bins, f'{h_sys_AA.GetName()}_rebinned', self.bins)
+            self.file_distributions = ROOT.TFile(self.file_AA_ratio_distributions_name, 'READ')
 
-        h_main_pp = self.file_pp.Get(self.main_result_name)
-        h_sys_pp = self.file_pp.Get(self.sys_total_name)
-        self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
-        self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
-        
+            self.main_result_name_01 = f'hmain_{self.observable}_R{self.jetR}_0.1_{self.min_pt}-{self.max_pt}'
+            self.sys_total_name_01 = f'hmain_{self.observable}_R{self.jetR}_0.1_{self.min_pt}-{self.max_pt}'
+            self.main_result_name_02 = f'hmain_{self.observable}_R{self.jetR}_0.2_{self.min_pt}-{self.max_pt}'
+            self.sys_total_name_02 = f'hmain_{self.observable}_R{self.jetR}_0.2_{self.min_pt}-{self.max_pt}'
+            
+            h_main_AA = self.file_distributions.Get(self.main_result_name_01)
+            h_sys_AA = self.file_distributions.Get(self.sys_total_name_01)
+            self.h_main_AA = h_main_AA.Rebin(self.n_bins, f'{h_main_AA.GetName()}_rebinned', self.bins)
+            self.h_sys_AA = h_sys_AA.Rebin(self.n_bins, f'{h_sys_AA.GetName()}_rebinned', self.bins)
+
+            h_main_pp = self.file_distributions.Get(self.main_result_name_02)
+            h_sys_pp = self.file_distributions.Get(self.sys_total_name_02)
+            self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
+            self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
+
+            self.colors = [ROOT.kGreen-2, ROOT.kMagenta-4]
+
+        else:
+
+            self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
+            self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
+
+            self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
+            self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
+
+            h_main_AA = self.file_AA.Get(self.main_result_name)
+            h_sys_AA = self.file_AA.Get(self.sys_total_name)
+            #print(bins)
+            #print([h_main_AA.GetXaxis().GetXbins().GetArray()[i] for i in range(n_bins+1)])
+            self.h_main_AA = h_main_AA.Rebin(self.n_bins, f'{h_main_AA.GetName()}_rebinned', self.bins)
+            self.h_sys_AA = h_sys_AA.Rebin(self.n_bins, f'{h_sys_AA.GetName()}_rebinned', self.bins)
+
+            h_main_pp = self.file_pp.Get(self.main_result_name)
+            h_sys_pp = self.file_pp.Get(self.sys_total_name)
+            self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
+            self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
+            
         self.ytitle = f'#frac{{1}}{{ #it{{#sigma}}_{{#it{{z}}_{{#it{{r}}}} > {self.bins[0]} }} }} #frac{{d#it{{#sigma}}}}{{d{self.xtitle}}}'
         
         # Normalize to the integral over the reported range except for the last bin,
@@ -135,12 +159,20 @@ class PlotRAA(common_base.CommonBase):
         print(f'Integral over truncated range (pp): {self.integral_pp_truncated}')
         
         # Form ratio
-        self.h_ratio = self.h_main_AA.Clone()
-        self.h_ratio.Divide(self.h_main_pp)
-        self.h_ratio_sys = self.h_sys_AA.Clone()
-        self.h_ratio_sys.Divide(self.h_sys_pp)
+        if self.obs_label == '0.1-0.2':
+            self.file_ratio = ROOT.TFile(self.file_AA_ratio_name, 'READ')
+            self.file_sys = ROOT.TFile(self.file_AA_ratio_sys_name, 'READ')
+            h_ratio = self.file_ratio.Get('h_ratio_main')
+            h_ratio_sys = self.file_sys.Get('h_ratio_main_sys')
+            self.h_ratio = h_ratio.Rebin(self.n_bins, f'{h_ratio.GetName()}_rebinned', self.bins)
+            self.h_ratio_sys = h_ratio_sys.Rebin(self.n_bins, f'{h_ratio_sys.GetName()}_rebinned', self.bins)
+        else:
+            self.h_ratio = self.h_main_AA.Clone()
+            self.h_ratio.Divide(self.h_main_pp)
+            self.h_ratio_sys = self.h_sys_AA.Clone()
+            self.h_ratio_sys.Divide(self.h_sys_pp)
     
-        self.ymax = self.h_main_pp.GetMaximum()
+        self.ymax = max(self.h_main_pp.GetMaximum(), self.h_main_AA.GetMaximum())
         
         # Load theory predictions
         if self.plot_theory:
@@ -251,7 +283,11 @@ class PlotRAA(common_base.CommonBase):
         pad2.cd()
               
         myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
-        myBlankHisto2.SetYTitle('#frac{Pb#font[122]{-}Pb}{pp}')
+        if self.obs_label == '0.1-0.2':
+            myBlankHisto2.SetYTitle('#frac{#it{r}=0.1}{#it{r}=0.2}')
+            pad2.SetLogy()
+        else:
+            myBlankHisto2.SetYTitle('#frac{Pb#font[122]{-}Pb}{pp}')
         myBlankHisto2.SetXTitle(self.xtitle)
         myBlankHisto2.GetXaxis().SetTitleSize(30)
         myBlankHisto2.GetXaxis().SetTitleFont(43)
@@ -265,9 +301,15 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto2.GetYaxis().SetLabelSize(25)
         myBlankHisto2.GetYaxis().SetNdivisions(505)
         
-        myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+        if self.obs_label == '0.1-0.2':
+            myBlankHisto2.GetYaxis().SetRangeUser(0.2, 6.99)
+        else:
+            myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
 
-        ratio_legend = ROOT.TLegend(0.33,0.75,0.5,0.97)
+        if self.obs_label == '0.1-0.2':
+            ratio_legend = ROOT.TLegend(0.73,0.75,0.9,0.97)
+        else:
+            ratio_legend = ROOT.TLegend(0.33,0.75,0.5,0.97)
         self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
 
         myBlankHisto2.Draw('')
@@ -330,8 +372,12 @@ class PlotRAA(common_base.CommonBase):
             self.h_ratio.Draw('PE X0 same')
        
         pad1.cd()
-        myLegend.AddEntry(self.h_main_pp, 'pp', 'PE')
-        myLegend.AddEntry(self.h_main_AA, 'Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1]), 'PE')
+        if self.obs_label == '0.1-0.2':
+            myLegend.AddEntry(self.h_main_AA, '#it{r} = 0.1', 'PE')
+            myLegend.AddEntry(self.h_main_pp, '#it{r} = 0.2', 'PE')
+        else:
+            myLegend.AddEntry(self.h_main_pp, 'pp', 'PE')
+            myLegend.AddEntry(self.h_main_AA, 'Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1]), 'PE')
         myLegend.AddEntry(self.h_sys_pp, 'Sys. uncertainty', 'f')
         
         text_latex = ROOT.TLatex()
@@ -339,7 +385,7 @@ class PlotRAA(common_base.CommonBase):
         
         x = 0.25
         text_latex.SetTextSize(0.065)
-        text = '#bf{{ALICE}} {}'.format(self.figure_approval_status)
+        text = '#bf{{ALICE}} {}'.format(self.figure_approval_status) + '  Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1])
         text_latex.DrawLatex(x, 0.83, text)
         
         text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -354,8 +400,12 @@ class PlotRAA(common_base.CommonBase):
         text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
         text_latex.DrawLatex(x, 0.51, text)
         
-        text = 'anti-#it{k}_{T} subjets' + '   #it{r} = ' + str(self.obs_label)
-        text_latex.DrawLatex(x, 0.41, text)
+        if self.obs_label == '0.1-0.2':
+            text = 'anti-#it{k}_{T} subjets'
+            text_latex.DrawLatex(x, 0.41, text)
+        else:
+            text = 'anti-#it{k}_{T} subjets' + '   #it{r} = ' + str(self.obs_label)
+            text_latex.DrawLatex(x, 0.41, text)    
         
         myLegend.Draw()
 
@@ -373,17 +423,34 @@ class PlotRAA(common_base.CommonBase):
     
         #----------------------------------------------------------
         # JETSCAPE
-        f_pp = ROOT.TFile(self.file_jetscape_pp_name, 'READ')
-        f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
+        if self.obs_label == '0.1-0.2':
+
+            f_pp = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
+            f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
+            
+            h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
+            h_pp = f_pp.Get(h_name)
+            h_pp.SetDirectory(0)
+            f_pp.Close()
+            
+            h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
+            h_AA = f_AA.Get(h_name)
+            h_AA.SetDirectory(0)
+            f_AA.Close()
         
-        h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
-        h_pp = f_pp.Get(h_name)
-        h_pp.SetDirectory(0)
-        f_pp.Close()
-        
-        h_AA = f_AA.Get(h_name)
-        h_AA.SetDirectory(0)
-        f_AA.Close()
+        else:
+
+            f_pp = ROOT.TFile(self.file_jetscape_pp_name, 'READ')
+            f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
+            
+            h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
+            h_pp = f_pp.Get(h_name)
+            h_pp.SetDirectory(0)
+            f_pp.Close()
+            
+            h_AA = f_AA.Get(h_name)
+            h_AA.SetDirectory(0)
+            f_AA.Close()
 
         # Rebin to data binning
         bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[0:]
@@ -400,12 +467,12 @@ class PlotRAA(common_base.CommonBase):
         hRatio = h_AA.Clone()
         hRatio.SetName(f'hRatio_{h_AA.GetName()}')
         hRatio.Divide(h_pp)
-      
+    
         # Add to theory list
         self.prediction_list.append(hRatio)
         self.label_list.append('JETSCAPE')
         self.sublabel_list.append('')
-      
+
         #----------------------------------------------------------
         # Factorization (Ringer, Sato)
         if 'medium_jet_functions' in result:
