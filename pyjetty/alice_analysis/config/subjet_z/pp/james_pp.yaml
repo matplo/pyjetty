@@ -114,11 +114,13 @@ systematics_list:
   - binning
   - fastsim_generator0
   - fastsim_generator1
+  - delta_matching
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC17pq/493677/AnalysisResultsFinal.root'
 main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8/493678/AnalysisResultsFinal.root'
 trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_trkeff/493679/AnalysisResultsFinal.root'
+delta_matching_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_matching/821755/AnalysisResultsFinal.root'
 fastsim_response:
  - '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_fastsim_pythia/493680/AnalysisResultsFinal.root'
  - '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18b8_fastsim_herwig/493681/AnalysisResultsFinal.root'

@@ -159,6 +159,8 @@ class RunAnalysis(common_base.CommonBase):
 
     if 'trkeff' in self.systematics_list:
       self.trkeff_response = config['trkeff_response']
+    if 'delta_matching' in self.systematics_list:
+      self.delta_matching_response = config['delta_matching_response']
     if 'fastsim_generator0' in self.systematics_list:
       self.fastsim_response_list = config['fastsim_response']
     if 'random_mass' in self.systematics_list:
@@ -313,6 +315,8 @@ class RunAnalysis(common_base.CommonBase):
       elif systematic == 'random_mass':
         data = self.randmass_data
         response = self.randmass_response
+      elif systematic == 'delta_matching':
+        response = self.delta_matching_response
 
       analysis = roounfold_obs.Roounfold_Obs(
         self.observable, data, response, self.config_file, output_dir, self.file_format,
