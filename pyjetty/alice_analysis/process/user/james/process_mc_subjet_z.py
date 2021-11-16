@@ -295,6 +295,11 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
             if subjet_truth:
             
               successful_match = True
+
+              # For subjet matching radius systematic, check distance between subjets
+              if self.matching_systematic:
+                if subjet_det.delta_R(subjet_truth) > 0.5 * self.jet_matching_distance * subjetR:
+                  continue
               
               z_truth = subjet_truth.pt() / jet_truth.pt()
               

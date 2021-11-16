@@ -84,6 +84,10 @@ class ProcessMCBase(process_base.ProcessBase):
       self.event_plane_range = config['event_plane_angle']
     else:
       self.event_plane_range = None
+    if 'matching_systematic' in config:
+      self.matching_systematic = config['matching_systematic']
+    else:
+      self.matching_systematic = False
     self.dry_run = config['dry_run']
     self.skip_deltapt_RC_histograms = True
     self.fill_RM_histograms = True
