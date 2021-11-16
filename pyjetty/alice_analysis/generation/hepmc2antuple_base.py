@@ -18,7 +18,7 @@ class HepMC2antupleBase(common_base.CommonBase):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, input = '', output = '', as_data = False, hepmc = 2, nev = 0, gen = 'pythia', no_progress_bar = False, include_parton = False, **kwargs):
+  def __init__(self, input = '', output = '', as_data = False, hepmc = 2, nev = 0, gen = 'pythia', no_progress_bar = False, include_parton = False, include_status=False, **kwargs):
     super(HepMC2antupleBase, self).__init__(**kwargs)
     self.input = input
     self.output = output
@@ -28,6 +28,7 @@ class HepMC2antupleBase(common_base.CommonBase):
     self.gen = gen
     self.no_progress_bar = no_progress_bar
     self.include_parton = include_parton
+    self.include_status = include_status
 
   #---------------------------------------------------------------
   def init(self):
@@ -38,6 +39,8 @@ class HepMC2antupleBase(common_base.CommonBase):
     self.tdf.cd()
     if self.as_data:
       self.t_p = ROOT.TNtuple('tree_Particle', 'tree_Particle', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
+    elif self.include_status:
+      self.t_p = ROOT.TNtuple('tree_Particle_gen', 'tree_Particle_gen', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:Status')
     else:
       self.t_p = ROOT.TNtuple('tree_Particle_gen', 'tree_Particle_gen', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
       if self.include_parton:

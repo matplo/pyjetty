@@ -29,9 +29,10 @@ def accept_particle_herwig(part, status, end_vertex, pid, pdg, parton=False):
 def accept_particle_jewel(part, status, end_vertex, pid, pdg, parton=False, select_charged=False):
 
   if parton:
-    raise NotImplementedError('Parton tree not implemented yet for JEWEL') 
+    raise NotImplementedError('Parton tree not implemented yet for JEWEL')
 
-  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1], select_charged=select_charged)
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1,3], 
+                                select_charged=select_charged, charged_exception=[3], pt_exception=1.e-3)
 
 #---------------------------------------------------------------
 def accept_particle_jetscape(part, pdg, parton=False):
@@ -85,10 +86,10 @@ def accept_particle_hybrid(part, pdg, parton):
   return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1, 6, 7])
   
 #---------------------------------------------------------------
-def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, status_accepted = [1], select_charged=True):
+def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, status_accepted = [1], select_charged=True, charged_exception=[], pt_exception=0.):
   
   # Check status
-  #print('status: {} in {}'.format(status, status_accpted))
+  #print('status: {} in {}?'.format(status, status_accepted))
   if status not in status_accepted:
     return False
   
@@ -105,7 +106,8 @@ def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, sta
       #  print(part, status)
       #  print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
       if not parton and pdg.GetParticle(pid).Charge() == 0:
-        return False
+        if status not in charged_exception and part.momentum().perp() > pt_exception: # Exceptions for JEWEL in order to keep recoils and dummies
+          return False
     else:
       return False
     

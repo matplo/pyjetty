@@ -27,32 +27,33 @@ CORE_IN_BIN=$(( ($SLURM_ARRAY_TASK_ID - 1) % $NCORES_PER_BIN + 1))
 # Set JEWEL paths, and create output directory
 JEWEL_DIR=/software/users/james/jewel-2.2.0
 JEWEL_CONFIG_DIR=$JEWEL_DIR/config
+CONFIG_FILE=params_AA_recoils.dat
 JEWEL_EXECUTABLE=jewel-2.2.0-simple
-OUTDIR_BASE="/rstorage/generators/jewel_alice"
+OUTDIR_BASE="/rstorage/generators/jewel_alice/tree_gen"
 OUTDIR=$OUTDIR_BASE/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN
 mkdir -p $OUTDIR
 
 # Construct config file for this pt-hat bin -- set log,hepmc output locations, and set n_event and pt-hat bin
 replace=$OUTDIR/jewel
-sed 's!example!'"$replace"'!g' $JEWEL_CONFIG_DIR/params.dat >> $OUTDIR/params.dat
+sed 's!example!'"$replace"'!g' $JEWEL_CONFIG_DIR/$CONFIG_FILE >> $OUTDIR/$CONFIG_FILE
 
 PTHAT_MIN=${PTHAT_BINS[$(( $BIN - 1 ))]}
-echo $'\n' >> $OUTDIR/params.dat
-echo "NEVENT $NEV_PER_JOB" >> $OUTDIR/params.dat
-echo "PTMIN $PTHAT_MIN" >> $OUTDIR/params.dat
+echo $'\n' >> $OUTDIR/$CONFIG_FILE
+echo "NEVENT $NEV_PER_JOB" >> $OUTDIR/$CONFIG_FILE
+echo "PTMIN $PTHAT_MIN" >> $OUTDIR/$CONFIG_FILE
 if [ $BIN -lt ${#PTHAT_BINS[@]} ]; then
 	PTHAT_MAX=${PTHAT_BINS[$BIN]}
-    echo "PTMAX $PTHAT_MAX" >> $OUTDIR/params.dat
+    echo "PTMAX $PTHAT_MAX" >> $OUTDIR/$CONFIG_FILE
 	echo "Calculating bin $BIN (pThat=[$PTHAT_MIN,$PTHAT_MAX]) with core number $CORE_IN_BIN"
 else
 	echo "Calculating bin $BIN (pThat_min=$PTHAT_MIN) with core number $CORE_IN_BIN"
 fi
-echo "NJOB $SLURM_ARRAY_TASK_ID" >> $OUTDIR/params.dat
+echo "NJOB $SLURM_ARRAY_TASK_ID" >> $OUTDIR/$CONFIG_FILE
 
-echo "Running JEWEL PbPb"
+echo "Running JEWEL AA w/recoils"
 export LD_LIBRARY_PATH=/software/users/james/lhapdf-5.9.1-install/lib
 export LHAPATH=/software/users/james/lhapdf-5.9.1-install/share/lhapdf/PDFsets
-$JEWEL_DIR/$JEWEL_EXECUTABLE $OUTDIR/params.dat
+$JEWEL_DIR/$JEWEL_EXECUTABLE $OUTDIR/$CONFIG_FILE
 
 # Convert hepmc to ntuple
 module use /software/users/james/heppy/modules

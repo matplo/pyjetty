@@ -36,7 +36,7 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
 
     while not input_hepmc.failed():
       if input_hepmc.NextEvent():
-        self.fill_event(input_hepmc)
+        self.fill_event(input_hepmc, False)
       
       self.increment_event()
       if self.nev > 0 and self.ev_id > self.nev:
@@ -55,7 +55,7 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
       if self.accept_particle(part, part.status(), part.end_vertex(), pid, self.pdg, self.gen):
             
         self.particles_accepted.add(self.pdg.GetParticle(pid).GetName())
-        self.t_p.Fill(self.run_number, self.ev_id, part.momentum().perp(), part.momentum().pseudoRapidity(), part.momentum().phi(), pid)
+        self.t_p.Fill(self.run_number, self.ev_id, part.momentum().perp(), part.momentum().pseudoRapidity(), part.momentum().phi(), pid, part.status())
 
 #---------------------------------------------------------------
 if __name__ == '__main__':
@@ -70,5 +70,5 @@ if __name__ == '__main__':
   parser.add_argument('--no-progress-bar', help='whether to print progress bar', action='store_true', default=False)
   args = parser.parse_args()
   
-  converter = HepMC2antuple(input = args.input, output = args.output, as_data = args.as_data, hepmc = args.hepmc, nev = args.nev, gen = args.gen, no_progress_bar = args.no_progress_bar)
+  converter = HepMC2antuple(input = args.input, output = args.output, as_data = args.as_data, hepmc = args.hepmc, nev = args.nev, gen = args.gen, no_progress_bar = args.no_progress_bar, include_status=True)
   converter.main()
