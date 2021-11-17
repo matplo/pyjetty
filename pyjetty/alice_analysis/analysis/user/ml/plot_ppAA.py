@@ -14,6 +14,7 @@ import pickle
 # Data analysis and plotting
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 import seaborn as sns
 sns.set_context('paper', rc={'font.size':18,'axes.titlesize':18,'axes.labelsize':18})
 
@@ -60,6 +61,7 @@ class PlotPPAA(common_base.CommonBase):
 
         self.models = config['models']
         self.K_list = config['K']
+        self.K_max = config['K_max']
         self.dmax = config['dmax']
         self.efp_measure = config['efp_measure']
         self.efp_beta = config['efp_beta']
@@ -73,6 +75,8 @@ class PlotPPAA(common_base.CommonBase):
 
         self.efp_alpha_list = config['efp_lasso']['alpha']
         self.d_lasso_efp = config['efp_lasso']['d_lasso']
+
+        self.alpha_lasso_external = 0.0007
 
     #---------------------------------------------------------------
     # Main processing function
@@ -115,6 +119,18 @@ class PlotPPAA(common_base.CommonBase):
                                 self.roc_curve_dict_lasso = pickle.load(f_lasso)
                                 self.N_terms_lasso = pickle.load(f_lasso)
                                 self.observable_lasso = pickle.load(f_lasso)
+
+                        # Load external lasso file
+                        if 'efp_lasso' in self.models:
+                            external_lasso_file = '/rstorage/ml/egml/nsubjettiness/807291/felix_lasso_paper/ROC_hard_R0.4_pt[100.0, 125.0]_Rmax0_lasso_687.pkl'
+                            if os.path.exists(external_lasso_file):
+                                with open(external_lasso_file, 'rb') as f_external_lasso:
+                                    self.roc_curve_dict_lasso_external = pickle.load(f_external_lasso)
+                                    self.N_terms_lasso_external = pickle.load(f_external_lasso)
+                                    self.observable_lasso_external = pickle.load(f_external_lasso)
+                                self.N_terms_lasso['efp_lasso'][self.alpha_lasso_external] = self.N_terms_lasso_external[self.alpha_lasso_external]
+                                self.observable_lasso['efp_lasso'][self.alpha_lasso_external] = self.observable_lasso_external[self.alpha_lasso_external]
+                                print(self.observable_lasso_external[self.alpha_lasso_external])
 
                         # Plot models for a single setting
                         self.plot_models(event_type, jetR, jet_pt_bin, R_max)
@@ -167,7 +183,7 @@ class PlotPPAA(common_base.CommonBase):
                         self.plot_AUC_convergence(outputdir, auc_list, event_type, jetR, jet_pt_bin, R_max)
 
         # Plot ROC curves of constituent subtraction study
-        if self.constituent_subtraction_study:
+        if self.constituent_subtraction_study['pfn'] or self.constituent_subtraction_study['nsub']:
 
             jetR = self.jetR_list[0]
             jet_pt_bin = self.jet_pt_bins[0]
@@ -199,9 +215,9 @@ class PlotPPAA(common_base.CommonBase):
 
                 # Plot Nsubjettiness
                 roc_list = {}
-                roc_list['nsub_hard'] = roc_curve_dict['nsub_hard']
-                roc_list['nsub_beforeCS'] = roc_curve_dict['nsub_beforeCS']
-                roc_list['nsub_afterCS'] = roc_curve_dict['nsub_afterCS']
+                roc_list['nsub_hard'] = roc_curve_dict['nsub_hard'][self.K_max]
+                roc_list['nsub_beforeCS'] = roc_curve_dict['nsub_beforeCS'][self.K_max]
+                roc_list['nsub_afterCS'] = roc_curve_dict['nsub_afterCS'][self.K_max]
                 self.plot_roc_curves(roc_list, 'CS', jetR, jet_pt_bin, R_max)
                 
     #---------------------------------------------------------------
@@ -219,7 +235,7 @@ class PlotPPAA(common_base.CommonBase):
             roc_list = {}
             roc_list['PFN'] = self.roc_curve_dict['pfn']
             for K in self.K_list:
-                roc_list[f'Nsub (K = {K}), DNN'] = self.roc_curve_dict['nsub_dnn'][K]
+                roc_list[f'Nsub (M = {K}), DNN'] = self.roc_curve_dict['nsub_dnn'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
         
@@ -237,14 +253,25 @@ class PlotPPAA(common_base.CommonBase):
             roc_list['zg'] = self.roc_curve_dict_lasso['zg']
             for alpha in self.nsubjettiness_alpha_plot_list:
                 roc_list[rf'Lasso $(\alpha = {alpha})$, Nsub'] = self.roc_curve_dict_lasso['nsub_lasso'][alpha]
-            #alpha_efp = self.efp_alpha_list[1]
-            #roc_list[rf'Lasso $(\alpha = {alpha_efp})$, EFP'] = self.roc_curve_dict_lasso['efp_lasso'][alpha_efp]
+            roc_list[rf'Lasso $(\alpha = {self.alpha_lasso_external})$, EFP'] = self.roc_curve_dict_lasso_external['efp'][self.alpha_lasso_external]
+            self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
+
+        if 'nsub_lasso' in self.models and 'efp_lasso' in self.models:
+            roc_list = {}
+            roc_list['jet_angularity'] = self.roc_curve_dict_lasso['jet_angularity']
+            roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
+            roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
+            roc_list['zg'] = self.roc_curve_dict_lasso['zg']
+            for alpha in self.nsubjettiness_alpha_plot_list:
+                roc_list[rf'Lasso $(\alpha = {alpha})$, Nsub'] = self.roc_curve_dict_lasso['nsub_lasso'][alpha]
+            alpha_efp = self.efp_alpha_list[1]
+            roc_list[rf'Lasso $(\alpha = {alpha_efp})$, EFP'] = self.roc_curve_dict_lasso['efp_lasso'][alpha_efp]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
         if 'nsub_dnn' in self.models and 'nsub_lasso' in self.models and 'efp_dnn' in self.models and 'efp_lasso' in self.models:
             roc_list = {}
-            roc_list[f'Nsub (K = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['nsub_dnn'][self.K_lasso_nsubjettiness]
+            roc_list[f'Nsub (M = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['nsub_dnn'][self.K_lasso_nsubjettiness]
             roc_list[f'EFP (d = {self.d_lasso_efp})'] = self.roc_curve_dict['efp_linear'][self.d_lasso_efp]
             roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
             roc_list['jet_angularity'] = self.roc_curve_dict_lasso['jet_angularity']
@@ -266,20 +293,20 @@ class PlotPPAA(common_base.CommonBase):
         if 'nsub_dnn' in self.models:
             roc_list = {}
             for K in self.K_list:
-                roc_list[f'Nsub (K = {K}), DNN'] = self.roc_curve_dict['nsub_dnn'][K]
+                roc_list[f'Nsub (M = {K}), DNN'] = self.roc_curve_dict['nsub_dnn'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
         if 'nsub_linear' in self.models:
             roc_list = {}
             for K in self.K_list:
-                roc_list[f'Nsub (K = {K}), Linear'] = self.roc_curve_dict['nsub_linear'][K]
+                roc_list[f'Nsub (M {K}), Linear'] = self.roc_curve_dict['nsub_linear'][K]
             self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
             self.plot_significance_improvement(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
         if 'nsub_dnn' in self.models and 'nsub_lasso' in self.models:
             roc_list = {}
-            roc_list[f'Nsub (K = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['nsub_dnn'][self.K_lasso_nsubjettiness]
+            roc_list[f'Nsub (M = {self.K_lasso_nsubjettiness}), DNN'] = self.roc_curve_dict['nsub_dnn'][self.K_lasso_nsubjettiness]
             roc_list['thrust'] = self.roc_curve_dict_lasso['thrust']
             roc_list['jet_angularity'] = self.roc_curve_dict_lasso['jet_angularity']
             roc_list['jet_theta_g'] = self.roc_curve_dict_lasso['jet_theta_g']
@@ -308,15 +335,15 @@ class PlotPPAA(common_base.CommonBase):
     
         plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
         plt.axis([0, 1, 0, 1])
+        plt.title('JEWEL vs. PYTHIA8     ' + r'$100<p_{\mathrm{T,jet}}<125\;\mathrm{GeV}$', fontsize=14)
         if self.plot_title:
             plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
-        plt.xlabel('False Positive Rate', fontsize=16)
-        plt.ylabel('True Positive Rate', fontsize=16)
+        plt.xlabel('False Positive Rate (AA)', fontsize=16)
+        plt.ylabel('True Positive Rate (AA)', fontsize=16)
         #plt.ylabel(rf'$\varepsilon_{{\rm{{true positive}} }}^{{\rm{{AA}} }}$', fontsize=16)
         plt.grid(True)
     
         for label,value in roc_list.items():
-
             index=0
             if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'LHA', 'thrust', 'pTD', 'hadron_z', 'zg', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label or 'EFN' in label or 'pfn' in label:
                 linewidth = 4
@@ -328,12 +355,16 @@ class PlotPPAA(common_base.CommonBase):
                     label = r'$m_{\mathrm{jet}}$'
                 if label == 'jet_angularity':
                     label = r'$\lambda_1$ (girth)'
+                    linewidth = 2
                 if label == 'thrust':
                     label = r'$\lambda_2$ (thrust)'
+                    linewidth = 2
                 if label == 'jet_theta_g':
                     label = r'$\theta_{\mathrm{g}}$'
+                    linewidth = 2
                 if label == 'zg':
                     label = r'$z_{\mathrm{g}}$'
+                    linewidth = 2
                 if label == 'PFN':
                     label = 'Particle Flow Network'
                 if label == 'EFN':
@@ -344,6 +375,12 @@ class PlotPPAA(common_base.CommonBase):
                     label = rf'Jet ($p_{{ \rm{{T}} }}^{{ \rm{{particle}} }} > 1$ GeV)'
                 if label == 'PFN_background':
                     label = 'Jet + Background'
+                if label == 'pfn_hard':
+                    label = 'Jet'
+                if label == 'pfn_beforeCS':
+                    label = 'Jet + Background (before subtraction)'                
+                if label == 'pfn_afterCS':
+                    label = 'Jet + Background (after subtraction)'                
             elif 'Lasso' in label:
                 linewidth = 4
                 alpha = 0.5
@@ -353,6 +390,7 @@ class PlotPPAA(common_base.CommonBase):
                 reg_param = float(re.search('= (.*)\)', label).group(1))
                 if 'Nsub' in label:
                     n_terms = self.N_terms_lasso['nsub_lasso'][reg_param]
+                    print(self.observable_lasso['nsub_lasso'][reg_param])
                 elif 'EFP' in label:
                     n_terms = self.N_terms_lasso['efp_lasso'][reg_param]
 
@@ -361,7 +399,8 @@ class PlotPPAA(common_base.CommonBase):
                 elif 'EFP' in label:
                     label = rf'$\sum_{{G}} c_{{G}} \rm{{EFP}}_{{G}}$'
                 label += f', {n_terms} terms'
-            elif 'DNN' in label or 'EFP' in label:
+
+            elif 'DNN' in label or 'EFP' in label or 'nsub' in label:
                 linewidth = 2
                 alpha = 0.9
                 linestyle = 'solid'
@@ -380,6 +419,7 @@ class PlotPPAA(common_base.CommonBase):
                      linestyle=linestyle, alpha=alpha, color=color)
                     
         plt.legend(loc='lower right', fontsize=legend_fontsize)
+
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir_i, f'ROC_{self.roc_plot_index}.pdf'))
         plt.close()
@@ -478,20 +518,23 @@ class PlotPPAA(common_base.CommonBase):
     def color(self, label):
 
         color = None
-        if label in ['jet_angularity', 'PFN', 'PFN_hard', 'pfn_hard', 'pfn_hard_min_pt', rf'Nsub (K = {self.K_list[4]}), DNN', 'EFP (d = 7), Linear']:
+        if label in ['jet_angularity', 'PFN', 'PFN_hard', 'pfn_hard', 'pfn_hard_min_pt', rf'Nsub (M = {self.K_list[4]}), DNN', 'EFP (d = 7), Linear']:
             color = sns.xkcd_rgb['faded purple'] 
-        elif label in ['EFN', 'EFN_hard', 'pfn_beforeCS', 'pfn_beforeCS_min_pt', 'jet_mass', 'LHA', 'hadron_z', 'thrust', 'pTD', 'multiplicity_0150']:
+        elif label in ['EFN', 'EFN_hard', 'jet_mass', 'LHA', 'hadron_z', 'thrust', 'pTD', 'multiplicity_0150', rf'Lasso $(\alpha = {self.alpha_lasso_external})$, EFP']:
             color = sns.xkcd_rgb['faded red']    
-        elif label in ['PFN_background', rf'Nsub (K = {self.K_list[3]}), DNN', 'EFP (d = 6), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[1]})$, Nsub', 'zg']:
+        elif label in ['PFN_background', 'pfn_afterCS', 'pfn_afterCS_min_pt', rf'Nsub (M = {self.K_list[3]}), DNN', 'EFP (d = 6), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[1]})$, Nsub', 'zg']:
             color = sns.xkcd_rgb['dark sky blue']    
-        elif label in ['EFN_background', 'pfn_afterCS', 'pfn_afterCS_min_pt', 'PFN_hard_min_pt', rf'Nsub (K = {self.K_list[2]}), DNN', 'EFP (d = 5), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[0]})$, Nsub']:
+        elif label in ['EFN_background', 'PFN_hard_min_pt', rf'Nsub (M = {self.K_list[2]}), DNN', 'EFP (d = 5), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[0]})$, Nsub']:
             color = sns.xkcd_rgb['medium green']  
-        elif label in [rf'Nsub (K = {self.K_list[0]}), DNN', 'EFP (d = 3), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[1]})$, EFP']:
+        elif label in [rf'Nsub (M = {self.K_list[0]}), DNN', 'EFP (d = 3), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[1]})$, EFP']:
             color = sns.xkcd_rgb['watermelon'] 
-        elif label in [rf'Nsub (K = {self.K_list[1]}), DNN', 'EFP (d = 4), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[0]})$, EFP']:
+        elif label in [rf'Nsub (M = {self.K_list[1]}), DNN', 'EFP (d = 4), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[0]})$, EFP']:
             color = sns.xkcd_rgb['light brown'] 
         elif label in ['jet_theta_g']:
             color = sns.xkcd_rgb['medium brown']
+        else:
+            color = sns.xkcd_rgb['almost black']
+        #  'pfn_beforeCS', 'pfn_beforeCS_min_pt', 
 
         return color
 
