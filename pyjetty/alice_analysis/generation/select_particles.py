@@ -32,7 +32,7 @@ def accept_particle_jewel(part, status, end_vertex, pid, pdg, parton=False, sele
     raise NotImplementedError('Parton tree not implemented yet for JEWEL')
 
   return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1,3], 
-                                select_charged=select_charged, charged_exception=[3], pt_exception=1.e-3)
+                                select_charged=select_charged, charged_exception=[3], pt_exception=1.e-5)
 
 #---------------------------------------------------------------
 def accept_particle_jetscape(part, pdg, parton=False):
