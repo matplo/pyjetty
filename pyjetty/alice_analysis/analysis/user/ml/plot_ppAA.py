@@ -196,14 +196,22 @@ class PlotPPAA(common_base.CommonBase):
             with open(roc_filename, 'rb') as f:
                 roc_curve_dict = pickle.load(f)
 
+            # Load external file for Rmax=1 result
+            external_Rmax_file = '/rstorage/ml/egml/nsubjettiness/834675/constituent_subtraction_R0.4_pt[100.0, 125.0]_Rmax1.0/ROC_constituent_subtraction.pkl'
+            if os.path.exists(external_Rmax_file):
+                with open(external_Rmax_file, 'rb') as f_external_Rmax:
+                    roc_curve_dict_Rmax_external = pickle.load(f_external_Rmax)
+
             if self.constituent_subtraction_study['pfn']:
 
                 # Plot PFN
                 roc_list = {}
                 roc_list['pfn_hard'] = roc_curve_dict['pfn_hard']
-                roc_list['pfn_beforeCS'] = roc_curve_dict['pfn_beforeCS']
                 roc_list['pfn_afterCS'] = roc_curve_dict['pfn_afterCS']
+                roc_list['pfn_afterCS_Rmax1'] = roc_curve_dict_Rmax_external['pfn_afterCS']
+                roc_list['pfn_beforeCS'] = roc_curve_dict['pfn_beforeCS']
                 self.plot_roc_curves(roc_list, 'CS', jetR, jet_pt_bin, R_max)
+                self.plot_significance_improvement(roc_list, 'CS', jetR, jet_pt_bin, R_max)
 
                 # Plot PFN w/min_pt cut
                 roc_list = {}
@@ -390,9 +398,14 @@ class PlotPPAA(common_base.CommonBase):
                 if label == 'pfn_hard':
                     label = 'Jet'
                 if label == 'pfn_beforeCS':
-                    label = 'Jet + Background (before subtraction)'                
+                    label = 'Jet + Background (before subtraction)'   
+                    alpha = 0.6
+                    legend_fontsize = 11
+                    linewidth = 3             
                 if label == 'pfn_afterCS':
-                    label = 'Jet + Background (after subtraction)'                
+                    label = rf'Jet + Background ($R_{{\rm{{max}}}}=0.25$)' 
+                if label == 'pfn_afterCS_Rmax1':
+                    label = rf'Jet + Background ($R_{{\rm{{max}}}}=1.0$)'
             elif 'Lasso' in label:
                 linewidth = 2
                 alpha = 1
@@ -444,35 +457,100 @@ class PlotPPAA(common_base.CommonBase):
     def plot_significance_improvement(self, roc_list, event_type, jetR, jet_pt_bin, R_max):
     
         plt.axis([0, 1, 0, 3])
+        plt.title('JEWEL vs. PYTHIA8     ' + r'$100<p_{\mathrm{T,jet}}<125\;\mathrm{GeV}$', fontsize=14)
         if self.plot_title:
             plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
-        plt.xlabel('True Positive Rate', fontsize=16)
+        plt.xlabel('True AA Rate', fontsize=16)
         plt.ylabel('Significance improvement', fontsize=16)
         plt.grid(True)
             
         for label,value in roc_list.items():
-            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'jet_theta_g'] or 'multiplicity' in label:
+            index=0
+            if label in ['PFN', 'EFN', 'jet_mass', 'jet_angularity', 'LHA', 'thrust', 'pTD', 'hadron_z', 'zg', 'jet_theta_g'] or 'multiplicity' in label or 'PFN' in label or 'EFN' in label or 'pfn' in label:
                 linewidth = 4
                 alpha = 0.5
                 linestyle = self.linestyle(label)
-            elif 'DNN' in label:
+                color=self.color(label)
+                legend_fontsize = 12
+                if label == 'jet_mass':
+                    label = r'$m_{\mathrm{jet}}$'
+                if label == 'jet_angularity':
+                    label = r'$\lambda_1$ (girth)'
+                    linewidth = 2
+                    alpha = 0.6
+                if label == 'thrust':
+                    label = r'$\lambda_2$ (thrust)'
+                    linewidth = 2
+                    alpha = 0.6
+                if label == 'jet_theta_g':
+                    label = r'$\theta_{\mathrm{g}}$'
+                    linewidth = 2
+                    alpha = 0.6
+                if label == 'zg':
+                    label = r'$z_{\mathrm{g}}$'
+                    linewidth = 2
+                    alpha = 0.6
+                if label == 'PFN':
+                    label = 'Particle Flow Network'
+                if label == 'EFN':
+                    label = 'Energy Flow Network'
+                if label == 'PFN_hard':
+                    label = 'Jet'
+                if label == 'PFN_hard_min_pt':
+                    label = rf'Jet, $p_{{ \rm{{T}} }}^{{ \rm{{particle}} }} > 1$ GeV'
+                    alpha = 0.6
+                    linewidth = 2
+                if label == 'PFN_background':
+                    label = 'Jet + Background'
+                if label == 'PFN_background_min_pt':
+                    label = rf'Jet + Background, $p_{{ \rm{{T}} }}^{{ \rm{{particle}} }} > 1$ GeV'
+                    alpha = 0.6
+                    linewidth = 2
+                    legend_fontsize = 11
+                if label == 'pfn_hard':
+                    label = 'Jet'
+                if label == 'pfn_beforeCS':
+                    label = 'Jet + Background (before subtraction)'                
+                if label == 'pfn_afterCS':
+                    label = rf'Jet + Background (after subtraction, $R_{{\rm{{max}}}}=0.25$)' 
+                if label == 'pfn_afterCS_Rmax1':
+                    label = rf'Jet + Background (after subtraction, $R_{{\rm{{max}}}}=1.0$)'
+            elif 'Lasso' in label:
+                linewidth = 2
+                alpha = 1
+                linestyle = 'solid'
+                color=self.color(label)
+                legend_fontsize = 10
+                reg_param = float(re.search('= (.*)\)', label).group(1))
+                if 'Nsub' in label:
+                    n_terms = self.N_terms_lasso['nsub_lasso'][reg_param]
+                    print(self.observable_lasso['nsub_lasso'][reg_param])
+                elif 'EFP' in label:
+                    n_terms = self.N_terms_lasso['efp_lasso'][reg_param]
+
+                if 'Nsub' in label:
+                    label = rf'$\prod_{{N,\beta}} \left( \tau_N^{{\beta}} \right) ^{{c_{{N,\beta}} }}$'
+                elif 'EFP' in label:
+                    label = rf'$\sum_{{G}} c_{{G}} \rm{{EFP}}_{{G}}$'
+                label += f', {n_terms} terms'
+
+            elif 'DNN' in label or 'EFP' in label or 'nsub' in label:
                 linewidth = 2
                 alpha = 0.9
                 linestyle = 'solid'
-            elif 'Lasso' in label:
-                linewidth = 4
-                alpha = 0.5
-                linestyle = 'solid'
+                color=self.color(label)
+                legend_fontsize = 12
             else:
                 linewidth = 2
                 linestyle = 'solid'
                 alpha = 0.9
                 color = sns.xkcd_rgb['almost black']
+                legend_fontsize = 12
                 
             FPR = value[0]
             TPR = value[1]
             plt.plot(TPR, TPR/np.sqrt(FPR+0.001), linewidth=linewidth, label=label,
-                     linestyle=linestyle, alpha=alpha, color=self.color(label))
+                     linestyle=linestyle, alpha=alpha, color=color)
          
         plt.legend(loc='best', fontsize=10)
         plt.tight_layout()
@@ -536,6 +614,8 @@ class PlotPPAA(common_base.CommonBase):
             color = sns.xkcd_rgb['faded red']    
         elif label in ['PFN_background', 'PFN_background_min_pt', 'pfn_afterCS', 'pfn_afterCS_min_pt', rf'Nsub (M = {self.K_list[3]}), DNN', 'EFP (d = 6), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[1]})$, Nsub', 'zg']:
             color = sns.xkcd_rgb['dark sky blue']    
+        elif label in ['pfn_afterCS_Rmax1']:
+            color = sns.xkcd_rgb['light lavendar']    
         elif label in ['EFN_background', rf'Nsub (M = {self.K_list[2]}), DNN', 'EFP (d = 5), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[0]})$, Nsub']:
             color = sns.xkcd_rgb['medium green']  
         elif label in [rf'Nsub (M = {self.K_list[0]}), DNN', 'EFP (d = 3), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[1]})$, EFP']:
@@ -556,7 +636,7 @@ class PlotPPAA(common_base.CommonBase):
     def linestyle(self, label):
  
         linestyle = None
-        if 'PFN' in label and 'min_pt' in label:
+        if 'PFN' in label and 'min_pt' in label or label == 'pfn_beforeCS':
             linestyle = 'dotted'
         elif 'PFN' in label or 'EFN' in label or 'DNN' in label or 'pfn' in label:
             linestyle = 'solid'
