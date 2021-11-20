@@ -600,50 +600,52 @@ class ProcessppAA(common_base.CommonBase):
                                 self.four_vectors['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}']['cone_four_vectors_afterCS'].append(four_vectors_in_cone_afterCS)
 
                                 # Also compute N-subjettiness for each of the cones
-                                jet_particles = []
-                                for p in fj_particles_hard:
-                                    if jet.delta_R(p) < jetR:
-                                        jet_particles.append(p)
-                                jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
-                                cs = fj.ClusterSequence(jet_particles, jet_def)
-                                jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
-                                axis_definition = fjcontrib.KT_Axes()
-                                for j,N in enumerate(self.N_list):
-                                    beta = self.beta_list[j]
-                                    measure_definition = fjcontrib.UnnormalizedMeasure(beta)
-                                    n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
-                                    n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
-                                    self.nsub_cone_hard_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_hard_N{N}_beta{beta}'].append(n_subjettiness)
+                                nsub_cone = False
+                                if nsub_cone:
+                                    jet_particles = []
+                                    for p in fj_particles_hard:
+                                        if jet.delta_R(p) < jetR:
+                                            jet_particles.append(p)
+                                    jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
+                                    cs = fj.ClusterSequence(jet_particles, jet_def)
+                                    jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
+                                    axis_definition = fjcontrib.KT_Axes()
+                                    for j,N in enumerate(self.N_list):
+                                        beta = self.beta_list[j]
+                                        measure_definition = fjcontrib.UnnormalizedMeasure(beta)
+                                        n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
+                                        n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
+                                        self.nsub_cone_hard_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_hard_N{N}_beta{beta}'].append(n_subjettiness)
 
-                                jet_particles = []
-                                for p in fj_particles_combined_beforeCS:
-                                    if jet.delta_R(p) < jetR:
-                                        jet_particles.append(p)
-                                jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
-                                cs = fj.ClusterSequence(jet_particles, jet_def)
-                                jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
-                                axis_definition = fjcontrib.KT_Axes()
-                                for j,N in enumerate(self.N_list):
-                                    beta = self.beta_list[j]
-                                    measure_definition = fjcontrib.UnnormalizedMeasure(beta)
-                                    n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
-                                    n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
-                                    self.nsub_cone_beforeCS_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_beforeCS_N{N}_beta{beta}'].append(n_subjettiness)
+                                    jet_particles = []
+                                    for p in fj_particles_combined_beforeCS:
+                                        if jet.delta_R(p) < jetR:
+                                            jet_particles.append(p)
+                                    jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
+                                    cs = fj.ClusterSequence(jet_particles, jet_def)
+                                    jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
+                                    axis_definition = fjcontrib.KT_Axes()
+                                    for j,N in enumerate(self.N_list):
+                                        beta = self.beta_list[j]
+                                        measure_definition = fjcontrib.UnnormalizedMeasure(beta)
+                                        n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
+                                        n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
+                                        self.nsub_cone_beforeCS_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_beforeCS_N{N}_beta{beta}'].append(n_subjettiness)
 
-                                jet_particles = []
-                                for p in fj_particles_combined[i]:
-                                    if jet.delta_R(p) < jetR:
-                                        jet_particles.append(p)
-                                jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
-                                cs = fj.ClusterSequence(jet_particles, jet_def)
-                                jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
-                                axis_definition = fjcontrib.KT_Axes()
-                                for j,N in enumerate(self.N_list):
-                                    beta = self.beta_list[j]
-                                    measure_definition = fjcontrib.UnnormalizedMeasure(beta)
-                                    n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
-                                    n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
-                                    self.nsub_cone_afterCS_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_afterCS_N{N}_beta{beta}'].append(n_subjettiness)
+                                    jet_particles = []
+                                    for p in fj_particles_combined[i]:
+                                        if jet.delta_R(p) < jetR:
+                                            jet_particles.append(p)
+                                    jet_def = fj.JetDefinition(fj.antikt_algorithm, fj.JetDefinition.max_allowable_R)
+                                    cs = fj.ClusterSequence(jet_particles, jet_def)
+                                    jet_cone = fj.sorted_by_pt(cs.inclusive_jets())[0]
+                                    axis_definition = fjcontrib.KT_Axes()
+                                    for j,N in enumerate(self.N_list):
+                                        beta = self.beta_list[j]
+                                        measure_definition = fjcontrib.UnnormalizedMeasure(beta)
+                                        n_subjettiness_calculator = fjcontrib.Nsubjettiness(N, axis_definition, measure_definition)
+                                        n_subjettiness = n_subjettiness_calculator.result(jet_cone)/jet_cone.pt()
+                                        self.nsub_cone_afterCS_variables['combined_matched'][f'R{jetR}'][f'pt{jet_pt_bin}'][f'Rmax{R_max}'][f'nsub_cone_afterCS_N{N}_beta{beta}'].append(n_subjettiness)
 
         self.event_index += 1
         if self.event_index%100 == 0:

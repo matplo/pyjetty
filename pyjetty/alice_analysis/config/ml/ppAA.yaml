@@ -4,7 +4,7 @@
 # These parameters are used in the process script
 #------------------------------------------------------------------------------
 
-K_max: 100
+K_max: 50
 jetR: [0.4]
 jet_pt_bins: [[100.,125.]]
 eta_max: 2.
@@ -42,12 +42,13 @@ n_val: 30000
 n_test: 30000
 
 # Select model: nsub_linear, efp_linear, nsub_lasso, efp_lasso, nsub_dnn, efp_dnn, pfn, efn
-models: [nsub_linear, efp_linear, nsub_lasso, efp_lasso, nsub_dnn, pfn, efn]
+models: [nsub_lasso, efp_lasso]
 
 # Option to perform constituent subtraction study, using particles in cone before and after CS
 # For now, each of these uses the same config block as 'pfn' or 'nsub_dnn' below
 constituent_subtraction_study: 
-  pfn: True
+  pfn: False
+  pfn_min_pt: False
   nsub: False
 
 # Define Nsubjettiness observable basis sets to train models
@@ -135,9 +136,12 @@ pfn:
     # Network architecture parameters
     Phi_sizes: [100, 100, 256]
     F_sizes: [100, 100, 100]
+    #Phi_sizes: [200, 200, 200, 200, 512]
+    #F_sizes: [200, 200, 200, 200, 200, 200]
 
     # Network training parameters
-    epochs: 10
+    epochs: 20
+    #epochs: 20
     batch_size: 500
     use_pids: True                                  # Use PID information (this option is currently ignored)
 

@@ -414,8 +414,8 @@ class AnalyzePPAA(common_base.CommonBase):
 
                         # Plot first few K (before and after scaling)
                         if 'neural_network' in self.models and K < 5:
-                            self.plot_nsubjettiness_distributions(K, self.training_data[K]['X_Nsub_train'], 'before_scaling')
-                            self.plot_nsubjettiness_distributions(K, sklearn.preprocessing.scale(self.training_data[K]['X_Nsub_train']), 'after_scaling')
+                            self.plot_nsubjettiness_distributions(K, self.training_data[K]['X_Nsub_train'], self.y_train, self.training_data[K]['feature_labels'], 'before_scaling')
+                            self.plot_nsubjettiness_distributions(K, sklearn.preprocessing.scale(self.training_data[K]['X_Nsub_train']), self.y_train, self.training_data[K]['feature_labels'], 'after_scaling')
 
                         # Compute EFPs
                         if 'efp_dnn' in self.models or 'efp_linear' in self.models or 'efp_lasso' in self.models:
@@ -476,6 +476,35 @@ class AnalyzePPAA(common_base.CommonBase):
 
 
                             print('Done.') 
+
+                            # Plot a few single observables
+
+                            # EFP Lasso for paper -- run with d = 4
+                            #observable = '[(0, 1)] + 3.54* [(0, 1), (0, 2)] + 1.72 * [(0, 1), (0, 2), (0, 3), (0, 4)] -3.82 * [(0, 1), (0, 1), (2, 3), (2, 3)]'
+                            if self.dmax == 4:
+                                observable = rf'$\mathcal{{O}}^{{\mathrm{{ML}}}}_{{\mathrm{{EFP}}}}$ (4 terms)' 
+                                ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{ d \mathcal{{O}}^{{\mathrm{{ML}}}}_{{\mathrm{{EFP}}}} }}$'
+                                X = self.X_EFP_train[self.dmax][:,0] + 3.54*self.X_EFP_train[self.dmax][:,4] + 1.72*self.X_EFP_train[self.dmax][:,17] - 3.82*self.X_EFP_train[self.dmax][:,23]
+                                y = self.Y_EFP_train[self.dmax]
+                                self.plot_observable(X, y, xlabel=observable, ylabel=ylabel, filename='EFP_0_4_17_23.pdf')
+                            
+                            # Nsub for paper
+                            #observable = r'$\tau_{10}^{1})^{0.152} (\tau_{11}^{1})^{0.335} (\tau_{14}^{1})^{1.382} (\tau_{14}^{2})^{2.13}$'
+                            observable = rf'$\mathcal{{O}}^{{\mathrm{{ML}}}}_{{N-\mathrm{{sub}}}}$ (4 terms)' 
+                            ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{ d \mathcal{{O}}^{{\mathrm{{ML}}}}_{{N-\mathrm{{sub}}}} }}$'
+                            #print(self.training_data[self.K_max]['feature_labels'])
+                            #print(self.training_data[self.K_max]['X_Nsub_train'].shape)
+                            X_train = self.training_data[self.K_max]['X_Nsub_train']
+                            eps = 0.
+                            term1 = np.multiply( np.power(X_train[:,28]+eps, 0.152), np.power(X_train[:,31]+eps, 0.335))
+                            term2 = np.multiply( np.power(X_train[:,40]+eps, 1.382), np.power(X_train[:,41]+eps, 2.13))
+                            tau = np.multiply(term1, term2)
+                            print(np.mean(term1))
+                            print(np.mean(term2))
+                            print(np.mean(tau))
+                            np.log(tau)
+                            y = self.y_train
+                            self.plot_observable(tau, y, xlabel=observable, ylabel=ylabel, filename='tau_10_11_14_14.pdf', logx=True, logy=True)
 
                         # Train models
                         self.train_models(event_type, jetR, jet_pt_bin, R_max)
@@ -1146,9 +1175,9 @@ class AnalyzePPAA(common_base.CommonBase):
                 X_particles_beforeCS_total = hf[f'cone_four_vectors_beforeCS{key_suffix_combined}'][:3*self.n_total]
                 X_particles_afterCS_total = hf[f'cone_four_vectors_afterCS{key_suffix_combined}'][:3*self.n_total]
             if self.constituent_subtraction_study['nsub']:
-                X_nsub_hard_total = hf[f'cone_nsub_hard{key_suffix_combined}'][:3*self.n_total]
-                X_nsub_beforeCS_total = hf[f'cone_nsub_beforeCS{key_suffix_combined}'][:3*self.n_total]
-                X_nsub_afterCS_total = hf[f'cone_nsub_afterCS{key_suffix_combined}'][:3*self.n_total]
+                X_nsub_hard_total = hf[f'X_Nsub_cone_hard{key_suffix_combined}'][:3*self.n_total]
+                X_nsub_beforeCS_total = hf[f'X_Nsub_cone_beforeCS{key_suffix_combined}'][:3*self.n_total]
+                X_nsub_afterCS_total = hf[f'X_Nsub_cone_afterCS{key_suffix_combined}'][:3*self.n_total]
 
             # Determine total number of jets
             total_jets = int(y_total.size)
@@ -1223,16 +1252,29 @@ class AnalyzePPAA(common_base.CommonBase):
 
         # Plot first few K    
         if self.constituent_subtraction_study['nsub']:
-            self.plot_nsubjettiness_distributions(3, X_nsub_hard_train[:,5], 'hard')
-            self.plot_nsubjettiness_distributions(3, X_nsub_beforeCS_train[:,5], 'beforeCS')
-            self.plot_nsubjettiness_distributions(3, X_nsub_afterCS_train[:,5], 'afterCS')
+
+            # Define formatted labels for features
+            feature_labels = []
+            for i,N in enumerate(self.N_list):
+                if i < 5:
+                    beta = self.beta_list[i]
+                    feature_labels.append(r'$\tau_{}^{{{}}}$'.format(N,beta))
+
+            self.plot_nsubjettiness_distributions(3, X_nsub_hard_train[:,:5], y_train, feature_labels, 'hard')
+            self.plot_nsubjettiness_distributions(3, X_nsub_beforeCS_train[:,:5], y_train, feature_labels, 'beforeCS')
+            self.plot_nsubjettiness_distributions(3, X_nsub_afterCS_train[:,:5], y_train, feature_labels, 'afterCS')
 
         # ------------------------------------------
 
         # Set up dict to store roc curves
         self.roc_curve_dict = {}
         if self.constituent_subtraction_study['pfn']:
-            models = ['pfn_hard', 'pfn_beforeCS', 'pfn_afterCS', 'pfn_hard_min_pt', 'pfn_beforeCS_min_pt', 'pfn_afterCS_min_pt']
+            models = ['pfn_hard', 'pfn_beforeCS', 'pfn_afterCS']
+            for model in models:
+                self.roc_curve_dict[model] = {}
+                self.AUC[f'{model}{self.key_suffix}'] = []
+        if self.constituent_subtraction_study['pfn_min_pt']:
+            models = ['pfn_hard_min_pt', 'pfn_beforeCS_min_pt', 'pfn_afterCS_min_pt']
             for model in models:
                 self.roc_curve_dict[model] = {}
                 self.AUC[f'{model}{self.key_suffix}'] = []
@@ -1244,20 +1286,19 @@ class AnalyzePPAA(common_base.CommonBase):
 
         # Train models
         if self.constituent_subtraction_study['pfn']:
-
             model_settings = self.model_settings['pfn']
-
             self.fit_pfn('pfn_hard', model_settings, y, X_particles_hard)
             self.fit_pfn('pfn_beforeCS', model_settings, y, X_particles_beforeCS)
             self.fit_pfn('pfn_afterCS', model_settings, y, X_particles_afterCS)
 
+        if self.constituent_subtraction_study['pfn_min_pt']:
+            model_settings = self.model_settings['pfn']
             self.fit_pfn('pfn_hard_min_pt', model_settings, y, X_particles_hard_min_pt)
             self.fit_pfn('pfn_beforeCS_min_pt', model_settings, y, X_particles_beforeCS_min_pt)
             self.fit_pfn('pfn_afterCS_min_pt', model_settings, y, X_particles_afterCS_min_pt)
 
         if self.constituent_subtraction_study['nsub']:
             model_settings = self.model_settings['nsub_dnn']
-
             self.fit_dnn(X_nsub_hard_train, y_train, X_nsub_hard_test, y_test, 'nsub_hard', model_settings, dim_label='K', dim=self.K_max)
             self.fit_dnn(X_nsub_beforeCS_train, y_train, X_nsub_beforeCS_test, y_test, 'nsub_beforeCS', model_settings, dim_label='K', dim=self.K_max)
             self.fit_dnn(X_nsub_afterCS_train, y_train, X_nsub_afterCS_test, y_test, 'nsub_afterCS', model_settings, dim_label='K', dim=self.K_max)
@@ -1282,7 +1323,7 @@ class AnalyzePPAA(common_base.CommonBase):
                  bins,
                  histtype='step',
                  density=True,
-                 label = 'hard',
+                 label = 'Jet',
                  linewidth=2,
                  linestyle='-',
                  alpha=0.5)
@@ -1290,7 +1331,7 @@ class AnalyzePPAA(common_base.CommonBase):
                  bins,
                  histtype='step',
                  density=True,
-                 label = 'before CS',
+                 label = 'Jet + Background (before subtraction)',
                  linewidth=2,
                  linestyle='-',
                  alpha=0.5)
@@ -1298,12 +1339,14 @@ class AnalyzePPAA(common_base.CommonBase):
                  bins,
                  histtype='step',
                  density=True,
-                 label = 'after CS',
+                 label = 'Jet + Background (after subtraction)',
                  linewidth=2,
                  linestyle='-',
                  alpha=0.5)
-        plt.xlabel(rf'jet multiplicity', fontsize=14)
-        legend = plt.legend(loc='best', fontsize=14, frameon=False)
+        xtitle = rf'$N_{{\mathrm{{constituents}}}}$'
+        plt.xlabel(xtitle, fontsize=14)
+        plt.ylabel(rf'$\frac{{ dN }}{{ d{{N_{{ \mathrm{{constituents}} }} }} }}$', fontsize=16)
+        legend = plt.legend(loc='best', fontsize=10, frameon=False)
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir_i, f'constituent_subtraction_multiplicity_{label}.pdf'))
         plt.close()
@@ -1518,29 +1561,31 @@ class AnalyzePPAA(common_base.CommonBase):
             plt.close()
             
         # delta pt -- random cone
-        if 'combined' in event_type:
-            bins = np.linspace(-50, 50, 100)
-            mean = np.round(np.mean(self.delta_pt_random_cone),2)
-            sigma = np.round(np.std(self.delta_pt_random_cone),2)
-            plt.hist(self.delta_pt_random_cone,
-                     bins,
-                     histtype='stepfilled',
-                     label = rf'$\mathrm{{mean}} = {mean},\;\sigma = {sigma}$',
-                     linewidth=2,
-                     linestyle='-',
-                     alpha=0.5)
-            plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
-            plt.xlabel(r'$\delta p_{T}$', fontsize=14)
-            plt.yscale('log')
-            legend = plt.legend(loc='best', fontsize=14, frameon=False)
-            plt.tight_layout()
-            plt.savefig(os.path.join(self.output_dir_i, f'delta_pt_random_cone.pdf'))
-            plt.close()
+        delta_pt = False
+        if delta_pt:
+            if 'combined' in event_type:
+                bins = np.linspace(-50, 50, 100)
+                mean = np.round(np.mean(self.delta_pt_random_cone),2)
+                sigma = np.round(np.std(self.delta_pt_random_cone),2)
+                plt.hist(self.delta_pt_random_cone,
+                        bins,
+                        histtype='stepfilled',
+                        label = rf'$\mathrm{{mean}} = {mean},\;\sigma = {sigma}$',
+                        linewidth=2,
+                        linestyle='-',
+                        alpha=0.5)
+                plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
+                plt.xlabel(r'$\delta p_{T}$', fontsize=14)
+                plt.yscale('log')
+                legend = plt.legend(loc='best', fontsize=14, frameon=False)
+                plt.tight_layout()
+                plt.savefig(os.path.join(self.output_dir_i, f'delta_pt_random_cone.pdf'))
+                plt.close()
 
     #---------------------------------------------------------------
     # Plot JEWEL vs. PYTHIA
     #---------------------------------------------------------------
-    def plot_observable(self, X, y_train, xlabel='', ylabel='', filename='', xfontsize=12, yfontsize=16, logy=False):
+    def plot_observable(self, X, y_train, xlabel='', ylabel='', filename='', xfontsize=12, yfontsize=16, logx=False, logy=False):
             
         jewel_indices = y_train
         pythia_indices = 1 - y_train
@@ -1555,10 +1600,16 @@ class AnalyzePPAA(common_base.CommonBase):
         df_pythia['generator'] = np.repeat(self.pp_label, observable_pythia.shape[0])
         df = df_jewel.append(df_pythia, ignore_index=True)
 
-        bins = np.linspace(np.amin(X), np.amax(X), 50)
+        if filename == 'tau_10_11_14_14.pdf':
+            #bins = 10 ** np.linspace(np.log10(1.e-16), np.log10(1.e-10), 50)
+            bins = np.linspace(0., 1.e-12, 50)
+            print(bins)
+            print(df.describe())
+        else:
+            bins = np.linspace(np.amin(X), np.amax(X), 50)
         h = sns.histplot(df, x=xlabel, hue='generator', stat='density', bins=bins, element='step', common_norm=False, log_scale=[False,logy])
         if h.legend_:
-            h.legend_.set_bbox_to_anchor((0.85, 0.85))
+            #h.legend_.set_bbox_to_anchor((0.85, 0.85))
             h.legend_.set_title(None)
             plt.setp(h.get_legend().get_texts(), fontsize='14') # for legend text
 
@@ -1572,21 +1623,21 @@ class AnalyzePPAA(common_base.CommonBase):
     #---------------------------------------------------------------
     # Plot nsubjettiness
     #---------------------------------------------------------------
-    def plot_nsubjettiness_distributions(self, K, X_train, suffix=''):
+    def plot_nsubjettiness_distributions(self, K, X_train, y_train, feature_labels, suffix=''):
             
         print(f'Plotting input nsubjettiness data, K={K}...')
         print()
         
         # Separate PYTHIA/JEWEL
-        jewel_indices = self.y_train
-        pythia_indices = 1 - self.y_train
+        jewel_indices = y_train
+        pythia_indices = 1 - y_train
         n_plot = int(self.n_train) # Plot a subset to save time/space
         X_Nsub_jewel = X_train[jewel_indices.astype(bool)][:n_plot]
         X_Nsub_pythia = X_train[pythia_indices.astype(bool)][:n_plot]
 
         # Construct dataframes for scatter matrix plotting
-        df_jewel = pd.DataFrame(X_Nsub_jewel, columns=self.training_data[K]['feature_labels'])
-        df_pythia = pd.DataFrame(X_Nsub_pythia, columns=self.training_data[K]['feature_labels'])
+        df_jewel = pd.DataFrame(X_Nsub_jewel, columns=feature_labels)
+        df_pythia = pd.DataFrame(X_Nsub_pythia, columns=feature_labels)
         
         # Add label columns to each df to differentiate them for plotting
         df_jewel['generator'] = np.repeat(self.AA_label, X_Nsub_jewel.shape[0])

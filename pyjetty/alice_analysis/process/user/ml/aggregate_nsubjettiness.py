@@ -14,8 +14,9 @@ def aggregate(config_file, filelist, output_dir):
 
     # List of arrays to aggregate
     observables = ['X_four_vectors', 'X_Nsub', 'y', 'jet_pt', 'delta_pt', 'matched_pt', 'matched_deltaR', 'jet_angularity', 'thrust', 'LHA', 'pTD', 'jet_mass', 'jet_theta_g', 'zg', 'jet_subjet_z', 'hadron_z', 'multiplicity_0000', 'multiplicity_0150', 'multiplicity_0500', 'multiplicity_1000']
-    #observables += ['cone_four_vectors_hard', 'cone_four_vectors_beforeCS', 'cone_four_vectors_afterCS']
-
+    observables += ['cone_four_vectors_hard', 'cone_four_vectors_beforeCS', 'cone_four_vectors_afterCS']
+    #observables += ['X_Nsub_cone_hard', 'X_Nsub_cone_beforeCS', 'X_Nsub_cone_afterCS']
+    
     # Read config file
     with open(config_file, 'r') as stream:
       config = yaml.safe_load(stream)

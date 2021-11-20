@@ -338,8 +338,8 @@ class PlotPPAA(common_base.CommonBase):
         plt.title('JEWEL vs. PYTHIA8     ' + r'$100<p_{\mathrm{T,jet}}<125\;\mathrm{GeV}$', fontsize=14)
         if self.plot_title:
             plt.title(rf'{event_type} event: $R = {jetR}, p_T = {jet_pt_bin}, R_{{max}} = {R_max}$', fontsize=14)
-        plt.xlabel('False Positive Rate (AA)', fontsize=16)
-        plt.ylabel('True Positive Rate (AA)', fontsize=16)
+        plt.xlabel('False AA Rate', fontsize=16)
+        plt.ylabel('True AA Rate', fontsize=16)
         #plt.ylabel(rf'$\varepsilon_{{\rm{{true positive}} }}^{{\rm{{AA}} }}$', fontsize=16)
         plt.grid(True)
     
