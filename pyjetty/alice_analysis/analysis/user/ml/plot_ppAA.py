@@ -163,10 +163,11 @@ class PlotPPAA(common_base.CommonBase):
                             roc_curve_dict_Rmax025 = pickle.load(f_Rmax025)
 
                         roc_list = {}
-                        roc_list[f'PFN_hard'] = roc_curve_dict_Rmax0['pfn']
-                        roc_list[f'PFN_background'] = roc_curve_dict_Rmax025['pfn']
-                        roc_list[f'PFN_hard_min_pt'] = roc_curve_dict_Rmax0['pfn_min_pt']
-                        
+                        roc_list[f'PFN_hard'] = roc_curve_dict_Rmax0['PFN']
+                        roc_list[f'PFN_background'] = roc_curve_dict_Rmax025['PFN']
+                        roc_list[f'PFN_hard_min_pt'] = roc_curve_dict_Rmax0['PFN_min_pt']
+                        roc_list[f'PFN_background_min_pt'] = roc_curve_dict_Rmax025['PFN_min_pt']
+
                         outputdir = os.path.join(self.output_dir, f'combined_matched_R{jetR}_pt{jet_pt_bin}_Rmax{R_max}')
                         self.plot_roc_curves(roc_list, event_type, jetR, jet_pt_bin, R_max)
 
@@ -376,9 +377,16 @@ class PlotPPAA(common_base.CommonBase):
                 if label == 'PFN_hard':
                     label = 'Jet'
                 if label == 'PFN_hard_min_pt':
-                    label = rf'Jet ($p_{{ \rm{{T}} }}^{{ \rm{{particle}} }} > 1$ GeV)'
+                    label = rf'Jet, $p_{{ \rm{{T}} }}^{{ \rm{{particle}} }} > 1$ GeV'
+                    alpha = 0.6
+                    linewidth = 2
                 if label == 'PFN_background':
                     label = 'Jet + Background'
+                if label == 'PFN_background_min_pt':
+                    label = rf'Jet + Background, $p_{{ \rm{{T}} }}^{{ \rm{{particle}} }} > 1$ GeV'
+                    alpha = 0.6
+                    linewidth = 2
+                    legend_fontsize = 11
                 if label == 'pfn_hard':
                     label = 'Jet'
                 if label == 'pfn_beforeCS':
@@ -522,13 +530,13 @@ class PlotPPAA(common_base.CommonBase):
     def color(self, label):
 
         color = None
-        if label in ['jet_angularity', 'PFN', 'PFN_hard', 'pfn_hard', 'pfn_hard_min_pt', rf'Nsub (M = {self.K_list[4]}), DNN', 'EFP (d = 7), Linear']:
+        if label in ['jet_angularity', 'PFN', 'PFN_hard', 'PFN_hard_min_pt', 'pfn_hard', 'pfn_hard_min_pt', rf'Nsub (M = {self.K_list[4]}), DNN', 'EFP (d = 7), Linear']:
             color = sns.xkcd_rgb['faded purple'] 
         elif label in ['EFN', 'EFN_hard', 'jet_mass', 'LHA', 'hadron_z', 'thrust', 'pTD', 'multiplicity_0150', rf'Lasso $(\alpha = {self.alpha_lasso_external})$, EFP']:
             color = sns.xkcd_rgb['faded red']    
-        elif label in ['PFN_background', 'pfn_afterCS', 'pfn_afterCS_min_pt', rf'Nsub (M = {self.K_list[3]}), DNN', 'EFP (d = 6), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[1]})$, Nsub', 'zg']:
+        elif label in ['PFN_background', 'PFN_background_min_pt', 'pfn_afterCS', 'pfn_afterCS_min_pt', rf'Nsub (M = {self.K_list[3]}), DNN', 'EFP (d = 6), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[1]})$, Nsub', 'zg']:
             color = sns.xkcd_rgb['dark sky blue']    
-        elif label in ['EFN_background', 'PFN_hard_min_pt', rf'Nsub (M = {self.K_list[2]}), DNN', 'EFP (d = 5), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[0]})$, Nsub']:
+        elif label in ['EFN_background', rf'Nsub (M = {self.K_list[2]}), DNN', 'EFP (d = 5), Linear', rf'Lasso $(\alpha = {self.nsubjettiness_alpha_plot_list[0]})$, Nsub']:
             color = sns.xkcd_rgb['medium green']  
         elif label in [rf'Nsub (M = {self.K_list[0]}), DNN', 'EFP (d = 3), Linear', rf'Lasso $(\alpha = {self.efp_alpha_list[1]})$, EFP']:
             color = sns.xkcd_rgb['watermelon'] 
@@ -548,7 +556,9 @@ class PlotPPAA(common_base.CommonBase):
     def linestyle(self, label):
  
         linestyle = None
-        if 'PFN' in label or 'EFN' in label or 'DNN' in label or 'pfn' in label:
+        if 'PFN' in label and 'min_pt' in label:
+            linestyle = 'dotted'
+        elif 'PFN' in label or 'EFN' in label or 'DNN' in label or 'pfn' in label:
             linestyle = 'solid'
         else:
             linestyle = 'dotted'
