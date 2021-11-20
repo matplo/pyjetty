@@ -356,15 +356,19 @@ class PlotPPAA(common_base.CommonBase):
                 if label == 'jet_angularity':
                     label = r'$\lambda_1$ (girth)'
                     linewidth = 2
+                    alpha = 0.6
                 if label == 'thrust':
                     label = r'$\lambda_2$ (thrust)'
                     linewidth = 2
+                    alpha = 0.6
                 if label == 'jet_theta_g':
                     label = r'$\theta_{\mathrm{g}}$'
                     linewidth = 2
+                    alpha = 0.6
                 if label == 'zg':
                     label = r'$z_{\mathrm{g}}$'
                     linewidth = 2
+                    alpha = 0.6
                 if label == 'PFN':
                     label = 'Particle Flow Network'
                 if label == 'EFN':
@@ -382,8 +386,8 @@ class PlotPPAA(common_base.CommonBase):
                 if label == 'pfn_afterCS':
                     label = 'Jet + Background (after subtraction)'                
             elif 'Lasso' in label:
-                linewidth = 4
-                alpha = 0.5
+                linewidth = 2
+                alpha = 1
                 linestyle = 'solid'
                 color=self.color(label)
                 legend_fontsize = 10
