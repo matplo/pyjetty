@@ -508,6 +508,7 @@ class AnalyzePPAA(common_base.CommonBase):
                         output_filename = os.path.join(self.output_dir_i, 'tau_10_11_14_14.pkl')
                         with open(output_filename, 'wb') as f:
                             pickle.dump(tau, f)
+                            pickle.dump(X_train, f)
                             pickle.dump(y, f)
 
                         # Train models
