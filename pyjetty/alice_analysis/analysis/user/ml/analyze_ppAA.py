@@ -474,7 +474,6 @@ class AnalyzePPAA(common_base.CommonBase):
                                 # Preprocessing: zero mean unit variance
                                 self.X_EFP_train[d] = sklearn.preprocessing.scale(X_EFP_train_d.astype(np.float128))
 
-
                             print('Done.') 
 
                             # Plot a few single observables
@@ -488,23 +487,28 @@ class AnalyzePPAA(common_base.CommonBase):
                                 y = self.Y_EFP_train[self.dmax]
                                 self.plot_observable(X, y, xlabel=observable, ylabel=ylabel, filename='EFP_0_4_17_23.pdf')
                             
-                            # Nsub for paper
-                            #observable = r'$\tau_{10}^{1})^{0.152} (\tau_{11}^{1})^{0.335} (\tau_{14}^{1})^{1.382} (\tau_{14}^{2})^{2.13}$'
-                            observable = rf'$\mathcal{{O}}^{{\mathrm{{ML}}}}_{{N-\mathrm{{sub}}}}$ (4 terms)' 
-                            ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{ d \mathcal{{O}}^{{\mathrm{{ML}}}}_{{N-\mathrm{{sub}}}} }}$'
-                            #print(self.training_data[self.K_max]['feature_labels'])
-                            #print(self.training_data[self.K_max]['X_Nsub_train'].shape)
-                            X_train = self.training_data[self.K_max]['X_Nsub_train']
-                            eps = 0.
-                            term1 = np.multiply( np.power(X_train[:,28]+eps, 0.152), np.power(X_train[:,31]+eps, 0.335))
-                            term2 = np.multiply( np.power(X_train[:,40]+eps, 1.382), np.power(X_train[:,41]+eps, 2.13))
-                            tau = np.multiply(term1, term2)
-                            print(np.mean(term1))
-                            print(np.mean(term2))
-                            print(np.mean(tau))
-                            np.log(tau)
-                            y = self.y_train
-                            self.plot_observable(tau, y, xlabel=observable, ylabel=ylabel, filename='tau_10_11_14_14.pdf', logx=True, logy=True)
+                        # Nsub for paper
+                        #observable = r'$\tau_{10}^{1})^{0.152} (\tau_{11}^{1})^{0.335} (\tau_{14}^{1})^{1.382} (\tau_{14}^{2})^{2.13}$'
+                        observable = rf'$\mathcal{{O}}^{{\mathrm{{ML}}}}_{{N-\mathrm{{sub}}}}$ (4 terms)' 
+                        ylabel = rf'$\frac{{1}}{{\sigma}} \frac{{d\sigma}}{{ d \mathcal{{O}}^{{\mathrm{{ML}}}}_{{N-\mathrm{{sub}}}} }}$'
+                        #print(self.training_data[self.K_max]['feature_labels'])
+                        #print(self.training_data[self.K_max]['X_Nsub_train'].shape)
+                        X_train = self.training_data[self.K_max]['X_Nsub_train']
+                        eps = 0.
+                        term1 = np.multiply( np.power(X_train[:,28]+eps, 0.152), np.power(X_train[:,31]+eps, 0.335))
+                        term2 = np.multiply( np.power(X_train[:,40]+eps, 1.382), np.power(X_train[:,41]+eps, 2.13))
+                        tau = np.multiply(term1, term2)
+                        log_tau = np.log10(1+tau)
+                        print(np.mean(term1))
+                        print(np.mean(term2))
+                        print(np.mean(tau))
+                        y = self.y_train
+                        self.plot_observable(log_tau, tau, xlabel=observable, ylabel=ylabel, filename='tau_10_11_14_14.pdf', logx=True, logy=True)
+
+                        output_filename = os.path.join(self.output_dir_i, 'tau_10_11_14_14.pkl')
+                        with open(output_filename, 'wb') as f:
+                            pickle.dump(tau, f)
+                            pickle.dump(y, f)
 
                         # Train models
                         self.train_models(event_type, jetR, jet_pt_bin, R_max)
@@ -1602,12 +1606,14 @@ class AnalyzePPAA(common_base.CommonBase):
 
         if filename == 'tau_10_11_14_14.pdf':
             #bins = 10 ** np.linspace(np.log10(1.e-16), np.log10(1.e-10), 50)
-            bins = np.linspace(0., 1.e-12, 50)
-            print(bins)
+            bins = np.linspace(0., 1.e-11, 100)
+            #bins = np.linspace(np.amin(X), np.amax(X), 50)
             print(df.describe())
+            stat='count'
         else:
             bins = np.linspace(np.amin(X), np.amax(X), 50)
-        h = sns.histplot(df, x=xlabel, hue='generator', stat='density', bins=bins, element='step', common_norm=False, log_scale=[False,logy])
+            stat='density'
+        h = sns.histplot(df, x=xlabel, hue='generator', stat=stat, bins=bins, element='step', common_norm=False, log_scale=[False, logy])
         if h.legend_:
             #h.legend_.set_bbox_to_anchor((0.85, 0.85))
             h.legend_.set_title(None)
