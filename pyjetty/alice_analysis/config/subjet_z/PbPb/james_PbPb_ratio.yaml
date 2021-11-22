@@ -58,6 +58,7 @@ leading_subjet_z:
     obs_bins_truth: [0., 0.6, 0.65, 0.7, 0.75, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.0]
     obs_bins_det: [0.5, 0.6, 0.65, 0.7, 0.75, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
+    obs_min_reported: [0.7]
 
   config2:
     subjet_R: 0.2
@@ -67,6 +68,7 @@ leading_subjet_z:
     obs_bins_truth: [0., 0.6, 0.65, 0.7, 0.75, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.0]
     obs_bins_det: [0.5, 0.6, 0.65, 0.7, 0.75, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
+    obs_min_reported: [0.7]
 
 ###############################################################################
 # Analysis parameters
@@ -76,10 +78,10 @@ output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'leading_subjet_z'
-do_unfolding: True
+do_unfolding: False
 force_rebin: True
 do_systematics: True
-do_plot_final_result: True
+do_plot_final_result: False
 do_plot_performance: False
 figure_approval_status: ''
 
@@ -108,7 +110,6 @@ R_max_variation2: 0.7
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18qr/493675/AnalysisResultsFinal_half2.root'
-#main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18qr/493675/AnalysisResultsFinal_half2.root'
 main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC20g4_embedding/493586/AnalysisResultsFinal.root'
 trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC20g4_embedding_trkeff/493682/AnalysisResultsFinal.root'
 

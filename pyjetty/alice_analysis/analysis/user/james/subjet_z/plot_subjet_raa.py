@@ -31,7 +31,7 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def initialize(self):
 
-        self.output_dir = '.'
+        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/paper_fig_v1'
 
         # Load config file
         config_file = './plot.yaml'
@@ -41,7 +41,8 @@ class PlotRAA(common_base.CommonBase):
             self.file_AA_name = config['file_AA']
             self.file_AA_ratio_name = config['file_AA_ratio']
             self.file_AA_ratio_sys_name = config['file_AA_ratio_sys']
-            self.file_AA_ratio_distributions_name = config['file_AA_ratio_distributions']
+            self.file_AA_ratio_distributions_name1 = config['file_AA_ratio_distribution1']
+            self.file_AA_ratio_distributions_name2= config['file_AA_ratio_distribution2']
             self.file_jetscape_pp_name = config['jetscape_pp']
             self.file_jetscape_AA_name = config['jetscape_AA']
         self.config_results = [config[name] for name in config if 'result' in name ]
@@ -98,20 +99,21 @@ class PlotRAA(common_base.CommonBase):
         # Get hists from ROOT file
         if self.obs_label == '0.1-0.2':
 
-            self.file_distributions = ROOT.TFile(self.file_AA_ratio_distributions_name, 'READ')
+            self.file_distributions1 = ROOT.TFile(self.file_AA_ratio_distributions_name1, 'READ')
+            self.file_distributions2 = ROOT.TFile(self.file_AA_ratio_distributions_name2, 'READ')
 
             self.main_result_name_01 = f'hmain_{self.observable}_R{self.jetR}_0.1_{self.min_pt}-{self.max_pt}'
             self.sys_total_name_01 = f'hResult_{self.observable}_systotal_R{self.jetR}_0.1_{self.min_pt}-{self.max_pt}'
             self.main_result_name_02 = f'hmain_{self.observable}_R{self.jetR}_0.2_{self.min_pt}-{self.max_pt}'
             self.sys_total_name_02 = f'hResult_{self.observable}_systotal_R{self.jetR}_0.2_{self.min_pt}-{self.max_pt}'
             
-            h_main_AA = self.file_distributions.Get(self.main_result_name_01)
-            h_sys_AA = self.file_distributions.Get(self.sys_total_name_01)
+            h_main_AA = self.file_distributions1.Get(self.main_result_name_01)
+            h_sys_AA = self.file_distributions1.Get(self.sys_total_name_01)
             self.h_main_AA = h_main_AA.Rebin(self.n_bins, f'{h_main_AA.GetName()}_rebinned', self.bins)
             self.h_sys_AA = h_sys_AA.Rebin(self.n_bins, f'{h_sys_AA.GetName()}_rebinned', self.bins)
 
-            h_main_pp = self.file_distributions.Get(self.main_result_name_02)
-            h_sys_pp = self.file_distributions.Get(self.sys_total_name_02)
+            h_main_pp = self.file_distributions2.Get(self.main_result_name_02)
+            h_sys_pp = self.file_distributions2.Get(self.sys_total_name_02)
             self.h_main_pp = h_main_pp.Rebin(self.n_bins, f'{h_main_pp.GetName()}_rebinned', self.bins)
             self.h_sys_pp = h_sys_pp.Rebin(self.n_bins, f'{h_sys_pp.GetName()}_rebinned', self.bins)
 
@@ -157,7 +159,7 @@ class PlotRAA(common_base.CommonBase):
         print(f'Integral over truncated range (AA): {self.integral_AA_truncated}')
         print(f'Integral over full range (pp): {integral_pp}')
         print(f'Integral over truncated range (pp): {self.integral_pp_truncated}')
-        
+
         # Form ratio
         if self.obs_label == '0.1-0.2':
             self.file_ratio = ROOT.TFile(self.file_AA_ratio_name, 'READ')
@@ -166,6 +168,10 @@ class PlotRAA(common_base.CommonBase):
             h_ratio_sys = self.file_sys.Get('h_ratio_main_sys')
             self.h_ratio = h_ratio.Rebin(self.n_bins, f'{h_ratio.GetName()}_rebinned', self.bins)
             self.h_ratio_sys = h_ratio_sys.Rebin(self.n_bins, f'{h_ratio_sys.GetName()}_rebinned', self.bins)
+
+            self.h_ratio = self.h_main_AA.Clone('h_alt_ratio')
+            self.h_ratio.Divide(self.h_main_pp)
+        
         else:
             self.h_ratio = self.h_main_AA.Clone()
             self.h_ratio.Divide(self.h_main_pp)
@@ -284,11 +290,10 @@ class PlotRAA(common_base.CommonBase):
               
         myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
         if self.obs_label == '0.1-0.2':
-            #myBlankHisto2.SetYTitle('#frac{#it{r}=0.1}{#it{r}=0.2}')
-            term1 = f'#frac{{ #it{{#sigma}}_{{ {self.xtitle} > {self.bins[0]} }}^{{ #it{{r}}=0.2 }} }}{{ #it{{#sigma}}_{{ {self.xtitle} > {self.bins[0]} }}^{{ #it{{r}}=0.1 }} }}'
-            term2 = f'#frac{{ d#it{{#sigma}} / d{self.xtitle}^{{#it{{r}}=0.1}} }}{{ d#it{{#sigma}} / d{self.xtitle}^{{#it{{r}}=0.2}} }}'
-            myBlankHisto2.SetYTitle(f'{term1} {term2}')
-
+            myBlankHisto2.SetYTitle('#frac{#it{r}=0.1}{#it{r}=0.2}')
+            #term1 = f'#frac{{ #it{{#sigma}}_{{ {self.xtitle} > {self.bins[0]} }}^{{ #it{{r}}=0.2 }} }}{{ #it{{#sigma}}_{{ {self.xtitle} > {self.bins[0]} }}^{{ #it{{r}}=0.1 }} }}'
+            #term2 = f'#frac{{ d#it{{#sigma}} / d{self.xtitle}^{{#it{{r}}=0.1}} }}{{ d#it{{#sigma}} / d{self.xtitle}^{{#it{{r}}=0.2}} }}'
+            #myBlankHisto2.SetYTitle(f'{term1} {term2}')
             
             pad2.SetLogy()
         else:

@@ -79,7 +79,7 @@ class ComputeRatioSystematics(common_base.CommonBase):
     self.pt_bin = obs_config_dict['common_settings']['pt_bins_reported']
 
     obs_bins_truth = (obs_config_dict['config1']['obs_bins_truth'])
-    self.truth_obs_bin_array = array('d',obs_bins_truth)
+    self.truth_obs_bin_array = np.array(obs_bins_truth)
 
     # We will assume the numerator is the first setting, and the denominator is the second
     obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
@@ -89,9 +89,16 @@ class ComputeRatioSystematics(common_base.CommonBase):
     # List of systematic variations to perform
     self.systematics_list = config['systematics_list']
 
+    # Get the two halves of unfolded data -- use one for r=0.1, and one for r=0.2
+    input_dir1 = config['output_dir']
+    if 'half2' in input_dir1:
+      input_dir1 = input_dir1.replace('half2', 'half1')
+    input_dir2 = input_dir1.replace('half1', 'half2')
+    self.input_dir1 = os.path.join(input_dir1, self.observable)
+    self.input_dir2 = os.path.join(input_dir2, self.observable)
+
     # Create output dir
-    self.input_dir = os.path.join(config['output_dir'], self.observable)
-    self.output_dir = os.path.join(self.input_dir, 'ratio_systematics')
+    self.output_dir = os.path.join(self.input_dir1, 'ratio_systematics')
     if not os.path.exists(self.output_dir):
       os.makedirs(self.output_dir)
 
@@ -121,18 +128,24 @@ class ComputeRatioSystematics(common_base.CommonBase):
     #       So we will just keep the final values from the individual results.
     self.reg_param_numerator = 3
     self.reg_param_denominator = 3
-    self.reg_param_generator = 15
+    self.reg_param_generator = 30
+    self.numerator_half = 1
+    self.denominator_half = 2
+    self.min_zr = 0.7
+    self.max_zr = 1.
+    self.min_pt = 100
+    self.max_pt = 150
 
     #-----------------------------------------
     # Form the ratio of the main result (and save it to file)
-    h_numerator_main = self.load_observable('main', self.jetR, self.obs_settings[0], self.reg_param_numerator)
-    h_denominator_main = self.load_observable('main', self.jetR, self.obs_settings[1], self.reg_param_denominator)
+    h_numerator_main = self.load_observable('main', self.jetR, self.obs_settings[0], self.reg_param_numerator, half=self.numerator_half)
+    h_denominator_main = self.load_observable('main', self.jetR, self.obs_settings[1], self.reg_param_denominator, half=self.denominator_half)
 
     h_ratio_main = h_numerator_main.Clone()
     h_ratio_main.SetName('h_ratio_main')
     h_ratio_main.Divide(h_denominator_main)
 
-    f = ROOT.TFile(os.path.join(self.input_dir, 'final_results/fFinalResults_ratio.root'), 'RECREATE')
+    f = ROOT.TFile(os.path.join(self.input_dir1, 'final_results/fFinalResults_ratio.root'), 'RECREATE')
     h_ratio_main.Write()
     f.Close()
 
@@ -144,14 +157,17 @@ class ComputeRatioSystematics(common_base.CommonBase):
       if systematic == 'main': # Reg param uncertainty
           h_ratio_systematic_dict['reg_param+'] = self.compute_systematic_variation(h_ratio_main, 'reg_param+')
           h_ratio_systematic_dict['reg_param-'] = self.compute_systematic_variation(h_ratio_main, 'reg_param-')
-      elif systematic in ['fastsim_generator0', 'fastsim_generator1']: # Take difference of two fastsim generators
+      elif systematic in ['fastsim_generator0', 'fastsim_generator1']: # We will add these in quadrature
         if systematic == 'fastsim_generator1':
-          h_numerator_generator0 = self.load_observable('fastsim_generator0', self.jetR, self.obs_settings[0], self.reg_param_numerator)
-          h_denominator_generator0 = self.load_observable('fastsim_generator0', self.jetR, self.obs_settings[1], self.reg_param_denominator)
-          h_ratio_generator0 = h_numerator_generator0.Clone()
-          h_ratio_generator0.SetName('h_ratio_generator0')
-          h_ratio_generator0.Divide(h_denominator_generator0)
-          h_ratio_systematic_dict['generator'] = self.compute_systematic_variation(h_ratio_generator0, 'generator')
+          #h_numerator_generator0 = self.load_observable('fastsim_generator0', self.jetR, self.obs_settings[0], self.reg_param_numerator, half=self.numerator_half)
+          #h_denominator_generator0 = self.load_observable('fastsim_generator0', self.jetR, self.obs_settings[1], self.reg_param_denominator, half=self.denominator_half)
+          #h_ratio_generator0 = h_numerator_generator0.Clone()
+          #h_ratio_generator0.SetName('h_ratio_generator0')
+          #h_ratio_generator0.Divide(h_denominator_generator0)
+          #h_ratio_systematic_dict['generator'] = self.compute_systematic_variation(h_ratio_generator0, 'generator')
+          h_numerator_systematic = self.load_systematic_percentage('generator', self.jetR, self.obs_settings[0], self.reg_param_generator, self.min_pt, self.max_pt, half=self.numerator_half)
+          h_denominator_systematic = self.load_systematic_percentage('generator', self.jetR, self.obs_settings[1], self.reg_param_generator, self.min_pt, self.max_pt, half=self.denominator_half)
+          h_ratio_systematic_dict['generator'] = self.add_hlist_in_quadrature([h_numerator_systematic, h_denominator_systematic])
       else:
         h_ratio_systematic_dict[systematic] = self.compute_systematic_variation(h_ratio_main, systematic)
 
@@ -189,8 +205,8 @@ class ComputeRatioSystematics(common_base.CommonBase):
 
     h_ratio_systematic_dict_grouped['unfolding'] = self.hist_stdev(h_unfolding_list)
 
-    # At this point, the signed uncertainties are: trkeff, generator
-    # And the unsigned uncertainties are: subtraction, unfolding
+    # At this point, the signed uncertainties are: trkeff 
+    # And the unsigned uncertainties are: subtraction, unfolding, generator
 
     #-----------------------------------------
     # Combine systematics in quadrature and write to file
@@ -224,10 +240,15 @@ class ComputeRatioSystematics(common_base.CommonBase):
     #self.write_hepdata()     
 
   #----------------------------------------------------------------------
-  def load_observable(self, systematic, jetR, obs_setting, reg_param):
+  def load_observable(self, systematic, jetR, obs_setting, reg_param, half=None):
+
+    if half == 1:
+      input_dir = self.input_dir1
+    elif half == 2:
+      input_dir = self.input_dir2
 
     # Load 2D distribution from file
-    input_dir = os.path.join(self.input_dir, systematic)
+    input_dir = os.path.join(input_dir, systematic)
     filename = os.path.join(input_dir, f'fResult_R{self.jetR}_{obs_setting}.root')
     f = ROOT.TFile(filename, 'READ')
     hname = f'hUnfolded_{self.observable}_R{jetR}_{obs_setting}_{reg_param}'
@@ -236,6 +257,7 @@ class ComputeRatioSystematics(common_base.CommonBase):
 
     # Project to 1D histogram for selected pt range
     h2D.GetXaxis().SetRangeUser(self.pt_bin[0], self.pt_bin[1])
+    h2D.GetYaxis().SetRangeUser(self.min_zr, self.max_zr)
     h = h2D.ProjectionY() # Better to use ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) ?
     h.SetName(f'h{systematic}_{self.observable}_R{jetR}_{obs_setting}_n{reg_param}_{self.pt_bin[0]}-{self.pt_bin[1]}')
     h.SetDirectory(0)
@@ -246,6 +268,24 @@ class ComputeRatioSystematics(common_base.CommonBase):
     h.Scale(1., 'width')
     n_jets_inclusive = h.Integral(1, h.GetNbinsX(), 'width')
     h.Scale(1./n_jets_inclusive)
+        
+    return h
+
+  #----------------------------------------------------------------------
+  def load_systematic_percentage(self, systematic, jetR, obs_setting, reg_param, min_pt, max_pt, half=None):
+
+    if half == 1:
+      input_dir = self.input_dir1
+    elif half == 2:
+      input_dir = self.input_dir2
+
+    # Load 2D distribution from file
+    input_dir = os.path.join(input_dir, 'systematics')
+    filename = os.path.join(input_dir, 'fSystematics.root')
+    f = ROOT.TFile(filename, 'READ')
+    hname = f'hSystematic_{self.observable}_{systematic}_R{jetR}_{obs_setting}_n{reg_param}_{min_pt}-{max_pt}'
+    h = f.Get(hname)
+    h.SetDirectory(0)
         
     return h
 
@@ -279,8 +319,8 @@ class ComputeRatioSystematics(common_base.CommonBase):
       reg_param_denominator = self.reg_param_numerator
 
     # Load unfolded variations and form ratio
-    h_numerator_systematic = self.load_observable(systematic_name, self.jetR, self.obs_settings[0], reg_param_numerator)
-    h_denominator_systematic = self.load_observable(systematic_name, self.jetR, self.obs_settings[1], reg_param_denominator)
+    h_numerator_systematic = self.load_observable(systematic_name, self.jetR, self.obs_settings[0], reg_param_numerator, half=self.numerator_half)
+    h_denominator_systematic = self.load_observable(systematic_name, self.jetR, self.obs_settings[1], reg_param_denominator, half=self.denominator_half)
 
     h_ratio_systematic = h_numerator_systematic.Clone()
     h_ratio_systematic.SetName(f'h_ratio_{systematic}')
@@ -373,6 +413,28 @@ class ComputeRatioSystematics(common_base.CommonBase):
     return h_new
 
   #----------------------------------------------------------------------
+  # Add a list of (identically-binned) histograms in quadrature, bin-by-bin
+  #----------------------------------------------------------------------
+  def add_hlist_in_quadrature(self, h_list, new_name=None):
+
+    h_new = h_list[0].Clone()
+    if not new_name:
+        new_name = '{}_new'.format(h_list[0].GetName())
+    h_new.SetName(new_name)
+
+    for i in range(1, h_new.GetNbinsX()+1):
+
+      values_i = [h.GetBinContent(i) for h in h_list]
+
+      new_value_squared = 0.
+      for value_i in values_i:
+        new_value_squared += value_i*value_i
+      new_value = math.sqrt(new_value_squared)
+      h_new.SetBinContent(i, new_value)
+
+    return h_new
+
+  #----------------------------------------------------------------------
   def attach_uncertainty_to_hist(self, h, hPercError):
 
     #Fill array with lower bin edges of data histogram
@@ -380,6 +442,35 @@ class ComputeRatioSystematics(common_base.CommonBase):
       content = h.GetBinContent(bin)
       perErr = hPercError.GetBinContent(bin)
       h.SetBinError(bin, content*perErr*0.01)
+
+  #----------------------------------------------------------------------
+  # Returns truncated 1D histogram from bins [minbin, ..., maxbin] inclusive
+  # (Note this uses 1-indexed bin number to comply with ROOT)
+  #----------------------------------------------------------------------
+  def truncate_hist(self, h, minbin, maxbin, new_name):
+    length = h.GetNbinsX()
+
+    # Check if either minbin or maxbin exist, and if so set bin indices 
+    if maxbin == None and minbin == None:
+      h.SetNameTitle(new_name, new_name)
+      return h
+    else:
+      if maxbin == None:
+        bin_range = range(minbin+1, length+2)
+        if minbin >= length:
+          raise ValueError(f"Min bin number {minbin} larger or equal to histogram size {length}")
+        if minbin < 1:
+          raise ValueError(f"Min bin number {minbin} cannot be less than 1")
+
+      elif minbin == None:
+        bin_range = range(1, maxbin+2)
+        if maxbin >= length:
+          raise ValueError(f"Max bin number {maxbin} larger or equal to histogram size {length}")
+        if maxbin < 1:
+          raise ValueError(f"Max bin number {maxbin} cannot be less than 1")
+
+      bin_edges = array('d', [h.GetXaxis().GetBinLowEdge(i) for i in bin_range])
+      return h.Rebin(len(bin_edges)-1, new_name, bin_edges)
 
   #----------------------------------------------------------------------
   def plot_systematic_uncertainties(self, h_list, h_total, suffix=''):
@@ -400,7 +491,7 @@ class ComputeRatioSystematics(common_base.CommonBase):
     myPad.Draw()
     myPad.cd()
 
-    truth_bin_array = self.truth_obs_bin_array
+    truth_bin_array = self.truth_obs_bin_array[(self.truth_obs_bin_array > self.min_zr-1.e-3)]
     n_bins_truth = len(truth_bin_array) - 1
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
@@ -466,10 +557,10 @@ class ComputeRatioSystematics(common_base.CommonBase):
     text = '#it{R} = ' + str(self.jetR)
     text_latex.DrawLatex(0.3, 0.78, text)
 
-    text = f'{self.obs_setting_label}={self.obs_settings[0]})/({self.obs_setting_label}={self.obs_settings[1]}'
+    text = f'({self.obs_setting_label}={self.obs_settings[0]})/({self.obs_setting_label}={self.obs_settings[1]})'
     text_latex.DrawLatex(0.3, 0.71, text)
 
-    outputFilename = os.path.join(self.output_dir, f'hSystematics_R{self.utils.remove_periods(self.jetR)}_{int(self.pt_bin[0])}-{int(self.pt_bin[1])}{suffix}{self.file_format}')
+    outputFilename = os.path.join(self.output_dir, f'hSystematics_ratio_R{self.utils.remove_periods(self.jetR)}_{int(self.pt_bin[0])}-{int(self.pt_bin[1])}{suffix}{self.file_format}')
     c.SaveAs(outputFilename)
     c.Close()
 

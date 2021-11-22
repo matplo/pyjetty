@@ -93,6 +93,7 @@ leading_subjet_z:
     obs_bins_truth: [0., 0.6, 0.7, 0.77, 0.83, 0.89, 0.95, 1.0]
     obs_bins_det: [0.5, 0.6, 0.7, 0.77, 0.83, 0.89, 0.95, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
+    obs_min_reported: [0.6]
 
   config2:
     subjet_R: 0.2
@@ -102,6 +103,7 @@ leading_subjet_z:
     obs_bins_truth: [0., 0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
     obs_bins_det: [0.5, 0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
     obs_bins_det_sys_binning: [0.6, 0.66, 0.72, 0.8, 0.9, 0.96, 0.98, 1.0]
+    obs_min_reported: [0.7]
 
 ###############################################################################
 # Analysis parameters
@@ -114,7 +116,7 @@ analysis_observable: 'leading_subjet_z'
 do_unfolding: False
 force_rebin: True
 do_systematics: True
-do_plot_final_result: True
+do_plot_final_result: False
 do_plot_performance: False
 figure_approval_status: ''
 
