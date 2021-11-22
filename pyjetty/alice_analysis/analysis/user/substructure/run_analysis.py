@@ -250,6 +250,7 @@ class RunAnalysis(common_base.CommonBase):
         obs_setting = self.obs_settings[i]
         grooming_setting = self.grooming_settings[i]
         obs_label = self.obs_labels[i]
+        self.get_obs_min_bins(self.obs_config_dict[subconfig], obs_label)
         self.get_obs_max_bins(self.obs_config_dict[subconfig], obs_label)
 
         # Compute systematics and attach to main results
@@ -378,7 +379,33 @@ class RunAnalysis(common_base.CommonBase):
     else:
       obs_max_bins = [None for i in self.pt_bins_reported]
 
-    setattr(self, "obs_max_bins_{}".format(obs_label), obs_max_bins)
+    setattr(self, f"obs_max_bins_{obs_label}", obs_max_bins)
+
+  #----------------------------------------------------------------------
+  def get_obs_min_bins(self, subconfig, obs_label):
+
+    if "obs_min_reported" in subconfig:
+      obs_bins_truth = self.truth_bin_array(obs_label)
+      obs_min_reported = subconfig["obs_min_reported"]
+      setattr(self, "obs_min_reported_{}".format(obs_label), obs_min_reported)
+
+      # Idiot checks
+      if len(obs_min_reported) != len(self.pt_bins_reported)-1:
+        raise ValueError(
+          "Length of obs_min_reported {} should match number of pt_bins_reported {}".format(
+          obs_min_reported, self.pt_bins_reported))
+
+      for val in obs_min_reported:
+        if not val in obs_bins_truth:
+          raise ValueError("Final bin cutoff {} is not in the bin edges list {}".format(
+            val, obs_bins_truth))
+
+      obs_min_bins = [obs_bins_truth.index(i) for i in obs_min_reported]
+
+    else:
+      obs_min_bins = [None for i in self.pt_bins_reported]
+
+    setattr(self, f"obs_min_bins_{obs_label}", obs_min_bins)
 
   #----------------------------------------------------------------------
   def compute_systematics(self, jetR, obs_label, obs_setting, grooming_setting):
@@ -413,20 +440,22 @@ class RunAnalysis(common_base.CommonBase):
       for i in range(0, len(self.pt_bins_reported) - 1):
         min_pt_truth = self.pt_bins_reported[i]
         max_pt_truth = self.pt_bins_reported[i+1]
+        minbin = self.obs_min_bins(obs_label)[i]
         maxbin = self.obs_max_bins(obs_label)[i]
 
         # Load 1D unfolded results for each pt slice into attributes
         self.load_1D_observables(jetR, obs_label, obs_setting, grooming_setting, reg_param,
-                                 min_pt_truth, max_pt_truth)
+                                 min_pt_truth, max_pt_truth, minbin, maxbin)
 
         # Compute systematics of the 1D distributions for each pt slice
         self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param,
-                                    min_pt_truth, max_pt_truth, maxbin, final=False)
+                                    min_pt_truth, max_pt_truth, minbin, maxbin, final=False)
 
     # Now determine the best possible reg param by minimizing uncertainty
     for i in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[i]
       max_pt_truth = self.pt_bins_reported[i+1]
+      minbin = self.obs_min_bins(obs_label)[i]
       maxbin = self.obs_max_bins(obs_label)[i]
 
       try:
@@ -437,7 +466,7 @@ class RunAnalysis(common_base.CommonBase):
         if self.use_max_reg_param:
           reg_param_final = self.determine_reg_param_final(
             jetR, obs_label, obs_setting, grooming_setting,
-            min_pt_truth, max_pt_truth, maxbin)
+            min_pt_truth, max_pt_truth, minbin, maxbin)
           text = 'Optimal regularization parameter for pT={}-{} determined to be {} = {}.'.format(
             min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final)
           with open(self.logfile, 'a') as myfile:
@@ -448,7 +477,7 @@ class RunAnalysis(common_base.CommonBase):
           exit(1)
 
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
-                                  min_pt_truth, max_pt_truth, maxbin, final=True)
+                                  min_pt_truth, max_pt_truth, minbin, maxbin, final=True)
                                   
       # Set SD tagging fraction for final reg parameter
       if grooming_setting and 'sd' in grooming_setting:
@@ -557,7 +586,7 @@ class RunAnalysis(common_base.CommonBase):
   # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
   #----------------------------------------------------------------------
   def load_1D_observables(self, jetR, obs_label, obs_setting, grooming_setting,
-                          reg_param, min_pt_truth, max_pt_truth):
+                          reg_param, min_pt_truth, max_pt_truth, minbin, maxbin):
 
     # Get all other systematic variations, and store as attributes
     for systematic in self.systematics_list:
@@ -568,7 +597,7 @@ class RunAnalysis(common_base.CommonBase):
                                             obs_label, reg_param, min_pt_truth, max_pt_truth)
       store_tagging_fraction = (systematic == 'main')
       self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
-                                min_pt_truth, max_pt_truth,
+                                min_pt_truth, max_pt_truth, minbin, maxbin,
                                 store_tagging_fraction=store_tagging_fraction)
 
       if systematic == 'main':
@@ -577,19 +606,19 @@ class RunAnalysis(common_base.CommonBase):
         name1D = 'hRegParam1_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
                                                          reg_param, min_pt_truth, max_pt_truth)
         hRegParam1 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
-                                               min_pt_truth, max_pt_truth)
+                                               min_pt_truth, max_pt_truth, minbin, maxbin)
 
         name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param-2)
         name1D = 'hRegParam2_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
                                                          reg_param, min_pt_truth, max_pt_truth)
         hRegParam2 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
-                                               min_pt_truth, max_pt_truth)
+                                               min_pt_truth, max_pt_truth, minbin, maxbin)
 
   #----------------------------------------------------------------------
   # Compute systematics
   #----------------------------------------------------------------------
   def compute_obs_systematic(self, jetR, obs_label, obs_setting, grooming_setting,
-                             reg_param, min_pt_truth, max_pt_truth, maxbin=None, final=False):
+                             reg_param, min_pt_truth, max_pt_truth, minbin=None, maxbin=None, final=False):
 
     # Get main result
     name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format('main', self.observable, jetR,
@@ -621,7 +650,7 @@ class RunAnalysis(common_base.CommonBase):
 
       else:
         h_systematic_ratio = self.construct_systematic(systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
-                                                       reg_param, min_pt_truth, max_pt_truth, maxbin)
+                                                       reg_param, min_pt_truth, max_pt_truth, minbin, maxbin)
       if h_systematic_ratio:
         if systematic in ['main', 'prior1', 'truncation', 'binning']:
           h_unfolding_list.append(h_systematic_ratio)
@@ -654,10 +683,10 @@ class RunAnalysis(common_base.CommonBase):
     name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
                     self.observable, jetR, obs_label, reg_param,
                     int(min_pt_truth), int(max_pt_truth))
-    if grooming_setting and maxbin:
-      hResult_sys = self.truncate_hist(hMain.Clone(), maxbin+1, name)
+    if grooming_setting:
+      hResult_sys = self.truncate_hist(hMain.Clone(), minbin, maxbin+1, name)
     else:
-      hResult_sys = self.truncate_hist(hMain.Clone(), maxbin, name)
+      hResult_sys = self.truncate_hist(hMain.Clone(), minbin, maxbin, name)
     hResult_sys.SetDirectory(0)
     self.AttachErrToHist(hResult_sys, hSystematic_Total)
     setattr(self, name, hResult_sys)
@@ -683,12 +712,12 @@ class RunAnalysis(common_base.CommonBase):
       # Plot systematic uncertainties, and write total systematic to a ROOT file
       self.plot_systematic_uncertainties(
         jetR, obs_label, obs_setting, grooming_setting,
-        min_pt_truth, max_pt_truth, maxbin, h_list, hSystematic_Total)
+        min_pt_truth, max_pt_truth, minbin, maxbin, h_list, hSystematic_Total)
 
       # Plot unfolding uncertainties
       self.plot_systematic_uncertainties(
         jetR, obs_label, obs_setting, grooming_setting,
-        min_pt_truth, max_pt_truth, maxbin, h_unfolding_list, hSystematic_Unfolding, suffix='Unfolding')
+        min_pt_truth, max_pt_truth, minbin, maxbin, h_unfolding_list, hSystematic_Unfolding, suffix='Unfolding')
 
   #----------------------------------------------------------------------
   # Retrieve a given systematic histogram
@@ -743,33 +772,26 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   # Get systematic variation and save percentage difference as attribte
   def construct_systematic(self, systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
-                           reg_param, min_pt_truth, max_pt_truth, maxbin):
+                           reg_param, min_pt_truth, max_pt_truth, minbin, maxbin):
                            
     # Set whether to store signed uncertainty value or absolute value
     # For now, only use signed uncertainty in cases where we don't average/combine multiple sources
     signed = systematic in ['trkeff', 'fastsim_generator1']
 
+    if grooming_setting:
+      maxbin += 1
+
     # Combine certain systematics as average or max
     if systematic == 'main':
-      if grooming_setting and maxbin:
-        h_systematic_ratio = self.construct_systematic_average(
-              hMain, 'RegParam', jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=False)
-      else:
-        h_systematic_ratio = self.construct_systematic_average(
-              hMain, 'RegParam', jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin, takeMaxDev=False)
+      h_systematic_ratio = self.construct_systematic_average(
+            hMain, 'RegParam', jetR, obs_label, reg_param,
+            min_pt_truth, max_pt_truth, minbin, maxbin, takeMaxDev=False)
         
     elif systematic in ['prior1', 'prior2']:
       if systematic == 'prior1':
-        if grooming_setting and maxbin:
-          h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'prior', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
-        else:
-          h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'prior', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+        h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'prior', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, minbin, maxbin, takeMaxDev=True)
       else:
         return None
             
@@ -783,27 +805,17 @@ class RunAnalysis(common_base.CommonBase):
         h_reference = getattr(self, name)
             
         # Take the difference of generator to reference generator (e.g. herwig fastsim)
-        if grooming_setting and maxbin:
-          h_systematic_ratio = self.construct_systematic_percentage(
-                h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin+1, signed=signed)
-        else:
-          h_systematic_ratio = self.construct_systematic_percentage(
-                h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin, signed=signed)
+        h_systematic_ratio = self.construct_systematic_percentage(
+              h_reference, 'fastsim_generator1', jetR, obs_label,
+              reg_param, min_pt_truth, max_pt_truth, minbin, maxbin, signed=signed)
       else:
         return None
         
     elif systematic in ['subtraction1', 'subtraction2']:
       if systematic == 'subtraction1':
-        if grooming_setting and maxbin:
-          h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'subtraction', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin+1, takeMaxDev=True)
-        else:
-          h_systematic_ratio = self.construct_systematic_average(
-                hMain, 'subtraction', jetR, obs_label, reg_param,
-                min_pt_truth, max_pt_truth, maxbin, takeMaxDev=True)
+        h_systematic_ratio = self.construct_systematic_average(
+              hMain, 'subtraction', jetR, obs_label, reg_param,
+              min_pt_truth, max_pt_truth, minbin, maxbin, takeMaxDev=True)
       else:
         return None
         
@@ -821,21 +833,13 @@ class RunAnalysis(common_base.CommonBase):
       self.change_to_per(h_systematic_ratio_temp)
       h_systematic_ratio_temp.SetMinimum(0.)
       h_systematic_ratio_temp.SetMaximum(1.5*h_systematic_ratio_temp.GetMaximum())
-      if grooming_setting and maxbin:
-        h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin+1, name_ratio)
-      else:
-        h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
+      h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, minbin, maxbin, name_ratio)
       setattr(self, name_ratio, h_systematic_ratio)
         
     else:
-      if grooming_setting and maxbin:
-        h_systematic_ratio = self.construct_systematic_percentage(
-              hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin+1, signed=signed)
-      else:
-        h_systematic_ratio = self.construct_systematic_percentage(
-              hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin, signed=signed)
+      h_systematic_ratio = self.construct_systematic_percentage(
+            hMain, systematic, jetR, obs_label, reg_param,
+            min_pt_truth, max_pt_truth, minbin, maxbin, signed=signed)
               
     name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label, reg_param, min_pt_truth, max_pt_truth)
     setattr(self, name, h_systematic_ratio)
@@ -846,7 +850,7 @@ class RunAnalysis(common_base.CommonBase):
   # Get systematic variation and save percentage difference as attribte
   def construct_systematic_percentage(self, hMain, systematic, jetR,
                                       obs_label, reg_param, min_pt_truth,
-                                      max_pt_truth, maxbin, signed=False):
+                                      max_pt_truth, minbin, maxbin, signed=False):
 
     name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR, obs_label,
                                             reg_param, min_pt_truth, max_pt_truth)
@@ -875,7 +879,7 @@ class RunAnalysis(common_base.CommonBase):
               "-- ratio:", h_systematic_ratio_temp.GetBinContent(i))
 
     self.change_to_per(h_systematic_ratio_temp, signed=signed)
-    h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
+    h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, minbin, maxbin, name_ratio)
     del h_systematic_ratio_temp   # No longer need this -- prevents memory leaks
     setattr(self, name_ratio, h_systematic_ratio)
     return h_systematic_ratio
@@ -883,14 +887,14 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   def construct_systematic_average(self, hMain, sys_label, jetR, obs_label,
                                   reg_param, min_pt_truth, max_pt_truth,
-                                  maxbin, takeMaxDev=False):
+                                  minbin, maxbin, takeMaxDev=False):
   
     h_systematic_ratio1 = self.construct_systematic_percentage(
       hMain, '{}1'.format(sys_label), jetR, obs_label, reg_param,
-      min_pt_truth, max_pt_truth, maxbin)
+      min_pt_truth, max_pt_truth, minbin, maxbin)
     h_systematic_ratio2 = self.construct_systematic_percentage(
       hMain, '{}2'.format(sys_label), jetR, obs_label,
-      reg_param, min_pt_truth, max_pt_truth, maxbin)
+      reg_param, min_pt_truth, max_pt_truth, minbin, maxbin)
 
     name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, sys_label, jetR, obs_label,
                                                        reg_param, min_pt_truth, max_pt_truth)
@@ -902,13 +906,18 @@ class RunAnalysis(common_base.CommonBase):
 
   #----------------------------------------------------------------------
   def get_obs_distribution(self, jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
-                           min_pt_truth, max_pt_truth, store_tagging_fraction=False):
+                           min_pt_truth, max_pt_truth, minbin, maxbin, store_tagging_fraction=False):
 
     h2D = getattr(self, name2D)
     h2D.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     h = h2D.ProjectionY() # Better to use ProjectionY('{}_py'.format(h2D.GetName()), 1, h2D.GetNbinsX()) ?
     h.SetName(name1D)
     h.SetDirectory(0)
+
+    if not minbin:
+      minbin = 1
+    if not maxbin:
+      maxbin = h.GetNbinsX()
         
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
     
@@ -919,8 +928,8 @@ class RunAnalysis(common_base.CommonBase):
     if grooming_setting and 'sd' in grooming_setting:
     
       # If SD, the untagged jets are in the first bin
-      n_jets_inclusive = h.Integral(1, h.GetNbinsX(), 'width')
-      n_jets_tagged = h.Integral(2, h.GetNbinsX(), 'width')
+      n_jets_inclusive = h.Integral(minbin, maxbin, 'width')
+      n_jets_tagged = h.Integral(minbin+1, maxbin, 'width')
       
       if store_tagging_fraction:
         f_tagging = n_jets_tagged/n_jets_inclusive
@@ -929,7 +938,7 @@ class RunAnalysis(common_base.CommonBase):
         setattr(self, f_tagging_name, f_tagging)
       
     else:
-      n_jets_inclusive = h.Integral(1, h.GetNbinsX(), 'width')
+      n_jets_inclusive = h.Integral(minbin, maxbin, 'width')
     
     h.Scale(1./n_jets_inclusive)
     
@@ -939,7 +948,7 @@ class RunAnalysis(common_base.CommonBase):
 
   #----------------------------------------------------------------------
   def plot_systematic_uncertainties(self, jetR, obs_label, obs_setting, grooming_setting,
-                                    min_pt_truth, max_pt_truth, maxbin, h_list, h_total, suffix=''):
+                                    min_pt_truth, max_pt_truth, minbin, maxbin, h_list, h_total, suffix=''):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -960,6 +969,8 @@ class RunAnalysis(common_base.CommonBase):
     truth_bin_array = self.truth_bin_array(obs_label)
     if maxbin:
       truth_bin_array = truth_bin_array[0:maxbin+1]
+    if minbin:
+      truth_bin_array = truth_bin_array[minbin:]
     n_bins_truth = len(truth_bin_array) - 1
 
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
@@ -1052,21 +1063,33 @@ class RunAnalysis(common_base.CommonBase):
         fSystematics.Close()
 
   #----------------------------------------------------------------------
-  # Returns truncated 1D histogram from bins [1, ..., maxbin] inclusive
+  # Returns truncated 1D histogram from bins [minbin, ..., maxbin] inclusive
   # (Note this uses 1-indexed bin number to comply with ROOT)
   #----------------------------------------------------------------------
-  def truncate_hist(self, h, maxbin, new_name):
+  def truncate_hist(self, h, minbin, maxbin, new_name):
     length = h.GetNbinsX()
-    if maxbin == None or maxbin == length:
+
+    # Check if either minbin or maxbin exist, and if so set bin indices 
+    if maxbin == None and minbin == None:
       h.SetNameTitle(new_name, new_name)
       return h
-    elif maxbin > length:
-      raise ValueError("Max bin number {} larger than histogram size {}".format(maxbin, length))
-    elif maxbin < 1:
-      raise ValueError("Max bin number {} cannot be less than 1".format(maxbin))
+    else:
+      if maxbin == None:
+        bin_range = range(minbin+1, length+2)
+        if minbin >= length:
+          raise ValueError(f"Min bin number {minbin} larger or equal to histogram size {length}")
+        if minbin < 1:
+          raise ValueError(f"Min bin number {minbin} cannot be less than 1")
 
-    bin_edges = array('d', [h.GetXaxis().GetBinLowEdge(i) for i in range(1, maxbin+2)])
-    return h.Rebin(len(bin_edges)-1, new_name, bin_edges)
+      elif minbin == None:
+        bin_range = range(1, maxbin+2)
+        if maxbin >= length:
+          raise ValueError(f"Max bin number {maxbin} larger or equal to histogram size {length}")
+        if maxbin < 1:
+          raise ValueError(f"Max bin number {maxbin} cannot be less than 1")
+
+      bin_edges = array('d', [h.GetXaxis().GetBinLowEdge(i) for i in bin_range])
+      return h.Rebin(len(bin_edges)-1, new_name, bin_edges)
 
   #----------------------------------------------------------------------
   # Add a list of (identically-binned) histograms in quadrature, bin-by-bin
@@ -1115,7 +1138,7 @@ class RunAnalysis(common_base.CommonBase):
   # all calculated systematic uncertainties when added in quadrature
   # 
   def determine_reg_param_final(self, jetR, obs_label, obs_setting, grooming_setting,
-                                min_pt_truth, max_pt_truth, maxbin):
+                                min_pt_truth, max_pt_truth, minbin, maxbin):
 
     assert self.use_max_reg_param == True
 
@@ -1135,7 +1158,7 @@ class RunAnalysis(common_base.CommonBase):
              (self.observable, self.utils.remove_periods(jetR), obs_label,
               reg_param, min_pt_truth, max_pt_truth) for reg_param in reg_params]
     hStat_list_untruncated = [f.Get(name) for name in names]
-    hStat_list = [self.truncate_hist(h, maxbin, name+'_trunc')
+    hStat_list = [self.truncate_hist(h, minbin, maxbin, name+'_trunc')
                   for (h, name) in zip(hStat_list_untruncated, names)]
 
     # Add statistical and systematic uncertainties in quadrature
@@ -1449,11 +1472,18 @@ class RunAnalysis(common_base.CommonBase):
     return getattr(self, 'truth_obs_bin_array_{}'.format(obs_label))
 
   #---------------------------------------------------------------
-  # Get truth_bin_array
+  # Get max obs bin
   #---------------------------------------------------------------
   def obs_max_bins(self, obs_label):
 
     return getattr(self, 'obs_max_bins_{}'.format(obs_label))
+
+  #---------------------------------------------------------------
+  # Get min obs bin
+  #---------------------------------------------------------------
+  def obs_min_bins(self, obs_label):
+
+    return getattr(self, 'obs_min_bins_{}'.format(obs_label))
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
