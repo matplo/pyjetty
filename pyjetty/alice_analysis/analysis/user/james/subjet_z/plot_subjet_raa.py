@@ -317,7 +317,7 @@ class PlotRAA(common_base.CommonBase):
             myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
 
         if self.obs_label == '0.1-0.2':
-            ratio_legend = ROOT.TLegend(0.73,0.75,0.9,0.97)
+            ratio_legend = ROOT.TLegend(0.7,0.78,0.9,0.98)
         else:
             ratio_legend = ROOT.TLegend(0.33,0.75,0.5,0.97)
         self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
@@ -424,7 +424,7 @@ class PlotRAA(common_base.CommonBase):
 
         c.SaveAs(self.output_filename)
         c.Close()
-            
+
     #---------------------------------------------------------------
     # Initialize theory predictions
     #---------------------------------------------------------------
@@ -437,54 +437,23 @@ class PlotRAA(common_base.CommonBase):
         #----------------------------------------------------------
         # JETSCAPE
         if self.obs_label == '0.1-0.2':
+            pp_filename = self.file_jetscape_AA_name
+            AA_filename = self.file_jetscape_AA_name
+            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
+            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
+            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname, label='JETSCAPE AA')
 
-            f_pp = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
-            f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
-            
-            h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
-            h_pp = f_pp.Get(h_name)
-            h_pp.SetDirectory(0)
-            f_pp.Close()
-            
-            h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
-            h_AA = f_AA.Get(h_name)
-            h_AA.SetDirectory(0)
-            f_AA.Close()
-        
+            pp_filename = self.file_jetscape_pp_name
+            AA_filename = self.file_jetscape_pp_name
+            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
+            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
+            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname, label='JETSCAPE pp')
         else:
-
-            f_pp = ROOT.TFile(self.file_jetscape_pp_name, 'READ')
-            f_AA = ROOT.TFile(self.file_jetscape_AA_name, 'READ')
-            
-            h_name = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
-            h_pp = f_pp.Get(h_name)
-            h_pp.SetDirectory(0)
-            f_pp.Close()
-            
-            h_AA = f_AA.Get(h_name)
-            h_AA.SetDirectory(0)
-            f_AA.Close()
-
-        # Rebin to data binning
-        bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[0:]
-        h_pp = h_pp.Rebin(bin_edges.size-1, f'{h_pp.GetName()}_rebinned', bin_edges)
-        h_AA = h_AA.Rebin(bin_edges.size-1, f'{h_AA.GetName()}_rebinned', bin_edges)
-        
-        # Normalization
-        h_pp.Scale(1., 'width')
-        h_AA.Scale(1., 'width')
-        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
-        h_AA.Scale(1./h_AA.Integral(1, h_pp.GetNbinsX()))
-
-        # Form ratio
-        hRatio = h_AA.Clone()
-        hRatio.SetName(f'hRatio_{h_AA.GetName()}')
-        hRatio.Divide(h_pp)
-    
-        # Add to theory list
-        self.prediction_list.append(hRatio)
-        self.label_list.append('JETSCAPE')
-        self.sublabel_list.append('')
+            pp_filename = self.file_jetscape_pp_name
+            AA_filename = self.file_jetscape_AA_name
+            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
+            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
+            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname)
 
         #----------------------------------------------------------
         # Factorization (Ringer, Sato)
@@ -515,6 +484,45 @@ class PlotRAA(common_base.CommonBase):
             self.prediction_list.append(g)
             self.label_list.append('Medium jet functions')
             self.sublabel_list.append('')
+
+    #---------------------------------------------------------------
+    # Initialize JETSCAPE prediction
+    #---------------------------------------------------------------
+    def add_jetscape(self, pp_filename, AA_filename, pp_hname, AA_hname, label='JETSCAPE'):
+
+        f_pp = ROOT.TFile(pp_filename, 'READ')
+        f_AA = ROOT.TFile(AA_filename, 'READ')
+        
+        h_name = pp_hname
+        h_pp = f_pp.Get(h_name)
+        h_pp.SetDirectory(0)
+        f_pp.Close()
+        
+        h_name = AA_hname
+        h_AA = f_AA.Get(h_name)
+        h_AA.SetDirectory(0)
+        f_AA.Close()
+
+        # Rebin to data binning
+        bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[0:]
+        h_pp = h_pp.Rebin(bin_edges.size-1, f'{h_pp.GetName()}_rebinned', bin_edges)
+        h_AA = h_AA.Rebin(bin_edges.size-1, f'{h_AA.GetName()}_rebinned', bin_edges)
+        
+        # Normalization
+        h_pp.Scale(1., 'width')
+        h_AA.Scale(1., 'width')
+        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
+        h_AA.Scale(1./h_AA.Integral(1, h_pp.GetNbinsX()))
+
+        # Form ratio
+        hRatio = h_AA.Clone()
+        hRatio.SetName(f'hRatio_{h_AA.GetName()}')
+        hRatio.Divide(h_pp)
+    
+        # Add to theory list
+        self.prediction_list.append(hRatio)
+        self.label_list.append(label)
+        self.sublabel_list.append('')
 
     #---------------------------------------------------------------
     # Rebin numpy arrays (xbins,y) representing a histogram,
