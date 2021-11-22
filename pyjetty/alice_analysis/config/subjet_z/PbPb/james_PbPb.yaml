@@ -111,7 +111,7 @@ output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'leading_subjet_z'
-do_unfolding: True
+do_unfolding: False
 force_rebin: True
 do_systematics: True
 do_plot_final_result: True

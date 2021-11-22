@@ -72,7 +72,7 @@ leading_subjet_z:
 # Analysis parameters
 
 file_format: '.pdf'
-output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio'
+output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio_half2'
 roounfold_path: '/Users/jamesmulligan/RooUnfold/build/libRooUnfold.dylib'
 
 analysis_observable: 'leading_subjet_z'
@@ -107,7 +107,8 @@ R_max_variation1: 0.05
 R_max_variation2: 0.7
 
 # Paths to processing output, to be used for unfolding
-main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18qr/493675/AnalysisResultsFinal.root'
+main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18qr/493675/AnalysisResultsFinal_half2.root'
+#main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC18qr/493675/AnalysisResultsFinal_half2.root'
 main_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC20g4_embedding/493586/AnalysisResultsFinal.root'
 trkeff_response: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC20g4_embedding_trkeff/493682/AnalysisResultsFinal.root'
 

@@ -97,7 +97,7 @@ output_dir: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04
 roounfold_path: '/Users/jamesmulligan/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.dylib'
 
 analysis_observable: 'leading_subjet_z'
-do_unfolding: True
+do_unfolding: False
 force_rebin: True
 do_systematics: True
 do_plot_final_result: True
@@ -114,7 +114,7 @@ systematics_list:
   - binning
   - fastsim_generator0
   - fastsim_generator1
-  - delta_matching
+#  - delta_matching      # Note: only include for inclusive case
 
 # Paths to processing output, to be used for unfolding
 main_data: '/Users/jamesmulligan/Analysis_subjet_z/output_process/LHC17pq/493677/AnalysisResultsFinal.root'
