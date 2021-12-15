@@ -1,0 +1,191 @@
+# Processing parameters
+jetR: [0.4]
+alphas: [1, 1.5, 2, 3]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+
+# Background subtraction parameters for Pb-Pb
+constituent_subtractor:
+  max_distance: [0.05, 0.25, 0.7]
+  main_R_max: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  common_settings:
+    xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
+    pt_bins_reported: [60, 80]
+    plot_overlay_list:
+      - ['config_R0.4_1', 'config_R0.4_1.5', 'config_R0.4_2', 'config_R0.4_3']
+      - ['config_R0.4_1_SD', 'config_R0.4_1.5_SD', 'config_R0.4_2_SD', 'config_R0.4_3_SD']
+    max_reg_param: 10
+
+  ############################################################################
+  # Different R & alpha configurations
+  config_R0.4_1:
+    R: 0.4
+    alpha: 1
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.07, 0.12, 0.16, 0.2, 0.25, 0.35, 0.55, 0.75]
+    obs_max_reported: [0.55]
+    obs_bins_det: [0, 0.07, 0.12, 0.16, 0.2, 0.25, 0.35, 0.55, 0.75]
+    obs_bins_det_sys_binning: [0, 0.05, 0.1, 0.13, 0.17, 0.21, 0.3, 0.41, 0.6, 0.75]
+
+  config_R0.4_1.5:
+    R: 0.4
+    alpha: 1.5
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.03, 0.07, 0.12, 0.16, 0.2, 0.25, 0.45, 0.6]
+    obs_max_reported: [0.45]
+    obs_bins_det: [0, 0.03, 0.05, 0.07, 0.12, 0.16, 0.20, 0.25, 0.45, 0.6]
+    obs_bins_det_sys_binning: [0, 0.03, 0.045, 0.075, 0.09, 0.13, 0.17, 0.21, 0.26, 0.48, 0.6]
+
+  config_R0.4_2:
+    R: 0.4
+    alpha: 2
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.20, 0.35, 0.5]
+    obs_max_reported: [0.35]
+    obs_bins_det: [0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.20, 0.35, 0.5]
+    obs_bins_det_sys_binning: [0, 0.02, 0.055, 0.085, 0.13, 0.16, 0.22, 0.37, 0.45]
+
+  config_R0.4_3:
+    R: 0.4
+    alpha: 3
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.008, 0.015, 0.025, 0.04, 0.06, 0.11, 0.25, 0.4]
+    obs_max_reported: [0.25]
+    obs_bins_det: [0, 0.008, 0.015, 0.025, 0.04, 0.06, 0.11, 0.25, 0.4]
+    obs_bins_det_sys_binning: [0, 0.01, 0.015, 0.02, 0.025, 0.045, 0.065, 0.12, 0.23, 0.35]
+
+  ############################################################################
+  # Different R & alpha configurations for SoftDrop
+  config_R0.4_1_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    R: 0.4
+    alpha: 1
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.03, 0.05, 0.07, 0.1, 0.15, 0.25, 0.4, 0.6, 0.8]
+    obs_max_reported: [0.6]
+    obs_bins_det: [0, 0.02, 0.04, 0.06, 0.09, 0.17, 0.25, 0.4, 0.6, 0.8]
+    obs_bins_det_sys_binning: [0, 0.015, 0.03, 0.05, 0.1, 0.15, 0.25, 0.41, 0.58, 0.8]
+
+  config_R0.4_1.5_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    R: 0.4
+    alpha: 1.5
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.007, 0.015, 0.025, 0.05, 0.1, 0.15, 0.25, 0.5, 0.7]
+    obs_max_reported: [0.5]
+    obs_bins_det: [0, 0.007, 0.015, 0.025, 0.05, 0.1, 0.15, 0.25, 0.5, 0.7]
+    obs_bins_det_sys_binning: [0, 0.005, 0.01, 0.02, 0.03, 0.045, 0.11, 0.16, 0.27, 0.53, 0.7]
+
+  config_R0.4_2_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    R: 0.4
+    alpha: 2
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.002, 0.008, 0.015, 0.025, 0.045, 0.085, 0.15, 0.35, 0.6]
+    obs_max_reported: [0.35]
+    obs_bins_det: [0, 0.002, 0.008, 0.015, 0.025, 0.045, 0.07, 0.1, 0.15, 0.2, 0.35, 0.6]
+    obs_bins_det_sys_binning: [0, 0.003, 0.009, 0.015, 0.03, 0.05, 0.075, 0.1, 0.16, 0.21, 0.33, 0.6]
+
+  config_R0.4_3_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    R: 0.4
+    alpha: 3
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [45, 50, 60, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 80, 100, 120]
+    obs_bins_truth: [0, 0.001, 0.003, 0.008, 0.015, 0.03, 0.06, 0.1, 0.25, 0.5]
+    obs_max_reported: [0.25]
+    obs_bins_det: [0, 0.001, 0.003, 0.008, 0.015, 0.03, 0.06, 0.1, 0.25, 0.5]
+    obs_bins_det_sys_binning: [0, 0.003, 0.015, 0.035, 0.07, 0.11, 0.24, 0.5]
+
+
+
+###############################################################################
+# Analysis & plotting parameters
+file_format: ".pdf"
+output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR04_ptbin3"
+roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
+
+analysis_observable: 'ang'
+do_unfolding: True
+force_rebin: True
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: False
+figure_approval_status: 'Work In Progress'
+
+# Whether or not to use previous result
+use_prev_prelim: False
+
+# List of which systematics to perform
+# Options: [main, trkeff, prior1, prior2, truncation, binning, \
+#           random_mass, fastsim_generator0, fastsim_generator1]
+systematics_list:
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
+  - random_mass
+#  - fastsim_generator0
+#  - fastsim_generator1
+  - subtraction1
+  - subtraction2
+  - thermal_closure
+
+# Paths to processing output, to be used for unfolding
+main_data: '/rstorage/alice/AnalysisResults/ang/611758/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/809428/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/865085/AnalysisResultsFinal.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/865128/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/865129/AnalysisResultsFinal.root'
+fastsim_response: ['', '']
+thermal_closure: '/rstorage/alice/AnalysisResults/ang/865139/AnalysisResultsFinal.root'
+
+# R_max variations
+R_max_variation1: 0.05
+R_max_variation2: 0.7
+
+# Prior variation parameters
+prior_variation_option: 1
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5

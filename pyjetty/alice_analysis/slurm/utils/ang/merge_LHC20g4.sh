@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Script to merge output ROOT files
-JOB_ID=760182
+JOB_ID=865085
 OUTPUT_DIR="/rstorage/alice/AnalysisResults/ang/$JOB_ID"
 
 # command line arguments

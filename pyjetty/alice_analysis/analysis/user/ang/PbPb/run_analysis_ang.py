@@ -229,18 +229,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    if self.do_theory and float(obs_label.split('_')[0]) in self.theory_alpha and \
-       ( (self.use_old and not grooming_setting) or not self.use_old ):
-      # Compare parton-level theory to parton-level event generators
-      print("Plotting parton-level theory comparisons for", obs_label)
-      self.plot_parton_comp(jetR, obs_label, obs_setting, grooming_setting)
-
-    if self.do_theory_F_np and float(obs_label.split('_')[0]) in self.theory_alpha and \
-       ( (self.use_old and not grooming_setting) or not self.use_old ):
-      # Compare parton-level theory to parton-level event generators
-      print("Plotting F_NP-convolved theory comparisons for", obs_label)
-      self.plot_Fnp_comp(jetR, obs_label, obs_setting, grooming_setting)
-
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
     for i in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[i]
@@ -341,17 +329,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hPythia, fraction_tagged_pythia = self.MC_prediction(
           jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, 'Pythia')
 
-      hHerwig = None; fraction_tagged_herwig = None;
-      if self.do_theory and not self.use_prev_prelim and \
-         'fastsim_generator1' in self.systematics_list:
-        # Load Herwig comparison as well
-        if grooming_setting:
-          hHerwig, fraction_tagged_herwig = self.MC_prediction(
-            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1, 'Herwig')
-        else:
-          hHerwig, fraction_tagged_herwig = self.MC_prediction(
-            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, 'Herwig')
-
       if hPythia:
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
@@ -363,16 +340,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         plot_pythia = True
       else:
         print('No PYTHIA prediction for %s %s' % (self.observable, obs_label))
-
-      if hHerwig:
-        hHerwig.SetFillStyle(0)
-        hHerwig.SetMarkerSize(1.5)
-        hHerwig.SetMarkerStyle(34)
-        hHerwig.SetMarkerColor(600+3)
-        hHerwig.SetLineColor(600+3)
-        hHerwig.SetLineWidth(1)
-        hHerwig.Draw('E2 same')
-        plot_herwig = True
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -599,7 +566,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.57, 0.87, text)
     
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text = 'Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.8, text)
 
@@ -753,12 +720,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         i_config, jetR, overlay_list, min_pt_truth,
         max_pt_truth, maxbins, plot_MC=True, MC='PYTHIA', plot_ratio=True)
 
-      if self.do_theory and not self.use_prev_prelim and \
-         'fastsim_generator1' in self.systematics_list:
-        self.plot_observable_overlay_subconfigs(
-          i_config, jetR, overlay_list, min_pt_truth,
-          max_pt_truth, maxbins, plot_MC=True, MC='Herwig', plot_ratio=True)
-
 
   #----------------------------------------------------------------------
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth,
@@ -774,7 +735,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     else:
       c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
-    
+
     c.cd()
     if plot_ratio:
       pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
@@ -921,10 +882,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           myBlankHisto.GetYaxis().SetTitleOffset(1.1)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
         myBlankHisto.Draw('E')
-        
+
         # Plot ratio
         if plot_ratio:
-          
+
           c.cd()
           pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
           pad2.SetTopMargin(0)
@@ -934,7 +895,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           pad2.SetTicks(1,1)
           pad2.Draw()
           pad2.cd()
-          
+
           myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
           myBlankHisto2.SetYTitle("#frac{Data}{%s}" % MC)
           myBlankHisto2.SetXTitle(xtitle)
@@ -951,10 +912,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetNdivisions(505)
           if plot_ratio_same_scale:
             if jetR == 0.2:
-              myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.75)
+              myBlankHisto2.GetYaxis().SetRangeUser(0.4, 2.2)
             elif jetR == 0.4:
               myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.9)
-            else: 
+            else:
               myBlankHisto2.GetYaxis().SetRangeUser(0, 2.2)
           elif jetR == 0.2:
             if min_pt_truth == 20:
@@ -963,7 +924,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               myBlankHisto2.GetYaxis().SetRangeUser(0.78, 1.299)
             elif min_pt_truth == 60:
               myBlankHisto2.GetYaxis().SetRangeUser(0.55, 1.499)
-            else: 
+            else:
               myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.99)
           elif jetR == 0.4:
             if min_pt_truth == 20:
@@ -972,17 +933,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               myBlankHisto2.GetYaxis().SetRangeUser(0.7, 2.1)
             elif min_pt_truth == 60:
               myBlankHisto2.GetYaxis().SetRangeUser(0.75, 1.55)
-            else: 
+            else:
               myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.99)
-          else: 
+          else:
             myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.99)
           myBlankHisto2.Draw()
-        
+
           line = ROOT.TLine(0,1,xmax,1)
           line.SetLineColor(920+2)
           line.SetLineStyle(2)
           line.Draw()
-      
+
       hMC = None; fraction_tagged_MC = None;
       if plot_MC:
         if MC.lower() == "pythia":
@@ -1086,7 +1047,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(text_xval, 0.87, text)
 
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    text = 'Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(text_xval, 0.81, text)
 

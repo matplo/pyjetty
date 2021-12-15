@@ -1,7 +1,7 @@
 #! /bin/bash
 
 #SBATCH --job-name="ang_treff"
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=2
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=3
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
 #SBATCH --array=1-1000

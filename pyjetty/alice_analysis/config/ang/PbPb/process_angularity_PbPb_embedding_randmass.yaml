@@ -83,3 +83,25 @@ ang:
       zcut: 0.2
       beta: 0
     alpha: 3
+
+
+###############################################################################
+mass:
+
+  common_settings:
+    xtitle: '#it{m}_{jet}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
+
+  ############################################################################
+  # Different alpha configurations
+  config_m:
+    name: "mass"
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_m_SD:
+    name: "groomed mass"
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+

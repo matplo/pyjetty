@@ -17,3 +17,5 @@ Pipfile.lock
 *.run
 *.DS_Store
 .vscode/settings.json
+*.save
+*.tar.gz

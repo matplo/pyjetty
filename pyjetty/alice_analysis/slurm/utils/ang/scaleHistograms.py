@@ -28,10 +28,10 @@ def scaleHistograms(configFile, remove_unscaled):
   bRemoveOutliers = False
   outlierLimit = 2
   outlierNBinsThreshold=4
-  
+
   # Option to print out detailed info about scaling and outlier removal
   verbose = False
-  
+
   # Read the cross-section, and scale histograms
   EndPtHardBin = 20
   with open(configFile, 'r') as stream:
@@ -64,7 +64,9 @@ def scaleHistograms(configFile, remove_unscaled):
       name = key.GetName()
       if "Scaled" in name:
         continue
-      if "roounfold" in name:
+      elif "roounfold" in name:
+        continue
+      elif "hNevents" in name:
         continue
       obj = f.Get(name)
       if obj:

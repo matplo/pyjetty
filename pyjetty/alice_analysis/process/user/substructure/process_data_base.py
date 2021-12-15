@@ -78,9 +78,11 @@ class ProcessDataBase(process_base.ProcessBase):
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores the observable setting, e.g. subjetR
     #   The grooming list stores a list of grooming settings {'sd': [zcut, beta]} or {'dg': [a]}
+    #   The observable names list stores the LaTeX formatted name of the observable for plots
     self.observable_list = config['process_observables']
     self.obs_settings = {}
     self.obs_grooming_settings = {}
+    self.obs_names = {}
     for observable in self.observable_list:
 
       obs_config_dict = config[observable]
@@ -90,6 +92,8 @@ class ProcessDataBase(process_base.ProcessBase):
       self.obs_settings[observable] = self.utils.obs_settings(
         observable, obs_config_dict, obs_subconfig_list)
       self.obs_grooming_settings[observable] = self.utils.grooming_settings(obs_config_dict)
+
+      self.obs_names[observable] = obs_config_dict["common_settings"]["xtitle"]
 
     # Construct set of unique grooming settings
     self.grooming_settings = []
@@ -237,7 +241,7 @@ class ProcessDataBase(process_base.ProcessBase):
         print('jet selector is:', jet_selector,'\n')
 
       # Analyze
-      if self.is_pp:
+      if self.is_pp or self.include_no_subtraction:
 
         # Do jet finding
         cs = fj.ClusterSequence(fj_particles, jet_def)
@@ -246,7 +250,7 @@ class ProcessDataBase(process_base.ProcessBase):
 
         self.analyze_jets(jets_selected, jetR)
 
-      else:
+      if not self.is_pp:
 
         max_distance = self.max_distance if isinstance(self.max_distance, list) else \
                        self.max_distance[jetR]
@@ -296,7 +300,7 @@ class ProcessDataBase(process_base.ProcessBase):
 
     # Fill base histograms
     jet_pt_ungroomed = jet.pt()
-    if self.is_pp or self.fill_Rmax_indep_hists:
+    if self.is_pp or (len(suffix) and self.fill_Rmax_indep_hists):
 
       hZ = getattr(self, 'hZ_R{}'.format(jetR))
       for constituent in jet.constituents():
@@ -304,26 +308,25 @@ class ProcessDataBase(process_base.ProcessBase):
         hZ.Fill(jet_pt_ungroomed, z)
 
     # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
-    # Note that the subconfigurations are defined by the first observable, if multiple are defined
-    observable = self.observable_list[0]
-    for i in range(len(self.obs_settings[observable])):
+    for observable in self.observable_list:
+      for i in range(len(self.obs_settings[observable])):
 
-      obs_setting = self.obs_settings[observable][i]
-      grooming_setting = self.obs_grooming_settings[observable][i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+        obs_setting = self.obs_settings[observable][i]
+        grooming_setting = self.obs_grooming_settings[observable][i]
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
-      # Groom jet, if applicable
-      if grooming_setting:
-        gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
-        jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
-        if not jet_groomed_lund:
-          continue
-      else:
-        jet_groomed_lund = None
+        # Groom jet, if applicable
+        if grooming_setting:
+          gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
+          jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
+          if not jet_groomed_lund:
+            continue
+        else:
+          jet_groomed_lund = None
 
-      # Call user function to fill histograms
-      self.fill_jet_histograms(jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                               obs_label, jet_pt_ungroomed, suffix)
+        # Call user function to fill histograms
+        self.fill_jet_histograms(observable, jet, jet_groomed_lund, jetR, obs_setting,
+                                 grooming_setting, obs_label, jet_pt_ungroomed, suffix)
 
   #---------------------------------------------------------------
   # This function is called once
@@ -337,7 +340,7 @@ class ProcessDataBase(process_base.ProcessBase):
   # This function is called once for each jet subconfiguration
   # You must implement this
   #---------------------------------------------------------------
-  def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                          obs_label, jet_pt_ungroomed, suffix):
+  def fill_jet_histograms(self, observable, jet, jet_groomed_lund, jetR, obs_setting,
+                          grooming_setting, obs_label, jet_pt_ungroomed, suffix):
 
     raise NotImplementedError('You must implement fill_jet_histograms()!')

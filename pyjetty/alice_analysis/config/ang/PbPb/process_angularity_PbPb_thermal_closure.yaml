@@ -4,7 +4,7 @@ jetR: [0.2, 0.4]
 # For extra verbose output in some functions
 debug_level: 0
 
-process_observables: ['ang', 'mass']
+process_observables: ['ang']
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 # Uncomment for data // comment for MC
 #reject_tracks_fraction: 0
@@ -30,6 +30,12 @@ emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
 mc_fraction_threshold: 0.5
 # Uncommend for MC // comment for data
 reject_tracks_fraction: 0.02
+
+# Parameters for thermal model
+thermal_model:
+  beta: 0.425
+  N_avg: 2500
+  sigma_N: 500
 
 
 ###############################################################################
@@ -100,3 +106,5 @@ mass:
     SoftDrop:
       zcut: 0.2
       beta: 0
+
+

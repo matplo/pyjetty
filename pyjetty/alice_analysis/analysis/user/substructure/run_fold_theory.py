@@ -117,7 +117,7 @@ class TheoryFolding():
     if self.observable == 'jet_axis':
       obs = '#it{#DeltaR}_{axis}'
     elif self.observable == 'ang':
-      obs = '#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}'
+      obs = '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
     else:
       obs = 'observable'
     

@@ -70,9 +70,9 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
   #---------------------------------------------------------------
-  def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                          obs_label, jet_pt_ungroomed, suffix):
-    
+  def fill_jet_histograms(self, observable, jet, jet_groomed_lund, jetR, obs_setting,
+                          grooming_setting, obs_label, jet_pt_ungroomed, suffix):
+
     # Recluster with WTA (with larger jet R)
     jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
     jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
