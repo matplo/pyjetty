@@ -17,7 +17,6 @@ import os
 from pyjetty.mputils import *
 
 from pyjetty.alice_analysis.process.base import process_base
-from pyjetty.alice_analysis.process.user.ang_pp.helpers import lambda_alpha_kappa_i
 
 from array import array
 import numpy as np
@@ -479,7 +478,7 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     continue
 
                 # Get showered partons
-                elif not MPIon and not parton_finished:
+                elif not parton_finished:  # and not MPIon
                     # Read parton information
                     vals = line.split()
                     if line[0] == '-':
@@ -513,14 +512,14 @@ class herwig_parton_hadron(process_base.ProcessBase):
                     hadron_final = False
 
                     # Get correct structure for finding jets
-                    partons = None
-                    hadrons = None
-                    if not MPIon:
-                        partons = fjext.vectorize_px_py_pz_e(
-                            partons_px, partons_py, partons_pz, partons_e)
+                    #partons = None
+                    #hadrons = None
+                    #if not MPIon:
+                    partons = fjext.vectorize_px_py_pz_e(
+                        partons_px, partons_py, partons_pz, partons_e)
 
-                        hadrons = fjext.vectorize_px_py_pz_e(
-                            hadrons_px, hadrons_py, hadrons_pz, hadrons_e)
+                    hadrons = fjext.vectorize_px_py_pz_e(
+                        hadrons_px, hadrons_py, hadrons_pz, hadrons_e)
 
                     ch_hadrons = fjext.vectorize_px_py_pz_e(
                         ch_hadrons_px, ch_hadrons_py, ch_hadrons_pz, ch_hadrons_e)
@@ -556,12 +555,12 @@ class herwig_parton_hadron(process_base.ProcessBase):
                 elif line[2] == ' ':  # and len(line.split()) == 5:
                     # Reading hadron information
                     vals = line.split()
-                    if not MPIon:
-                        hadrons_px.append(vals[0])
-                        hadrons_py.append(vals[1])
-                        hadrons_pz.append(vals[2])
-                        hadrons_e.append(vals[3])
-                        #hadrons_q.append(vals[4])
+                    #if not MPIon:
+                    hadrons_px.append(vals[0])
+                    hadrons_py.append(vals[1])
+                    hadrons_pz.append(vals[2])
+                    hadrons_e.append(vals[3])
+                    #hadrons_q.append(vals[4])
 
                     if '+' in hadron_type or '-' in hadron_type:
                         ch_hadrons_px.append(vals[0])
@@ -594,9 +593,13 @@ class herwig_parton_hadron(process_base.ProcessBase):
             #if not (iev+1) % 1000:
             #    print("Event number %s" % str(iev+1), end='\r')
 
-            jets_ch = fj.sorted_by_pt(jet_selector(jet_def(ch_hadrons)))
-            jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons)))
-            jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons)))
+            try:
+                jets_ch = fj.sorted_by_pt(jet_selector(jet_def(ch_hadrons)))
+                jets_p = fj.sorted_by_pt(jet_selector(jet_def(partons)))
+                jets_h = fj.sorted_by_pt(jet_selector(jet_def(hadrons)))
+            except ValueError:
+                print(ch_hadrons, partons, hadrons)
+                exit()
 
             if MPIon:
                 for jet in jets_ch:
