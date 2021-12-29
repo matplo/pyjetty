@@ -683,7 +683,7 @@ class RunAnalysis(common_base.CommonBase):
     name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
                     self.observable, jetR, obs_label, reg_param,
                     int(min_pt_truth), int(max_pt_truth))
-    if grooming_setting:
+    if grooming_setting and maxbin:
       hResult_sys = self.truncate_hist(hMain.Clone(), minbin, maxbin+1, name)
     else:
       hResult_sys = self.truncate_hist(hMain.Clone(), minbin, maxbin, name)
@@ -778,7 +778,7 @@ class RunAnalysis(common_base.CommonBase):
     # For now, only use signed uncertainty in cases where we don't average/combine multiple sources
     signed = systematic in ['trkeff', 'fastsim_generator1']
 
-    if grooming_setting:
+    if grooming_setting and maxbin:
       maxbin += 1
 
     # Combine certain systematics as average or max
