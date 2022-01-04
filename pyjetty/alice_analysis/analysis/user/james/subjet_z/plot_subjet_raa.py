@@ -31,7 +31,7 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def initialize(self):
 
-        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/paper_fig_v1'
+        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v2'
 
         # Load config file
         config_file = './plot.yaml'
@@ -233,7 +233,7 @@ class PlotRAA(common_base.CommonBase):
         pad1.Draw()
         pad1.cd()
 
-        myLegend = ROOT.TLegend(0.65,0.65,0.8,0.85)
+        myLegend = ROOT.TLegend(0.69,0.63,0.84,0.83)
         self.utils.setup_legend(myLegend, 0.055, sep=-0.1)
         
         self.h_main_pp.SetMarkerSize(1.5)
@@ -304,17 +304,19 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto2.GetXaxis().SetTitleOffset(1.95)
         myBlankHisto2.GetXaxis().SetLabelFont(43)
         myBlankHisto2.GetXaxis().SetLabelSize(25)
+        myBlankHisto2.GetXaxis().SetTickSize(0.07)
         myBlankHisto2.GetYaxis().SetTitleSize(25)
         myBlankHisto2.GetYaxis().SetTitleFont(43)
         myBlankHisto2.GetYaxis().SetTitleOffset(2.)
         myBlankHisto2.GetYaxis().SetLabelFont(43)
         myBlankHisto2.GetYaxis().SetLabelSize(25)
         myBlankHisto2.GetYaxis().SetNdivisions(505)
-        
+        myBlankHisto2.GetYaxis().SetTickSize(0.025)
+
         if self.obs_label == '0.1-0.2':
             myBlankHisto2.GetYaxis().SetRangeUser(0.2, 6.99)
         else:
-            myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+            myBlankHisto2.GetYaxis().SetRangeUser(1.e-3, 1.99)
 
         if self.obs_label == '0.1-0.2':
             ratio_legend = ROOT.TLegend(0.7,0.78,0.9,0.98)
@@ -393,25 +395,26 @@ class PlotRAA(common_base.CommonBase):
         text_latex = ROOT.TLatex()
         text_latex.SetNDC()
         
-        x = 0.25
-        text_latex.SetTextSize(0.065)
+        x = 0.24
+        text_latex.SetTextSize(0.07)
         if self.obs_label == '0.1-0.2':
-            text = '#bf{{ALICE}} {}'.format(self.figure_approval_status) + '  Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1])
+            text = 'ALICE {}'.format(self.figure_approval_status) + '  Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(self.centrality[0], self.centrality[1])
         else:
-            text = '#bf{{ALICE}} {}'.format(self.figure_approval_status)
+            text = 'ALICE {}'.format(self.figure_approval_status)
         text_latex.DrawLatex(x, 0.83, text)
         
+        text_latex.SetTextSize(0.065)
         text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
         text_latex.DrawLatex(x, 0.75, text)
 
-        text = 'Charged jets   anti-#it{k}_{T}'
+        text = 'Charged-particle anti-#it{k}_{T} jets'
         text_latex.DrawLatex(x, 0.67, text)
         
         text = '#it{R} = ' + str(self.jetR) + '   |#it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
         text_latex.DrawLatex(x, 0.6, text)
         
-        text = str(self.min_pt) + ' < #it{p}_{T, ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
-        text_latex.DrawLatex(x, 0.51, text)
+        text = str(self.min_pt) + ' < #it{p}_{T}^{ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
+        text_latex.DrawLatex(x, 0.5, text)
         
         if self.obs_label == '0.1-0.2':
             text = 'anti-#it{k}_{T} subjets'
