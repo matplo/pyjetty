@@ -307,10 +307,10 @@ class ComputeRatioSystematics(common_base.CommonBase):
     if 'reg_param' in systematic:
       if systematic == 'reg_param+':
         reg_param_numerator = self.reg_param_numerator + 2
-        reg_param_denominator = self.reg_param_numerator + 2
+        reg_param_denominator = self.reg_param_denominator + 2
       elif systematic == 'reg_param-':
         reg_param_numerator = self.reg_param_numerator - 2
-        reg_param_denominator = self.reg_param_numerator - 2   
+        reg_param_denominator = self.reg_param_denominator - 2   
     elif 'generator' in systematic: # For subjet JEWEL systematic, set a larger reg param so that it can converge
         reg_param_numerator = self.reg_param_generator
         reg_param_denominator = self.reg_param_generator
