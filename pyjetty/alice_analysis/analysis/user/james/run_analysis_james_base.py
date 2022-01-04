@@ -289,19 +289,34 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.45,0.33,0.61,0.57)
-    self.utils.setup_legend(myLegend,0.05)
+    if self.observable == 'leading_subjet_z':
+      myLegend = ROOT.TLegend(0.45,0.3,0.61,0.54)
+    elif self.observable == 'inclusive_subjet_z':
+      myLegend = ROOT.TLegend(0.38,0.32,0.54,0.56)
+    else:
+      myLegend = ROOT.TLegend(0.45,0.33,0.61,0.57)
+    self.utils.setup_legend(myLegend,0.05, sep=-0.2)
+
+    if self.observable == 'leading_subjet_z':
+      myLegend.SetHeader('Leading anti-#it{k}_{T} subjets')
+    elif self.observable == 'inclusive_subjet_z':
+      myLegend.SetHeader('Inclusive anti-#it{k}_{T} subjets')
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = 2*self.get_maximum(name, overlay_list)
     ymin = 2e-4
+    ymin_ratio = 0.
     ymax_ratio = 1.99
+    if self.observable == 'theta_g':
+      ymin_ratio = 0.5
+      ymax_ratio = 1.69
+      ymax*=1.1
     if self.observable == 'leading_subjet_z':
         ymax = 16.99
         ymin = 1e-3
         ymax_ratio = 1.99
     if self.observable == 'inclusive_subjet_z':
-        ymax = 2e3
+        ymax = 2e4
         ymin = 2e-1
         pad1.SetLogy()
         ymax_ratio = 1.99
@@ -401,14 +416,16 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           myBlankHisto2.GetXaxis().SetTitleOffset(4.)
           myBlankHisto2.GetXaxis().SetLabelFont(43)
           myBlankHisto2.GetXaxis().SetLabelSize(25)
+          myBlankHisto2.GetXaxis().SetTickSize(0.07)
           myBlankHisto2.GetYaxis().SetTitleSize(25)
           myBlankHisto2.GetYaxis().SetTitleFont(43)
           myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
+          myBlankHisto2.GetYaxis().SetTickSize(0.035)
           
-          myBlankHisto2.GetYaxis().SetRangeUser(0., ymax_ratio)
+          myBlankHisto2.GetYaxis().SetRangeUser(ymin_ratio, ymax_ratio)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(xmin,1,xmax,1)
@@ -585,16 +602,16 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           text_latex.SetNDC()
           text_latex.SetTextSize(0.05)
           x = 0.3
-          y = 0.35 - 0.9*float(obs_setting)
+          y = 0.3 - 0.9*float(obs_setting)
           text = f'#LT#it{{z}}^{{loss}}_{{{subobs_label} = {obs_setting} }}#GT = {np.round(z_loss,2):.2f}'
           text_latex.DrawLatex(x, y, text)
       elif self.observable == 'inclusive_subjet_z':
           pad1.cd()
           text_latex = ROOT.TLatex()
           text_latex.SetNDC()
-          text_latex.SetTextSize(0.05)
-          x = 0.67
-          y = 0.92 - 0.95*float(obs_setting)
+          text_latex.SetTextSize(0.045)
+          x = 0.47
+          y = 0.33 - 0.8*float(obs_setting)
           text = f'#LT#it{{N}}^{{subjets }}_{{{subobs_label} = {obs_setting}}}#GT = {np.round(n_subjets,2):.1f}'
           text_latex.DrawLatex(x, y, text)
         
@@ -608,24 +625,24 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     
-    text_latex.SetTextSize(0.06)
+    text_latex.SetTextSize(0.065)
     x = 0.25
     y = 0.86
-    text = '#bf{{ALICE}} {}'.format(self.figure_approval_status)
+    text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(x, y, text)
     
     text_latex.SetTextSize(0.055)
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.DrawLatex(x, y-0.06, text)
 
-    text = 'Charged jets   anti-#it{k}_{T}'
+    text = 'Charged-particle anti-#it{k}_{T} jets'
     text_latex.DrawLatex(x, y-0.12, text)
     
     text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR)
     text_latex.DrawLatex(x, y-0.18, text)
     
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(x, y-0.24, text)
+    text = str(min_pt_truth) + ' < #it{p}_{T}^{ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.DrawLatex(x, y-0.26, text)
     
     myLegend.Draw()
     
@@ -641,7 +658,6 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       rg_axis.SetTickSize(0.015)
       rg_axis.SetLabelOffset(0.015)
       rg_axis.Draw()
-
 
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:
