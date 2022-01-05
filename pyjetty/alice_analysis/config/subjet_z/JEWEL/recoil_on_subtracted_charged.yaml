@@ -1,0 +1,19 @@
+# Configuration for processing JEWEL calcualtions
+
+process_observables: ['leading_subjet_z']
+jetR: [0.4]
+
+recoils_off: False
+thermal_subtraction_method: 'GridSub1'
+gridsizes: [0.025, 0.05, 0.1, 0.4]
+run_diagnostics: True
+thermal_rejection_fraction: 0.33
+
+# Observable block
+leading_subjet_z:
+
+  config1:
+    subjet_R: 0.1
+
+  config2:
+    subjet_R: 0.2

@@ -1,0 +1,15 @@
+# Configuration for processing JEWEL calcualtions
+
+process_observables: ['leading_subjet_z']
+jetR: [0.4]
+
+recoils_off: True
+
+# Observable block
+leading_subjet_z:
+
+  config1:
+    subjet_R: 0.1
+
+  config2:
+    subjet_R: 0.2
