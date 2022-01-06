@@ -91,7 +91,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             self.xtitle =  '#it{z}_{g}'
             self.ytitle = '#frac{1}{#sigma} #frac{d#it{#sigma}}{d#it{z}_{g}}'
         elif observable == 'theta_g':
-            self.xmin = -0.01
+            self.xmin = -0.015
             self.ymax = 3.99
             self.ymin_ratio = 1e-3
             self.ymax_ratio = 1.99
@@ -116,6 +116,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
         self.plot_list = []
         self.g_theory_dict = {}
         self.h_ratio_dict = {}
+        self.h_ratio_sys_dict = {}
         self.g_ratio_dict = {}
 
         # Plot each pt bin in its own pad
@@ -186,13 +187,15 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
         self.plot_list.append(self.h_sys)
         self.plot_list.append(self.g_theory_dict)
         self.plot_list.append(self.h_ratio_dict)
+        self.plot_list.append(self.h_ratio_sys_dict)
         self.plot_list.append(self.g_ratio_dict)
         self.plot_list.append(self.blank_histo_list)
 
     #-------------------------------------------------------------------------------------------
     # Construct ratio data/theory as TGraph (see alternately: analysis/base/analysis_utils.divide_tgraph(self, h, g, combine_errors=False))
     # Fills:
-    #   - self.h_ratio_list with histogram of ratio with stat uncertainties
+    #   - self.h_ratio_dict with histogram of ratio with stat uncertainties
+    #   - self.h_ratio_sys_dict with histogram of ratio with sys uncertainties
     #   - self.g_theory_dict with tgraph of ratio with sys uncertainties
     #-------------------------------------------------------------------------------------------
     def construct_ratio(self, h, h_sys, g_theory, x, central, lower, upper, a):
@@ -201,13 +204,17 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
         h_ratio = h.Clone()
         h_ratio.SetName(f'{h_ratio.GetName()}_{a}')
         h_ratio.SetDirectory(0)
+        h_ratio_sys = h.Clone()
+        h_ratio_sys.SetName(f'{h_ratio_sys.GetName()}_{a}')
+        h_ratio_sys.SetDirectory(0)
         n = h.GetNbinsX()
         for bin in range(1, n+1):
             # Get histogram (x,y)
             h_x = h.GetBinCenter(bin)
             h_y = h.GetBinContent(bin)
             h_error = h.GetBinError(bin)
-            
+            h_sys_error = h_sys.GetBinError(bin)
+
             # Get TGraph (x,y) and errors
             g_x = ROOT.Double(0)
             g_y = ROOT.Double(0)
@@ -220,32 +227,20 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             new_content = h_y / g_y
             h_ratio.SetBinContent(bin, new_content)
             h_ratio.SetBinError(bin, h_error/h_y * new_content)
-
-        self.plot_list.append(h_ratio)
+            h_ratio_sys.SetBinContent(bin, new_content)
+            h_ratio_sys.SetBinError(bin, h_sys_error/h_y * new_content)
         self.h_ratio_dict[a] = h_ratio
-        
-        # Construct systematic uncertainties: combine data and theory uncertainties
-        y_ratio = np.array([h_ratio.GetBinContent(i) for i in range(1, n+1)])
+        self.h_ratio_sys_dict[a] = h_ratio_sys
 
-        # Get relative systematic from data
-        y_data = np.array([h.GetBinContent(i) for i in range(1, n+1)])
-        y_sys_data = np.array([h_sys.GetBinError(i) for i in range(1, n+1)])
-        y_sys_data_relative = np.divide(y_sys_data, y_data)
-        
+        # Construct theory systematic uncertainties on ratio, and plot at ratio=1
+
         # Get relative systematics from theory
         yerr_up_relative = np.divide(upper-central, central)
         yerr_dn_relative = np.divide(central-lower, central)
-        
-        # Combine systematics in quadrature
-        y_sys_total_up_relative = np.sqrt( np.square(y_sys_data_relative) + np.square(yerr_up_relative))
-        y_sys_total_dn_relative = np.sqrt( np.square(y_sys_data_relative) + np.square(yerr_dn_relative))
-        
-        y_sys_total_up = np.multiply(y_sys_total_up_relative, y_ratio)
-        y_sys_total_dn = np.multiply(y_sys_total_dn_relative, y_ratio)
-        
-        # Note: invert direction of asymmetric uncertainty
+
         xerrup = xerrdn = np.array([0. for i in range(n)])
-        g_ratio = ROOT.TGraphAsymmErrors(n, x, y_ratio, xerrdn, xerrup, y_sys_total_up, y_sys_total_dn)
+        y_ratio = np.ones(n)
+        g_ratio = ROOT.TGraphAsymmErrors(n, x, y_ratio, xerrdn, xerrup, yerr_dn_relative, yerr_up_relative)
         g_ratio.SetName(f'g_ratio_{a}')
         self.g_ratio_dict[a] = g_ratio
 
@@ -434,15 +429,25 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
         self.g_ratio_dict[a].SetLineColor(self.color_theory)
         self.g_ratio_dict[a].SetLineWidth(3)
         self.g_ratio_dict[a].Draw('3 same')
-    
+
+        # Draw th1 with sys uncertainty
+        self.h_ratio_sys_dict[a].SetLineColor(0)
+        self.h_ratio_sys_dict[a].SetMarkerSize(0)
+        self.h_ratio_sys_dict[a].SetMarkerColor(0)
+        self.h_ratio_sys_dict[a].SetFillColor(self.color_data)
+        self.h_ratio_sys_dict[a].SetFillColorAlpha(self.color_data, 0.3)
+        self.h_ratio_sys_dict[a].SetFillStyle(1001)
+        self.h_ratio_sys_dict[a].SetLineWidth(0)
+        self.h_ratio_sys_dict[a].Draw('E2 same')
+
         # Draw th1 with stat uncertainty
-        self.h_ratio_dict[a].SetMarkerColorAlpha(self.color_data, self.alpha)
-        self.h_ratio_dict[a].SetLineColorAlpha(self.color_data, self.alpha)
-        self.h_ratio_dict[a].SetFillColorAlpha(self.color_theory, self.alpha)
+        self.h_ratio_dict[a].SetMarkerColor(self.color_data)
+        self.h_ratio_dict[a].SetLineColor(self.color_data)
+        self.h_ratio_dict[a].SetFillColor(self.color_theory)
         self.h_ratio_dict[a].SetLineWidth(2)
         self.h_ratio_dict[a].SetMarkerStyle(self.marker_data)
         self.h_ratio_dict[a].SetMarkerSize(self.marker_size)
-        self.h_ratio_dict[a].Draw('PE same')
+        self.h_ratio_dict[a].Draw('PE X0 same')
 
     #-------------------------------------------------------------------------------------------
     # Set legend parameters
