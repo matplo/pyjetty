@@ -114,6 +114,8 @@ namespace RUtil
                             const double & sd_beta = 0, const double & sd_zcut = 0.2,
                             const std::string & option = "");
 
+        double find_cell(double val, const double * cell, const int range, bool phi);
+
     private:
         // Create empty THn using provided axes
         THnF* create_empty_thn(const char* name, const int & n_dim,
