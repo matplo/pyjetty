@@ -13,6 +13,20 @@ namespace RUtil
                                        const double & content,
                                        const double & prior_variation_parameter);
 
+	double HistUtils::find_cell(double val, const double * cell, const int range, bool phi){
+
+        	if (phi && val > TMath::Pi())
+            		val -= 2*TMath::Pi();
+
+        	for(int e = 0 ; e < range ; e++){
+            	if (val >= cell[e] and val < cell[e+1])
+                	return cell[e];
+        	}
+        	std::cout << "value is out of bounds" << std::endl;
+        	std::cout << val << " " << cell << std::endl;
+        	exit(0);
+    }
+	
     //---------------------------------------------------------------
     // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
     // If move_y_underflow is set, y-underflow bins in h_to_rebin are added to (x, 1) bin
