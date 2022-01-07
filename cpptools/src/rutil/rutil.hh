@@ -99,6 +99,8 @@ namespace RUtil
 							const TH2D & h, const std::string & name, const bool groomed = false,
 							const double & sd_beta = 0, const double & sd_zcut = 0.2,
 							const std::string & option = "");
+							
+		double find_cell(double val, const double * cell, const int range, bool phi);
 
     private:
         // Create empty THn using provided axes
