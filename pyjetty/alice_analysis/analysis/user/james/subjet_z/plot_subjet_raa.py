@@ -31,7 +31,9 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def initialize(self):
 
-        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v2'
+        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v3'
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
 
         # Load config file
         config_file = './plot.yaml'
@@ -45,6 +47,13 @@ class PlotRAA(common_base.CommonBase):
             self.file_AA_ratio_distributions_name2= config['file_AA_ratio_distribution2']
             self.file_jetscape_pp_name = config['jetscape_pp']
             self.file_jetscape_AA_name = config['jetscape_AA']
+            self.file_jewel_pp_name = config['jewel_pp']
+            self.file_jewel_AA_recoils_off_name = config['jewel_AA_recoils_off']
+            self.file_jewel_AA_recoils_on_charged_name = config['jewel_AA_recoils_on_charged']
+            self.file_jewel_AA_recoils_on_cone_name = config['jewel_AA_recoils_on_cone']
+            self.file_jewel_AA_recoils_on_unsubtracted_name = config['jewel_AA_recoils_on_unsubtracted']
+            self.gridsize = config['gridsize']
+
         self.config_results = [config[name] for name in config if 'result' in name ]
 
         self.plot_data = True
@@ -55,10 +64,38 @@ class PlotRAA(common_base.CommonBase):
         self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12')
         
-        self.theory_colors = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kPink+1,ROOT.kBlue-10, ROOT.kAzure-4, ROOT.kOrange+6, ROOT.kRed-7]
+        self.theory_colors = {}
+        self.theory_colors['Medium jet functions'] = ROOT.kTeal-8
+        self.theory_colors['JETSCAPE'] = ROOT.kViolet-8
+        self.theory_colors['JETSCAPE AA'] = ROOT.kViolet-8
+        self.theory_colors['JETSCAPE pp'] = ROOT.kOrange+6
+        self.theory_colors['JEWEL, recoils on'] = ROOT.kAzure-4
+        self.theory_colors['JEWEL, recoils off'] = ROOT.kRed-7
+        self.theory_colors['JEWEL AA, recoils on'] = ROOT.kAzure-4
+        self.theory_colors['JEWEL AA, recoils off'] = ROOT.kRed-7
+        # ROOT.kPink+1, ROOT.kBlue-10
+
+        self.theory_alpha = 0.8
         
-        self.line_style = [1, 1, 1, 1, 1, 1, 11, 1, 1]
-        self.line_width = [4, 4, 4, 4, 4, 4, 6, 4, 4]
+        self.line_style = {}
+        self.line_style['Medium jet functions'] = 1
+        self.line_style['JETSCAPE'] = 1
+        self.line_style['JETSCAPE AA'] = 1
+        self.line_style['JETSCAPE pp'] = 1
+        self.line_style['JEWEL, recoils on'] = 1 # 11
+        self.line_style['JEWEL, recoils off'] = 1
+        self.line_style['JEWEL AA, recoils on'] = 1
+        self.line_style['JEWEL AA, recoils off'] = 1
+
+        self.line_width = {}
+        self.line_width['Medium jet functions'] = 6
+        self.line_width['JETSCAPE'] = 6
+        self.line_width['JETSCAPE AA'] = 6
+        self.line_width['JETSCAPE pp'] = 6
+        self.line_width['JEWEL, recoils on'] = 6
+        self.line_width['JEWEL, recoils off'] = 6
+        self.line_width['JEWEL AA, recoils on'] = 6
+        self.line_width['JEWEL AA, recoils off'] = 6
          
         self.figure_approval_status = ''
         
@@ -87,9 +124,6 @@ class PlotRAA(common_base.CommonBase):
         self.obs_label = result['obs_label']
         self.min_pt = result['min_pt']
         self.max_pt = result['max_pt']
-        self.theory_colors = self.theory_colors
-        self.line_style = self.line_style
-        self.line_width = self.line_width
         
         # Get binning to plot
         self.bins = np.array(result['bins'])
@@ -315,14 +349,18 @@ class PlotRAA(common_base.CommonBase):
 
         if self.obs_label == '0.1-0.2':
             myBlankHisto2.GetYaxis().SetRangeUser(0.2, 6.99)
+        elif self.obs_label == 0.2:
+            myBlankHisto2.GetYaxis().SetRangeUser(1.e-3, 2.69)
         else:
             myBlankHisto2.GetYaxis().SetRangeUser(1.e-3, 1.99)
 
         if self.obs_label == '0.1-0.2':
-            ratio_legend = ROOT.TLegend(0.7,0.78,0.9,0.98)
+            ratio_legend = ROOT.TLegend(0.3,0.28,0.6,0.52)
+        elif self.obs_label == 0.2:
+            ratio_legend = ROOT.TLegend(0.3,0.6,0.5,0.85)
         else:
-            ratio_legend = ROOT.TLegend(0.33,0.75,0.5,0.97)
-        self.utils.setup_legend(ratio_legend, 0.07, sep=0.2)
+            ratio_legend = ROOT.TLegend(0.3,0.72,0.5,0.97)
+        self.utils.setup_legend(ratio_legend, 0.07, sep=-0.4)
 
         myBlankHisto2.Draw('')
           
@@ -349,25 +387,29 @@ class PlotRAA(common_base.CommonBase):
                   
                 label = self.label_list[i]
                 sublabel = self.sublabel_list[i]
-                color = self.theory_colors[i]
-                
-                if type(prediction) in [ROOT.TH1F]:
+                color = self.theory_colors[label]
+                linewidth = self.line_width[label]
+                linestyle = self.line_style[label]
+
+                if type(prediction) in [ROOT.TH1F, ROOT.TH1D]:
 
                     prediction.SetLineColor(0)
                     prediction.SetMarkerSize(0)
                     prediction.SetMarkerStyle(0)
-                    prediction.SetFillColor(color)
+                    prediction.SetFillColorAlpha(color, self.theory_alpha)
                     prediction.SetLineColor(color)
-                    prediction.SetLineWidth(6)
+                    prediction.SetLineWidth(linewidth)
+                    prediction.SetLineStyle(linestyle)
                     
                     prediction.Draw('E3 same')
                     ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'L')
 
                 elif type(prediction) in [ROOT.TGraph]:
                 
-                    prediction.SetFillColor(color)
+                    prediction.SetFillColorAlpha(color, self.theory_alpha)
                     prediction.SetLineColor(color)
-                    prediction.SetLineWidth(8)
+                    prediction.SetLineWidth(linewidth)
+                    prediction.SetLineStyle(linestyle)
                     
                     prediction.Draw('same')
                     ratio_legend.AddEntry(prediction, f'{label}{sublabel}', 'L')
@@ -436,27 +478,6 @@ class PlotRAA(common_base.CommonBase):
         self.label_list = []
         self.sublabel_list = []
         self.prediction_list = []
-    
-        #----------------------------------------------------------
-        # JETSCAPE
-        if self.obs_label == '0.1-0.2':
-            pp_filename = self.file_jetscape_AA_name
-            AA_filename = self.file_jetscape_AA_name
-            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
-            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
-            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname, label='JETSCAPE AA')
-
-            pp_filename = self.file_jetscape_pp_name
-            AA_filename = self.file_jetscape_pp_name
-            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
-            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
-            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname, label='JETSCAPE pp')
-        else:
-            pp_filename = self.file_jetscape_pp_name
-            AA_filename = self.file_jetscape_AA_name
-            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
-            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
-            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname)
 
         #----------------------------------------------------------
         # Factorization (Ringer, Sato)
@@ -487,6 +508,63 @@ class PlotRAA(common_base.CommonBase):
             self.prediction_list.append(g)
             self.label_list.append('Medium jet functions')
             self.sublabel_list.append('')
+    
+        #----------------------------------------------------------
+        # JETSCAPE
+        if self.obs_label == '0.1-0.2':
+            pp_filename = self.file_jetscape_AA_name
+            AA_filename = self.file_jetscape_AA_name
+            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
+            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
+            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname, label='JETSCAPE AA')
+
+            pp_filename = self.file_jetscape_pp_name
+            AA_filename = self.file_jetscape_pp_name
+            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.2_pt0.0Scaled'
+            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r0.1_pt0.0Scaled'
+            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname, label='JETSCAPE pp')
+        else:
+            pp_filename = self.file_jetscape_pp_name
+            AA_filename = self.file_jetscape_AA_name
+            pp_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
+            AA_hname = f'h_chjet_subjetz_alice_R{self.jetR}_r{self.obs_label}_pt0.0Scaled'
+            self.add_jetscape(pp_filename, AA_filename, pp_hname, AA_hname)
+
+        #----------------------------------------------------------
+        # JEWEL
+        if self.obs_label == '0.1-0.2':
+
+            pp_filename = self.file_jewel_AA_recoils_on_cone_name
+            AA_filename = self.file_jewel_AA_recoils_on_cone_name
+            pp_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_0.2Scaled'
+            AA_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_0.1Scaled'
+            self.add_jewel(pp_filename, AA_filename, pp_hname, AA_hname, label='JEWEL AA, recoils on')
+
+            pp_filename = self.file_jewel_AA_recoils_off_name
+            AA_filename = self.file_jewel_AA_recoils_off_name
+            pp_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_0.2Scaled'
+            AA_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_0.1Scaled'
+            self.add_jewel(pp_filename, AA_filename, pp_hname, AA_hname, label='JEWEL AA, recoils off')
+
+            #pp_filename = self.file_jewel_pp_name
+            #AA_filename = self.file_jewel_pp_name
+            #pp_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_0.2Scaled'
+            #AA_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_0.1Scaled'
+            #self.add_jewel(pp_filename, AA_filename, pp_hname, AA_hname, label='JEWEL pp')
+        
+        else:
+
+            pp_filename = self.file_jewel_pp_name
+            AA_filename = self.file_jewel_AA_recoils_on_cone_name
+            pp_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_{self.obs_label}Scaled'
+            AA_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_{self.obs_label}Scaled'
+            self.add_jewel(pp_filename, AA_filename, pp_hname, AA_hname, label='JEWEL, recoils on')
+
+            pp_filename = self.file_jewel_pp_name
+            AA_filename = self.file_jewel_AA_recoils_off_name
+            pp_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_{self.obs_label}Scaled'
+            AA_hname = f'h_leading_subjet_z_JetPt_R{self.jetR}_{self.obs_label}Scaled'
+            self.add_jewel(pp_filename, AA_filename, pp_hname, AA_hname, label='JEWEL, recoils off')
 
     #---------------------------------------------------------------
     # Initialize JETSCAPE prediction
@@ -497,14 +575,23 @@ class PlotRAA(common_base.CommonBase):
         f_AA = ROOT.TFile(AA_filename, 'READ')
         
         h_name = pp_hname
-        h_pp = f_pp.Get(h_name)
-        h_pp.SetDirectory(0)
+        h_pp_2D = f_pp.Get(h_name)
+        h_pp_2D.SetDirectory(0)
         f_pp.Close()
         
         h_name = AA_hname
-        h_AA = f_AA.Get(h_name)
-        h_AA.SetDirectory(0)
+        h_AA_2D = f_AA.Get(h_name)
+        h_AA_2D.SetDirectory(0)
         f_AA.Close()
+
+        # Select pt bin and project onto z_r axis
+        h_pp_2D.GetXaxis().SetRangeUser(self.min_pt, self.max_pt)
+        h_pp = h_pp_2D.ProjectionY()
+        h_pp.SetName(f'{h_pp.GetName()}_pp_{label}')        
+
+        h_AA_2D.GetXaxis().SetRangeUser(self.min_pt, self.max_pt)
+        h_AA = h_AA_2D.ProjectionY()  
+        h_AA.SetName(f'{h_AA.GetName()}_AA_{label}')    
 
         # Rebin to data binning
         bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[0:]
@@ -522,6 +609,54 @@ class PlotRAA(common_base.CommonBase):
         hRatio.SetName(f'hRatio_{h_AA.GetName()}')
         hRatio.Divide(h_pp)
     
+        # Add to theory list
+        self.prediction_list.append(hRatio)
+        self.label_list.append(label)
+        self.sublabel_list.append('')
+
+    #---------------------------------------------------------------
+    # Initialize JETSCAPE prediction
+    #---------------------------------------------------------------
+    def add_jewel(self, pp_filename, AA_filename, pp_hname, AA_hname, label='JEWEL'):
+
+        f_pp = ROOT.TFile(pp_filename, 'READ')
+        f_AA = ROOT.TFile(AA_filename, 'READ')
+        
+        h_name = pp_hname
+        h_pp_2D = f_pp.Get(h_name)
+        h_pp_2D.SetDirectory(0)
+        f_pp.Close()
+        
+        h_name = AA_hname
+        h_AA_2D = f_AA.Get(h_name)
+        h_AA_2D.SetDirectory(0)
+        f_AA.Close()
+
+        # Select pt bin and project onto z_r axis
+        h_pp_2D.GetXaxis().SetRangeUser(self.min_pt, self.max_pt)
+        h_pp = h_pp_2D.ProjectionY()
+        h_pp.SetName(f'{h_pp.GetName()}_pp_{label}')        
+
+        h_AA_2D.GetXaxis().SetRangeUser(self.min_pt, self.max_pt)
+        h_AA = h_AA_2D.ProjectionY()  
+        h_AA.SetName(f'{h_AA.GetName()}_AA_{label}')        
+
+        # Rebin to data binning
+        bin_edges = np.array(self.h_main_pp.GetXaxis().GetXbins())[0:]
+        h_pp = h_pp.Rebin(bin_edges.size-1, f'{h_pp.GetName()}_rebinned', bin_edges)
+        h_AA = h_AA.Rebin(bin_edges.size-1, f'{h_AA.GetName()}_rebinned', bin_edges)
+        
+        # Normalization
+        h_pp.Scale(1., 'width')
+        h_AA.Scale(1., 'width')
+        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
+        h_AA.Scale(1./h_AA.Integral(1, h_pp.GetNbinsX()))
+
+        # Form ratio
+        hRatio = h_AA.Clone()
+        hRatio.SetName(f'hRatio_{h_AA.GetName()}')
+        hRatio.Divide(h_pp)
+
         # Add to theory list
         self.prediction_list.append(hRatio)
         self.label_list.append(label)

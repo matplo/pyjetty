@@ -10,8 +10,16 @@ file_AA_ratio_distribution1: '/Users/jamesmulligan/Analysis_subjet_z/output_anal
 file_AA_ratio_distribution2: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio_half2/leading_subjet_z/final_results/fFinalResults.root'
 
 # JETSCAPE
-jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/501204/5020_PP_Colorless/AnalysisResultsFinal.root'
-jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/501204/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/901673/5020_PP_Colorless/AnalysisResultsFinal.root'
+jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/901673/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+
+# JEWEL
+jewel_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/pp/893737/AnalysisResultsFinal.root'
+jewel_AA_recoils_off: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_off/893753/AnalysisResultsFinal.root'
+jewel_AA_recoils_on_charged: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_on_charged/901454/AnalysisResultsFinal.root'
+jewel_AA_recoils_on_cone: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_on_cone/904091/AnalysisResultsFinal.root'
+jewel_AA_recoils_on_unsubtracted: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_on_unsubtracted/895833/AnalysisResultsFinal.root'
+gridsize: 0.1
 
 # In-medium jet functions
 # From Felix: Please find below results for the subjet R_AA including some uncertainties. As I mentioned before, there are
