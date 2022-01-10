@@ -84,19 +84,54 @@ class Process_CurvesFromJewelTracks_subjet_z(process_jewel_generated_base.Curves
     elif '4momsub' in self.thermal_subtraction_method.lower():
       name = f'h_{self.observable}_JetPt_R{jetR}_{obs_label}_4momsub{label}'
 
+    # Correct the jet pt by subtracting thermal particles within R of jet axis
+    holes_in_jet = []
+    negative_pt = 0.
+    for thermal_particle in self.event_bck_df:
+      if jet.delta_R(thermal_particle) < jetR:
+        if np.random.uniform() >= self.thermal_rejection_fraction:
+          negative_pt += thermal_particle.pt()
+          holes_in_jet.append(thermal_particle)
+    jet_pt = jet.pt() - negative_pt   # corrected pt: shower+recoil-holes
+
     # For a given jet, find all inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
 
-    # Fill inclusive subjets (we will only use z_r>0.5)
-    for subjet in subjets:
-        z = subjet.pt() / jet.pt()
-        
-        # If z=1, it will be default be placed in overflow bin -- prevent this
-        if np.isclose(z, 1.):
-            z = 0.999
+    # Get leading subjet (accounts for holes)
+    _, leading_subjet_pt = self.leading_jet(subjets, holes_in_jet, obs_setting)
+    z = leading_subjet_pt / jet_pt
+    
+    # If z=1, it will be default be placed in overflow bin -- prevent this
+    if np.isclose(z, 1.):
+      z = 0.999
 
-        getattr(self, name).Fill(jet.pt(), z)
+    getattr(self, name).Fill(jet_pt, z)
+
+  #---------------------------------------------------------------
+  # Return leading jet (or subjet)
+  #---------------------------------------------------------------
+  def leading_jet(self, jets, fj_hadrons_negative, jetR):
+
+    leading_jet = None
+    leading_jet_pt = 0.
+    for jet in jets:
+                      
+      # Get the corrected jet pt by subtracting the negative recoils within R
+      jet_pt = jet.pt()
+      for temp_hadron in fj_hadrons_negative:
+        if jet.delta_R(temp_hadron) < jetR:
+          jet_pt -= temp_hadron.pt()
+              
+      if not leading_jet:
+        leading_jet = jet
+        leading_jet_pt = jet_pt
+      
+      if jet_pt > leading_jet_pt:
+        leading_jet = jet
+        leading_jet_pt = jet_pt
+
+    return leading_jet, leading_jet_pt
 
 ##################################################################
 if __name__ == '__main__':
