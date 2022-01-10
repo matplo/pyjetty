@@ -179,7 +179,7 @@ class CurvesFromJewelTracks():
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9'
             if not self.recoils_off:
                 track_criteria += ' and Status != 3'
-            bck_criteria = 'ParticlePt < 1e-5' # Just something, anything, but in this case won't use it
+            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3' # Not used by default, unless user accesses thermal particles in user function
         elif 'gridsub' in self.thermal_subtraction_method.lower():
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
             bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
