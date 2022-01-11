@@ -3,7 +3,7 @@
 process_observables: ['leading_subjet_z']
 jetR: [0.4]
 
-recoils_off: True 
+recoils_off: False 
 thermal_rejection_fraction: 0.33
 
 # Observable block

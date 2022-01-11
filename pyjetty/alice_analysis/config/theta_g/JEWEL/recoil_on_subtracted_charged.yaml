@@ -1,0 +1,25 @@
+# Configuration for processing JEWEL calcualtions
+
+process_observables: ['theta_g', 'zg']
+jetR: [0.2]
+
+recoils_off: False
+thermal_subtraction_method: 'GridSub1'
+gridsizes: [0.025, 0.05, 0.1, 0.4]
+run_diagnostics: True
+thermal_rejection_fraction: 0.33
+
+# Observable block
+theta_g:
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+zg:
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0

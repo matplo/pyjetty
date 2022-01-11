@@ -3,7 +3,7 @@
 process_observables: ['leading_subjet_z']
 jetR: [0.4]
 
-recoils_off: True
+recoils_off: False
 
 # Observable block
 leading_subjet_z:

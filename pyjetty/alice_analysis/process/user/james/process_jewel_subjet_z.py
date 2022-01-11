@@ -84,10 +84,15 @@ class Process_CurvesFromJewelTracks_subjet_z(process_jewel_generated_base.Curves
     elif '4momsub' in self.thermal_subtraction_method.lower():
       name = f'h_{self.observable}_JetPt_R{jetR}_{obs_label}_4momsub{label}'
 
+    # Convert df of pt/eta/phi of thermal particles to list of fastjet particles, for convenience
+    df_thermal = []
+    if len(self.event_bck_df) != 0:
+      df_thermal = self.get_fjparticles(self.event_bck_df)
+
     # Correct the jet pt by subtracting thermal particles within R of jet axis
     holes_in_jet = []
     negative_pt = 0.
-    for thermal_particle in self.event_bck_df:
+    for thermal_particle in df_thermal:
       if jet.delta_R(thermal_particle) < jetR:
         if np.random.uniform() >= self.thermal_rejection_fraction:
           negative_pt += thermal_particle.pt()

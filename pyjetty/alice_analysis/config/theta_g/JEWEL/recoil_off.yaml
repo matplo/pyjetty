@@ -1,0 +1,21 @@
+# Configuration for processing JEWEL calcualtions
+
+process_observables: ['theta_g', 'zg']
+jetR: [0.2]
+
+recoils_off: True
+
+# Observable block
+theta_g:
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+zg:
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
