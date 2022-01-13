@@ -1,5 +1,15 @@
 # Running the code
 
+## Setup on hiccup
+
+Please note that in order to run the code on the hiccup cluster, all but the lightest code tests should use the slurm batch system. This means that every code you run should either:
+1. Be called through `sbatch`, which will launch your jobs across the 8 hiccup nodes (see steps 0 and 1 below for examples)
+2. Be run on an interactive node requested via slurm (this should always be done for steps 2-3 below):
+   ```
+   srun -N 1 -n 20 -t 24:00:00 -p std --pty bash
+   ``` 
+   which requests 1 full node (20 cores) for 24 hours in the std partition. You can choose the time, queue, and number of cores to suite your needs. When you’re   done with your session, just type `exit`.
+
 ## pp-AA (full events) from James
 
 The events are located on hiccup at:
@@ -54,72 +64,6 @@ The analysis workflow is as follows:
    
    This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
 
-## pp-AA (full events) from Yue Shi
-
-The events are located on hiccup at:
-- PYTHIA/JEWEL + HYDJET, full events: `/rstorage/ml/egml/data/v3/files_hydjet.txt`
-
-The analysis workflow is as follows:
-
-1. Skim the events into numpy arrays of four-vectors and labels
-   ```
-   cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_skim.sh
-   ```
-   This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL, and both hard event + background).
-   
-   This step likely does not have to be repeated, unless we get new event samples.
-
-2. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
-   ```
-   cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_compute_nsubjettiness.sh
-   ```
-   You should update the skimmed filelist in `slurm_compute_nsubjettiness.sh` if necessary (if step 1 is repeated).
-   
-   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
-   
-   This writes output to `/rstorage/ml/egml/nsubjettiness/<job_id>/files.txt`
-
-3. Aggregate the results from each file's processing output
-   ```
-   cd pyjetty/alice_analysis/process/user/ml
-   python aggregate_nsubjettiness.py -o /rstorage/ml/egml/nsubjettiness/<process_job_id>
-   ```
-   The `-o` path should point to the directory containing `files.txt` from Step 2. This is the location that the output file, `nsubjettiness.h5`, will be written to. 
-   
-4. Fit model and make plots:
-   ```
-   cd alice_analysis/analysis/user/ml
-   python analyze_ppAA.py -c <config> -o <output_dir>
-   ```
-   The `-o` path should point to the directory containing `nsubjettiness.h5` from Step 3. This is the location that the output plots will be written to. 
-   
-   This step use a common config file at `alice_analysis/config/ml/ppAA.yaml`.
-   
-## pp-AA (jets only)
-
-There are also earlier versions of events where only the jets are included:
-- PYTHIA/JEWEL + HYDJET, jets: `/rstorage/ml/egml/data/v2/with_hydjet/files.txt`
-- PYTHIA/JEWEL (no UE), jets: `/rstorage/ml/egml/data/v2/no_ue/files.txt`
-- (The initial events, now superceded, are located at `/rstorage/ml/egml/data/v1/files.txt`)
-
-You would need to check out an earlier version of the code (c. April 2021) to use this. I dont' foresee this will be used, but for completeness I keep the documentation here:
-
-1. Skim the events into numpy arrays of four-vectors and labels
-   ```
-   cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_skim.sh                                # (for PYTHIA/JEWEL + HYDJET)
-   sbatch slurm_skim_no_ue.sh                          # (for no UE)
-   ```
-   This writes the output to `/rstorage/ml/egml/skim/<job_id>/files.txt` (for both PYTHIA and JEWEL).
-
-2. Compute Nsubjettiness arrays from input events, and write them to file, along with labels and four-vectors: 
-   ```
-   cd pyjetty/alice_analysis/process/user/ml/slurm
-   sbatch slurm_compute_nsubjettiness.sh               # (for PYTHIA/JEWEL + HYDJET)
-   sbatch slurm_compute_nsubjettiness_no_ue.sh         # (for no UE)
-   ```
 ## Quark-gluon
 
 The analysis consists of two steps:
