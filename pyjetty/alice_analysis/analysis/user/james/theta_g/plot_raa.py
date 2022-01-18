@@ -54,14 +54,26 @@ class PlotRAA(common_base.CommonBase):
         self.markers = [20, 21]
         ROOT.gStyle.SetLineStyleString(11,'30 12');
         
-        self.theory_colors_james = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kPink+1, ROOT.kBlue-10, ROOT.kCyan-2]
-        self.theory_colors_laura = [ROOT.kViolet-8, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kRed-7, ROOT.kCyan-2]
+        self.theory_colors = {}
+        self.theory_colors['JETSCAPE'] = ROOT.kViolet-8
+        self.theory_colors['JEWEL, recoils off'] = ROOT.kCyan-2
+        self.theory_colors['JEWEL, recoils on'] = ROOT.kGreen-6
+        self.theory_colors['Pablos, #it{L}_{res} = 0'] = ROOT.kTeal-8
+        self.theory_colors['Pablos, #it{L}_{res} = 2/#pi#it{T}'] = ROOT.kOrange+6
+        self.theory_colors['Pablos, #it{L}_{res} = #infty'] = ROOT.kRed-7
+        self.theory_colors['Caucal'] = ROOT.kAzure-4
+        self.theory_colors['Qin'] = ROOT.kCyan-2
+        self.theory_colors['Chien'] = ROOT.kBlue-10
+        self.theory_colors['Yuan, #hat{q}L = 5 GeV^{2}'] = ROOT.kPink+1
+        self.theory_colors['Yuan, med #it{q}/#it{g}'] = ROOT.kBlue-10
+        self.theory_colors['Yuan, quark'] = ROOT.kGray
 
-        self.line_style_james = [1, 1, 1, 1, 1, 1, 11, 11]
-        self.line_width_james = [4, 4, 4, 4, 4, 4, 4, 6]
-        self.line_style_laura = [1, 1, 1, 1, 11, 1, 1]
-        self.line_width_laura = [4, 4, 4, 4, 6, 4, 4]
-         
+        self.line_style = {}
+        self.line_style['Qin'] = 11
+        self.line_style['Yuan, #hat{q}L = 5 GeV^{2}'] = 1
+        self.line_style['Yuan, med #it{q}/#it{g}'] = 11
+        self.line_style['Yuan, quark'] = 11
+
         self.formatted_grooming_label = 'Soft Drop #it{{z}}_{{cut}}={}, #it{{#beta}}=0'
         self.figure_approval_status = ''
         
@@ -104,9 +116,6 @@ class PlotRAA(common_base.CommonBase):
         self.file_pp_name = result['file_pp']
         self.file_AA_name = result['file_AA']
         self.set_xy_titles()
-        self.theory_colors = self.theory_colors_james
-        self.line_style = self.line_style_james
-        self.line_width = self.line_width_james
 
         # Get hists from ROOT file
         self.file_pp = ROOT.TFile(self.file_pp_name, 'READ')
@@ -206,9 +215,6 @@ class PlotRAA(common_base.CommonBase):
             self.rg_xmax = result['xmax']
         self.file_name = result['file']
         self.set_xy_titles()
-        self.theory_colors = self.theory_colors_laura
-        self.line_style = self.line_style_laura
-        self.line_width = self.line_width_laura
         
         h_PbPb_name = self.config_laura['h_PbPb']
         h_pp_name = self.config_laura['h_pp']
@@ -598,11 +604,11 @@ class PlotRAA(common_base.CommonBase):
         
             if self.centrality[0] == 0:
           
-                myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.19)
+                myBlankHisto2.GetYaxis().SetRangeUser(0.3, 2.49)
                 
-                ratio_legend = ROOT.TLegend(0.28,0.73,0.42,0.98)
+                ratio_legend = ROOT.TLegend(0.305,0.68,0.42,0.985)
                 self.utils.setup_legend(ratio_legend, 0.06, sep=-0.2)
-                ratio_legend2 = ROOT.TLegend(0.53,0.73,0.69,0.98)
+                ratio_legend2 = ROOT.TLegend(0.55,0.68,0.69,0.985)
                 self.utils.setup_legend(ratio_legend2, 0.06, sep=-0.2)
                 
             elif self.centrality[0] == 30:
@@ -630,9 +636,9 @@ class PlotRAA(common_base.CommonBase):
                     myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.59)
 
             if self.centrality[0] == 0 and self.jetR == 0.4:
-                ratio_legend = ROOT.TLegend(0.23,0.7,0.38,0.95)
+                ratio_legend = ROOT.TLegend(0.23,0.68,0.38,0.96)
                 self.utils.setup_legend(ratio_legend, 0.07, sep=-0.4)
-                ratio_legend2 = ROOT.TLegend(0.43,0.72,0.58,0.95)
+                ratio_legend2 = ROOT.TLegend(0.52,0.82,0.67,0.96)
                 self.utils.setup_legend(ratio_legend2, 0.07, sep=-0.2)
             elif self.centrality[0] == 30:
                 ratio_legend = ROOT.TLegend(0.3,0.74,0.45,0.91)
@@ -640,9 +646,9 @@ class PlotRAA(common_base.CommonBase):
                 ratio_legend2 = ROOT.TLegend(0.5,0.72,0.65,0.95)
                 self.utils.setup_legend(ratio_legend2, 0.07, sep=-0.4)
             else:
-                ratio_legend = ROOT.TLegend(0.3,0.7,0.45,0.95)
+                ratio_legend = ROOT.TLegend(0.3,0.68,0.45,0.96)
                 self.utils.setup_legend(ratio_legend, 0.07, sep=-0.4)
-                ratio_legend2 = ROOT.TLegend(0.5,0.72,0.65,0.95)
+                ratio_legend2 = ROOT.TLegend(0.6,0.73,0.75,0.96)
                 self.utils.setup_legend(ratio_legend2, 0.07, sep=-0.2)
 
         myBlankHisto2.Draw('')
@@ -671,7 +677,7 @@ class PlotRAA(common_base.CommonBase):
                 label = self.label_list[i]
                 sublabel = self.sublabel_list[i]
 
-                color = self.theory_colors[i]
+                color = self.theory_colors[label+sublabel]
                 g.SetLineColor(color)
                 g.SetFillColor(color)
                 g.SetFillColorAlpha(color, 0.85)
@@ -679,22 +685,31 @@ class PlotRAA(common_base.CommonBase):
                     g.SetLineColor(0)
                     if self.observable in ['rg', 'theta_g']:
                         if self.jetR == 0.4:
-                            if 'Pablos' in label or 'JETSCAPE' in label:
+                            if 'Pablos' in label or 'JETSCAPE' in label or 'Caucal' in label:
                                 ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
                             else:
                                 ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
                         elif self.jetR == 0.2:
-                            if 'Yuan' in label or 'Caucal' in label:
+                            if 'JEWEL' in label:
                                 ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+                                if 'recoils off' in sublabel:
+                                    g.SetFillStyle(3144)
+                                if 'recoils on' in sublabel:
+                                    g.SetFillStyle(3144)
                             else:
                                 ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
                     elif self.observable == 'zg':
-                        if 'Pablos' in label:
-                            ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
-                        else:
+                        if 'Pablos' in label or 'JETSCAPE' in label or 'Caucal' in label:
                             ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+                        else:
+                            if 'JEWEL' in label:
+                                if 'recoils off' in sublabel:
+                                    g.SetFillStyle(3144)
+                                if 'recoils on' in sublabel:
+                                    g.SetFillStyle(3144)
+                            ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
                 elif type(g) == ROOT.TGraph:
-                    g.SetLineStyle(self.line_style[i])
+                    g.SetLineStyle(self.line_style[label+sublabel])
                     g.SetLineWidth(4)
                     if self.observable in ['rg', 'theta_g']:
                         if self.jetR == 0.4:
@@ -702,16 +717,22 @@ class PlotRAA(common_base.CommonBase):
                                 ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
                             else:
                                 ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
-                        if self.jetR == 0.2:
+                        elif self.jetR == 0.2:
+                            if 'JEWEL' in label:
+                                ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'F')
+                                if 'recoils off' in sublabel:
+                                    g.SetFillStyle(3144)
+                                if 'recoils on' in sublabel:
+                                    g.SetFillStyle(3144)
                             if 'Yuan' in label:
                                 ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
                             else:
                                 ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
                     elif self.observable == 'zg':
                         if 'Pablos' in label:
-                            ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
-                        else:
                             ratio_legend.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
+                        else:
+                            ratio_legend2.AddEntry(g, '{}{}'.format(label, sublabel), 'L')
 
         # Draw curves in specified order
         if self.plot_theory:
@@ -778,6 +799,15 @@ class PlotRAA(common_base.CommonBase):
 
             label = self.label_list[i]
             sublabel = self.sublabel_list[i]
+
+            if 'Chien' in label:
+                index = self.draw_order.index(i)
+                self.draw_order.append(self.draw_order.pop(index))
+
+            if 'JEWEL' in label:
+                index = self.draw_order.index(i)
+                self.draw_order.insert(0, self.draw_order.pop(index))
+
             if 'Pablos' in label:
                 index = self.draw_order.index(i)
                 self.draw_order.insert(0, self.draw_order.pop(index))
@@ -786,14 +816,6 @@ class PlotRAA(common_base.CommonBase):
                 index = self.draw_order.index(i)
                 self.draw_order.append(self.draw_order.pop(index))
           
-        if self.observable == 'zg':
-            for i, g in enumerate(self.prediction_g_list):
-
-                label = self.label_list[i]
-                if 'JETSCAPE' in label:
-                    index = self.draw_order.index(i)
-                    self.draw_order.insert(0, self.draw_order.pop(index))
-                    
     #---------------------------------------------------------------
     # Translate R_g <--> theta_g
     # Options: 'rg': theta_g --> r_g
@@ -932,7 +954,8 @@ class PlotRAA(common_base.CommonBase):
                             ratio = np.divide(y_AA, y_pp)
                             ratio_lower = np.divide(y_AA_min, y_pp)
                             ratio_upper = np.divide(y_AA_max, y_pp)
-                            g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+                            #g = ROOT.TGraphAsymmErrors(n, x, ratio, xerr, xerr, ratio-ratio_lower, ratio_upper-ratio)
+                            g = ROOT.TGraph(n, x, ratio)
 
                         else:
                             y_AA = np.array(theory_prediction['y_AA'])
@@ -979,7 +1002,56 @@ class PlotRAA(common_base.CommonBase):
                         n = len(x)
                         xerr = np.zeros(n)
                         g = ROOT.TGraphErrors(n, x, ratio, xerr, ratio_err)
-    
+
+                    elif type == 'jewel':
+
+                        pp_filename = theory_prediction['pp_filename']
+                        AA_filename = theory_prediction['AA_filename']
+                        f_pp = ROOT.TFile(pp_filename, 'READ')
+                        f_AA = ROOT.TFile(AA_filename, 'READ')
+
+                        sublabel = theory_prediction['sublabel']
+
+                        h_name_pp = f'h_{self.observable}_JetPt_R{self.jetR}Scaled'
+                        if ', recoils on (GridSub' in sublabel:
+                            gridsize = theory_prediction['gridsize']
+                            h_name_AA = f'h_{self.observable}_JetPt_R{self.jetR}_gridsub_{gridsize}Scaled'
+                        else:
+                            h_name_AA = f'h_{self.observable}_JetPt_R{self.jetR}Scaled'
+                        h_pp_2D = f_pp.Get(h_name_pp)
+                        h_pp_2D.SetDirectory(0)
+                        f_pp.Close()
+                        h_AA_2D = f_AA.Get(h_name_AA)
+                        h_AA_2D.SetDirectory(0)
+                        f_AA.Close()
+
+                        # Select pt bin and project onto z_r axis
+                        h_pp_2D.GetXaxis().SetRangeUser(self.min_pt, self.max_pt)
+                        h_pp = h_pp_2D.ProjectionY()
+                        h_pp.SetName(f'{h_pp.GetName()}_pp_{sublabel}')        
+
+                        h_AA_2D.GetXaxis().SetRangeUser(self.min_pt, self.max_pt)
+                        h_AA = h_AA_2D.ProjectionY()  
+                        h_AA.SetName(f'{h_AA.GetName()}_AA_{sublabel}')        
+
+                        # Rebin to data binning
+                        h_pp = h_pp.Rebin(bin_edges.size-1, f'{h_pp.GetName()}_rebinned', bin_edges)
+                        h_AA = h_AA.Rebin(bin_edges.size-1, f'{h_AA.GetName()}_rebinned', bin_edges)
+                        
+                        # Normalization
+                        h_pp.Scale(1., 'width')
+                        h_AA.Scale(1., 'width')
+                        h_pp.Scale(1./h_pp.Integral(1, h_pp.GetNbinsX()))
+                        h_AA.Scale(1./h_AA.Integral(1, h_pp.GetNbinsX()))
+
+                        # Form ratio
+                        hRatio = h_AA.Clone()
+                        hRatio.SetName(f'hRatio_{h_AA.GetName()}')
+                        hRatio.Divide(h_pp)
+
+                        # Construct TGraph
+                        g = ROOT.TGraphErrors(hRatio)
+
                     # Option: Translate R_g to theta_g
                     if self.observable == 'theta_g' and self.plot_axis_rg:
                         g = self.translate_rg_theta_g(g, 'rg', tgraph=True, ratio=True)
@@ -1050,14 +1122,14 @@ class PlotRAA(common_base.CommonBase):
         h_systematic_total.SetYTitle('Systematic uncertainty (%)')
         h_systematic_total.SetMaximum(2.7*h_systematic_total.GetMaximum(50))
         h_systematic_total.SetMinimum(1e-3)
-        h_systematic_total.SetLineColor(self.theory_colors_james[1])
+        h_systematic_total.SetLineColor(ROOT.kTeal-8)
         h_systematic_total.SetLineStyle(1)
         h_systematic_total.SetLineWidth(2)
         h_systematic_total.Draw("hist X0")
         leg.AddEntry(h_systematic_total, 'Total', 'l')
 
         self.h_sys_jewel.SetMarkerSize(0)
-        self.h_sys_jewel.SetLineColor(self.theory_colors_james[2])
+        self.h_sys_jewel.SetLineColor(ROOT.kViolet-8)
         self.h_sys_jewel.SetLineStyle(1)
         self.h_sys_jewel.SetLineWidth(2)
         self.h_sys_jewel.DrawCopy('X0 same')
