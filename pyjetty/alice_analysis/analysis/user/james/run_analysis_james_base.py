@@ -314,12 +314,14 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     if self.observable == 'leading_subjet_z':
         ymax = 16.99
         ymin = 1e-3
-        ymax_ratio = 1.99
+        ymin_ratio = 0.5
+        ymax_ratio = 1.79
     if self.observable == 'inclusive_subjet_z':
         ymax = 2e4
         ymin = 2e-1
         pad1.SetLogy()
-        ymax_ratio = 1.99
+        ymin_ratio = 0.5
+        ymax_ratio = 1.79
     
     # Get xmin and xmax over all hists
     xmin = 1
