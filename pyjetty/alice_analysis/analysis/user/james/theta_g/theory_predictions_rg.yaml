@@ -87,6 +87,56 @@ hybrid_model:
     ratio_lower: [0.984919, 0.947697, 0.857595, 0.937897, 0.873432]
     ratio_upper: [1.02576, 1.08091, 0.933931, 1.03665, 1.06541]
   
+jewel:
+  label: 'JEWEL'
+  observable: 'theta_g'
+  plot_list: ['config1', 'config2']
+  config1:
+    jetR: 0.2
+    sublabel: ', recoils off'
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_off/895988/AnalysisResultsFinal.root'
+
+  config2:
+    jetR: 0.2
+    sublabel: ', recoils on' # constituent subtraction
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_on_CS/919099/AnalysisResultsFinal.root'
+
+  config3:
+    jetR: 0.2
+    sublabel: ', recoils on (unsubtracted)'
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_on_unsubtracted/895989/AnalysisResultsFinal.root'
+
+  config4:
+    jetR: 0.2
+    sublabel: ', recoils on (GridSub, gridsize=0.025)'
+    gridsize: 0.025
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_on_full/907227/AnalysisResultsFinal.root'
+
+  config5:
+    jetR: 0.2
+    sublabel: ', recoils on (GridSub, gridsize=0.05)'
+    gridsize: 0.05
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_on_full/907227/AnalysisResultsFinal.root'
+
+  config6:
+    jetR: 0.2
+    sublabel: ', recoils on (GridSub, gridsize=0.1)'
+    gridsize: 0.1
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_on_full/907227/AnalysisResultsFinal.root'
+
+
 lbnl:
   label: 'Yuan'
   observable: 'theta_g'

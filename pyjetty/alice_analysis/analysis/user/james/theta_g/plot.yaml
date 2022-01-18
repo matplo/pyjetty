@@ -9,9 +9,9 @@ james:
     obs_label: 'SD_zcut02_B0'
     min_pt: 60
     max_pt: 80
-    file_pp: './PRL_results/james/pp_ref/217440-02/zg/final_results/fFinalResults.root'
-    file_AA: './PRL_results/james/PbPb/334797-02/zg/final_results/fFinalResults.root'
-    jewel_systematic: './PRL_results/james/PbPb/334797-02-jewel/zg/fSystematics.root'
+    file_pp: './james/pp_ref/217440-02/zg/final_results/fFinalResults.root'
+    file_AA: './james/PbPb/334797-02/zg/final_results/fFinalResults.root'
+    jewel_systematic: './james/PbPb/334797-02-jewel/zg/fSystematics.root'
 
   result2:
     observable: 'zg'
@@ -20,8 +20,8 @@ james:
     obs_label: 'SD_zcut02_B0'
     min_pt: 80
     max_pt: 100
-    file_pp: './PRL_results/james/pp_ref/217440-04/zg/final_results/fFinalResults.root'
-    file_AA: './PRL_results/james/PbPb/334797-04/zg/final_results/fFinalResults.root'
+    file_pp: './james/pp_ref/217440-04/zg/final_results/fFinalResults.root'
+    file_AA: './james/PbPb/334797-04/zg/final_results/fFinalResults.root'
 
   result3:
     observable: 'theta_g'
@@ -30,9 +30,9 @@ james:
     obs_label: 'SD_zcut02_B0'
     min_pt: 60
     max_pt: 80
-    file_pp: './PRL_results/james/pp_ref/217440-02/theta_g/final_results/fFinalResults.root'
-    file_AA: './PRL_results/james/PbPb/334797-02/theta_g/final_results/fFinalResults.root'
-    jewel_systematic: './PRL_results/james/PbPb/334797-02-jewel/theta_g/fSystematics.root'
+    file_pp: './james/pp_ref/217440-02/theta_g/final_results/fFinalResults.root'
+    file_AA: './james/PbPb/334797-02/theta_g/final_results/fFinalResults.root'
+    jewel_systematic: './james/PbPb/334797-02-jewel/theta_g/fSystematics.root'
 
 laura:
 
@@ -44,7 +44,7 @@ laura:
   h_ratio: 'h1_nom_ratio'
   g_ratio_sys: 'h1_nom_ratio_err'
   
-  file_theory: './PRL_results/laura/JetSplittingModels_semicent.root'
+  file_theory: './laura/JetSplittingModels_semicent.root'
 
   # List of results to plot
   result1:
@@ -53,7 +53,7 @@ laura:
     zcut: 0.2
     min_pt: 60
     max_pt: 80
-    file: './PRL_results/laura/Resultszg_30to50_R04_z02_Nov9.root'
+    file: './laura/Resultszg_30to50_R04_z02_Nov9.root'
 
     theory:
      - g_zg_sd2_hyb_lres0: 'Pablos, #it{L}_{res} = 0'
@@ -73,7 +73,7 @@ laura:
     min_pt: 60
     max_pt: 80
     xmax: 0.35
-    file: './PRL_results/laura/Resultsrg_30to50_R04_z02_Nov9.root'
+    file: './laura/Resultsrg_30to50_R04_z02_Nov9.root'
 
     theory:
      - g_rg_sd2_hyb_lres0: 'Pablos, #it{L}_{res} = 0'
@@ -93,7 +93,7 @@ laura:
     max_pt: 80
     xmax: 0.2
     ymax: 2.5
-    file: './PRL_results/leticia/ResultstsRg_semicent_zcut4.root'
+    file: './leticia/ResultstsRg_semicent_zcut4.root'
 
     theory:
      - g_rg_sd4_hyb_lres0: 'Pablos, #it{L}_{res} = 0'

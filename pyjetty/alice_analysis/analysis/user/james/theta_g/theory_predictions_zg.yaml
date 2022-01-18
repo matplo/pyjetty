@@ -97,6 +97,31 @@ hybrid_model:
     ratio_lower: [0.966022, 0.940345, 0.945086, 0.944446, 1.00006, 0.989107]
     ratio_upper: [1.03845, 0.985829, 1.00165, 1.001, 1.12841, 1.08461]
  
+jewel:
+  label: 'JEWEL'
+  observable: 'zg'
+  plot_list: ['config1', 'config2']
+  config1:
+    jetR: 0.2
+    sublabel: ', recoils off'
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_off/895988/AnalysisResultsFinal.root'
+
+  config2:
+    jetR: 0.2
+    sublabel: ', recoils on'   # constituent subtraction
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_on_CS/919099/AnalysisResultsFinal.root'
+
+  config3:
+    jetR: 0.2
+    sublabel: ', recoils on (unsubtracted)'
+    pt: [60,80]
+    pp_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/pp/895987/AnalysisResultsFinal.root'
+    AA_filename: '/Users/jamesmulligan/Analysis_theta_g/TheoryPredictions/JEWEL/AA_recoils_on_unsubtracted/895989/AnalysisResultsFinal.root'
+
 yang_ting:
   label: 'Chien'
   observable: 'zg'
