@@ -31,7 +31,7 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def initialize(self):
 
-        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v3'
+        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v4'
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
@@ -264,6 +264,7 @@ class PlotRAA(common_base.CommonBase):
         pad1.SetTopMargin(0.08)
         pad1.SetRightMargin(0.04)
         pad1.SetBottomMargin(0.)
+        pad1.SetTicks(0,1)
         pad1.Draw()
         pad1.cd()
 
@@ -309,7 +310,7 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto.GetYaxis().SetTitleSize(0.065)
         myBlankHisto.GetYaxis().SetTitleSize(0.08)
         myBlankHisto.GetYaxis().SetTitleOffset(1.15)
-        myBlankHisto.GetYaxis().SetLabelSize(0.06)
+        myBlankHisto.GetYaxis().SetLabelSize(0.07)
         myBlankHisto.Draw('E')
 
         c.cd()
@@ -343,7 +344,7 @@ class PlotRAA(common_base.CommonBase):
         myBlankHisto2.GetYaxis().SetTitleFont(43)
         myBlankHisto2.GetYaxis().SetTitleOffset(2.)
         myBlankHisto2.GetYaxis().SetLabelFont(43)
-        myBlankHisto2.GetYaxis().SetLabelSize(25)
+        myBlankHisto2.GetYaxis().SetLabelSize(22)
         myBlankHisto2.GetYaxis().SetNdivisions(505)
         myBlankHisto2.GetYaxis().SetTickSize(0.025)
 
@@ -455,13 +456,16 @@ class PlotRAA(common_base.CommonBase):
         text = '#it{R} = ' + str(self.jetR) + '   |#it{{#eta}}_{{jet}}| < {}'.format(0.9-self.jetR)
         text_latex.DrawLatex(x, 0.6, text)
         
-        text = str(self.min_pt) + ' < #it{p}_{T}^{ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
-        text_latex.DrawLatex(x, 0.5, text)
-        
         if self.obs_label == '0.1-0.2':
+            text = str(self.min_pt) + ' < #it{p}_{T}^{ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
+            text_latex.DrawLatex(x, 0.49, text)
+
             text = 'anti-#it{k}_{T} subjets'
-            text_latex.DrawLatex(x, 0.41, text)
+            text_latex.DrawLatex(x, 0.4, text)
         else:
+            text = str(self.min_pt) + ' < #it{p}_{T}^{ch jet} < ' + str(self.max_pt) + ' GeV/#it{c}'
+            text_latex.DrawLatex(x, 0.5, text)
+
             text = 'anti-#it{k}_{T} subjets' + '   #it{r} = ' + str(self.obs_label)
             text_latex.DrawLatex(x, 0.41, text)    
         
