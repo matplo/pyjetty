@@ -4,6 +4,15 @@ process_observables: ['theta_g', 'zg']
 jetR: [0.2]
 
 recoils_off: False
+thermal_rejection_fraction: 0.33
+
+constituent_subtractor:
+  max_distance: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
 
 # Observable block
 theta_g:
