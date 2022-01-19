@@ -15,7 +15,6 @@ import math
 import ROOT
 import yaml
 import os
-import sys
 from array import *
 
 # Fastjet via python (from external library fjpydev)
@@ -24,6 +23,7 @@ import fjext
 import fjcontrib
 
 from pyjetty.alice_analysis.process.base import process_utils
+from pyjetty.mputils import CEventSubtractor
 
 # Load pyjetty ROOT utils
 ROOT.gSystem.Load('libpyjetty_rutil')
@@ -94,6 +94,32 @@ class CurvesFromJewelTracks():
         self.thermal_rejection_fraction = 0.0
         if 'thermal_rejection_fraction' in config:
             self.thermal_rejection_fraction = config['thermal_rejection_fraction']
+
+        #----------------------------------------------
+        # If constituent subtractor is present, initialize it
+        self.constituent_subtractor = None
+        if 'constituent_subtractor' in config:
+
+            print('Constituent subtractor is enabled.')
+            constituent_subtractor = config['constituent_subtractor']
+        
+            max_distance = constituent_subtractor['max_distance']
+            alpha = constituent_subtractor['alpha']
+            max_eta = constituent_subtractor['max_eta']
+            bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
+            max_pt_correct = constituent_subtractor['max_pt_correct']
+            ghost_area = constituent_subtractor['ghost_area']
+            
+            self.constituent_subtractor = CEventSubtractor(max_distance=max_distance, 
+                                                           alpha=alpha, 
+                                                           max_eta=max_eta, 
+                                                           bge_rho_grid_size=bge_rho_grid_size, 
+                                                           max_pt_correct=max_pt_correct, 
+                                                           ghost_area=ghost_area, 
+                                                           distance_type=fjcontrib.ConstituentSubtractor.deltaR)
+
+        else:
+            print('Constituent subtractor is disabled.')
 
         #----------------------------------------------
         # Create dictionaries to store grooming settings and observable settings for each observable
@@ -179,7 +205,7 @@ class CurvesFromJewelTracks():
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9'
             if not self.recoils_off:
                 track_criteria += ' and Status != 3'
-            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3' # Not used by default, unless user accesses thermal particles in user function
+            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3' # Not used by default, unless constituent subtraction is activated or user accesses thermal particles in user function
         elif 'gridsub' in self.thermal_subtraction_method.lower():
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
             bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
@@ -283,6 +309,32 @@ class CurvesFromJewelTracks():
                 else:
                     print('WARNING: Duplicate JET particles may be present in event',self.event_number)
                     #[print(p.eta(),p.pt()) for p in fj_particles]
+
+        # If constituent subtraction is enabled, perform subtraction on the event
+        if self.constituent_subtractor:
+
+            # Convert df of pt/eta/phi of thermal particles to list of fastjet particles, for convenience
+            thermal_particles = []
+            if len(self.event_bck_df) != 0:
+                thermal_particles = self.get_fjparticles(self.event_bck_df)
+
+            # Drop specified fraction of thermal particles -- loop manually since the wrapped functions are a bit funky
+            thermal_particles_selected = []
+            for i,p in enumerate(thermal_particles):
+                if np.random.uniform() >= self.thermal_rejection_fraction:
+                    thermal_particles_selected.append(p)
+            #print(f'n_thermals before: {len(thermal_particles)}')
+            #print(f'n_thermals after: {len(thermal_particles_selected)}')
+
+            # Determine rho from thermal particles
+            self.constituent_subtractor.bge_rho.set_particles(thermal_particles_selected)
+
+            # Perform subtraction over full event (jet+recoil)
+            fj_particles = self.constituent_subtractor.subtractor.subtract_event(fj_particles)
+            
+            #rho = self.constituent_subtractor.bge_rho.rho()
+            #print(f'rho: {rho}')
+            #print()
 
         # Loop through jetR, and process event for each R
         for jetR in self.jetR_list:
