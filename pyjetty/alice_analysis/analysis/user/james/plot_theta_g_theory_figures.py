@@ -57,15 +57,22 @@ class PlotAngularityFigures(common_base.CommonBase):
         #self.theory_grooming_labels = [self.utils.grooming_label(gs) for\
         #                               gs in self.theory_grooming_settings]
 
-        self.xmin = -0.01
-        #self.ymax = 18.99
-        self.ymin_ratio = 0.5
-        self.ymax_ratio = 2
+        # Don't use theory predictions below this value (to disable, set to 0)
+        self.thetag_cut = 0.
 
-        self.xtitle =  '#it{#theta}_{g}'
-        self.ytitle = '#frac{d#it{#sigma}}{d#it{#theta}_{g}} ' + \
-                      '#/#int_{#it{#theta}_{g}^{NP}}^{1} ' + \
-                      '#frac{d#it{#sigma}}{d#it{#theta}_{g}} d#it{#theta}_{g}'
+        self.xmin = -0.03
+        self.ymax = 13.5
+        self.ymin_ratio = 0.4
+        self.ymax_ratio = 2.5
+
+        self.xtitle = '#it{#theta}_{g}'
+        self.ytitle = '#frac{1}{#it{#sigma}_{#it{#theta}_{g}>#it{#theta}_{g}^{NP}}} ' + \
+                      '#frac{d#it{#sigma}}{d#it{#theta}_{g}}'
+
+        # y title with integral in denominator
+        #self.ytitle = '#frac{d#it{#sigma}}{d#it{#theta}_{g}} ' + \
+        #              '#/#int_{#it{#theta}_{g}^{NP}}^{1} ' + \
+        #              '#frac{d#it{#sigma}}{d#it{#theta}_{g}} d#it{#theta}_{g}'
 
         self.left_offset = 0.4
         self.bottom_offset = 0.15
@@ -97,6 +104,8 @@ class PlotAngularityFigures(common_base.CommonBase):
             # Formula assumes that jet pT xsec falls like pT^(-5.5)
             formula_pt = (4.5/3.5)*(min_pt**-3.5 - max_pt**-3.5) / \
                          (min_pt**-4.5 - max_pt**-4.5)
+            # Also scale by ~20% to account for shift in full --> charged pT spectrum
+            formula_pt *= 1.2
 
             self.theta_np[min_pt] = { R : { zcut : { beta : (self.Lambda / (zcut * formula_pt * R))**(1 / (1 + beta)) \
                                                      for beta in self.sd_beta }
@@ -207,41 +216,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.h.Scale(1./integral_perturbative)
         self.h_sys.Scale(1./integral_perturbative)
 
-        self.ymax = 2 * self.h.GetMaximum() * (1 + (pad == 3) * 0.2)
-        ''' Can modify for theta_g formatting later
-        # Set ymax corresponding to the alpha=1.5 case
-        if alpha == '1.5':
-            if R == 0.2:
-                if min_pt == 20:
-                    self.ymax = 1.9 * self.h.GetMaximum()
-                elif min_pt == 40:
-                    self.ymax = 2.6 * self.h.GetMaximum()
-                elif min_pt == 60:
-                    if Fnp:
-                        self.ymax = 2.1 * self.h.GetMaximum()
-                    else:
-                        self.ymax = 1.9 * self.h.GetMaximum()
-                elif min_pt == 80:
-                    if Fnp:
-                        self.ymax = 2.2 * self.h.GetMaximum()
-                    else:
-                        self.ymax = 1.9 * self.h.GetMaximum()
-            elif R == 0.4:
-                if min_pt == 20:
-                    self.ymax = 2.6 * self.h.GetMaximum()
-                elif min_pt == 40:
-                    self.ymax = 2.9 * self.h.GetMaximum()
-                elif min_pt == 60:
-                    if Fnp:
-                        self.ymax = 2.5 * self.h.GetMaximum()
-                    else:
-                        self.ymax = 1.9 * self.h.GetMaximum()
-                elif min_pt == 80:
-                    if Fnp:
-                        self.ymax = 2 * self.h.GetMaximum()
-                    else:
-                        self.ymax = 1.9 * self.h.GetMaximum()
-        '''
+        #self.ymax = 2 * self.h.GetMaximum() * (1 + (pad == 3) * 0.2)
 
         self.scale_label = self.scale_histogram_for_visualization(
             self.h_sys, R, min_pt, zcut, beta)
@@ -275,7 +250,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             h_theory_cent_rebinned = self.remove_negative_bin_edges(h_theory_cent_rebinned)
             h_theory_min_rebinned = self.remove_negative_bin_edges(h_theory_min_rebinned)
             h_theory_max_rebinned = self.remove_negative_bin_edges(h_theory_max_rebinned)
-            
+
             # Normalize such that integral in perturbative region is 1
             min_bin = h_theory_cent_rebinned.FindBin(self.theta_np[min_pt][R][zcut][beta]) + 1
             #if self.h.GetBinCenter(min_bin) <= self.theta_np[min_pt][R][zcut][beta]:
@@ -289,25 +264,30 @@ class PlotAngularityFigures(common_base.CommonBase):
             h_theory_cent_rebinned.Scale(1./integral_perturbative_theory)
             h_theory_min_rebinned.Scale(1./integral_perturbative_theory)
             h_theory_max_rebinned.Scale(1./integral_perturbative_theory)
-                        
+
             # Scale additionally for visualization
             self.scale_histogram_for_visualization(h_theory_cent_rebinned, R, min_pt, zcut, beta)
             self.scale_histogram_for_visualization(h_theory_min_rebinned, R, min_pt, zcut, beta)
             self.scale_histogram_for_visualization(h_theory_max_rebinned, R, min_pt, zcut, beta)
 
-            x = np.array([h_theory_cent_rebinned.GetXaxis().GetBinCenter(i) for i in range(1, n+1)])
-            y = np.array([h_theory_cent_rebinned.GetBinContent(i) for i in range(1, n+1)])
-            xerrup = xerrdn = np.array([0. for i in range(n)])
-            yerrup = np.array([h_theory_max_rebinned.GetBinContent(i)-y[i-1] for i in range(1, n+1)])
-            yerrdn = np.array([y[i-1]-h_theory_min_rebinned.GetBinContent(i) for i in range(1, n+1)])
-            g_theory = ROOT.TGraphAsymmErrors(n, x, y, xerrdn, xerrup, yerrdn, yerrup)
+            n_theory_bins = h_theory_cent_rebinned.GetNbinsX()
+            x = np.array([h_theory_cent_rebinned.GetXaxis().GetBinCenter(i) \
+                          for i in range(1, n_theory_bins+1)])
+            y = np.array([h_theory_cent_rebinned.GetBinContent(i) \
+                          for i in range(1, n_theory_bins+1)])
+            xerrup = xerrdn = np.array([0. for i in range(n_theory_bins)])
+            yerrup = np.array([h_theory_max_rebinned.GetBinContent(i)-y[i-1] \
+                               for i in range(1, n_theory_bins+1)])
+            yerrdn = np.array([y[i-1]-h_theory_min_rebinned.GetBinContent(i) \
+                               for i in range(1, n_theory_bins+1)])
+            g_theory = ROOT.TGraphAsymmErrors(n_theory_bins, x, y, xerrdn, xerrup, yerrdn, yerrup)
             g_theory_name = 'g_theory_%i_%s' % (i, grooming_label)
             g_theory.SetNameTitle(g_theory_name, g_theory_name)
             self.g_theory_dict[beta].append(g_theory)
 
             # Construct ratios in self.h_ratio_dict, self.g_ratio_dict
             self.construct_ratio(self.h, self.h_sys, h_theory_cent_rebinned, h_theory_min_rebinned,
-                                 h_theory_max_rebinned, n, x, xerrup, xerrdn, y, yerrup, yerrdn,
+                                 h_theory_max_rebinned, n_theory_bins, x, xerrup, xerrdn, y, yerrup, yerrdn,
                                  R, zcut, beta, i, pad)
 
         f_data.Close()
@@ -367,68 +347,8 @@ class PlotAngularityFigures(common_base.CommonBase):
         myBlankHisto.GetYaxis().SetTitleSize(0.09)
         myBlankHisto.GetYaxis().SetTitleOffset(1.4)
         myBlankHisto.GetYaxis().SetLabelSize(0.06)
-        if self.logy:
-            if R == 0.2:
-                if min_pt == 20:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(0.2)
-                        myBlankHisto.SetMaximum(9e3)
-                    #else:
-                    #    myBlankHisto.SetMinimum(0.2)
-                    #    myBlankHisto.SetMaximum(9e3)
-                elif min_pt == 40:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(0.3)
-                        myBlankHisto.SetMaximum(2e4)
-                    #else:
-                    #    myBlankHisto.SetMinimum(0.2)
-                    #    myBlankHisto.SetMaximum(9e3)
-                elif min_pt == 60:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(0.4)
-                        myBlankHisto.SetMaximum(2e4)
-                    else:
-                        myBlankHisto.SetMinimum(0.5)
-                        myBlankHisto.SetMaximum(9e3)
-                elif min_pt == 80:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(1.01)
-                        myBlankHisto.SetMaximum(5e4)
-                    else:
-                        myBlankHisto.SetMinimum(1.5)
-                        myBlankHisto.SetMaximum(5e4)
-            elif R == 0.4:
-                if min_pt == 20:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(0.03)
-                        myBlankHisto.SetMaximum(2e4)
-                    #else:
-                    #    myBlankHisto.SetMinimum(0.15)
-                    #    myBlankHisto.SetMaximum(9e3)
-                if min_pt == 40:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(0.15)
-                        myBlankHisto.SetMaximum(3e4)
-                    #else:
-                    #    myBlankHisto.SetMinimum(0.15)
-                    #    myBlankHisto.SetMaximum(2e4)
-                if min_pt == 60:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(0.15)
-                        myBlankHisto.SetMaximum(5e4)
-                    else:
-                        myBlankHisto.SetMinimum(0.25)
-                        myBlankHisto.SetMaximum(9e3)
-                if min_pt == 80:
-                    if Fnp:
-                        myBlankHisto.SetMinimum(0.2)
-                        myBlankHisto.SetMaximum(6e4)
-                    else:
-                        myBlankHisto.SetMinimum(0.3)
-                        myBlankHisto.SetMaximum(9e3)
-        else:
-            myBlankHisto.SetMinimum(0.001)
-            myBlankHisto.SetMaximum(self.ymax)
+        myBlankHisto.SetMinimum(0.001)
+        myBlankHisto.SetMaximum(self.ymax)
 
         myBlankHisto.Draw()
         self.blank_histo_list.append(myBlankHisto)
@@ -445,11 +365,11 @@ class PlotAngularityFigures(common_base.CommonBase):
         leg = ROOT.TLegend(0.2+shift, 0.7, 0.6, 0.96)
         size = 0.08
         self.setupLegend(leg, size)
-            
+
         self.plot_list.append(leg)
 
         leg3 = ROOT.TLegend(0.2+shift/2, 0.72, 0.55, 0.96)
-        if pad == 3:
+        if pad == 2:
             self.setupLegend(leg3, size)
             self.plot_list.append(leg3)
 
@@ -486,17 +406,17 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.g_theory_dict[beta][i].Draw('L 3 same')
 
             leg.AddEntry(self.g_theory_dict[beta][i], 'NLL\' #otimes '+folding_label, 'lf')
-            
+
         self.h_sys.Draw('E2 same')
         line_np.Draw()
         self.h.Draw('PE X0 same')
 
-        if pad == 2:
-            leg.Draw('same')
         if pad == 3:
+            leg.Draw('same')
+        if pad == 2:
             leg3.Draw('same')
         
-        if pad == 3:
+        if pad == 2:
             leg3.AddEntry(line_np, "#it{#theta}_{g}^{NP} #leq " + \
                           "(#frac{#Lambda}{#it{z}_{cut} #it{p}_{T} #it{R}})^" + \
                           "{#frac{1}{1+#it{#beta}}}", 'lf')
@@ -547,9 +467,10 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.plot_list.append(system3)
             self.plot_list.append(system4)
 
-        system5y = ymax-6.*dy if pad == 1 else ymax-4.6*dy
-        #system5y = ymax-6.*dy
-        system5 = ROOT.TLatex(x+0.4, system5y,
+        #system5y = ymax-6.*dy if pad == 1 else ymax-4.6*dy
+        system5y = ymax-6.*dy
+        system5x = x+0.35 if pad == 1 else x+0.4 if pad==2 else x+0.45
+        system5 = ROOT.TLatex(system5x, system5y,
                               '#it{{#beta}} = {}{}'.format(beta, self.scale_label))
         system5.SetNDC()
         if pad in [1]:
@@ -560,7 +481,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         system5.Draw()
         self.plot_list.append(system5)
 
-        if pad == 3:
+        if pad == 2:
             system5 = ROOT.TLatex(0.2+(shift/2), ymax-3.8*dy,
                                   'Soft Drop: #it{z}_{cut} = %s' % str(zcut))
             system5.SetNDC()
@@ -580,7 +501,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad2.SetRightMargin(0.)
         pad2.SetTopMargin(0.)
         pad2.SetBottomMargin(self.bottom_offset/(self.bottom_offset+self.ratio_height))
-        pad2.SetTicks(1,1)
+        pad2.SetTicks(1,2)
         if self.logy:
             pad2.SetLogy()
         if self.logx:
@@ -591,18 +512,18 @@ class PlotAngularityFigures(common_base.CommonBase):
         # Draw blank histos
         blankname = 'myBlankHisto2_{}_PtBin{}-{}_{}'.format(pad, min_pt, max_pt, R)
         myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, xmax-0.001)
-        myBlankHisto2.SetNdivisions(505, "y")
+        myBlankHisto2.SetMinimum(self.ymin_ratio)
+        myBlankHisto2.SetMaximum(self.ymax_ratio)
+        myBlankHisto2.SetNdivisions(510, "y")
         myBlankHisto2.SetNdivisions(505, "x")
         myBlankHisto2.SetXTitle(self.xtitle)
         myBlankHisto2.SetYTitle('#frac{Data}{Theory}')
         myBlankHisto2.GetXaxis().SetTitleSize(0.15)
-        myBlankHisto2.GetXaxis().SetTitleOffset(1.)
+        myBlankHisto2.GetXaxis().SetTitleOffset(0.7)
         myBlankHisto2.GetXaxis().SetLabelSize(0.1)
         myBlankHisto2.GetYaxis().SetTitleSize(0.12)
         myBlankHisto2.GetYaxis().SetTitleOffset(1.)
         myBlankHisto2.GetYaxis().SetLabelSize(0.1)
-        myBlankHisto2.SetMinimum(self.ymin_ratio)
-        myBlankHisto2.SetMaximum(self.ymax_ratio)
         myBlankHisto2.Draw()
         self.blank_histo_list.append(myBlankHisto2)
 
@@ -611,6 +532,21 @@ class PlotAngularityFigures(common_base.CommonBase):
         line.SetLineStyle(2)
         line.Draw('same')
         self.plot_list.append(line)
+
+        if pad in [1]:
+            # Add y-axis numerical label text because ROOT is incapable
+            ymin_text = ROOT.TLatex(0.327, 0.42, '0.5')
+            ymin_text.SetNDC()
+            ymax_text = ROOT.TLatex(0.367, 0.89, '2')
+            ymax_text.SetNDC()
+
+            ymin_text.SetTextSize(0.1)
+            ymin_text.Draw()
+            self.plot_list.append(ymin_text)
+
+            ymax_text.SetTextSize(0.1)
+            ymax_text.Draw()
+            self.plot_list.append(ymax_text)
 
         # Draw ratio
         for i, folding_label in enumerate(self.folding_labels):
@@ -652,48 +588,58 @@ class PlotAngularityFigures(common_base.CommonBase):
         grooming_label = "zcut%s_B%s" % (str(zcut).replace('.', ''), str(beta))
 
         # Construct central value
-        h_ratio = h.Clone()
+        h_trim = self.trim_data(h, h_theory_cent)
+        h_ratio = h_trim.Clone()
         h_ratio.SetName('{}_{}_{}_{}'.format(h_ratio.GetName(), R, grooming_label, pad))
         h_ratio.SetDirectory(0)
         h_ratio.Divide(h_theory_cent)
         self.plot_list.append(h_ratio)
         self.h_ratio_dict[beta].append(h_ratio)
-        y_ratio = np.array([h_ratio.GetBinContent(i) for i in range(1, n+1)])
-        
+        y_ratio = np.array([h_ratio.GetBinContent(i) for i in range(1, h_trim.GetNbinsX()+1)])
+
         # Construct systematic uncertainties: combine data and theory uncertainties
-        
+
         # Get relative systematic from data
-        y_data = np.array([h.GetBinContent(i) for i in range(1, n+1)])
-        y_sys_data = np.array([h_sys.GetBinError(i) for i in range(1, n+1)])
+        y_data = np.array([h_trim.GetBinContent(i) for i in range(1, h_trim.GetNbinsX()+1)])
+        h_sys_trim = self.trim_data(h_sys, h_theory_cent)
+        y_sys_data = np.array([h_sys_trim.GetBinError(i) for i in range(1, h_trim.GetNbinsX()+1)])
         y_sys_data_relative = np.divide(y_sys_data, y_data)
-        
+
         # Get relative systematics from theory
         yerr_up_relative = np.divide(yerrup, y)
         yerr_dn_relative = np.divide(yerrdn, y)
-        
+
+        # Trim according to theta_g cut
+        #if self.thetag_cut != 0:
+        #    yerr_up_relative = [yerr_up_relative[i] for i in range(len(yerr_up_relative)) \
+        #                        if len(yerr_up_relative)-len(y_data) <= i]
+        #    yerr_dn_relative = [yerr_dn_relative[i] for i in range(len(yerr_dn_relative)) \
+        #                        if len(yerr_dn_relative)-len(y_data) <= i]
+
         # Combine systematics in quadrature
         y_sys_total_up_relative = np.sqrt( np.square(y_sys_data_relative) + \
                                            np.square(yerr_up_relative))
         y_sys_total_dn_relative = np.sqrt( np.square(y_sys_data_relative) + \
                                            np.square(yerr_dn_relative))
-        
+
         y_sys_total_up = np.multiply(y_sys_total_up_relative, y_ratio)
         y_sys_total_dn = np.multiply(y_sys_total_dn_relative, y_ratio)
-        
+
         # Note: invert direction of asymmetric uncertainty
         g_ratio = ROOT.TGraphAsymmErrors(n, x, y_ratio, xerrdn, xerrup,
                                          y_sys_total_up, y_sys_total_dn)
         g_ratio.SetName('g_ratio_{}_{}'.format(i, grooming_label))
         self.g_ratio_dict[beta].append(g_ratio)
-        
+
     #-------------------------------------------------------------------------------------------
     # Rebin theory histogram according to data binning
     # Set statistical uncertainties to 0 (since we will neglect them)
     #-------------------------------------------------------------------------------------------
     def rebin_theory(self, h_theory, h):
-    
-        n = h.GetNbinsX()
-        xbins = array('d', [h.GetBinLowEdge(bi) for bi in range(1, n+2)])
+
+        xbins = array('d', [h.GetBinLowEdge(bi) for bi in range(1, h.GetNbinsX()+2) \
+           if h.GetBinLowEdge(bi) >= self.thetag_cut])
+        n = len(xbins) - 1
 
         for bi in range(1, h_theory.GetNbinsX()+2):
             # Undo scaling by bin width before rebinning
@@ -707,6 +653,18 @@ class PlotAngularityFigures(common_base.CommonBase):
             h_theory_rebinned.SetBinError(bi, 0)
     
         return h_theory_rebinned
+
+    #-------------------------------------------------------------------------------------------
+    # Rebin data histogram according to theory binning
+    # Ensures that theta_g cut does not affect ratio plots
+    #-------------------------------------------------------------------------------------------
+    def trim_data(self, h, h_theory):
+
+        xbins = array('d', [h_theory.GetBinLowEdge(bi) \
+                      for bi in range(1, h_theory.GetNbinsX()+2)])
+        n = len(xbins) - 1
+        h_trimmed = h.Rebin(n, h.GetName()+'_trimmed', xbins)
+        return h_trimmed
 
     #-------------------------------------------------------------------------------------------
     # Remove bins from histogram that have negative edges for plotting purposes

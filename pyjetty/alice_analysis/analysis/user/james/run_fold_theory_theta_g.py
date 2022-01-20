@@ -41,10 +41,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
       for i, obs_setting in enumerate(self.obs_settings):
         grooming_setting = self.grooming_settings[i]  # grooming parameters
         zcut = None; beta = None
-        if grooming_setting and type(obs_setting) == dict and 'zcut' in obs_setting.keys() and 'beta' in obs_setting.keys():
+        if grooming_setting and type(obs_setting) == dict and 'zcut' in obs_setting.keys() \
+              and 'beta' in obs_setting.keys():
           zcut = obs_setting["zcut"]
           beta = obs_setting["beta"]
-          #label = ("zcut%s_B%s" % (str(zcut), str(beta))).replace('.','') 
+          #label = ("zcut%s_B%s" % (str(zcut), str(beta))).replace('.','')
           label = self.create_label(jetR, obs_setting, grooming_setting)
         else: # Not SD grooming
           continue
@@ -62,7 +63,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
         obs_width = np.subtract(obs_bins[1:], obs_bins[:-1])
 
-        # -----------------------------------------------------        
+        # -----------------------------------------------------
         # Create histograms where theory curves will be stored
         th_hists_no_scaling = []          # Basically a copy of the theory calculations, but binned
         th_hists = []                     # Histograms that will actually be used in the folding
@@ -80,12 +81,13 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           pt_max = self.theory_pt_bins[p+1]
 
           # Get scale factor for this pT bin.
-          # This reverses the self-normalization of 1/sigma for correct pT scaling when doing projections onto the y-axis.
+          # This reverses the self-normalization of 1/sigma for correct
+          #     pT scaling when doing projections onto the y-axis.
           scale_f = self.pt_scale_factor_jetR(pt, pt_bins[p+1], jetR)
 
           # load theory file, grab the data, and fill histograms with it
           th_file = 'R_%s_pT_%i-%i.dat' % (str(jetR).replace('.',''), int(pt_min), int(pt_max))
-          th_file = os.path.join(th_path, th_file) 
+          th_file = os.path.join(th_path, th_file)
 
           # ------------------------------------------------------------------------------------------------------------
           # Load data from theory file
@@ -109,14 +111,18 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
                 hist_name = 'h2_input_%s_obs_pT_%s_sv%i' % (self.observable, label, sv)
                 hist_name_no_scaling = hist_name + '_no_scaling'
 
-                th_hist            = ROOT.TH2D(hist_name           , ';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
-                th_hist_no_scaling = ROOT.TH2D(hist_name_no_scaling, ';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+                th_hist            = ROOT.TH2D(hist_name, ';p_{T}^{jet};%s' % (self.observable),
+                    len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+
+                th_hist_no_scaling = ROOT.TH2D(hist_name_no_scaling, ';p_{T}^{jet};%s' % (self.observable),
+                    len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
 
                 th_hists.append(th_hist)
                 hist_names.append(hist_name)
                 th_hists_no_scaling.append(th_hist_no_scaling)
 
-              # Save content into histogram before any scaling has been applied (to compare to the theory curves and make sure everything went fine)
+              # Save content into histogram before any scaling has been applied
+              # (to compare to the theory curves and make sure everything went fine)
               for ob in range(0, len(obs_bins)-1):
                 th_hists_no_scaling[sv].SetBinContent(p+1, ob+1, y_val_bin_ctr[ob])
 
@@ -131,27 +137,27 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
           f.close()
 
-        # ------------------------------------------------------------------------------------------------------------  
+        # ------------------------------------------------------------------------------------------------------------
         new_obs_lab = ("zcut%s_B%s" % (str(zcut), str(beta))).replace('.','')
 
-        # ------------------------------------------------------------------------------------------------------------  
+        # ------------------------------------------------------------------------------------------------------------
         for n_pt in range(0, len(self.final_pt_bins)-1):
           histo_list = []
           for sv in range(0, n_scale_variations):
             projection_name = 'h1_input_%s_R%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
 
-            # Determine the bin number that corresponds to the pT edges given           
+            # Determine the bin number that corresponds to the pT edges given
             min_bin, max_bin = self.bin_position( self.theory_pt_bins, self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1] )
 
             h1_input_hist = th_hists[sv].ProjectionY(projection_name, min_bin, max_bin)
             h1_input_hist.SetTitle(projection_name)
             h1_input_hist.SetDirectory(0)
-           
+
             # Undo the bin width scaling and set correct normalization
             norm_factor = h1_input_hist.Integral()
             if norm_factor == 0: norm_factor = 1
             h1_input_hist.Scale(1./norm_factor, "width")
-           
+
             for b in range(0, h1_input_hist.GetNbinsX()):
               h1_input_hist.SetBinError(b+1, 0)
 
@@ -201,7 +207,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
             for lev in self.response_levels:
               outpdfname_2 = os.path.join(outpdfname, 'comp_gen_input_theory_%s_pT_%i_%i_GeVc_' % \
                   (self.create_label(jetR, obs_setting, grooming_setting), int(self.final_pt_bins[n_pt]), int(self.final_pt_bins[n_pt+1])) )
-              outpdfname_2 += lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+self.theory_response_labels[ri]+".pdf" 
+              outpdfname_2 += lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+self.theory_response_labels[ri]+".pdf"
               self.plot_comparison_SCET_gen_input(graph_cent, jetR, obs_setting, grooming_setting, lev[0], lev[1], lev[2], \
                   self.theory_response_labels[ri], self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1], outpdfname_2)
 
@@ -219,11 +225,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
         self.outfile.cd()
         for sv in range(0,n_scale_variations):
           setattr(self,hist_names[sv],th_hists[sv])
-          
+
         # Only save the 2D histograms for the central scale case
         #th_hists_no_scaling[0].Write()
         #th_hists[0].Write()
-        
+
         outpdfname = os.path.join(self.output_dir, 'control_plots', 'input')
         if not os.path.exists(outpdfname):
           os.makedirs(outpdfname)
@@ -242,7 +248,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
       c1 = ROOT.TCanvas('c1','c1',1000,800)
       c1.Divide(2,2)
-   
+
       for j in range(0,4):
         c1.cd(j+1).SetLogz()
         c1.cd(j+1).SetLeftMargin(0.20)
@@ -255,7 +261,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
       self.pretty_TH2D(h_list_no_scaling[i],'input theory curves, scale variation %i'%(i),'#it{p}_{T}^{jet} [GeV/#it{c}]',self.obs_label,'#frac{1}{#sigma} #frac{d#sigma}{d'+self.obs_label+'}')
       self.pretty_TH2D(h_list           [i],'scaled input, scale variation %i'%(i)       ,'#it{p}_{T}^{jet} [GeV/#it{c}]',self.obs_label,'~ #frac{d#sigma}{d'+self.obs_label+'}')
-      
+
       h_list_no_scaling[i].GetXaxis().SetTitleOffset(1.6)
       h_list           [i].GetXaxis().SetTitleOffset(1.6)
       h_list_no_scaling[i].GetYaxis().SetTitleOffset(1.5)
@@ -265,27 +271,27 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
       c1.cd(1)
       h_list_no_scaling[i].Draw('COLZ')
-    
+
       c1.cd(2)
       h_list[i].Draw('COLZ')
-  
+
       c1.cd(3)
       h_list_no_scaling[i].Draw('LEGO1')
 
       c1.cd(4)
       h_list[i].Draw('LEGO1')
- 
-      c1.Draw()   
+
+      c1.Draw()
 
       if len(h_list_no_scaling)==1:
         c1.Print(outpdfname)
-      else: 
+      else:
         if i == 0: c1.Print(outpdfname+'(')
         elif i == len(h_list_no_scaling)-1:  c1.Print(outpdfname+')')
         else:  c1.Print(outpdfname)
 
       del c1
- 
+
 #----------------------------------------------------------------------
 if __name__ == '__main__':
 
