@@ -1069,27 +1069,26 @@ class RunAnalysis(common_base.CommonBase):
   def truncate_hist(self, h, minbin, maxbin, new_name):
     length = h.GetNbinsX()
 
-    # Check if either minbin or maxbin exist, and if so set bin indices 
-    if maxbin == None and minbin == None:
-      h.SetNameTitle(new_name, new_name)
-      return h
-    else:
-      if maxbin == None:
-        bin_range = range(minbin+1, length+2)
-        if minbin >= length:
-          raise ValueError(f"Min bin number {minbin} larger or equal to histogram size {length}")
-        if minbin < 1:
-          raise ValueError(f"Min bin number {minbin} cannot be less than 1")
+    # Check if either minbin or maxbin exist, and if so set bin indices
+    if maxbin == None:
+      if minbin == None:
+        h.SetNameTitle(new_name, new_name)
+        return h
+      bin_range = range(minbin+1, length+2)
+      if minbin >= length:
+        raise ValueError(f"Min bin number {minbin} larger or equal to histogram size {length}")
+      if minbin < 1:
+        raise ValueError(f"Min bin number {minbin} cannot be less than 1")
 
-      elif minbin == None:
-        bin_range = range(1, maxbin+2)
-        if maxbin >= length:
-          raise ValueError(f"Max bin number {maxbin} larger or equal to histogram size {length}")
-        if maxbin < 1:
-          raise ValueError(f"Max bin number {maxbin} cannot be less than 1")
+    elif minbin == None:
+      bin_range = range(1, maxbin+2)
+      if maxbin >= length:
+        raise ValueError(f"Max bin number {maxbin} larger or equal to histogram size {length}")
+      if maxbin < 1:
+        raise ValueError(f"Max bin number {maxbin} cannot be less than 1")
 
-      bin_edges = array('d', [h.GetXaxis().GetBinLowEdge(i) for i in bin_range])
-      return h.Rebin(len(bin_edges)-1, new_name, bin_edges)
+    bin_edges = array('d', [h.GetXaxis().GetBinLowEdge(i) for i in bin_range])
+    return h.Rebin(len(bin_edges)-1, new_name, bin_edges)
 
   #----------------------------------------------------------------------
   # Add a list of (identically-binned) histograms in quadrature, bin-by-bin

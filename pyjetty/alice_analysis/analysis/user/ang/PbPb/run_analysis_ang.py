@@ -281,9 +281,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
       # maxbin+1 in grooming case to account for extra tagging bin
     if grooming_setting and maxbin:
-      h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin+1, name+'_trunc')
     else:
-      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -498,7 +498,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(
         jetR, obs_label, min_pt_truth, max_pt_truth))
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
-    h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+    h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -682,7 +682,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if prev_prelim:
       h = thn.Projection(3)
     else:
-      h = self.truncate_hist(thn.Projection(3), maxbin, name)
+      h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
     h.SetDirectory(0)
 
     return h
@@ -700,7 +700,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
       self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    h = self.truncate_hist(thn.Projection(3), maxbin, name)
+    h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
     h.SetDirectory(0)
 
     return h
@@ -813,9 +813,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           h.SetBinError(i, 0.)
       else:
         if grooming_setting and maxbin:
-          h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+          h = self.truncate_hist(getattr(self, name), None, maxbin+1, name+'_trunc')
         else:
-          h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+          h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
         h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
           self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
 
