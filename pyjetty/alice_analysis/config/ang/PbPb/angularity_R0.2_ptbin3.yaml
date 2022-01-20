@@ -157,6 +157,7 @@ ang:
 # Analysis & plotting parameters
 file_format: ".pdf"
 output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin3"
+results_pp: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin3/ang/final_results/fFinalResults.root"
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
@@ -185,7 +186,7 @@ systematics_list:
 #  - fastsim_generator1
   - subtraction1
   - subtraction2
-#  - thermal_closure
+  - thermal_closure
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/872257/AnalysisResultsFinal.root'

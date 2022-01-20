@@ -31,120 +31,6 @@ ROOT.gSystem.Load('libpyjetty_rutil')
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
-
-################################################################
-# Helper functions
-################################################################
-
-#----------------------------------------------------------------------
-# Extrapolate y-values for values in xlist_new given points (x,y) in xlist and ylist
-# Use power=1 for linear, or power=2 for quadratic extrapolation
-#----------------------------------------------------------------------
-def list_interpolate(xlist, ylist, xlist_new, power=1, require_positive=False):
-
-  if len(xlist) < (power + 1):
-    raise ValueError("list_interpolate() requires at least %i points!" % (power + 1))
-
-  ylist_new = []
-  ix = 0
-  for xval in xlist_new:
-
-    while (ix + power) < len(xlist) and xlist[ix+power] <= xval:
-      ix += 1
-
-    x1 = xlist[ix]; y1 = ylist[ix]
-
-    # Check if data point is identical
-    if xval == x1:
-      if require_positive and y1 < 0:
-        ylist_new.append(0)
-        continue
-      ylist_new.append(y1)
-      continue
-
-    # Set value to 0 if out-of-range for extrapolation
-    if x1 > xval or (ix + power) >= len(xlist):
-      ylist_new.append(0)
-      continue
-
-    x2 = xlist[ix+1]; y2 = ylist[ix+1]
-
-    yval = None
-    if power == 1:  # linear
-      yval = linear_extrapolate(x1, y1, x2, y2, xval)
-    elif power == 2:  # quadratic
-      x3 = xlist[ix+2]; y3 = ylist[ix+2]
-      yval = quadratic_extrapolate(x1, y1, x2, y2, x3, y3, xval)
-    else:
-      raise ValueError("Unrecognized power", power, "/ please use either 1 or 2")
-
-    # Require positive values
-    if require_positive and yval < 0:
-      ylist_new.append(0)
-      continue
-
-    ylist_new.append(yval)
-
-  return ylist_new
-
-
-#---------------------------------------------------------------
-# Given two data points, find linear fit and y-value for x
-#---------------------------------------------------------------
-def linear_extrapolate(x1, y1, x2, y2, x):
-
-  return (y2 - y1) / (x2 - x1) * x + (y1 - (y2 - y1) / (x2 - x1) * x1)
-
-
-#---------------------------------------------------------------
-# Given three data points, find quadratic fit and y-value for x
-#---------------------------------------------------------------
-def quadratic_extrapolate(x1, y1, x2, y2, x3, y3, x):
-
-  a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2))
-  b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3))
-  c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3)
-
-  return (a * x * x + b * x + c) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
-
-
-#---------------------------------------------------------------
-# Set LHS of distributions to 0 if crosses to 0 at some point (prevents multiple peaks)
-#---------------------------------------------------------------
-def set_zero_range(yvals):
-
-  found_nonzero_val = False
-
-  # Step through list backwards
-  for i in range(len(yvals)-1, -1, -1):
-    if yvals[i] <= 0:
-      if found_nonzero_val:
-        for j in range(0, i+1):
-          yvals[j] = 0
-        break
-      yvals[i] = 0
-      continue
-    else:
-      found_nonzero_val = True
-      continue
-
-  return yvals
-
-
-# Where there are single values pos/neg between two neg/pos, interpolate point
-def fix_fluctuations(yvals):
-
-  for i in range(1, len(yvals) - 1):
-    if yvals[i] > 0:
-      if yvals[i+1] < 0 and yvals[i-1] < 0:
-        yvals[i] = (yvals[i+1] + yvals[i-1]) / 2
-    else:  # yvals[i] <= 0
-      if yvals[i+1] > 0 and yvals[i-1] > 0:
-        yvals[i] = (yvals[i+1] + yvals[i-1]) / 2
-
-  return yvals
-
-
 ################################################################
 #######################  RUN ANALYSIS  #########################
 ################################################################
@@ -177,10 +63,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     self.jet_matching_distance = config['jet_matching_distance']
 
+    self.is_pp = True
+    self.results_pp = None
     if 'constituent_subtractor' in config:
         self.is_pp = False
-    else:
-        self.is_pp = True
+        self.results_pp = config["results_pp"]
     print('is_pp: {}'.format(self.is_pp))
 
     # Whether or not to use the previous preliminary result in final plots
@@ -621,7 +508,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   def MC_prediction(self, jetR, obs_setting, obs_label, min_pt_truth,
                     max_pt_truth, maxbin, MC='Pythia', overlay=False):
-  
+
     if MC.lower() == 'pythia':
       hMC = self.get_pythia_from_response(jetR, obs_label, min_pt_truth,
                                           max_pt_truth, maxbin, overlay)
@@ -637,7 +524,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     fraction_tagged_MC =  n_jets_tagged/n_jets_inclusive
     hMC.Scale(1./n_jets_inclusive, 'width')
-      
+
     return [hMC, fraction_tagged_MC]
 
   #----------------------------------------------------------------------
@@ -706,6 +593,47 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     return h
 
   #----------------------------------------------------------------------
+  def get_pp_data(self, jetR, obs_label, min_pt_truth, max_pt_truth,
+                  xbins, overlay=False):
+
+    output_dir = getattr(self, 'output_dir_main')
+
+    f = ROOT.TFile(self.results_pp, 'READ')
+
+    # Retrieve pp data and ensure that it has the proper bin range
+    h_pp_data_name = 'hmain_%s_R%s_%s_%s-%s_trunc' % \
+      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_pp_data = f.Get(h_pp_data_name)
+    if not h_pp_data:
+      raise AttributeError("%s not found in file %s" % (h_pp_data_name, self.results_pp))
+
+    name = 'h_pp_data_{}_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    if (xbins == [h_pp_data.GetBinLowEdge(i) for i in range(1, h_pp_data.GetNbinsX()+2)]):
+      h_pp_data.SetNameTitle(name, name)
+    else:
+      h_pp_data = h_pp_data.Rebin(len(xbins)-1, name, array('d', xbins))
+    h_pp_data.SetDirectory(0)
+
+    # Retrieve pp systematics and ensure that it has the proper bin range
+    h_pp_sys_name = 'hResult_%s_systotal_R%s_%s_n3_%s-%s' % \
+      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_pp_sys = f.Get(h_pp_sys_name)
+    if not h_pp_sys:
+      raise AttributeError("%s not found in file %s" % (h_pp_sys_name, self.results_pp))
+
+    name = 'h_pp_sys_{}_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    if (xbins == [h_pp_sys.GetBinLowEdge(i) for i in range(1, h_pp_sys.GetNbinsX()+2)]):
+      h_pp_sys.SetNameTitle(name, name)
+    else:
+      h_pp_sys = h_pp_sys.Rebin(len(xbins)-1, name, array('d', xbins))
+    h_pp_sys.SetDirectory(0)
+
+    return h_pp_data, h_pp_sys
+
+
+  #----------------------------------------------------------------------
   def plot_final_result_overlay(self, i_config, jetR, overlay_list):
     print('Plotting overlay of', overlay_list)
 
@@ -715,15 +643,21 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       max_pt_truth = self.pt_bins_reported[i+1]
       maxbins = [self.obs_max_bins(obs_label)[i] for obs_label in self.obs_labels]
 
-      # Plot PYTHIA
+      # Plot PYTHIA comparison plots
       self.plot_observable_overlay_subconfigs(
         i_config, jetR, overlay_list, min_pt_truth,
         max_pt_truth, maxbins, plot_MC=True, MC='PYTHIA', plot_ratio=True)
 
+      if not self.is_pp:
+        # Plot Pb-Pb/pp data comparison plots
+        self.plot_observable_overlay_subconfigs(
+          i_config, jetR, overlay_list, min_pt_truth,
+          max_pt_truth, maxbins, plot_pp_data=True, plot_ratio=True)
+
 
   #----------------------------------------------------------------------
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth,
-                                         max_pt_truth, maxbins, plot_MC=False,
+                                         max_pt_truth, maxbins, plot_pp_data=False, plot_MC=False,
                                          MC='PYTHIA', plot_nll=False, plot_ratio=False):
 
     # Flag to plot ratio all on the same scale, 0 to 2.2
@@ -759,11 +693,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.22, 0.66, 0.55, 0.91)
+    myLegend = ROOT.TLegend(0.62, 0.6, 0.96, 0.91)
     self.utils.setup_legend(myLegend, 0.045)
-    myLegend2 = ROOT.TLegend(0.43, 0.786, 0.65, 0.91)
+    myLegend2 = ROOT.TLegend(0.81, 0.788, 1, 0.91)
     self.utils.setup_legend(myLegend2, 0.045)
-    
+
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax, ymin = self.get_max_min(name, overlay_list, maxbins)
 
@@ -771,7 +705,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_list = []
 
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
-    
+
       if subconfig_name not in overlay_list:
         continue
 
@@ -779,7 +713,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       grooming_setting = self.grooming_settings[i]
       obs_label = self.obs_labels[i]
       maxbin = maxbins[i]
-      
+
       if subconfig_name == overlay_list[0]:
         marker = 20
         marker_pythia = 24
@@ -826,13 +760,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h.SetLineStyle(1)
       h.SetLineWidth(2)
       h.SetLineColor(color)
-      
+
       h_sys.SetLineColor(0)
       h_sys.SetFillColor(color)
       h_sys.SetFillColorAlpha(color, 0.3)
       h_sys.SetFillStyle(1001)
       h_sys.SetLineWidth(0)
-      
+
       if subconfig_name == overlay_list[0]:
 
         pad1.cd()
@@ -883,7 +817,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
         myBlankHisto.Draw('E')
 
-        # Plot ratio
+        # Initialize ratio plot
         if plot_ratio:
 
           c.cd()
@@ -897,7 +831,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           pad2.cd()
 
           myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
-          myBlankHisto2.SetYTitle("#frac{Data}{%s}" % MC)
+          if plot_MC:
+            myBlankHisto2.SetYTitle("#frac{Data}{%s}" % MC)
+          elif plot_pp_data:
+            myBlankHisto2.SetYTitle("#frac{Pb-Pb}{pp}")
           myBlankHisto2.SetXTitle(xtitle)
           myBlankHisto2.GetXaxis().SetTitleSize(30)
           myBlankHisto2.GetXaxis().SetTitleFont(43)
@@ -945,6 +882,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           line.Draw()
 
       hMC = None; fraction_tagged_MC = None;
+      h_pp_data = None; h_pp_sys = None;
       if plot_MC:
         if MC.lower() == "pythia":
           if grooming_setting and maxbin:
@@ -980,11 +918,40 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           hMC.SetLineColorAlpha(color, 0.5)
           hMC.SetLineWidth(4)
 
+      elif plot_pp_data:
+        h_pp_data, h_pp_sys = self.get_pp_data(
+          jetR, obs_label, min_pt_truth, max_pt_truth,
+          [h.GetBinLowEdge(i) for i in range(1, h.GetNbinsX()+2)])
+
+        plot_errors = True
+        if plot_errors:
+          h_pp_data.SetMarkerSize(1.5)
+          h_pp_data.SetMarkerStyle(marker_pythia) #27)
+          h_pp_data.SetMarkerColor(color)
+          h_pp_data.SetFillColor(color)
+          h_pp_data.SetLineStyle(9)
+          h_pp_data.SetLineWidth(2)
+          h_pp_data.SetLineColor(color)
+          h_pp_sys.SetLineColor(0)
+          h_pp_sys.SetFillColor(color)
+          #h_pp_sys.SetFillColorAlpha(color, 0.8)
+          h_pp_sys.SetFillStyle(3004)
+          h_pp_sys.SetLineWidth(0)
+        else:
+          h_pp_data.SetLineColor(color)
+          h_pp_data.SetLineColorAlpha(color, 0.5)
+          h_pp_data.SetLineWidth(4)
+
       if plot_ratio:
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
         if plot_MC:
           hRatioSys.Divide(hMC)
+        elif plot_pp_data:
+          hRatioSys.Divide(h_pp_data)
+          for i in range(1, hRatioSys.GetNbinsX()+1):
+            new_error = math.sqrt(h_sys.GetBinError(i) ** 2 + h_pp_sys.GetBinError(i) ** 2)
+            hRatioSys.SetBinError(i, new_error)
         hRatioSys.SetLineColor(0)
         hRatioSys.SetFillColor(color)
         hRatioSys.SetFillColorAlpha(color, 0.3)
@@ -996,6 +963,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
         if plot_MC:
           hRatioStat.Divide(hMC)
+        elif plot_pp_data:
+          hRatioStat.Divide(h_pp_data)
+          for i in range(1, hRatioStat.GetNbinsX()+1):
+            new_error = math.sqrt(h.GetBinError(i) ** 2 + h_pp_data.GetBinError(i) ** 2)
+            hRatioStat.SetBinError(i, new_error)
         hRatioStat.SetMarkerSize(1.5)
         hRatioStat.SetMarkerStyle(marker)
         hRatioStat.SetMarkerColor(color)
@@ -1012,12 +984,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         else:
           hMC.DrawCopy('L hist same')
 
+      elif plot_pp_data:
+        plot_errors = True
+        if plot_errors:
+          h_pp_sys.DrawCopy('E2 same')
+          h_pp_data.DrawCopy('PE X0 same')
+        else:
+          h_pp_data.DrawCopy('L hist same')
+
       h_sys.DrawCopy('E2 same')
       h.DrawCopy('PE X0 same')
 
       if plot_ratio:
         pad2.cd()
-        if plot_MC:
+        if plot_MC or plot_pp_data:
           hRatioSys.DrawCopy('E2 same')
           hRatioStat.DrawCopy('PE X0 same')
 
@@ -1034,14 +1014,18 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         myLegend.AddEntry(h, text, 'pe')
       else:
         myLegend2.AddEntry(h, text, 'pe')
-    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+    myLegend.AddEntry(h_sys, 'Syst. uncertainty', 'f')
     if plot_MC:
       if MC.lower() == "pythia":
         myLegend.AddEntry(hMC, 'PYTHIA8 Monash2013', 'l')
       elif MC.lower() == "herwig":
         myLegend.AddEntry(hMC, 'Herwig7 Default', 'l')
+    elif plot_pp_data:
+      myLegend.AddEntry(h_pp_data, 'pp', 'pe')
+      if plot_errors:
+        myLegend.AddEntry(h_pp_sys, 'pp syst. uncert.', 'f')
 
-    text_xval = 0.63
+    text_xval = 0.27
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = 'ALICE {}'.format(self.figure_approval_status)
@@ -1077,7 +1061,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       name = 'h_{}_R{}_{}-{}_{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR),
                                                  int(min_pt_truth), int(max_pt_truth), MC,
                                                  i_config, self.file_format)
-
+    elif plot_pp_data:
+      name = 'h_{}_R{}_{}-{}_ppComp_{}{}'.format(self.observable, self.utils.remove_periods(jetR),
+                                                 int(min_pt_truth), int(max_pt_truth),
+                                                 i_config, self.file_format)
 
     output_dir = getattr(self, 'output_dir_final_results')
     if not os.path.exists(os.path.join(output_dir, 'all_results')):
