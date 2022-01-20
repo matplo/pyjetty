@@ -36,7 +36,7 @@ SEED=$(( ($CORE_IN_BIN - 1) * NEV_PER_JOB + 1111 ))
 HERWIG_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/gen/herwig_infiles/$BIN/LHC_5020.run"
 HERWIG_SCRIPT_MPI="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/gen/herwig_infiles/$BIN/LHC_5020_MPI.run"
 PYTHON_SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/james/herwig_parton_hadron.py"
-CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/theta_g/pp/james_pp_gen.yaml"
+CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/theta_g/pp/james_pp.yaml"
 TEMP_OUTDIR="/storage/u/alice/AnalysisResults/theta_g/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 OUTDIR="/rstorage/alice/AnalysisResults/theta_g/$SLURM_ARRAY_JOB_ID/$BIN/$CORE_IN_BIN"
 mkdir -p $TEMP_OUTDIR
