@@ -160,8 +160,8 @@ output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin3"
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: False
-force_rebin: False
+do_unfolding: True
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
@@ -188,13 +188,13 @@ systematics_list:
 #  - thermal_closure
 
 # Paths to processing output, to be used for unfolding
-main_data: '/rstorage/alice/AnalysisResults/ang/611758/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/809428/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/865085/AnalysisResultsFinal.root'
-randmass_data: '/rstorage/alice/AnalysisResults/ang/865128/AnalysisResultsFinal.root'
-randmass_response: '/rstorage/alice/AnalysisResults/ang/865129/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/ang/872257/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFinal.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFinal.root'
 fastsim_response: ['', '']
-thermal_closure: '/rstorage/alice/AnalysisResults/ang/865139/AnalysisResultsFinal.root'
+thermal_closure: '/rstorage/alice/AnalysisResults/ang/879565/AnalysisResultsFinal.root'
 
 # R_max variations
 R_max_variation1: 0.05
