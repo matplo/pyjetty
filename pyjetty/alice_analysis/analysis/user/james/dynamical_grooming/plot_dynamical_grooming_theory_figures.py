@@ -89,7 +89,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             self.ymax_ratio = 1.99
             self.scale_factor_a2 = 1
             self.xtitle =  '#it{z}_{g}'
-            self.ytitle = '#frac{1}{#sigma} #frac{d#it{#sigma}}{d#it{z}_{g}}'
+            self.ytitle = '#frac{1}{#sigma_{jet}} #frac{d#it{#sigma}}{d#it{z}_{g}}'
         elif observable == 'theta_g':
             self.xmin = -0.015
             self.ymax = 3.99
@@ -97,7 +97,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             self.ymax_ratio = 1.99
             self.scale_factor_a2 = 1
             self.xtitle =  '#it{#theta}_{g}'
-            self.ytitle = '#frac{1}{#sigma} #frac{d#it{#sigma}}{d#it{#theta}_{g}}'
+            self.ytitle = '#frac{1}{#sigma_{jet}} #frac{d#it{#sigma}}{d#it{#theta}_{g}}'
 
     #-------------------------------------------------------------------------------------------
     def plot_multipanel(self, observable):
@@ -357,7 +357,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             system4.SetTextSize(size*scale_factor)
             system4.Draw()
 
-            system5 = ROOT.TLatex(x, ymax-5*dy-0.06, 'Dynamical grooming')
+            system5 = ROOT.TLatex(x, ymax-5*dy-0.06, 'dynamical grooming')
             system5.SetNDC()
             system5.SetTextSize(size*scale_factor)
             system5.Draw()

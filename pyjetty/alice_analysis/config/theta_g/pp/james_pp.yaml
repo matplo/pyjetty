@@ -31,7 +31,7 @@ theta_g:
 
   common_settings:
     xtitle: '#it{#theta}_{g}'
-    ytitle: '#frac{1}{#it{#sigma}_{jet, inc}} #frac{d#it{#sigma}}{d#it{#theta}_{g}}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#theta}_{g}}'
     pt_bins_reported: [60, 80]
     max_reg_param: 10
     plot_overlay_list:
@@ -112,7 +112,7 @@ zg:
 
   common_settings:
     xtitle: '#it{z}_{g}'
-    ytitle: '#frac{1}{#it{#sigma}_{jet, inc}} #frac{d#it{#sigma}}{d#it{z}_{g}}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{z}_{g}}'
     pt_bins_reported: [60, 80]
     max_reg_param: 10
     plot_overlay_list:
@@ -195,7 +195,7 @@ file_format: '.pdf'
 output_dir: '/Users/jamesmulligan/Analysis_theta_g_pp/roounfold_output/pp/343450'
 roounfold_path: '/Users/jamesmulligan/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.dylib'
 
-analysis_observable: 'zg'
+analysis_observable: 'theta_g'
 do_unfolding: False
 force_rebin: True
 do_systematics: True
