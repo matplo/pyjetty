@@ -91,10 +91,14 @@ def main():
 	# print (jet_def_rc02)
 	# rc = fjcontrib.Recluster(jet_def_rc, True)
 
+	jet_def_rc005 = fj.JetDefinition(fj.antikt_algorithm, 0.05)
 	jet_def_rc01 = fj.JetDefinition(fj.antikt_algorithm, 0.1)
 	jet_def_rc02 = fj.JetDefinition(fj.antikt_algorithm, 0.2)
-	print (jet_def_rc01)
+	jet_def_rc03 = fj.JetDefinition(fj.antikt_algorithm, 0.3)
+	print(jet_def_rc005)
+	print(jet_def_rc01)
 	print (jet_def_rc02)
+	print (jet_def_rc03)
 	#rc = fjcontrib.Recluster(jet_def_rc, True)
 
 	# tw = treewriter.RTreeWriter(name = 'lsjvsx', file_name = 'leadsj_vs_x.root')
@@ -145,8 +149,10 @@ def main():
 			j_sd01 = sd01.result(j)
 			sd01_info = fjcontrib.get_SD_jet_info(j_sd01)
 
+			rc_sjets005 = fj.sorted_by_pt(jet_def_rc005(j.constituents()))
 			rc_sjets01 = fj.sorted_by_pt(jet_def_rc01(j.constituents()))
 			rc_sjets02 = fj.sorted_by_pt(jet_def_rc02(j.constituents()))
+			rc_sjets03 = fj.sorted_by_pt(jet_def_rc03(j.constituents()))
 			tw.fill_branches(	j 			= j, 
 								lund 		= [ls for ls in lund_gen.result(j)], 
 								dyg1 		= dy_groomer.result(j, 1), 
@@ -167,12 +173,21 @@ def main():
 								# sd_mu 		= sd_info.mu, 
 								# sd_Delta 	= sd_info.dR, 
 
+								lsjet005 	= rc_sjets005[0],
+								nsjet005    	= len(rc_sjets005),
+								sjet005     	= rc_sjets005,
+
 								lsjet01 	= rc_sjets01[0],
 								nsjet01    	= len(rc_sjets01),
 								sjet01     	= rc_sjets01,
+
 								lsjet02 	= rc_sjets02[0],
 								nsjet02    	= len(rc_sjets02),
 								sjet02     	= rc_sjets02,
+
+								lsjet03 	= rc_sjets03[0],
+								nsjet03    	= len(rc_sjets03),
+								sjet03     	= rc_sjets03,
 
 								ppid       	= j_type[0],
 								pquark     	= j_type[1],

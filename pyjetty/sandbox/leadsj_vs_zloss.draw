@@ -1,0 +1,37 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_zloss.root 		:prof_zloss_vs_r_glue :p  : title=prof_zloss_vs_r_glue
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/leadsj_vs_zloss.root 		:prof_zloss_vs_r_quark :p  : title=prof_zloss_vs_r_quark
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul title=PYTHIA8,, tx_size=0.04
+#comment pos=lr tx_size=0.04 item=anti-k_{T} R = 0.4 item=100 < p_{T}^{jet,ch.} < 120 GeV/c item=anti-k_{T} subjets r_{sj} < R
+
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_glue.root 		:prof_zloss_vs_r_glue_log :l +l1 x0 +w4 graph +k4 : title=gluons
+#/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_quark.root 		:prof_zloss_vs_r_quark_log :l +l1 x0 +w4 graph +k2 : title=quarks
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_glue.root 		:prof_zloss_vs_r_glue_log :p +k4: title=gluons
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_quark.root 		:prof_zloss_vs_r_quark_log :p +k2 : title=quarks
+
+#x log(1/r_{sj})
+#y < z_{loss} >
+#maxy 1
+#miny 0
+
+#line 4.605170185988092, 0, 4.605170185988092, 1, 1, 2, 1, 0.2
+#line 2.302585092994046, 0, 2.302585092994046, 1, 1, 2, 1, 0.2
+#line 1.6094379124341003, 0, 1.6094379124341003, 1, 1, 2, 1, 0.2
+#line 1.2039728043259361, 0, 1.2039728043259361, 1, 1, 2, 1, 0.2
+
+#pavetext 4.505170185988092,1.02,4.605170185988092,1.02, tx_size=0.03 angle=45 item=r_{sj}=0.01
+#pavetext 2.202585092994046,1.02,2.302585092994046,1.02, tx_size=0.03 angle=45 item=r_{sj}=0.1
+#pavetext 1.5094379124341003,1.02,1.6094379124341003,1.02, tx_size=0.03 angle=45 item=r_{sj}=0.2
+#pavetext 1.1039728043259361,1.02,1.2039728043259361,1.02, tx_size=0.03 angle=45 item=r_{sj}=0.3
