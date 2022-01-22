@@ -12,16 +12,22 @@
 #geom 500x500
 #date
 #title: smart group
-#legend pos=ul title=PYTHIA8,, tx_size=0.04
-#comment pos=lr tx_size=0.04 item=anti-k_{T} R = 0.4 item=100 < p_{T}^{jet,ch.} < 120 GeV/c item=anti-k_{T} subjets r_{sj} < R
+##legend pos=ul title=PYTHIA8,, tx_size=0.04
+#legend 0.199,0.596,0.477,0.873, title=PYTHIA8,, tx_size=0.04
+#comment pos=lr tx_size=0.04 item=anti-k_{T} R = 0.4 item=80 < p_{T}^{jet,ch.} < 120 GeV/c item=subjet r_{sj} < R
 
 #/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_glue.root 		:prof_zloss_vs_r_glue_log :l +l1 x0 +w4 graph +k4 : title=gluons
 #/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_quark.root 		:prof_zloss_vs_r_quark_log :l +l1 x0 +w4 graph +k2 : title=quarks
 
-/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_glue.root 		:prof_zloss_vs_r_glue_log :p +k4: title=gluons
-/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_quark.root 		:prof_zloss_vs_r_quark_log :p +k2 : title=quarks
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_any.root 		:prof_zloss_vs_r_any_log :p +k1: title=inclusive (anti-k_{T})
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_glue.root 		:prof_zloss_vs_r_glue_log :p +k2: title=gluons (anti-k_{T})
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_quark.root 		:prof_zloss_vs_r_quark_log :p +k4 : title=quarks (anti-k_{T})
 
-#x log(1/r_{sj})
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_any_kt.root 		:prof_zloss_vs_r_any_log :graph l x0 +l1 +w15 +a30 +k1: title=inclusive (k_{T})
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_glue_kt.root 		:prof_zloss_vs_r_glue_log :graph l x0 +l1 +w15 +a30 +k2: title=gluons (k_{T})
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/lsj_zloss_quark_kt.root 		:prof_zloss_vs_r_quark_log :graph l x0 +l1 +w15 +a30 +k4 : title=quarks (k_{T})
+
+#x ln(1/r_{sj})
 #y < z_{loss} >
 #maxy 1
 #miny 0
