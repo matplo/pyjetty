@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+from parso import parse
+
 import fastjet as fj
 import fjcontrib
 import fjext
@@ -41,6 +43,7 @@ def main():
 	parser.add_argument('--jetptmin', help="jet pt minimum", default=-1, type=float)
 	parser.add_argument('--jetptmax', help="jet pt maximum", default=1e6, type=float)
 	parser.add_argument('--eta', help="jet eta max", default=2.4, type=float)
+	parser.add_argument('--kt', help="use kT algorithm instead of anti-kT for the subjets", default=False, action='store_true')
 
 	args = parser.parse_args()
 
@@ -71,7 +74,10 @@ def main():
 	print('log(1/r) :', [ROOT.TMath.Log(1/r) for r in sjrs])
 	sjdefs = dict()
 	for sjr in sjrs:
-		_jet_def = fj.JetDefinition(fj.antikt_algorithm, sjr)
+		if args.kt:
+			_jet_def = fj.JetDefinition(fj.kt_algorithm, sjr)
+		else:
+			_jet_def = fj.JetDefinition(fj.antikt_algorithm, sjr)
 		sjdefs[sjr] = _jet_def
 
 	# tw = treewriter.RTreeWriter(name = 'lsjvsx', file_name = 'leadsj_vs_x.root')
@@ -87,11 +93,17 @@ def main():
 		_h_zloss_r_q = ROOT.TH1F(sname, sname, len(sjrs), 0., 1.)
 		h_zloss_r_q[sjr] = _h_zloss_r_q
 
-	sname = 'prof_zloss_vs_r_glue'
-	prof_g = ROOT.TProfile(sname, sname, nbins, 0, jet_R0)
 	lbins = logbins(ROOT.TMath.Log(1./jet_R0), ROOT.TMath.Log(1./sjrs[0]), nbins)
 	print('lbins:', lbins)
+
+	sname = 'prof_zloss_vs_r_any'
+	prof_a = ROOT.TProfile(sname, sname, nbins, 0, jet_R0)
+	prof_a_log = ROOT.TProfile(sname+'_log', sname+'_log', nbins, lbins)
+
+	sname = 'prof_zloss_vs_r_glue'
+	prof_g = ROOT.TProfile(sname, sname, nbins, 0, jet_R0)
 	prof_g_log = ROOT.TProfile(sname+'_log', sname+'_log', nbins, lbins)
+
 	sname = 'prof_zloss_vs_r_quark'
 	prof_q = ROOT.TProfile(sname, sname, nbins, 0, jet_R0)
 	prof_q_log = ROOT.TProfile(sname+'_log', sname+'_log', nbins, lbins)
@@ -133,6 +145,9 @@ def main():
 				tw.fill_branch("ppid", j_type[0])
 				tw.fill_branch("pquark", j_type[1])
 				tw.fill_branch("pglue", j_type[2])
+
+				prof_a.Fill(sjr, zloss)
+				prof_a_log.Fill(ROOT.TMath.Log(1./sjr), zloss)
 
 				if j_type[1]:
 					h_zloss_r_q[sjr].Fill(zloss)
