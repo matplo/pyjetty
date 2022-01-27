@@ -95,15 +95,18 @@ leading_subjet_z:
 # Generating RM
 response_levels: [['h','ch','off']]
 th_subconfigs: ['config1','config2']
-theory_pt_bins: [20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,195,200]
+theory_pt_bins: [20,30,40,50,60,70,80,90,100,110,120,130,140,160,170,180,190,200]
 
-#th_fold_observable: 'jet_axis'
-#do_theory_comp: True
-#theory_dir: '/home/rey/jet_axis_theory_calculations/data/'
-#pt_scale_factors_path: '/home/rey/jet_axis_theory_calculations/data/'
-#response_files: ["/rstorage/alice/AnalysisResults/rey/692322/AnalysisResultsFinal.root","/rstorage/alice/AnalysisResults/rey/692325/AnalysisResultsFinal.root"]
-#response_labels: ["PYTHIA8","Herwig7"] 
-#final_pt_bins: [20,40,60,80,100]
+# Folding theory
+th_fold_observable: 'leading_subjet_z'
+theory_dir: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/subjet_z'
+pt_scale_factors_path: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/subjet_z'
+response_files: ["/rstorage/alice/AnalysisResults/james/920110/AnalysisResultsFinal.root","/rstorage/alice/AnalysisResults/james/922423/AnalysisResultsFinal.root"]
+response_labels: ["PYTHIA8","Herwig7"] 
+final_pt_bins: [80, 120]
+
+#There are a few options available for which binning the user wants for the observable to have. 
+# If no options are specified, I think the default is to bin with the binning used in the data analysis
 #theory_obs_bins: [0.,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.11,0.12,0.13,0.14,0.15,0.16,0.17,0.18,0.19,0.2]
 #use_nominal_ana_binning: True
 
