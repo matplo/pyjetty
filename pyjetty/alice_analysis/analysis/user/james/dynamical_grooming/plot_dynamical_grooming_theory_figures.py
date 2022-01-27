@@ -84,6 +84,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
 
         if observable == 'zg':
             self.xmin = -0.01
+            self.xmax = 0.5
             self.ymax = 8.99
             self.ymin_ratio = 1e-3
             self.ymax_ratio = 1.99
@@ -92,6 +93,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             self.ytitle = '#frac{1}{#sigma_{jet}} #frac{d#it{#sigma}}{d#it{z}_{g}}'
         elif observable == 'theta_g':
             self.xmin = -0.015
+            self.xmax = 0.999
             self.ymax = 3.99
             self.ymin_ratio = 1e-3
             self.ymax_ratio = 1.99
@@ -262,14 +264,14 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
         pad1.SetRightMargin(0.)
         pad1.SetTopMargin(0.0)
         pad1.SetBottomMargin(0.)
-        pad1.SetTicks(0,1)
+        pad1.SetTicks(1,1)
         pad1.Draw()
         pad1.cd()
 
         # Draw blank histos
         blankname = f'myBlankHisto_{pad}'
         xmax = self.h.GetXaxis().GetBinUpEdge(self.h.GetXaxis().GetNbins())
-        myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, xmax)
+        myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetYTitle(self.ytitle)    
         myBlankHisto.GetYaxis().SetTitleSize(0.1)
@@ -326,7 +328,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
         # # # # # # # # # # # # # # # # # # # # # # # #
         # text
         # # # # # # # # # # # # # # # # # # # # # # # #
-        ymax = 0.92
+        ymax = 0.9
         dy = 0.08
         x = 0.45 + shift + shift2
         size = 0.06
@@ -352,7 +354,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             system3.SetTextSize(size*scale_factor)
             system3.Draw()
             
-            system4 = ROOT.TLatex(x,ymax-4.*dy-0.02, str(self.min_pt) + ' < #it{p}_{T,jet}^{ch} < ' + str(self.max_pt) + ' GeV/#it{c}')
+            system4 = ROOT.TLatex(x,ymax-4.*dy-0.025, str(self.min_pt) + ' < #it{p}_{T,jet}^{ch} < ' + str(self.max_pt) + ' GeV/#it{c}')
             system4.SetNDC()
             system4.SetTextSize(size*scale_factor)
             system4.Draw()
@@ -376,7 +378,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
             beta_size = 1.3*size
             if observable == 'theta_g':
                 xlabel -= 0.4
-        system6 = ROOT.TLatex(xlabel,ymax-7.*dy-0.02, '#it{{a}} = {}'.format(a))
+        system6 = ROOT.TLatex(xlabel,ymax-7.*dy-0.0, '#it{{a}} = {}'.format(a))
         system6.SetNDC()
         system6.SetTextSize(beta_size)
         system6.Draw()
@@ -400,7 +402,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
 
         # Draw blank histos
         blankname = f'myBlankHisto2_{pad}'
-        myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, xmax-0.001)
+        myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto2.SetNdivisions(505, "y")
         myBlankHisto2.SetNdivisions(505, "x")
         myBlankHisto2.SetXTitle(self.xtitle)
@@ -416,7 +418,7 @@ class PlotDynamicalGroomingFigures(common_base.CommonBase):
         myBlankHisto2.Draw()
         self.blank_histo_list.append(myBlankHisto2)
 
-        line = ROOT.TLine(self.xmin,1,xmax,1)
+        line = ROOT.TLine(self.xmin,1,self.xmax,1)
         line.SetLineColor(1)
         line.SetLineStyle(2)
         line.Draw('same')
