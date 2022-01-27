@@ -285,7 +285,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     pad1.SetBottomMargin(0.13)
     if plot_ratio:
       pad1.SetBottomMargin(0.)
-    pad1.SetTicks(0,1)
+    pad1.SetTicks(1,1)
     pad1.Draw()
     pad1.cd()
 
@@ -629,7 +629,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     
     text_latex.SetTextSize(0.065)
     x = 0.25
-    y = 0.86
+    y = 0.855
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(x, y, text)
     
