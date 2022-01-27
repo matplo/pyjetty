@@ -24,6 +24,7 @@ plt.rcParams["yaxis.labellocation"] = 'top'
 plt.rcParams["xaxis.labellocation"] = 'right'
 
 from pyjetty.alice_analysis.analysis.user.substructure import run_analysis
+from pyjetty.alice_analysis.analysis.user.ang.PbPb import plotting_utils_ang
 
 # Load pyjetty ROOT utils
 ROOT.gSystem.Load('libpyjetty_rutil')
@@ -66,8 +67,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.is_pp = True
     self.results_pp = None
     if 'constituent_subtractor' in config:
-        self.is_pp = False
-        self.results_pp = config["results_pp"]
+      self.is_pp = False
+      self.results_pp = config["results_pp"]
+      self.max_distance = config["constituent_subtractor"]["max_distance"]
     print('is_pp: {}'.format(self.is_pp))
 
     # Whether or not to use the previous preliminary result in final plots
@@ -104,8 +106,95 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   # This function is called once after all subconfigurations and jetR have been looped over
   #----------------------------------------------------------------------
   def plot_performance(self):
+
+    if not self.do_plot_performance:
+      return
     print('Plotting performance plots...')
-    print("ERROR: Implement plot_performance() in python script")
+
+    # Initialize performance plotting class, and plot
+    if self.is_pp:
+
+      self.plotting_utils = plotting_utils_theta_g.PlottingUtils(
+        self.output_dir_performance, self.config_file)
+      self.plot_single_performance(self.output_dir_performance)
+
+    # Pb-Pb case
+    else:
+
+      # Plot for each R_max
+      for R_max in self.max_distance:
+
+        output_dir_performance = os.path.join(
+          self.output_dir_performance, 'Rmax{}'.format(R_max))
+        self.plotting_utils = plotting_utils_ang.PlottingUtils(
+          output_dir_performance, self.config_file, R_max = R_max)
+        self.plot_single_performance(output_dir_performance, R_max)
+
+        # Plot for thermal model
+        if self.do_thermal_closure and R_max == self.R_max:
+
+          output_dir_performance = os.path.join(self.output_dir_performance, 'thermal')
+          self.plotting_utils = plotting_utils_ang.PlottingUtils(
+            output_dir_performance, self.config_file, R_max = R_max, thermal = True)
+          self.plot_single_performance(output_dir_performance, R_max)
+
+    return
+
+
+  #----------------------------------------------------------------------
+  # This function is called once after all subconfigurations and jetR have been looped over
+  #----------------------------------------------------------------------
+  def plot_single_performance(self, output_dir_performance, R_max = None):
+
+    if R_max:
+      suffix = '_Rmax{}'.format(R_max)
+    else:
+      suffix = ''
+
+    # Create output subdirectories
+    self.create_output_subdir(output_dir_performance, 'jet')
+    self.create_output_subdir(output_dir_performance, 'resolution')
+    self.create_output_subdir(output_dir_performance, 'residual_pt')
+    self.create_output_subdir(output_dir_performance, 'residual_obs')
+    self.create_output_subdir(output_dir_performance, 'mc_projections_det')
+    self.create_output_subdir(output_dir_performance, 'mc_projections_truth')
+    self.create_output_subdir(output_dir_performance, 'truth')
+    self.create_output_subdir(output_dir_performance, 'data')
+    if not self.is_pp:
+      self.create_output_subdir(output_dir_performance, 'delta_pt')
+
+    # Generate performance plots
+    for jetR in self.jetR_list:
+
+      # Plot some subobservable-independent performance plots
+      self.plotting_utils.plot_DeltaR(jetR, self.jet_matching_distance)
+      self.plotting_utils.plot_JES(jetR)
+      self.plotting_utils.plot_JES_proj(jetR, self.pt_bins_reported)
+      self.plotting_utils.plotJER(
+        jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
+      self.plotting_utils.plot_jet_reco_efficiency(
+        jetR, self.utils.obs_label(self.obs_settings[0], self.grooming_settings[0]))
+
+      if not self.is_pp:
+        self.plotting_utils.plot_delta_pt(jetR, self.pt_bins_reported)
+
+      # Plot subobservable-dependent performance plots
+      for i, _ in enumerate(self.obs_subconfig_list):
+
+        obs_setting = self.obs_settings[i]
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+
+        self.plotting_utils.plot_obs_resolution(
+          jetR, obs_label, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual_pt(
+          jetR, obs_label, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual_obs(jetR, obs_label, self.xtitle)
+        self.plotting_utils.plot_obs_projections(
+          jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_truth(
+          jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+
     return
 
 
@@ -116,7 +205,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
 
-    # Loop through pt slices, and plot final result for each 1D theta_g distribution
+    # Loop through pt slices, and plot final result for each 1D distribution
     for i in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[i]
       max_pt_truth = self.pt_bins_reported[i+1]
@@ -948,10 +1037,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if plot_MC:
           hRatioSys.Divide(hMC)
         elif plot_pp_data:
-          hRatioSys.Divide(h_pp_data)
-          for i in range(1, hRatioSys.GetNbinsX()+1):
-            new_error = math.sqrt(h_sys.GetBinError(i) ** 2 + h_pp_sys.GetBinError(i) ** 2)
-            hRatioSys.SetBinError(i, new_error)
+          hRatioSys.Divide(h_pp_sys)
+          #for i in range(1, hRatioSys.GetNbinsX()+1):
+          #  new_error = math.sqrt(h_sys.GetBinError(i) ** 2 + h_pp_sys.GetBinError(i) ** 2)
+          #  hRatioSys.SetBinError(i, new_error)
         hRatioSys.SetLineColor(0)
         hRatioSys.SetFillColor(color)
         hRatioSys.SetFillColorAlpha(color, 0.3)
@@ -965,9 +1054,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           hRatioStat.Divide(hMC)
         elif plot_pp_data:
           hRatioStat.Divide(h_pp_data)
-          for i in range(1, hRatioStat.GetNbinsX()+1):
-            new_error = math.sqrt(h.GetBinError(i) ** 2 + h_pp_data.GetBinError(i) ** 2)
-            hRatioStat.SetBinError(i, new_error)
+          #for i in range(1, hRatioStat.GetNbinsX()+1):
+          #  new_error = math.sqrt(h.GetBinError(i) ** 2 + h_pp_data.GetBinError(i) ** 2)
+          #  hRatioStat.SetBinError(i, new_error)
         hRatioStat.SetMarkerSize(1.5)
         hRatioStat.SetMarkerStyle(marker)
         hRatioStat.SetMarkerColor(color)

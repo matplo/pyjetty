@@ -146,11 +146,11 @@ results_pp: "/rstorage/alice/AnalysisResults/ang/AngR04_ptbin3/ang/final_results
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: False
-force_rebin: False
+do_unfolding: True
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
-do_plot_performance: False
+do_plot_performance: True
 figure_approval_status: 'Work In Progress'
 
 # Whether or not to use previous result
@@ -171,7 +171,7 @@ systematics_list:
 #  - fastsim_generator1
   - subtraction1
   - subtraction2
-#  - thermal_closure
+  - thermal_closure
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/872257/AnalysisResultsFinal.root'

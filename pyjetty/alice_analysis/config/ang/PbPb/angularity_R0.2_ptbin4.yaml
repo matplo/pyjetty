@@ -18,6 +18,9 @@ constituent_subtractor:
   max_pt_correct: 100
   ghost_area: 0.01
 
+# Max eta value (for plots)
+eta_max: 0.9
+
 
 ###############################################################################
 # Rebinning and unfolding parameters/configurations for angularity observables
@@ -161,11 +164,11 @@ results_pp: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin4/ang/final_results
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: True
-force_rebin: True
+do_unfolding: False
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
-do_plot_performance: False
+do_plot_performance: True
 figure_approval_status: 'Work In Progress'
 
 # Whether to use previous result

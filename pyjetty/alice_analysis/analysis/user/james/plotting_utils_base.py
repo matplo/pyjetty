@@ -81,8 +81,10 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     #self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
     #                   ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
     #                   ROOT.kOrange-3]
-    self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray, ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kBlue-6, 1]
-                       
+    self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6,
+                       ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2,
+                       ROOT.kGray, ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kBlue-6, 1]
+
     self.MarkerArray = [20, 21, 22, 23, 34, 33, 24, 25, 26, 32, 27, 28, 42]
     self.OpenMarkerArray = [24, 25, 26, 32, 27, 28, 42]
 
@@ -435,6 +437,8 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       obs_true_list = [0.2, 0.3, 0.4, 0.5]
     elif 'z_{r}' in xtitle:
       obs_true_list = [0., 0.2, 0.4, 0.6, 0.8, 1.]
+    elif 'lambda' in xtitle:
+      obs_true_list = [0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8]
 
     for i in range(0, len(obs_true_list) - 1):
       min_obs_truth = obs_true_list[i]
@@ -501,17 +505,17 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     # (pt-det, pt-truth, obs-det, obs-truth)
     name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_obs = self.fMC.Get(name)
-    if hRM_obs.GetSumw2() == 0:
+    if not hRM_obs.GetSumw2():
       hRM_obs.Sumw2()
     
     name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     hObs_JetPt = self.fData.Get(name)
-    if hObs_JetPt.GetSumw2() == 0:
+    if not hObs_JetPt.GetSumw2():
       hObs_JetPt.Sumw2()
 
     # Plot 2D statistics in data
     self.plot2D_obs_statistics(hObs_JetPt.Clone(), jetR, obs_label)
-      
+
     # Loop through pt slices, and plot:
     #   (a) MC-det and MC-truth 1D distributions, for fixed pt-truth
     #   (b) MC-det and data 1D distributions, for fixed pt-det
@@ -618,14 +622,26 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     c = ROOT.TCanvas('c','c: hist',600,450)
     c.cd()
     ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetRightMargin(0.15)
     ROOT.gPad.SetBottomMargin(0.15)
     
     hObs_JetPt.SetMarkerSize(0.5)
     hObs_JetPt.GetYaxis().SetRangeUser(0, 1.)
     hObs_JetPt.GetXaxis().SetRangeUser(0, 100)
-    hObs_JetPt.RebinX(5)
-    hObs_JetPt.RebinY(5)
-    hObs_JetPt.Draw('text colz')
+    if self.observable != "ang":
+      hObs_JetPt.RebinX(5)
+      hObs_JetPt.RebinY(5)
+      h = hObs_JetPt
+    else:
+      ROOT.gPad.SetLogz(1)
+      xbins = [5, 20, 40, 60, 80, 100, 150, 200]
+      ybins = [hObs_JetPt.GetYaxis().GetBinLowEdge(i) for i in range(1, hObs_JetPt.GetYaxis().GetNbins()+2)]
+      h = self.rebin_data(
+        hObs_JetPt, hObs_JetPt.GetName() + "_rebin", len(xbins) - 1, array('d', xbins),
+        len(ybins) - 1, array('d', ybins), move_underflow=False)
+      h.RebinY(5)
+
+    h.Draw('text colz')
 
     output_filename = os.path.join(self.output_dir, 'data/h2D_{}_statistics_R{}_{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label))
     c.SaveAs(output_filename)
@@ -654,6 +670,10 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       rebin_val_mcdet = 2
       rebin_val_mctruth = 1
       rebin_val_data = 5
+    elif self.observable == "ang":
+      rebin_val_mcdet = 2
+      rebin_val_mctruth = 2
+      rebin_val_data = 2
       
     # Get RM, for a given pt cut
     if option == 'det':

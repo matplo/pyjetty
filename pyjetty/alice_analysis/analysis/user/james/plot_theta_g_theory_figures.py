@@ -89,7 +89,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.alpha = 0.7
         self.color_data = 1
         self.colors = [ROOT.kRed-7, ROOT.kTeal-8, ROOT.kViolet-8, ROOT.kBlue-9]
-        
+
         #------------------------------------------------------
 
         # Soft scale
@@ -124,7 +124,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         #------------------------------------------------------
         # Store paths to all final results in a dictionary
         self.predictions = {}
-        
+
         for i, min_pt in list(enumerate(self.pt_list))[:-1]:
             self.predictions[min_pt] = {}
             for R in self.R_list:
@@ -330,7 +330,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad1.SetRightMargin(0.)
         pad1.SetTopMargin(0.0)
         pad1.SetBottomMargin(0.)
-        pad1.SetTicks(0,1)
+        pad1.SetTicks(2,2)
         if self.logy:
             pad1.SetLogy()
         if self.logx:
@@ -483,7 +483,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         if pad == 2:
             system5 = ROOT.TLatex(0.2+(shift/2), ymax-3.8*dy,
-                                  'Soft Drop: #it{z}_{cut} = %s' % str(zcut))
+                                  'Soft drop: #it{z}_{cut} = %s' % str(zcut))
             system5.SetNDC()
             system5.SetTextSize(size)
             system5.Draw()

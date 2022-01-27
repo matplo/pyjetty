@@ -18,6 +18,9 @@ constituent_subtractor:
   max_pt_correct: 100
   ghost_area: 0.01
 
+# Max eta value (for plots)
+eta_max: 0.9
+
 
 ###############################################################################
 # Rebinning and unfolding parameters/configurations for angularity observables
@@ -165,7 +168,7 @@ do_unfolding: True
 force_rebin: True
 do_systematics: True
 do_plot_final_result: True
-do_plot_performance: False
+do_plot_performance: True
 figure_approval_status: 'Work In Progress'
 
 # Whether or not to use previous result
