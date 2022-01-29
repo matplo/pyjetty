@@ -66,7 +66,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
                 obs_bins = array('d',getattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+str(obs_setting)))
                 obs_width = np.subtract(obs_bins[1:],obs_bins[:-1])
-                print(f'obs_bins: {obs_bins}')
+                #print(f'obs_bins: {obs_bins}')
 
                 # -----------------------------------------------------        
                 # Create histograms where theory curves will be stored
@@ -99,8 +99,9 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
                     # Get z_r values
                     # Remove every other value in the array, since they are given as [0., 0.001, 0.001, 0.002, 0.002, ..., 0.999, 0.999, 1.0]
                     # Then take center value as "bin center"
-                    zr_edges = SCET_data_obs_setting_pt_bin['z'][::2]
+                    zr_edges = SCET_data_obs_setting_pt_bin['z'][::20]
                     zr_edges = np.append(zr_edges, SCET_data_obs_setting_pt_bin['z'][-1])
+                    #print(zr_edges)
                     zr_values = (zr_edges[1:] + zr_edges[:-1]) / 2
                     #print('zr_values:',zr_values.shape)
                     #print([zr_values[i] for i in range(zr_values.size)])
@@ -112,6 +113,8 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
                         # Get cross-section
                         # Remove every other value in the array, since they are given as [0., 0.001, 0.001, 0.002, 0.002, ..., 0.999, 0.999, 1.0]
                         y_val_n = SCET_data_variations[sv][1::2]
+                        # Then average every 10 elements together, in order to match the binning of our RM [0, 0.01, 0.02, ..., 0.99, 1.0]
+                        y_val_n =np.mean(y_val_n.reshape(-1, 10), axis=1)
                         #print(y_val_n)
                         #print([y_val_n[i] for i in range(y_val_n.size)])
 

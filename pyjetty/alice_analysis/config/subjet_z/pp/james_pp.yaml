@@ -95,13 +95,13 @@ leading_subjet_z:
 # Generating RM
 response_levels: [['h','ch','off']]
 th_subconfigs: ['config1','config2']
-theory_pt_bins: [20,30,40,50,60,70,80,90,100,110,120,130,140,160,170,180,190,200]
+theory_pt_bins: [50,60,70,80,90,100,110,120,130,140,160,180,200]
 
 # Folding theory
 th_fold_observable: 'leading_subjet_z'
 theory_dir: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/subjet_z'
 pt_scale_factors_path: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/subjet_z'
-response_files: ["/rstorage/alice/AnalysisResults/james/920110/AnalysisResultsFinal.root","/rstorage/alice/AnalysisResults/james/922423/AnalysisResultsFinal.root"]
+response_files: ["/rstorage/alice/AnalysisResults/james/934921/AnalysisResultsFinal.root","/rstorage/alice/AnalysisResults/james/934865/AnalysisResultsFinal.root"]
 response_labels: ["PYTHIA8","Herwig7"] 
 final_pt_bins: [80, 120]
 

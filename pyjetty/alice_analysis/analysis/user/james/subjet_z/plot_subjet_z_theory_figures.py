@@ -1,14 +1,11 @@
 """
-macro for plotting multi-paneled angularity theory figures
+macro for plotting multi-paneled data-pQCD figures
 """
 
 # General
 import os
 import sys
-import math
 import argparse
-
-from numpy import r_
 
 # Data analysis and plotting
 import ROOT
@@ -25,45 +22,51 @@ sys.settrace
 ROOT.gROOT.SetBatch(True)
 
 ################################################################
-class PlotAngularityFigures(common_base.CommonBase):
+class PlotSubjetZFigures(common_base.CommonBase):
 
     # ---------------------------------------------------------------
     # Constructor
     # ---------------------------------------------------------------
     def __init__(self, output_dir='', **kwargs):
-        super(PlotAngularityFigures, self).__init__(**kwargs)
+        super(PlotSubjetZFigures, self).__init__(**kwargs)
 
         self.output_dir = output_dir
         self.file_format = '.pdf'
 
         #------------------------------------------------------
 
-        self.observable = 'leading_subjet_z'
+        self.observable = 'inclusive_subjet_z'
         self.base_dir = f'/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/subjet_z/{self.observable}'
         self.data_file = 'fFinalResults.root'
-        self.theory_file = 'folded_scet_R04_pT_20_200.root'
+        self.theory_file = 'folded_scet_R04_pT_80_120.root'
         self.R_list = [0.4]
         self.r_list = [0.1, 0.2]
         self.pt_list = [80, 120]
         self.folding_labels = ['PYTHIA8', 'Herwig7']
-
-        # Note: logx doesn't work well, since lowest bins are different, and dominate some plots
-        self.logx = False 
-        # Note: logy is also not great, since the right-hand tails drop to different values
-        self.logy = False 
+        self.z_leading_min = 0.7001
 
         self.xmin = -0.03
-        self.ymax = 13.5
-        self.ymin_ratio = 0.4
-        self.ymax_ratio = 2.5
+        self.xmax = 1.03
+        if self.observable ==  'inclusive_subjet_z':
+            self.logy = True 
+            self.ymin = 0.5
+            self.ymax = 2000
+            self.ymin_ratio = 0.1
+            self.ymax_ratio = 20
+        if self.observable ==  'leading_subjet_z':
+            self.logy = True 
+            self.ymin = 0.18
+            self.ymax = 1200
+            self.ymin_ratio = 0.3
+            self.ymax_ratio = 12.9
 
         self.xtitle = '#it{z}_{#it{r}}'
-        self.ytitle = '#frac{1}{#it{#sigma}_{#it{z}_{#it{r}}>#it{#it{z}_{#it{r}}^{NP}}} ' + \
-                      '#frac{d#it{#sigma}}{d#it{#it{z}_{#it{r}}}'
+        self.ytitle = '#frac{1}{ #it{#sigma}_{ 0.7 < #it{z}_{#it{r}} < #it{z}_{#it{r}}^{NP} } } ' + \
+                      '#frac{d#it{#sigma}}{d#it{#it{z}_{#it{r}}}}'
 
-        self.left_offset = 0.4
+        self.left_offset = 0.26
         self.bottom_offset = 0.15
-        self.ratio_height = 0.25
+        self.ratio_height = 0.3
         self.top_bottom_scale_factor = (1 - self.ratio_height) / \
                                        (1 - self.bottom_offset - self.ratio_height)
 
@@ -83,7 +86,6 @@ class PlotAngularityFigures(common_base.CommonBase):
         # Peturbative region defined by Lambda=(1-z)pt*r
         self.zr_np = {}
         self.Lambda = 1
-
         for i, min_pt in list(enumerate(self.pt_list))[:-1]:
             max_pt = self.pt_list[i+1]
 
@@ -127,19 +129,20 @@ class PlotAngularityFigures(common_base.CommonBase):
 
         # Create multi-panel canvas
         cname = "c_" + str(R) + '_PtBin' + str(min_pt) + '-' + str(max_pt)
-        c = ROOT.TCanvas(cname, cname, 2400, 1400)
-        c.SetRightMargin(0.05);
+        c = ROOT.TCanvas(cname, cname, 2000, 1400)
+        c.SetRightMargin(0.1);
         c.SetLeftMargin(self.left_offset);
         c.SetTopMargin(0.03);
         c.SetBottomMargin(self.bottom_offset / 2);
         c.cd()
-        c.Divide(3, 1, 0.01, 0.)
+        c.Divide(2, 1, 0.01, 0.)
 
         # Keep histograms in memory, otherwise there can be problems
         #   with double deletes (i.e. ROOT then python deletes)
         self.plot_list = []
         self.g_theory_dict = { r : [] for r in self.r_list }
         self.h_ratio_dict = { r : [] for r in self.r_list }
+        self.h_ratio_sys_dict = { r : [] for r in self.r_list }
         self.g_ratio_dict = { r : [] for r in self.r_list }
 
         # Plot each pt bin in its own pad
@@ -171,21 +174,19 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.h.SetDirectory(0)
         self.h_sys.SetDirectory(0)
 
-        # Remove negative bin edges (which has the tagging fraction)
-        self.h = self.remove_negative_bin_edges(self.h)
-        self.h_sys = self.remove_negative_bin_edges(self.h_sys)
-
         # Normalize such that integral in perturbative region is 1
         n = self.h.GetNbinsX()
-        min_bin = self.h.FindBin(self.zr_np[min_pt][R][r]) + 1
-        max_bin = self.h.FindBin(self.zr_np[min_pt][R][r]) + 1
-        integral_perturbative = self.h.Integral(min_bin, max_bin+1, 'width')
+        min_bin = self.h.FindBin(self.z_leading_min)             
+        max_bin = self.h.FindBin(self.zr_np[min_pt][R][r]) - 1 # Take bin below zr_NP
+        integral_total = self.h.Integral(1, n, 'width')
+        integral_perturbative = self.h.Integral(min_bin, max_bin, 'width')
+        print(f'integral_total, leading_subjet_z, r={r}: {integral_total}')
+        print(f'integral_perturbative, leading_subjet_z, r={r}: {integral_perturbative}')
         self.h.Scale(1./integral_perturbative)
         self.h_sys.Scale(1./integral_perturbative)
 
-        self.scale_label = self.scale_histogram_for_visualization(
-            self.h_sys, R, min_pt, r)
-        self.scale_histogram_for_visualization(self.h, R, min_pt, r)
+        # Note: we don't compute z_loss or <N_subjets>, since we do not include 
+        # the NP region in the normalization
 
         filename = os.path.join(self.base_dir, self.theory_file)
         f_theory = ROOT.TFile(filename, 'READ')
@@ -212,23 +213,16 @@ class PlotAngularityFigures(common_base.CommonBase):
             h_theory_min_rebinned = self.rebin_theory(h_theory_min, self.h)
             h_theory_max_rebinned = self.rebin_theory(h_theory_max, self.h)
 
-            h_theory_cent_rebinned = self.remove_negative_bin_edges(h_theory_cent_rebinned)
-            h_theory_min_rebinned = self.remove_negative_bin_edges(h_theory_min_rebinned)
-            h_theory_max_rebinned = self.remove_negative_bin_edges(h_theory_max_rebinned)
-
-            # Normalize such that integral in perturbative region is 1
-            min_bin = self.h.FindBin(self.zr_np[min_pt][R][r]) + 1
-            max_bin = self.h.FindBin(self.zr_np[min_pt][R][r]) + 1
-            integral_perturbative_theory =  h_theory_cent_rebinned.Integral(min_bin, max_bin+1, 'width')
+            # Scale to the leading subjet perturbative region 0.5<zr<zr_NP
+            n = self.h.GetNbinsX()
+            min_bin = h_theory_cent_rebinned.FindBin(self.z_leading_min)
+            max_bin = h_theory_cent_rebinned.FindBin(self.zr_np[min_pt][R][r]) - 1 # Take bin below zr_NP
+            integral_perturbative_theory = h_theory_cent_rebinned.Integral(min_bin, max_bin, 'width')
+            print(f'integral_perturbative, leading_subjet_z, r={r}: {integral_perturbative_theory}')
 
             h_theory_cent_rebinned.Scale(1./integral_perturbative_theory)
             h_theory_min_rebinned.Scale(1./integral_perturbative_theory)
             h_theory_max_rebinned.Scale(1./integral_perturbative_theory)
-
-            # Scale additionally for visualization
-            self.scale_histogram_for_visualization(h_theory_cent_rebinned, R, min_pt, r)
-            self.scale_histogram_for_visualization(h_theory_min_rebinned, R, min_pt, r)
-            self.scale_histogram_for_visualization(h_theory_max_rebinned, R, min_pt, r)
 
             n_theory_bins = h_theory_cent_rebinned.GetNbinsX()
             x = np.array([h_theory_cent_rebinned.GetXaxis().GetBinCenter(i) \
@@ -245,10 +239,9 @@ class PlotAngularityFigures(common_base.CommonBase):
             g_theory.SetNameTitle(g_theory_name, g_theory_name)
             self.g_theory_dict[r].append(g_theory)
 
-            # Construct ratios in self.h_ratio_dict, self.g_ratio_dict
-            self.construct_ratio(self.h, self.h_sys, h_theory_cent_rebinned, h_theory_min_rebinned,
-                                 h_theory_max_rebinned, n_theory_bins, x, xerrup, xerrdn, y, yerrup, yerrdn,
-                                 R, r, i, pad)
+            # Construct ratios in self.h_ratio_dict, self.h_ratio_sys_dict, self.g_ratio_dict
+            self.construct_ratio(self.h, self.h_sys, h_theory_cent_rebinned,
+                                 n_theory_bins, x, xerrup, xerrdn, y, yerrup, yerrdn, R, r, pad)
 
         f_data.Close()
         f_theory.Close()
@@ -261,6 +254,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.plot_list.append(self.h_sys)
         self.plot_list.append(self.g_theory_dict)
         self.plot_list.append(self.h_ratio_dict)
+        self.plot_list.append(self.h_ratio_sys_dict)
         self.plot_list.append(self.g_ratio_dict)
         self.plot_list.append(self.blank_histo_list)
 
@@ -268,8 +262,6 @@ class PlotAngularityFigures(common_base.CommonBase):
     # Draw beta histograms in given pad
     #-------------------------------------------------------------------------------------------
     def plot_beta_overlay(self, c, pad, R, r, min_pt, max_pt):
-
-        self.logy = False
 
         # Create canvas
         c.cd(pad)
@@ -293,48 +285,46 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad1.SetTicks(0,1)
         if self.logy:
             pad1.SetLogy()
-        if self.logx:
-            pad1.SetLogx()
         pad1.Draw()
         pad1.cd()
 
         # Draw blank histos
         blankname = 'myBlankHisto_{}_PtBin{}-{}_{}'.format(pad, min_pt, max_pt, R)
-        xmax = self.h.GetXaxis().GetBinUpEdge(self.h.GetXaxis().GetNbins())
-        myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, xmax)
+        myBlankHisto = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetYTitle(self.ytitle)
         myBlankHisto.GetYaxis().SetTitleSize(0.09)
-        myBlankHisto.GetYaxis().SetTitleOffset(1.4)
-        myBlankHisto.GetYaxis().SetLabelSize(0.06)
-        myBlankHisto.SetMinimum(0.001)
+        myBlankHisto.GetYaxis().SetTitleOffset(1.2)
+        myBlankHisto.GetYaxis().SetLabelSize(0.08)
+        myBlankHisto.SetMinimum(self.ymin)
         myBlankHisto.SetMaximum(self.ymax)
 
         myBlankHisto.Draw()
         self.blank_histo_list.append(myBlankHisto)
 
-        scale_factor = 1.
         if pad in [1]:
             shift = 0.0
             shift2 = 0.0
         else:
-            shift = -0.08
-            shift2 = -0.15 - shift
+            if self.observable == 'leading_subjet_z':
+                shift = 0.0
+                shift2 = 0.0
+            elif self.observable == 'inclusive_subjet_z':
+                shift = -0.08
+                shift2 = -0.15 - shift
 
         # Legend for the center pad (2)
-        leg = ROOT.TLegend(0.2+shift, 0.7, 0.6, 0.96)
-        size = 0.08
-        self.setupLegend(leg, size)
-
+        if self.observable == 'leading_subjet_z':
+            x_legend = 0.1
+        elif self.observable == 'inclusive_subjet_z':
+            x_legend = 0.23
+        leg = ROOT.TLegend(x_legend+shift, 0.55, 0.6, 0.96)
+        size = 0.07
+        self.setupLegend(leg, size, sep=0.)
         self.plot_list.append(leg)
 
-        leg3 = ROOT.TLegend(0.2+shift/2, 0.72, 0.55, 0.96)
-        if pad == 2:
-            self.setupLegend(leg3, size)
-            self.plot_list.append(leg3)
-
         line_np = ROOT.TLine(self.zr_np[min_pt][R][r], 0, 
-                             self.zr_np[min_pt][R][r], self.ymax*0.6)
+                             self.zr_np[min_pt][R][r], self.ymax)
         line_np.SetLineColor(self.colors[-1])
         line_np.SetLineStyle(2)
         line_np.SetLineWidth(2)
@@ -355,8 +345,8 @@ class PlotAngularityFigures(common_base.CommonBase):
         self.h_sys.SetFillStyle(1001)
         self.h_sys.SetLineWidth(0)
         
-        leg.AddEntry(self.h, 'Data','PE')
-        
+        leg.AddEntry(self.h,'ALICE','PE')
+
         # Draw theory
         for i, folding_label in enumerate(self.folding_labels):
 
@@ -371,54 +361,50 @@ class PlotAngularityFigures(common_base.CommonBase):
         line_np.Draw()
         self.h.Draw('PE X0 same')
 
-        if pad == 3:
+        if pad == 2:
+            leg.AddEntry(self.h_sys, 'Syst. uncertainties', 'f')
+            leg.AddEntry(line_np, "#it{z}_{#it{r}}^{NP} #geq " + \
+                          "1 - #frac{#Lambda}{ #it{p}_{T} #it{z}_{#it{r}} }", 'lf')
             leg.Draw('same')
-        if pad == 2:
-            leg3.Draw('same')
-        
-        if pad == 2:
-            leg3.AddEntry(line_np, "#it{#theta}_{g}^{NP} #leq " + \
-                          "(#frac{#Lambda}{#it{z}_{cut} #it{p}_{T} #it{R}})^" + \
-                          "{#frac{1}{1+#it{#beta}}}", 'lf')
-            leg3.AddEntry(self.h_sys, 'Syst. uncertainty', 'f')
-
-        # Reset for ratio plot
-        self.logy = True
 
         # # # # # # # # # # # # # # # # # # # # # # # #
         # text
         # # # # # # # # # # # # # # # # # # # # # # # #
-        ymax = 0.93
-        dy = 0.07
-        x = 0.45 + shift + shift2
+        ymax = 0.92
+        dy = 0.09
+        if self.observable == 'leading_subjet_z':
+            x = 0.31 + shift + shift2
+        elif self.observable == 'inclusive_subjet_z':
+            x = 0.36 + shift + shift2
     
         if pad == 1:
+
             system0 = ROOT.TLatex(x,ymax,'ALICE')
             system0.SetNDC()
-            system0.SetTextSize(size / 1.2)#*scale_factor)
+            system0.SetTextSize(size)
             system0.Draw()
 
             system1 = ROOT.TLatex(x,ymax-dy,'pp  #sqrt{#it{s}} = 5.02 TeV')
             system1.SetNDC()
-            system1.SetTextSize(size / 1.2)#*scale_factor)
+            system1.SetTextSize(size)
             system1.Draw()
 
-            system2 = ROOT.TLatex(x,ymax-2*dy,'charged jets   anti-#it{k}_{T}')
+            system2 = ROOT.TLatex(x,ymax-2*dy,'Charged-particle anti-#it{k}_{T} jets')
             system2.SetNDC()
-            system2.SetTextSize(size / 1.2)#*scale_factor)
+            system2.SetTextSize(size)
             system2.Draw()
 
             system3 = ROOT.TLatex(x,ymax-3*dy,
                                   '#it{{R}} = {}    |#it{{#eta}}_{{jet}}| < {}'.format(R, 0.9-R))
             system3.SetNDC()
-            system3.SetTextSize(size / 1.2)#*scale_factor)
+            system3.SetTextSize(size)
             system3.Draw()
             
             system4 = ROOT.TLatex(x,ymax-4.*dy-0.02,
                                   str(min_pt) + ' < #it{p}_{T}^{ch jet} < ' + \
                                   str(max_pt) + ' GeV/#it{c}')
             system4.SetNDC()
-            system4.SetTextSize(size / 1.2)#*scale_factor)
+            system4.SetTextSize(size)
             system4.Draw()
 
             self.plot_list.append(system0)
@@ -427,19 +413,34 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.plot_list.append(system3)
             self.plot_list.append(system4)
 
-        #system5y = ymax-6.*dy if pad == 1 else ymax-4.6*dy
-        system5y = ymax-6.*dy
-        system5x = x+0.35 if pad == 1 else x+0.4 if pad==2 else x+0.45
-        system5 = ROOT.TLatex(system5x, system5y,
-                              '#it{{#beta}} = {}{}'.format(r, self.scale_label))
-        system5.SetNDC()
-        if pad in [1]:
-            beta_size = size / 1.3
+            if self.observable == 'leading_subjet_z':
+                system5y = ymax-5.3*dy
+                system5x = x - shift - shift2
+                system5 = ROOT.TLatex(system5x, system5y, 'Leading anti-#it{k}_{T} subjets')
+            elif self.observable == 'inclusive_subjet_z':
+                system5y = ymax-5.3*dy
+                system5x = x - shift - shift2
+                system5 = ROOT.TLatex(system5x, system5y, 'Inclusive anti-#it{k}_{T} subjets')
+            system5.SetNDC()
+            system5.SetTextSize(size)
+            system5.Draw()
+            self.plot_list.append(system5)
+
+            if self.observable == 'inclusive_subjet_z':
+                system5x += 0.2
+
         else:
-            beta_size = size
-        system5.SetTextSize(beta_size)
-        system5.Draw()
-        self.plot_list.append(system5)
+            if self.observable == 'leading_subjet_z':
+                system5x = x_legend
+            elif self.observable == 'inclusive_subjet_z':
+                system5x = x_legend + 0.2
+                    
+        system6y = ymax-7.*dy
+        system6 = ROOT.TLatex(system5x, system6y, f'#it{{r}} = {r}')
+        system6.SetNDC()
+        system6.SetTextSize(size)
+        system6.Draw()
+        self.plot_list.append(system6)
 
         # Set pad for ratio
         c.cd(pad)
@@ -456,14 +457,12 @@ class PlotAngularityFigures(common_base.CommonBase):
         pad2.SetTicks(1,2)
         if self.logy:
             pad2.SetLogy()
-        if self.logx:
-            pad2.SetLogx()
         pad2.Draw()
         pad2.cd()
 
         # Draw blank histos
         blankname = 'myBlankHisto2_{}_PtBin{}-{}_{}'.format(pad, min_pt, max_pt, R)
-        myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, xmax-0.001)
+        myBlankHisto2 = ROOT.TH1F(blankname,blankname, 1, self.xmin, self.xmax)
         myBlankHisto2.SetMinimum(self.ymin_ratio)
         myBlankHisto2.SetMaximum(self.ymax_ratio)
         myBlankHisto2.SetNdivisions(510, "y")
@@ -479,26 +478,11 @@ class PlotAngularityFigures(common_base.CommonBase):
         myBlankHisto2.Draw()
         self.blank_histo_list.append(myBlankHisto2)
 
-        line = ROOT.TLine(self.xmin,1,xmax,1)
+        line = ROOT.TLine(self.xmin, 1, self.xmax, 1)
         line.SetLineColor(1)
         line.SetLineStyle(2)
         line.Draw('same')
         self.plot_list.append(line)
-
-        if pad in [1]:
-            # Add y-axis numerical label text because ROOT is incapable
-            ymin_text = ROOT.TLatex(0.327, 0.42, '0.5')
-            ymin_text.SetNDC()
-            ymax_text = ROOT.TLatex(0.367, 0.89, '2')
-            ymax_text.SetNDC()
-
-            ymin_text.SetTextSize(0.1)
-            ymin_text.Draw()
-            self.plot_list.append(ymin_text)
-
-            ymax_text.SetTextSize(0.1)
-            ymax_text.Draw()
-            self.plot_list.append(ymax_text)
 
         # Draw ratio
         for i, folding_label in enumerate(self.folding_labels):
@@ -509,15 +493,24 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.g_ratio_dict[r][i].SetLineWidth(3)
             self.g_ratio_dict[r][i].Draw('3 same')
         
+            # Draw th1 with sys uncertainty
+            self.h_ratio_sys_dict[r][i].SetLineColor(0)
+            self.h_ratio_sys_dict[r][i].SetMarkerSize(0)
+            self.h_ratio_sys_dict[r][i].SetMarkerColor(0)
+            self.h_ratio_sys_dict[r][i].SetFillColor(self.color_data)
+            self.h_ratio_sys_dict[r][i].SetFillColorAlpha(self.color_data, 0.3)
+            self.h_ratio_sys_dict[r][i].SetFillStyle(1001)
+            self.h_ratio_sys_dict[r][i].SetLineWidth(0)
+            self.h_ratio_sys_dict[r][i].Draw('E2 same')
+
             # Draw th1 with stat uncertainty
-            self.h_ratio_dict[r][i].SetMarkerColorAlpha(self.colors[i], self.alpha)
-            self.h_ratio_dict[r][i].SetLineColorAlpha(self.colors[i], self.alpha)
-            self.h_ratio_dict[r][i].SetFillColorAlpha(self.colors[i], self.alpha)
+            self.h_ratio_dict[r][i].SetMarkerColor(self.colors[i])
             self.h_ratio_dict[r][i].SetLineColor(self.colors[i])
-            self.h_ratio_dict[r][i].SetLineWidth(2)
-            self.h_ratio_dict[r][i].SetMarkerStyle(self.markers[i])
+            self.h_ratio_dict[r][i].SetFillColor(self.colors[i])
+            self.h_ratio_dict[r][i].SetLineWidth(1)
+            self.h_ratio_dict[r][i].SetMarkerStyle(self.marker_data)
             self.h_ratio_dict[r][i].SetMarkerSize(self.marker_size)
-            self.h_ratio_dict[r][i].Draw('PE same')
+            self.h_ratio_dict[r][i].Draw('PE X0 same')
 
         line_np_ratio = ROOT.TLine(
             self.zr_np[min_pt][R][r], self.ymin_ratio,
@@ -528,19 +521,20 @@ class PlotAngularityFigures(common_base.CommonBase):
         line_np_ratio.Draw()
         self.plot_list.append(line_np_ratio)
 
-
     #-------------------------------------------------------------------------------------------
     # Construct ratio data/theory as TGraph
+    #  Plot data and theory uncertainties separately
     # Fills:
-    #   - self.h_ratio_list with histogram of ratio with stat uncertainties
+    #   - self.h_ratio_dict with histogram of ratio with stat uncertainties
+    #   - self.h_ratio_sys_dict with histogram of ratio with sys uncertainties
     #   - self.g_theory_dict with tgraph of ratio with sys uncertainties
     #-------------------------------------------------------------------------------------------
-    def construct_ratio(self, h, h_sys, h_theory_cent, h_theory_min, h_theory_max, n, x,
-                        xerrup, xerrdn, y, yerrup, yerrdn, R, r, i, pad):
+    def construct_ratio(self, h, h_sys, h_theory_cent, n, x,
+                        xerrup, xerrdn, y, yerrup, yerrdn, R, r, pad):
 
         grooming_label = f'{r}'
 
-        # Construct central value
+        # Construct ratio central value (and data statistical uncertainties)
         h_trim = self.trim_data(h, h_theory_cent)
         h_ratio = h_trim.Clone()
         h_ratio.SetName('{}_{}_{}_{}'.format(h_ratio.GetName(), R, grooming_label, pad))
@@ -548,33 +542,23 @@ class PlotAngularityFigures(common_base.CommonBase):
         h_ratio.Divide(h_theory_cent)
         self.plot_list.append(h_ratio)
         self.h_ratio_dict[r].append(h_ratio)
-        y_ratio = np.array([h_ratio.GetBinContent(i) for i in range(1, h_trim.GetNbinsX()+1)])
 
-        # Construct systematic uncertainties: combine data and theory uncertainties
-
-        # Get relative systematic from data
-        y_data = np.array([h_trim.GetBinContent(i) for i in range(1, h_trim.GetNbinsX()+1)])
+        # Construct ratio with data systematic uncertainties
         h_sys_trim = self.trim_data(h_sys, h_theory_cent)
-        y_sys_data = np.array([h_sys_trim.GetBinError(i) for i in range(1, h_trim.GetNbinsX()+1)])
-        y_sys_data_relative = np.divide(y_sys_data, y_data)
+        h_sys_ratio = h_sys_trim.Clone()
+        h_sys_ratio.SetName('{}_{}_{}_{}'.format(h_sys_ratio.GetName(), R, grooming_label, pad))
+        h_sys_ratio.SetDirectory(0)
+        h_sys_ratio.Divide(h_theory_cent)
+        self.plot_list.append(h_sys_ratio)
+        self.h_ratio_sys_dict[r].append(h_sys_ratio)
 
-        # Get relative systematics from theory
+        # Get relative systematics from theory, and plot at ratio=1
         yerr_up_relative = np.divide(yerrup, y)
         yerr_dn_relative = np.divide(yerrdn, y)
-
-        # Combine systematics in quadrature
-        y_sys_total_up_relative = np.sqrt( np.square(y_sys_data_relative) + \
-                                           np.square(yerr_up_relative))
-        y_sys_total_dn_relative = np.sqrt( np.square(y_sys_data_relative) + \
-                                           np.square(yerr_dn_relative))
-
-        y_sys_total_up = np.multiply(y_sys_total_up_relative, y_ratio)
-        y_sys_total_dn = np.multiply(y_sys_total_dn_relative, y_ratio)
-
-        # Note: invert direction of asymmetric uncertainty
-        g_ratio = ROOT.TGraphAsymmErrors(n, x, y_ratio, xerrdn, xerrup,
-                                         y_sys_total_up, y_sys_total_dn)
-        g_ratio.SetName('g_ratio_{}_{}'.format(i, grooming_label))
+        xerrup = xerrdn = np.array([0. for i in range(n)])
+        y_ratio = np.ones(n)
+        g_ratio = ROOT.TGraphAsymmErrors(n, x, y_ratio, xerrdn, xerrup, yerr_dn_relative, yerr_up_relative)
+        g_ratio.SetName(f'g_ratio_{r}')
         self.g_ratio_dict[r].append(g_ratio)
 
     #-------------------------------------------------------------------------------------------
@@ -601,7 +585,7 @@ class PlotAngularityFigures(common_base.CommonBase):
 
     #-------------------------------------------------------------------------------------------
     # Rebin data histogram according to theory binning
-    # Ensures that theta_g cut does not affect ratio plots
+    # Ensures that NP cut does not affect ratio plots
     #-------------------------------------------------------------------------------------------
     def trim_data(self, h, h_theory):
 
@@ -612,41 +596,9 @@ class PlotAngularityFigures(common_base.CommonBase):
         return h_trimmed
 
     #-------------------------------------------------------------------------------------------
-    # Remove bins from histogram that have negative edges for plotting purposes
-    #-------------------------------------------------------------------------------------------
-    def remove_negative_bin_edges(self, h):
-
-        n = h.GetNbinsX()
-        xbins = array('d', [h.GetBinLowEdge(bi) for bi in range(1, n+2)])
-
-        while xbins[0] < 0:
-            xbins = xbins[1:]
-            n -= 1
-
-        h_rebinned = h.Rebin(n, h.GetName()+'_negrm', xbins)
-        h_rebinned.SetDirectory(0)
-
-        return h_rebinned
-
-    #-------------------------------------------------------------------------------------------
-    # Scale vertical amplitude of histogram, for visualization
-    #-------------------------------------------------------------------------------------------
-    def scale_histogram_for_visualization(self, h, R, min_pt, r):
-
-        scale_factor = 1.
-        h.Scale(scale_factor)
-
-        if math.isclose(scale_factor, 1.):
-            plot_label = ''
-        else:
-            plot_label = ' (#times{})'.format(scale_factor)
-        
-        return plot_label
-
-    #-------------------------------------------------------------------------------------------
     # Set legend parameters
     #-------------------------------------------------------------------------------------------
-    def setupLegend(self, leg, textSize):
+    def setupLegend(self, leg, textSize, sep=0.5):
 
         leg.SetTextFont(42);
         leg.SetBorderSize(0);
@@ -654,15 +606,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         leg.SetFillColor(0);
         leg.SetMargin(0.25);
         leg.SetTextSize(textSize);
-        leg.SetEntrySeparation(0.5);
-
-    #---------------------------------------------------------------
-    # Remove periods from a label
-    #---------------------------------------------------------------
-    def remove_periods(self, text):
-
-        string = str(text)
-        return string.replace('.', '')
+        leg.SetEntrySeparation(sep);
 
     #-------------------------------------------------------------------------------------------
     def setOptions(self):
@@ -726,5 +670,5 @@ if __name__ == '__main__':
     # Parse the arguments
     args = parser.parse_args()
 
-    analysis = PlotAngularityFigures(output_dir=args.outputDir)
+    analysis = PlotSubjetZFigures(output_dir=args.outputDir)
     analysis.plot_results()
