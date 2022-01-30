@@ -17,6 +17,12 @@ $ ./pyjetty/cpptools/build.sh --tenngen --tglaubermc
 
 - run an example within the docker `./pyjetty/pyjetty/examples/pythia_gen_fastjet_lund_test.py`
 - some info/tips on the heppy docker at https://github.com/matplo/heppy/tree/master/docker/heppy
+- next time around it is sufficient to load only the pyjetty:
+```
+/tmp/heppy/docker/run.sh
+module use /host/tmp/pyjetty/modules
+module load pyjetty
+```
 
 # recommended build/setup from source
 
