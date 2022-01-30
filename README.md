@@ -2,7 +2,22 @@
 
 - meant as an extension of [https://github.com/matplo/heppy](https://github.com/matplo/heppy)
 
-# recommended build/setup
+# quick start with heppy in a docker
+
+- an example (you probably want to start in a different directory)...
+```
+cd /tmp
+git clone https://github.com/matplo/heppy.git
+./heppy/docker/heppy/run.sh
+cd /host/tmp
+git clone https://github.com/matplo/pyjetty.git
+heppy_load
+./pyjetty/cpptools/build.sh --tenngen --tglaubermc
+```
+
+- run an example within the docker `./pyjetty/pyjetty/examples/pythia_gen_fastjet_lund_test.py`
+
+# recommended build/setup from source
 
  - install heppy and `export HEPPY_DIR=<path to heppy>`
  - execute `$HEPPY_DIR/scripts/pipenv_heppy.sh run <where pyjetty>/cpptools/build.sh` - that's it...
