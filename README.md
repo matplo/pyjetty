@@ -6,13 +6,13 @@
 
 - an example (you probably want to start in a different directory)...
 ```
-cd /tmp
-git clone https://github.com/matplo/heppy.git
-./heppy/docker/heppy/run.sh
-cd /host/tmp
-git clone https://github.com/matplo/pyjetty.git
-heppy_load
-./pyjetty/cpptools/build.sh --tenngen --tglaubermc
+$ cd /tmp
+$ git clone https://github.com/matplo/heppy.git
+$ ./heppy/docker/heppy/run.sh
+$ cd /host/tmp
+$ git clone https://github.com/matplo/pyjetty.git
+$ heppy_load
+$ ./pyjetty/cpptools/build.sh --tenngen --tglaubermc
 ```
 
 - run an example within the docker `./pyjetty/pyjetty/examples/pythia_gen_fastjet_lund_test.py`
