@@ -405,7 +405,7 @@ class PlotAngularityFigures(common_base.CommonBase):
             self.g_theory_dict[beta][i].SetLineWidth(3)
             self.g_theory_dict[beta][i].Draw('L 3 same')
 
-            leg.AddEntry(self.g_theory_dict[beta][i], 'NLL\' #otimes '+folding_label, 'lf')
+            leg.AddEntry(self.g_theory_dict[beta][i], 'NLL #otimes '+folding_label, 'lf')
 
         self.h_sys.Draw('E2 same')
         line_np.Draw()

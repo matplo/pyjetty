@@ -249,7 +249,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     histJER.GetYaxis().SetTitle('#frac{#sigma(#it{p}_{T}^{gen})}{#it{p}_{T}^{gen}}')
     histJER.GetXaxis().SetTitle('#it{p}_{T}^{gen}')
     histJER.GetYaxis().SetRangeUser(-0.01, 0.5)
-    histJER.GetXaxis().SetRangeUser(5., 100.)
+    histJER.GetXaxis().SetRangeUser(5., 150.)
     outputFilename = os.path.join(self.output_dir, 'jet/histJER_R{}.pdf'.format(self.remove_periods(jetR)))
     histJER.SetMarkerStyle(21)
     histJER.SetMarkerColor(2)
@@ -262,17 +262,28 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     # For each pT^gen, compute the fraction of matched pT^gen
     
     # First, get the pT^gen spectrum
-    name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, obs_label, self.scaled_suffix)
+    name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(
+      self.observable, jetR, obs_label, self.scaled_suffix)
     histPtGen = self.fMC.Get(name).ProjectionX()
-    
+    hpg_xbins = [histPtGen.GetXaxis().GetBinLowEdge(i) for i in \
+                 range(1, histPtGen.GetXaxis().GetNbins()+2)]
+
     # Then, get the pT^gen spectrum for matched jets
-    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_4d = self.fMC.Get(name)
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
     histPtGenMatched = hRM.ProjectionY("_py",1,hRM.GetNbinsX()) #avoid under and overflow bins
     histPtGenMatched.SetName('histPtGenMatched_R{}_{}'.format(jetR, obs_label))
-    
+    hpgm_xbins = [histPtGenMatched.GetXaxis().GetBinLowEdge(i) for i in \
+                 range(1, histPtGenMatched.GetXaxis().GetNbins()+2)]
+
+    # Make sure before division that you have the same pT bins
+    if hpg_xbins != hpgm_xbins:
+      histPtGen = histPtGen.Rebin(len(hpgm_xbins) - 1, histPtGen.GetName() + "_rebin",
+                                  array('d', hpgm_xbins))
+
     # Compute the ratio
     histEfficiency = histPtGenMatched.Clone()
     histEfficiency.SetName('histEfficiency_{}'.format(name))
@@ -280,7 +291,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     
     histEfficiency.GetXaxis().SetTitle('#it{p}_{T}^{gen}')
     histEfficiency.GetYaxis().SetTitle('Efficiency')
-    histEfficiency.GetXaxis().SetRangeUser(0., 100.)
+    histEfficiency.GetXaxis().SetRangeUser(0., 150.)
     histEfficiency.GetYaxis().SetRangeUser(0., 1.2)
     histEfficiency.SetMarkerStyle(21)
     histEfficiency.SetMarkerColor(1)
@@ -371,8 +382,9 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_obs_residual_pt(self, jetR, obs_label, xtitle, pt_bins):
 
-    name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
-    
+    name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
     c_residual.SetBottomMargin(0.2)
@@ -387,46 +399,51 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
-      
-      hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_pt_truth, max_pt_truth, option='pt')
+
+      hResidual = self.get_residual_proj(
+        name, 'hResidual{}'.format(i), min_pt_truth, max_pt_truth, option='pt')
       hResidual.SetMarkerStyle(self.MarkerArray[i])
       hResidual.SetMarkerColor(self.ColorArray[i])
       hResidual.SetLineColor(self.ColorArray[i])
-      
+
       if i == 0:
-      
+
         hResidual.GetXaxis().SetTitleOffset(1.6);
         hResidual.GetYaxis().SetTitle('Probability density')
         hResidual.GetYaxis().SetRangeUser(0, 2.*hResidual.GetMaximum())
         hResidual.DrawCopy('P E')
-        
+
       else:
 
         hResidual.DrawCopy('P E same')
-    
-      leg.AddEntry(hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+
+      leg.AddEntry(
+        hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
 
     leg.Draw('same')
-    
-    outputFilename = os.path.join(self.output_dir, 'residual_pt/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+
+    outputFilename = os.path.join(
+      self.output_dir, 'residual_pt/hResidual_R%s_%s.pdf' % \
+      (str(jetR).replace('.',''), obs_label))
     c_residual.SaveAs(outputFilename)
     c_residual.Close()
 
   #---------------------------------------------------------------
   def plot_obs_residual_obs(self, jetR, obs_label, xtitle):
 
-    name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
-    
+    name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
     c_residual.SetBottomMargin(0.2)
-    
+
     leg = ROOT.TLegend(0.55,0.55,0.88,0.85, '')
     leg.SetFillColor(10)
     leg.SetBorderSize(0)
     leg.SetFillStyle(1)
     leg.SetTextSize(0.035)
-    
+
     # Loop through pt slices, and plot final residual for each 1D distribution
     min_pt = 80
     max_pt = 100
@@ -438,13 +455,15 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     elif 'z_{r}' in xtitle:
       obs_true_list = [0., 0.2, 0.4, 0.6, 0.8, 1.]
     elif 'lambda' in xtitle:
-      obs_true_list = [0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8]
+      obs_true_list = [0, 0.05, 0.1, 0.2, 0.4, 0.7]
 
     for i in range(0, len(obs_true_list) - 1):
       min_obs_truth = obs_true_list[i]
       max_obs_truth = obs_true_list[i+1]
-      
-      hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_obs_truth, max_obs_truth, option='obs', min_pt=min_pt, max_pt=max_pt)
+
+      hResidual = self.get_residual_proj(
+        name, 'hResidual' + str(i), min_obs_truth, max_obs_truth,
+        option='obs', min_pt=min_pt, max_pt=max_pt)
       hResidual.SetMarkerStyle(self.MarkerArray[i])
       hResidual.SetMarkerColor(self.ColorArray[i])
       hResidual.SetLineColor(0)
@@ -452,40 +471,47 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
         hResidual.SetMarkerStyle(self.OpenMarkerArray[i])
 
       if i == 0:
-      
+
         hResidual.GetXaxis().SetTitleOffset(1.6);
         hResidual.GetYaxis().SetTitle('Probability density')
         hResidual.GetYaxis().SetRangeUser(0, 2.*hResidual.GetMaximum())
         hResidual.DrawCopy('P E')
-        
+
       else:
 
         hResidual.DrawCopy('P E same')
 
-      leg.AddEntry(hResidual, '{} = {}-{}'.format('{}^{{{}}}'.format(xtitle, 'truth'), min_obs_truth, max_obs_truth), 'P')
+      leg.AddEntry(hResidual, '{} = {}-{}'.format('{}^{{{}}}'.format(xtitle, 'truth'),
+                                                  min_obs_truth, max_obs_truth), 'P')
 
     leg.Draw('same')
-    
+
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt, max_pt)
     text_latex.DrawLatex(0.2, 0.8, text)
-    
-    outputFilename = os.path.join(self.output_dir, 'residual_obs/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
+
+    outputFilename = os.path.join(
+      self.output_dir, 'residual_obs/hResidual_R{}_{}.pdf'.format(
+        str(jetR).replace('.', ''), obs_label))
     c_residual.SaveAs(outputFilename)
     c_residual.Close()
 
   #---------------------------------------------------------------
   # Get residual for a fixed pT-gen
   def get_residual_proj(self, name, label, min, max, option='pt', min_pt=80., max_pt=100.):
-    
+
     h_residual_pt = self.fMC.Get(name)
     h_residual_pt.SetName('{}_{}'.format(h_residual_pt.GetName(), label))
-    
+
     if option == 'pt':
       h_residual_pt.GetXaxis().SetRangeUser(min, max)
     elif option == 'obs':
       h_residual_pt.GetXaxis().SetRangeUser(min_pt, max_pt)
+      # Make sure that we do not overset the range
+      top_edge = h_residual_pt.GetYaxis().GetBinUpEdge(h_residual_pt.GetYaxis().GetNbins())
+      max = max if max <= top_edge else top_edge
+      min = min if min <= max else max
       h_residual_pt.GetYaxis().SetRangeUser(min, max)
     h_residual_pt.GetZaxis().SetRangeUser(-0.5, 0.5)
     h = h_residual_pt.Project3D('z')
@@ -497,17 +523,19 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     return h
 
   #---------------------------------------------------------------
-  def plot_obs_projections(self, jetR, obs_label, obs_setting, grooming_setting, xtitle, pt_bins):
+  def plot_obs_projections(self, jetR, obs_label, obs_setting, grooming_setting,
+                           xtitle, pt_bins):
 
     if not self.fData:
       return
-      
+
     # (pt-det, pt-truth, obs-det, obs-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_obs = self.fMC.Get(name)
     if not hRM_obs.GetSumw2():
       hRM_obs.Sumw2()
-    
+
     name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
     hObs_JetPt = self.fData.Get(name)
     if not hObs_JetPt.GetSumw2():
@@ -522,14 +550,18 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
-      
-      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='truth')
-      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='det')
+
+      self.plot_obs_projection(
+        hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting,
+        xtitle, min_pt_truth, max_pt_truth, option='truth')
+      self.plot_obs_projection(
+        hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting,
+        xtitle, min_pt_truth, max_pt_truth, option='det')
 
   #---------------------------------------------------------------
   def plot_obs_truth(self, jetR, obs_label, obs_setting, grooming_setting,
                      xtitle, pt_bins):
-                     
+
     name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, obs_label, self.scaled_suffix)
     h2D = self.fMC.Get(name)
     
@@ -650,10 +682,11 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   # If option='truth', plot MC-truth and MC-det projections for fixed pt-true
   # If option='det', plot data and MC-det projections for fixed pt-det
-  def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
+  def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting,
+                         grooming_setting, xtitle, min_pt, max_pt, option='truth'):
 
     ytitle = '#frac{{1}}{{N}} #frac{{dN}}{{d{}}}'.format(xtitle)
-    
+
     if self.observable == 'theta_g':
       rebin_val_mcdet = 5
       rebin_val_mctruth = 5
@@ -674,13 +707,13 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       rebin_val_mcdet = 2
       rebin_val_mctruth = 2
       rebin_val_data = 2
-      
+
     # Get RM, for a given pt cut
     if option == 'det':
       hRM.GetAxis(0).SetRangeUser(min_pt, max_pt)
     if option == 'truth':
       hRM.GetAxis(1).SetRangeUser(min_pt, max_pt)
-    
+
     # Get histogram of observable at MC-det from RM
     hObs_det = hRM.Projection(2)
     hObs_det.SetName('hObs_det_{}'.format(obs_label))
@@ -704,7 +737,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       hObs_truth.Scale(1., 'width')
       if grooming_setting and 'sd' in grooming_setting:
         hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
-      
+
     # Get histogram of theta_g in data, for given pt-det cut
     if option == 'det':
       hObs_JetPt.GetXaxis().SetRangeUser(min_pt, max_pt)
@@ -726,6 +759,10 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     myPad.SetTopMargin(0.07)
     myPad.SetRightMargin(0.04)
     myPad.SetBottomMargin(0.13)
+    logy = False
+    if self.observable == "ang" and grooming_setting and 'sd' in grooming_setting:
+      logy = True
+    myPad.SetLogy(logy)
     myPad.Draw()
     myPad.cd()
     
@@ -736,8 +773,15 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetTextSize(0.04)
     
     hObs_det.GetYaxis().SetTitleOffset(1.5)
-    hObs_det.SetMaximum(2.5*hObs_det.GetMaximum())
-    hObs_det.SetMinimum(0.)
+    if logy:
+      hObs_det.SetMaximum(1e4*hObs_det.GetMaximum())
+      hObs_det.SetMinimum(1e-4)
+    else:
+      if self.observable == "ang":
+        hObs_det.SetMaximum(2*hObs_det.GetMaximum())
+      else:
+        hObs_det.SetMaximum(2.5*hObs_det.GetMaximum())
+      hObs_det.SetMinimum(0.)
 
     hObs_det.Draw('hist')
     leg.AddEntry(hObs_det, "MC det", "L")
@@ -768,7 +812,8 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       text = str(min_pt) + ' < #it{p}_{T, ch jet}^{det} < ' + str(max_pt) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.3, 0.73, text)
 
-    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
+    text = '#it{R} = ' + str(jetR) + \
+      '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
     text_latex.DrawLatex(0.3, 0.67, text)
     
     subobs_label = self.formatted_subobs_label(self.observable)
@@ -782,7 +827,9 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       text = self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies)
       text_latex.DrawLatex(0.3, 0.61-delta, text)
 
-    output_filename = os.path.join(self.output_dir, 'mc_projections_{}/h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
+    output_filename = os.path.join(
+      self.output_dir, 'mc_projections_{}/h_{}_MC_R{}_{}_{}-{}.pdf'.format(
+      option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
     c.SaveAs(output_filename)
     c.Close()
 

@@ -885,6 +885,29 @@ class TheoryFolding():
       h2_obs_chr_had = hRM.Projection(3,2)
       h2_pT_chr_had  = hRM.Projection(1,0)
 
+      self.plot_obs_projections(h2_obs_chr_had, outpdfname.format(pT_min, pT_max))
+      '''
+      c2 = ROOT.TCanvas('c2','c2',1000,900)
+
+      hx = h2_obs_chr_had.ProjectionX(outpdfname.split('/')[-1].replace(".pdf", "_projx"))
+      hy = h2_obs_chr_had.ProjectionY(outpdfname.split('/')[-1].replace(".pdf", "_projy"))
+
+      # Rebin to smooth out statistics
+      hx.Rebin(5)
+      hy.Rebin(5)
+
+      c2.cd()
+      hx.Draw("L")
+      hy.Draw("L same")
+
+      # Draw legend with coords (x1, y1, x2, y2)
+      leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+      leg.AddEntry(hx, hx.GetXaxis().GetTitle(), "l")
+      leg.AddEntry(hy, hy.GetXaxis().GetTitle(), "l")
+      leg.Draw("same")
+
+      c2.Print(outpdfname.replace(".pdf", "_obsProj.pdf"))
+      '''
       # Set names to prevent ROOT overwrite warning
       h2_had_obs_pT.SetName(h2_had_obs_pT.GetTitle() + "_%s-%s" % (pT_min, pT_max))
       h2_chr_obs_pT.SetName(h2_chr_obs_pT.GetTitle() + "_%s-%s" % (pT_min, pT_max))
@@ -943,6 +966,49 @@ class TheoryFolding():
     # Reset range to prevent any future errors
     hRM.GetAxis(0).SetRangeUser(self.final_pt_bins[0], self.final_pt_bins[-1])
     del c1
+
+
+  #----------------------------------------------------------------------
+  def plot_obs_projections(self, h2D, outpdfname):
+
+    bare_name = outpdfname.split('/')[-1].replace(".pdf", "")
+    c2 = ROOT.TCanvas("c2_" + bare_name, "c2_" + bare_name, 1000, 900)
+
+    hx = h2D.ProjectionX(bare_name + "_projx")
+    hy = h2D.ProjectionY(bare_name + "_projy")
+
+    # Rebin to smooth out statistics
+    hx.Rebin(5)
+    hx.Scale(1/hx.Integral())
+    hy.Rebin(5)
+    hy.Scale(1/hy.Integral())
+
+    hx.SetMarkerSize(1)
+    hx.SetMarkerStyle(20)
+    hx.SetMarkerColor(2)
+    hx.SetLineStyle(1)
+    hx.SetLineWidth(2)
+    hx.SetLineColor(2)
+
+    hy.SetMarkerSize(1)
+    hy.SetMarkerStyle(21)
+    hy.SetMarkerColor(4)
+    hy.SetLineStyle(1)
+    hy.SetLineWidth(2)
+    hy.SetLineColor(4)
+
+    c2.cd()
+    hx.Draw("C L")
+    hy.Draw("C L same")
+
+    # Draw legend with coords (x1, y1, x2, y2)
+    leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+    leg.AddEntry(hx, hx.GetXaxis().GetTitle(), "l")
+    leg.AddEntry(hy, hy.GetXaxis().GetTitle(), "l")
+    leg.Draw("same")
+
+    c2.Print(outpdfname.replace(".pdf", "_obsProj.pdf"))
+    del c2
 
   #----------------------------------------------------------------------
   # Edit 2D histogram
