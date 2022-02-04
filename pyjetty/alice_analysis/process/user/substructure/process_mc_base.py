@@ -426,7 +426,8 @@ class ProcessMCBase(process_base.ProcessBase):
           # The pp-det tracks are each stored with a unique user_index >= 0
           #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
           # The thermal tracks are each stored with a unique user_index < 0
-          [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_det]
+          for p in fj_particles_det:
+            fj_particles_combined_beforeCS.push_back(p)
 
         # Main case: Get Pb-Pb event and embed it into the det-level particle list
         else:
@@ -436,7 +437,8 @@ class ProcessMCBase(process_base.ProcessBase):
           # The pp-det tracks are each stored with a unique user_index >= 0
           #   (same index in fj_particles_combined and fj_particles_det -- which will be used in prong-matching)
           # The Pb-Pb tracks are each stored with a unique user_index < 0
-          [fj_particles_combined_beforeCS.push_back(p) for p in fj_particles_det]
+          for p in fj_particles_det:
+            fj_particles_combined_beforeCS.push_back(p)
 
         # Perform constituent subtraction for each R_max
         fj_particles_combined = { R_max : cs.process_event(fj_particles_combined_beforeCS) for \

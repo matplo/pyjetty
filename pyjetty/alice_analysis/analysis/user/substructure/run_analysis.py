@@ -122,11 +122,14 @@ class RunAnalysis(common_base.CommonBase):
     if 'max_reg_param' in self.obs_config_dict['common_settings']:
       self.max_reg_param = self.obs_config_dict['common_settings']['max_reg_param']
       if self.max_reg_param < 3:
-        print("ERROR: The minimum number of iterations has been set to 3.",
+        raise ValueError("ERROR: The minimum number of iterations has been set to 3. " + \
               "Please set max_reg_param to a value >= 3.")
-        raise ValueError()
       self.use_max_reg_param = True
     self.reg_param_name = 'n_iter'
+
+    # Vary the regularization parameter by amount set in config
+    self.reg_param_variation = self.obs_config_dict["common_settings"]["reg_param_variation"] if \
+      "reg_param_variation" in self.obs_config_dict["common_settings"] else 2
 
     # Retrieve histogram binnings for each observable setting
     for i, _ in enumerate(self.obs_subconfig_list):
@@ -569,15 +572,17 @@ class RunAnalysis(common_base.CommonBase):
 
       if systematic == 'main':
         # Get regularization parameter variations, and store as attributes
-        name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param+2)
+        name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param+self.reg_param_variation)
         self.retrieve_histo_and_set_attribute(name, f)
-        name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param-2)
+        name = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param-self.reg_param_variation)
         self.retrieve_histo_and_set_attribute(name, f)
 
   #----------------------------------------------------------------------
   def retrieve_histo_and_set_attribute(self, name, f, suffix = ''):
 
     h = f.Get(name)
+    if not h:
+      raise ValueError("Histogram with name %s not found in file" % name)
     h.SetDirectory(0)
     setattr(self, '{}{}'.format(name, suffix), h)
 
@@ -602,13 +607,13 @@ class RunAnalysis(common_base.CommonBase):
 
       if systematic == 'main':
         # Get regularization parameter variations, and store as attributes
-        name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param+2)
+        name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param+self.reg_param_variation)
         name1D = 'hRegParam1_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
                                                          reg_param, min_pt_truth, max_pt_truth)
         hRegParam1 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
                                                min_pt_truth, max_pt_truth, minbin, maxbin)
 
-        name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param-2)
+        name2D = 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, reg_param-self.reg_param_variation)
         name1D = 'hRegParam2_{}_R{}_{}_n{}_{}-{}'.format(self.observable, jetR, obs_label,
                                                          reg_param, min_pt_truth, max_pt_truth)
         hRegParam2 = self.get_obs_distribution(jetR, obs_label, name2D, name1D, reg_param, grooming_setting,
