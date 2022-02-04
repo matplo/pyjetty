@@ -61,6 +61,9 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
           raise ValueError("Observable %s is not implemented in this script" % observable)
 
         obs_name = self.obs_names[observable]
+        obs_bins = getattr(self, "obs_bins_" + observable)
+        # Use more finely binned pT bins for TH2s than for the RMs
+        pt_bins = array('d', list(range(0, 201, 1)))
 
         # Loop over subobservable (alpha value)
         for i in range(len(self.obs_settings[observable])):
@@ -86,14 +89,14 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
             for R_max in max_distance:
               name = 'h_%s_JetPt_R%s_%s_Rmax%s' % (observable, jetR, obs_label, R_max) if \
                 len(obs_label) else ('h_%s_JetPt_R%s_Rmax%s' % (observable, jetR, R_max))
-              h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1)
+              h = ROOT.TH2F(name, name, len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
               h.GetXaxis().SetTitle('#it{p}_{T}^{ch jet}')
               h.GetYaxis().SetTitle(obs_name)
               setattr(self, name, h)
 
           name = ('h_%s_JetPt_Truth_R%s_%s' % (observable, jetR, obs_label)) if \
             len(obs_label) else ('h_%s_JetPt_Truth_R%s' % (observable, jetR))
-          h = ROOT.TH2F(name, name, 40, 0, 200, 100, 0, 1)
+          h = ROOT.TH2F(name, name, len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
           h.GetXaxis().SetTitle('#it{p}_{T,truth}^{ch jet}')
           h.GetYaxis().SetTitle(obs_name + '^{truth}')
           setattr(self, name, h)
