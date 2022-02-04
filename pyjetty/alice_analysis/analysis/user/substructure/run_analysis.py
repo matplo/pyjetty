@@ -334,9 +334,9 @@ class RunAnalysis(common_base.CommonBase):
     
       output_dir = getattr(self, 'output_dir_thermal_closure')
       rebin_response = self.check_rebin_response(output_dir)
-      
+
       analysis = roounfold_obs.Roounfold_Obs(
-        self.observable, self.fThermal, self.fThermal, self.config_file, output_dir,
+        self.observable, self.main_data, self.fThermal, self.config_file, output_dir,
         self.file_format, rebin_response=rebin_response, R_max=R_max, thermal_model = True,
         use_miss_fake=self.use_miss_fake)
       analysis.roounfold_obs()

@@ -178,7 +178,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
           name_thn = self.utils.name_thn(self.observable, jetR, obs_label, self.R_max, self.prong_matching_response)
           name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
-          name_data = self.utils.name_data(self.observable, jetR, obs_label, self.R_max, self.thermal_model)
+          name_data = name_data_thermal = self.utils.name_data(self.observable, jetR, obs_label, self.R_max)
           name_data_rebinned = self.utils.name_data_rebinned(self.observable, jetR, obs_label)
 
           name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, obs_label)
@@ -187,6 +187,13 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           setattr(self, 'name_data_R{}_{}'.format(jetR, obs_label), name_data)
           setattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label), name_data_rebinned)
           setattr(self, 'name_roounfold_R{}_{}'.format(jetR, obs_label), name_roounfold)
+
+          # In thermal case, we will use the MC instead of real data for the unfolding.
+          # Still, we need the real data above to use the correct uncertainties for smearing.
+          # Here, also load the "data" (MC) spectrum we will use for the actual unfolding.
+          if self.thermal_model:
+            name_data_thermal = self.utils.name_data(self.observable, jetR, obs_label, self.R_max, self.thermal_model)
+            setattr(self, 'name_data_thermal_R{}_{}'.format(jetR, obs_label), name_data_thermal)
 
       self.reg_param_name = 'n_iter'
       self.errorType = ROOT.RooUnfold.kCovToy
@@ -219,6 +226,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         name_thn_rebinned = getattr(self, 'name_thn_rebinned_R{}_{}'.format(jetR, obs_label))
         name_data = getattr(self, 'name_data_R{}_{}'.format(jetR, obs_label))
         name_roounfold = getattr(self, 'name_roounfold_R{}_{}'.format(jetR, obs_label))
+        if self.thermal_model:
+          name_data_thermal = getattr(self, 'name_data_thermal_R{}_{}'.format(jetR, obs_label))
 
         # Retrieve desired binnings
         n_pt_bins_det = getattr(self, 'n_pt_bins_det_{}'.format(obs_label))
@@ -279,11 +288,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         # Get data histogram
         hData = self.fData.Get(name_data)
 
-        # If thermal model, smear input spectrum
-        if self.thermal_model:
-            measuredErrors = self.getMeasuredErrors(hData)
-            self.smearSpectrum(hData, measuredErrors)
-
         # Re-bin the data histogram
         if use_histutils:
           h = self.histutils.rebin_th2(hData, name_data, det_pt_bin_array, n_pt_bins_det,
@@ -291,6 +295,23 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         else:
           h = self.utils.rebin_data(hData, name_data, n_pt_bins_det, det_pt_bin_array,
                                     n_bins_det, det_bin_array, move_underflow=move_underflow)
+
+        # If thermal model, smear MC input spectrum by measured data
+        # Then update data to be the correct spectrum
+        if self.thermal_model:
+            hDataThermal = self.fResponse.Get(name_data_thermal)
+
+            # Re-bin the thermal "data" histogram
+            if use_histutils:
+                h_th = self.histutils.rebin_th2(hDataThermal, name_data_thermal, det_pt_bin_array,
+                                                n_pt_bins_det, det_bin_array, n_bins_det, move_underflow)
+            else:
+                h_th = self.utils.rebin_data(hDataThermal, name_data_thermal, n_pt_bins_det, det_pt_bin_array,
+                                             n_bins_det, det_bin_array, move_underflow=move_underflow)
+
+            measuredErrors = self.getMeasuredErrors(h)
+            self.smearSpectrum(h_th, measuredErrors)
+            h = h_th
 
         h.SetDirectory(0)
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
