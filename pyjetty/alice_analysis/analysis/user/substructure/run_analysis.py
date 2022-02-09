@@ -328,10 +328,10 @@ class RunAnalysis(common_base.CommonBase):
         truncation=truncation, binning=binning, R_max=R_max,
         prong_matching_response=prong_matching_response, use_miss_fake=self.use_miss_fake)
       analysis.roounfold_obs()
-      
-    # Unfold thermal closure test
-    if self.do_thermal_closure:
-    
+
+    # Unfold thermal closure test (for main R_max only)
+    if self.do_thermal_closure and R_max == self.R_max:
+
       output_dir = getattr(self, 'output_dir_thermal_closure')
       rebin_response = self.check_rebin_response(output_dir)
 
@@ -831,11 +831,12 @@ class RunAnalysis(common_base.CommonBase):
       h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
       h_systematic_ratio_temp.SetDirectory(0)
       f_nonclosure.Close()
-          
+
       name_ratio = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
             self.observable, systematic, jetR, obs_label,
             reg_param, min_pt_truth, max_pt_truth)
       self.change_to_per(h_systematic_ratio_temp)
+      self.subtract_statistics(h_systematic_ratio_temp)
       h_systematic_ratio_temp.SetMinimum(0.)
       h_systematic_ratio_temp.SetMaximum(1.5*h_systematic_ratio_temp.GetMaximum())
       h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, minbin, maxbin, name_ratio)
@@ -850,6 +851,29 @@ class RunAnalysis(common_base.CommonBase):
     setattr(self, name, h_systematic_ratio)
               
     return h_systematic_ratio
+
+  #----------------------------------------------------------------------
+  # "Subtract" statistical uncertainties from main data points
+  # Assumes (bin content)^2 = (bin error)^2 + (other)^2
+  # If bin error > bin content, sets bin content to 0; else sets to "other"
+  def subtract_statistics(self, h, set_error_zero=False):
+
+    for bin in range(1, h.GetNbinsX()+1):
+
+      content = h.GetBinContent(bin)
+      error = h.GetBinError(bin)
+
+      # Check if uncertainties are larger than bin content
+      if error > content:
+        h.SetBinContent(bin, 0)
+        if set_error_zero:
+          h.SetBinError(bin, 0)
+        continue
+
+      new_content = math.sqrt(content * content - error * error)
+      h.SetBinContent(bin, new_content)
+      if set_error_zero:
+        h.SetBinError(bin, 0)
 
   #----------------------------------------------------------------------
   # Get systematic variation and save percentage difference as attribte
@@ -1399,7 +1423,7 @@ class RunAnalysis(common_base.CommonBase):
 
     for bin in range(0, h.GetNbinsX()+2):
       content = h.GetBinContent(bin)
-      
+
       if signed:
         content_new = 1-content
       else:

@@ -178,7 +178,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
           name_thn = self.utils.name_thn(self.observable, jetR, obs_label, self.R_max, self.prong_matching_response)
           name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
-          name_data = name_data_thermal = self.utils.name_data(self.observable, jetR, obs_label, self.R_max)
+          name_data = self.utils.name_data(self.observable, jetR, obs_label, self.R_max)
           name_data_rebinned = self.utils.name_data_rebinned(self.observable, jetR, obs_label)
 
           name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, obs_label)

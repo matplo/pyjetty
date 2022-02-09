@@ -68,12 +68,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.results_pp = None
     if 'constituent_subtractor' in config:
       self.is_pp = False
-      self.results_pp = config["results_pp"]
+      self.results_pp = config["results_pp"] if "results_pp" in config else None
       self.max_distance = config["constituent_subtractor"]["max_distance"]
     print('is_pp: {}'.format(self.is_pp))
 
-    # Whether or not to use the previous preliminary result in final plots
-    self.use_prev_prelim = config['use_prev_prelim']
+    # Whether or not to use the previous measurement in ratio
+    self.use_prev_result = config["use_prev_result"]
 
     self.histutils = ROOT.RUtil.HistUtils()
 
@@ -97,7 +97,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     for i_config, overlay_list in enumerate(self.plot_overlay_list):
 
-      if len(overlay_list) > 1:
+        #if len(overlay_list) > 1:
 
         self.plot_final_result_overlay(i_config, jetR, overlay_list)
 
@@ -213,12 +213,6 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
                            min_pt_truth, max_pt_truth, maxbin, plot_MC=True)
-
-      if min_pt_truth == 40 and (jetR == 0.2 or jetR == 0.4):
-        # Only want to compare to girth with \alpha=1
-        if obs_label == '1':
-          self.plot_obs_comp(jetR, obs_label, obs_setting, grooming_setting,
-                             min_pt_truth, max_pt_truth, maxbin)
 
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
@@ -397,202 +391,54 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
 
   #----------------------------------------------------------------------
-  # Get unfolded data from the previous preliminary result (40-60 GeV/c)
-  def get_h_prelim(self, jetR):
-    
-    if jetR == 0.2:
-      xedges = [0., 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.12]
-      yvals = [2.892837, 11.9108, 17.3579, 17.65965, 15.25709, 13.00818, 9.1359, 2.471203]
-      staterror = [0.09723696, 0.2879163, 0.3482209, 0.3487025, 0.3212577,
-                   0.2975396, 0.2503627, 0.06595427]
-      syserrorl = [0.1654749, 0.4376057, 0.536369, 0.1987916, 0.3712922,
-                   0.3223265, 0.3906225, 0.1588837]
-      syserrorh = [0.1673992, 0.4359767, 0.5354239, 0.200042, 0.3804927,
-                   0.3368305, 0.3948841, 0.1588432]
-    else:  #jetR == 0.4:
-      xedges = [0, 0.02, 0.03, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.18, 0.22]
-      yvals = [0.6078014, 2.815131, 5.960223, 9.770085, 9.899658, 8.603309,
-               6.119539, 4.60788, 2.300467, 0.7015587]
-      staterror = [0.0430097, 0.1299623, 0.1900576, 0.1710785, 0.1712931, 0.1581808,
-                   0.1320032, 0.1172254, 0.059633, 0.03359087]
-      syserrorl = [0.1025423, 0.1138034, 0.04146903, 0.096956, 0.06155705, 0.06077894,
-                   0.08091901, 0.06775198, 0.03015912, 0.04115888]
-      syserrorh = [0.1024212, 0.1204349, 0.07618093, 0.1491075, 0.07706482, 0.03761498,
-                   0.1431532, 0.1033103, 0.02661073, 0.0411509]
+  # Get unfolded data from the previous measurement
+  def get_h_prev_result(self, jetR, obs_label, min_pt_truth, max_pt_truth):
 
-    # Scale values by R due to observable definition
-    xedges_scaled = array('d', [round(val / jetR, 2) for val in xedges])
-    setattr(self, "xedges_prev_prelim_%s" % jetR, xedges_scaled)
-    scale_factor = [(xedges[i+1]-xedges[i]) / (xedges_scaled[i+1]-xedges_scaled[i])
-                    for i in range(0, len(yvals))]
-    yvals_scaled = [yvals[i] * scale_factor[i] for i in range(0, len(yvals))]
-    staterror_scaled = [staterror[i] * scale_factor[i] for i in range(0, len(staterror))]
-    syserrorl_scaled = [syserrorl[i] * scale_factor[i] for i in range(0, len(syserrorl))]
-    syserrorh_scaled = [syserrorh[i] * scale_factor[i] for i in range(0, len(syserrorh))]
+    output_dir = getattr(self, 'output_dir_main')
 
-    # Create histograms
-    name = "ALI−PREL−339374"
-    hCompStat = ROOT.TH1D(name, name, len(yvals), xedges_scaled)
-    hCompSys = ROOT.TH1D(name+'_sys', name+'_sys', len(yvals), xedges_scaled)
-    for i in range(1, len(xedges), 1):
-      hCompStat.SetBinContent(i, yvals_scaled[i-1])
-      hCompSys.SetBinContent(i, yvals_scaled[i-1])
-      hCompStat.SetBinError(i, staterror_scaled[i-1])
-      hCompSys.SetBinError(i, max(syserrorl_scaled[i-1], syserrorh_scaled[i-1]))
+    f = ROOT.TFile(self.results_pp, 'READ')
 
-    return hCompStat, hCompSys
+    # Retrieve previous result and ensure that it has the proper bin range
+    h_prev_data_name = 'hmain_%s_R%s_%s_%s-%s_trunc' % \
+      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_prev_data = f.Get(h_prev_data_name)
+    if not h_prev_data:
+      raise AttributeError("%s not found in file %s" % (h_prev_data_name, self.results_pp))
 
+    # Rename and steal ownership from ROOT
+    name = 'h_prev_result_{}_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_prev_data.SetNameTitle(name, name)
+    h_prev_data.SetDirectory(0)
 
-  #----------------------------------------------------------------------
-  def plot_obs_comp(self, jetR, obs_label, obs_setting, grooming_setting,
-                    min_pt_truth, max_pt_truth, maxbin):
-    
-    # Scale both distributions by integrals
-    scale_by_int = False
+    # Retrieve previous result systematics and ensure that it has the proper bin range
+    h_prev_sys_up_name = 'hResult_%s_sys_plus_R%s_%s_%s-%s' % \
+      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_prev_sys_up = f.Get(h_prev_sys_up_name)
+    if not h_prev_sys_up:
+      raise AttributeError("%s not found in file %s" % (h_prev_sys_up_name, self.results_pp))
+    name = 'h_prev_sys_up_{}_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_prev_sys_up.SetNameTitle(name, name)
+    h_prev_sys_up.SetDirectory(0)
 
-    name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
-    c = ROOT.TCanvas(name, name, 600, 450)
-    c.Draw()
-    
-    c.cd()
-    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-    myPad.SetLeftMargin(0.2)
-    myPad.SetTopMargin(0.07)
-    myPad.SetRightMargin(0.04)
-    myPad.SetBottomMargin(0.13)
-    myPad.Draw()
-    myPad.cd()
-    
-    xtitle = getattr(self, 'xtitle')
-    ytitle = getattr(self, 'ytitle')
-    color = 600-6
-    
-    # Get histograms
-    name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
-                                              min_pt_truth, max_pt_truth)
-    if grooming_setting and show_everything_else:
-      fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(
-        jetR, obs_label, min_pt_truth, max_pt_truth))
-      #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
-    h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
-    h.SetMarkerSize(1.5)
-    h.SetMarkerStyle(20)
-    h.SetMarkerColor(color)
-    h.SetLineStyle(1)
-    h.SetLineWidth(2)
-    h.SetLineColor(color)
-    if scale_by_int:
-      h.Scale(1/h.Integral())
-    
-    h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
-      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
-    h_sys.SetLineColor(0)
-    h_sys.SetFillColor(color)
-    h_sys.SetFillColorAlpha(color, 0.3)
-    h_sys.SetFillStyle(1001)
-    h_sys.SetLineWidth(0)
-    if scale_by_int:
-      h_sys.Scale(1/h_sys.Integral())
-    
-    n_obs_bins_truth = self.n_bins_truth(obs_label)
-    truth_bin_array = self.truth_bin_array(obs_label)
-    if maxbin:
-      truth_bin_array = truth_bin_array[0:maxbin+1]
-      if jetR == 0.2:
-        truth_bin_array[-1] = 0.6
-      n_obs_bins_truth = len(truth_bin_array)-1
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
-    myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(xtitle)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(ytitle)
-    if scale_by_int:
-      myBlankHisto.SetYTitle(ytitle + ' / #int(' + ytitle + ')')
-    myBlankHisto.SetMaximum(2*h.GetMaximum())
-    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
-      myBlankHisto.SetMaximum(1.5*h.GetMaximum())
-    myBlankHisto.SetMinimum(0.)
-    myBlankHisto.Draw("E")
+    h_prev_sys_down_name = 'hResult_%s_sys_minus_R%s_%s_%s-%s' % \
+      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_prev_sys_down = f.Get(h_prev_sys_down_name)
+    if not h_prev_sys_down:
+      raise AttributeError("%s not found in file %s" % (h_prev_sys_down_name, self.results_pp))
+    name = 'h_prev_sys_down_{}_R{}_{}_{}-{}'.format(
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_prev_sys_down.SetNameTitle(name, name)
+    h_prev_sys_down.SetDirectory(0)
 
-    hCompStat, hCompSys = self.get_h_prelim(jetR)
+    # Set normalization to 1 in all histograms
+    h_prev_data.Scale(jetR)
+    h_prev_sys_up.Scale(jetR)
+    h_prev_sys_down.Scale(jetR)
 
-    #formatting
-    hCompStat.SetFillStyle(0)
-    hCompStat.SetMarkerSize(1.5)
-    hCompStat.SetMarkerStyle(21)
-    hCompStat.SetMarkerColor(1)
-    hCompStat.SetLineColor(1)
-    hCompStat.SetLineWidth(1)
-    hCompSys.SetLineColor(0)
-    hCompSys.SetFillColor(1)
-    hCompSys.SetFillColorAlpha(1, 0.3)
-    hCompSys.SetFillStyle(1001)
-    hCompSys.SetLineWidth(0)
-    if scale_by_int:
-      hCompStat.Scale(1/hCompStat.Integral())
-      hCompSys.Scale(1/hCompSys.Integral())
+    return h_prev_data, h_prev_sys_up, h_prev_sys_down
 
-    hCompSys.Draw('E2 same')
-    hCompStat.Draw('PE X0 same')
-    h_sys.DrawCopy('E2 same')
-    h.DrawCopy('PE X0 same')
-  
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.57, 0.87, text)
-    
-    text = 'Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.57, 0.8, text)
-
-    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(0.57, 0.73, text)
-
-    text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
-    text_latex.DrawLatex(0.57, 0.66, text)
-    
-    subobs_label = self.utils.formatted_subobs_label(self.observable)
-    delta = 0.
-    if subobs_label:
-      text = '{} = {}'.format(subobs_label, obs_setting)
-      text_latex.DrawLatex(0.57, 0.59, text)
-      delta = 0.07
-    
-    if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting)#.replace("#beta}", "#beta}_{SD}")
-      text_latex.DrawLatex(0.57, 0.59-delta, text)
-      
-      text_latex.SetTextSize(0.04)
-      text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-      text_latex.DrawLatex(0.57, 0.52-delta, text)
-
-    myLegend = ROOT.TLegend(0.25, 0.7, 0.45, 0.85)
-    self.utils.setup_legend(myLegend,0.035)
-    myLegend.AddEntry(h, 'This measurement', 'pe')
-    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
-    myLegend.AddEntry(hCompStat, 'ALI-PREL-339374', 'pe')
-    myLegend.Draw()
-
-    name = 'hUnfoldedComp_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR),
-                                                 obs_label, int(min_pt_truth),
-                                                 int(max_pt_truth), self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results')
-    output_dir_single = output_dir + '/single_results'
-    if not os.path.exists(output_dir_single):
-      os.mkdir(output_dir_single)
-    outputFilename = os.path.join(output_dir_single, name)
-    c.SaveAs(outputFilename)
-    c.Close()
-
-    # Write result to ROOT file
-    final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
-    fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
-    h.Write()
-    h_sys.Write()
-    hCompStat.Write()
-    hCompSys.Write()
-    fFinalResults.Close()
 
   #----------------------------------------------------------------------
   def MC_prediction(self, jetR, obs_setting, obs_label, min_pt_truth,
@@ -622,31 +468,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     output_dir = getattr(self, 'output_dir_main')
 
-    prev_prelim = False
-    if self.use_prev_prelim and overlay and (jetR == 0.2 or jetR == 0.4) \
-       and min_pt_truth == 40 and obs_label == '1':
-      prev_prelim = True
-      # Need to rebin response for the binning used by previous preliminary result
-      filepath = os.path.join(output_dir, 'response_prev_prelim.root')
-
-      if not os.path.exists(filepath):
-        # Create rebinned THn with these binnings, and write to file
-        print("Rebinning response matrix for previous preliminary masurement...")
-        name_thn = self.utils.name_thn(self.observable, jetR, obs_label)
-        name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
-        name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, obs_label)
-        thn = ROOT.TFile(self.main_response, 'READ').Get(name_thn)
-        thn.SetName(name_thn)
-        label = 'R{}_{}'.format(jetR, obs_label)
-        pt_bins_truth = array('d', [5, 20, 40, 60, 80, 100, 150, 200])
-        pt_bins_det = array('d', [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150])
-        obs_bins = getattr(self, "xedges_prev_prelim_%s" % jetR)
-        self.utils.rebin_response(
-          filepath, thn, name_thn_rebinned, name_roounfold, label, len(pt_bins_det)-1,
-          pt_bins_det, len(obs_bins)-1, obs_bins, len(pt_bins_truth)-1, pt_bins_truth,
-          len(obs_bins)-1, obs_bins, self.observable, do_roounfoldresponse=False)
-    else:
-      filepath = os.path.join(output_dir, 'response.root')
+    filepath = os.path.join(output_dir, 'response.root')
     f = ROOT.TFile(filepath, 'READ')
 
     thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
@@ -655,10 +477,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     name = 'hPythia_{}_R{}_{}_{}-{}'.format(
       self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    if prev_prelim:
-      h = thn.Projection(3)
-    else:
-      h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
+    h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
     h.SetDirectory(0)
 
     return h
@@ -737,7 +556,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         i_config, jetR, overlay_list, min_pt_truth,
         max_pt_truth, maxbins, plot_MC=True, MC='PYTHIA', plot_ratio=True)
 
-      if not self.is_pp:
+      if not self.is_pp and self.results_pp:
         # Plot Pb-Pb/pp data comparison plots
         self.plot_observable_overlay_subconfigs(
           i_config, jetR, overlay_list, min_pt_truth,
@@ -826,21 +645,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(
           jetR, obs_label, min_pt_truth, max_pt_truth))
 
-      if self.use_prev_prelim and (jetR == 0.2 or jetR == 0.4) \
-         and min_pt_truth == 40 and obs_label == '1':
-        # Use previous preliminary result
-        h, h_sys = self.get_h_prelim(jetR)
-        # Move error bars to different histogram
-        h_sys.SetNameTitle("hSysPrelim%s", "hSysPrelim%s")
-        for i in range(1, h.GetNbinsX()+1, 1):
-          h.SetBinError(i, 0.)
+      if grooming_setting and maxbin:
+        h = self.truncate_hist(getattr(self, name), None, maxbin+1, name+'_trunc')
       else:
-        if grooming_setting and maxbin:
-          h = self.truncate_hist(getattr(self, name), None, maxbin+1, name+'_trunc')
-        else:
-          h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
-        h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
-          self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+        h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
+      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
 
       h.SetDirectory(0)
       h.SetMarkerSize(1.5)
@@ -864,11 +674,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         if maxbin:
-          if self.use_prev_prelim and (jetR == 0.2 or jetR == 0.4) \
-             and min_pt_truth == 40 and obs_label == '1':
-            xmax = getattr(self, "xedges_prev_prelim_%s" % jetR)[-1]
-          else:
-            xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]
+          xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(xtitle)
@@ -878,7 +684,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if min_pt_truth == 20:
             myBlankHisto.SetMaximum(1.1*ymax)
           elif min_pt_truth == 40:
-            myBlankHisto.SetMaximum(1.2*ymax)
+            if self.use_prev_result:
+              myBlankHisto.SetMaximum(1.8*ymax)
+            else:
+              myBlankHisto.SetMaximum(1.2*ymax)
           elif min_pt_truth == 60:
             myBlankHisto.SetMaximum(1.15*ymax)
           else:
@@ -923,7 +732,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if plot_MC:
             myBlankHisto2.SetYTitle("#frac{Data}{%s}" % MC)
           elif plot_pp_data:
-            myBlankHisto2.SetYTitle("#frac{Pb-Pb}{pp}")
+            if self.use_prev_result:
+              myBlankHisto2.SetYTitle("#frac{5.02 TeV}{2.76 TeV}")
+            else:
+              myBlankHisto2.SetYTitle("#frac{Pb-Pb}{pp}")
           myBlankHisto2.SetXTitle(xtitle)
           myBlankHisto2.GetXaxis().SetTitleSize(30)
           myBlankHisto2.GetXaxis().SetTitleFont(43)
@@ -1008,9 +820,29 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           hMC.SetLineWidth(4)
 
       elif plot_pp_data:
-        h_pp_data, h_pp_sys = self.get_pp_data(
-          jetR, obs_label, min_pt_truth, max_pt_truth,
-          [h.GetBinLowEdge(i) for i in range(1, h.GetNbinsX()+2)])
+
+        if self.use_prev_result:
+          # Use previous Pb-Pb result (use pp name for convenience)
+          h_pp_data, h_prev_sys_up, h_prev_sys_down = self.get_h_prev_result(
+            jetR, obs_label, min_pt_truth, max_pt_truth)
+          # Construct TGraphAsymmErrors to store asymmetric up and down uncertainties
+          x = array('d', [h_prev_sys_up.GetBinCenter(i) for i in \
+                          range(1, h_prev_sys_up.GetNbinsX()+1)])
+          y = array('d', [h_prev_sys_up.GetBinContent(i) for i in \
+                          range(1, h_prev_sys_up.GetNbinsX()+1)])
+          exl = array('d', [x[i-1]-h_prev_sys_up.GetBinLowEdge(i) for i in \
+                            range(1, h_prev_sys_up.GetNbinsX()+1)])
+          eyl = array('d', [h_prev_sys_down.GetBinError(i) for i in \
+                            range(1, h_prev_sys_down.GetNbinsX()+1)])
+          exh = array('d', [h_prev_sys_up.GetBinLowEdge(i)-x[i-2] for i in \
+                            range(2, h_prev_sys_up.GetNbinsX()+2)])
+          eyh = array('d', [h_prev_sys_up.GetBinError(i) for i in \
+                            range(1, h_prev_sys_up.GetNbinsX()+1)])
+          h_pp_sys = ROOT.TGraphAsymmErrors(len(x), x, y, exl, exh, eyl, eyh)
+        else:
+          h_pp_data, h_pp_sys = self.get_pp_data(
+            jetR, obs_label, min_pt_truth, max_pt_truth,
+            [h.GetBinLowEdge(i) for i in range(1, h.GetNbinsX()+2)])
 
         plot_errors = True
         if plot_errors:
@@ -1032,15 +864,35 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           h_pp_data.SetLineWidth(4)
 
       if plot_ratio:
-        hRatioSys = h_sys.Clone()
-        hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
-        if plot_MC:
-          hRatioSys.Divide(hMC)
-        elif plot_pp_data:
-          hRatioSys.Divide(h_pp_sys)
-          #for i in range(1, hRatioSys.GetNbinsX()+1):
-          #  new_error = math.sqrt(h_sys.GetBinError(i) ** 2 + h_pp_sys.GetBinError(i) ** 2)
-          #  hRatioSys.SetBinError(i, new_error)
+        if self.use_prev_result and plot_pp_data:
+          # Take ratios to get the correct systematic uncertainties
+          hRatioSysUp = h_sys.Clone()
+          hRatioSysUp.SetName('{}_RatioUp'.format(h_sys.GetName()))
+          hRatioSysUp.Divide(h_prev_sys_up)
+          hRatioSysDown = h_sys.Clone()
+          hRatioSysDown.SetName('{}_RatioDown'.format(h_sys.GetName()))
+          hRatioSysDown.Divide(h_prev_sys_down)
+          # Construct TGraphAsymmErrors
+          x = array('d', [hRatioSysUp.GetBinCenter(i) for i in \
+                          range(1, hRatioSysUp.GetNbinsX()+1)])
+          y = array('d', [hRatioSysUp.GetBinContent(i) for i in \
+                          range(1, hRatioSysUp.GetNbinsX()+1)])
+          exl = array('d', [x[i-1]-hRatioSysUp.GetBinLowEdge(i) for i in \
+                            range(1, hRatioSysUp.GetNbinsX()+1)])
+          eyl = array('d', [hRatioSysDown.GetBinError(i) for i in \
+                            range(1, hRatioSysDown.GetNbinsX()+1)])
+          exh = array('d', [hRatioSysUp.GetBinLowEdge(i)-x[i-2] for i in \
+                            range(2, hRatioSysUp.GetNbinsX()+2)])
+          eyh = array('d', [hRatioSysUp.GetBinError(i) for i in \
+                            range(1, hRatioSysUp.GetNbinsX()+1)])
+          hRatioSys = ROOT.TGraphAsymmErrors(len(x), x, y, exl, exh, eyl, eyh)
+        else:
+          hRatioSys = h_sys.Clone()
+          hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
+          if plot_MC:
+            hRatioSys.Divide(hMC)
+          elif plot_pp_data:
+            hRatioSys.Divide(h_pp_sys)
         hRatioSys.SetLineColor(0)
         hRatioSys.SetFillColor(color)
         hRatioSys.SetFillColorAlpha(color, 0.3)
@@ -1076,8 +928,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       elif plot_pp_data:
         plot_errors = True
         if plot_errors:
-          h_pp_sys.DrawCopy('E2 same')
-          h_pp_data.DrawCopy('PE X0 same')
+          # TGraphAsymmErrors doesn't have DrawCopy
+          if self.use_prev_result:
+            h_pp_sys.Draw('E2 same')
+            h_pp_data.Draw('PE X0 same')
+          else:
+            h_pp_sys.DrawCopy('E2 same')
+            h_pp_data.DrawCopy('PE X0 same')
         else:
           h_pp_data.DrawCopy('L hist same')
 
@@ -1087,8 +944,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if plot_ratio:
         pad2.cd()
         if plot_MC or plot_pp_data:
-          hRatioSys.DrawCopy('E2 same')
-          hRatioStat.DrawCopy('PE X0 same')
+          # TGraphAsymmErrors doesn't have DrawCopy
+          if self.use_prev_result:
+            hRatioSys.Draw('E2 same')
+            hRatioStat.Draw('PE X0 same')
+          else:
+            hRatioSys.DrawCopy('E2 same')
+            hRatioStat.DrawCopy('PE X0 same')
 
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
@@ -1110,9 +972,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       elif MC.lower() == "herwig":
         myLegend.AddEntry(hMC, 'Herwig7 Default', 'l')
     elif plot_pp_data:
-      myLegend.AddEntry(h_pp_data, 'pp', 'pe')
-      if plot_errors:
-        myLegend.AddEntry(h_pp_sys, 'pp syst. uncert.', 'f')
+      if self.use_prev_result:
+        myLegend.AddEntry(h_pp_data, 'Pb-Pb @ 2.76 TeV', 'pe')
+        if plot_errors:
+          myLegend.AddEntry(h_pp_sys, '2.76 TeV syst. uncert.', 'f')
+      else:
+        myLegend.AddEntry(h_pp_data, 'pp', 'pe')
+        if plot_errors:
+          myLegend.AddEntry(h_pp_sys, 'pp syst. uncert.', 'f')
 
     text_xval = 0.27
     text_latex = ROOT.TLatex()

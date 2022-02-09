@@ -29,7 +29,7 @@ ang:
   common_settings:
     xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
     ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
-    pt_bins_reported: [60, 80]
+    pt_bins_reported: [100, 150]
     plot_overlay_list:
       - ['config_R0.2_1', 'config_R0.2_1.5', 'config_R0.2_2', 'config_R0.2_3']
       - ['config_R0.2_1_SD', 'config_R0.2_1.5_SD', 'config_R0.2_2_SD', 'config_R0.2_3_SD']
@@ -42,12 +42,12 @@ ang:
     R: 0.2
     alpha: 1
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.75]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.07, 0.1, 0.12, 0.14, 0.17, 0.2, 0.24, 0.3, 0.5, 0.75]
     obs_max_reported: [0.5]
-    obs_bins_det: [0, 0.1, 0.15, 0.20, 0.25, 0.3, 0.5, 0.75]
-    obs_bins_det_sys_binning: [0, 0.09, 0.14, 0.19, 0.24, 0.32, 0.5, 0.75]
+    obs_bins_det: [0, 0.07, 0.1, 0.12, 0.14, 0.17, 0.2, 0.24, 0.3, 0.5, 0.75]
+    obs_bins_det_sys_binning: [0, 0.05, 0.09, 0.11, 0.13, 0.15, 0.18, 0.21, 0.25, 0.3, 0.5, 0.75]
     reg_param:
       0.2: 2
 
@@ -55,12 +55,12 @@ ang:
     R: 0.2
     alpha: 1.5
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.05, 0.08, 0.12, 0.17, 0.25, 0.4, 0.7]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.03, 0.06, 0.09, 0.12, 0.16, 0.2, 0.26, 0.4, 0.7]
     obs_max_reported: [0.4]
-    obs_bins_det: [0, 0.05, 0.08, 0.12, 0.17, 0.25, 0.4, 0.7]
-    obs_bins_det_sys_binning: [0, 0.045, 0.075, 0.11, 0.16, 0.27, 0.4, 0.7]
+    obs_bins_det: [0, 0.03, 0.06, 0.08, 0.1, 0.12, 0.16, 0.2, 0.26, 0.4, 0.7]
+    obs_bins_det_sys_binning: [0, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.17, 0.22, 0.28, 0.45, 0.7]
     reg_param:
       0.2: 2
 
@@ -68,12 +68,12 @@ ang:
     R: 0.2
     alpha: 2
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.02, 0.04, 0.07, 0.1, 0.13, 0.2, 0.3, 0.5, 0.7]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.15, 0.3, 0.5]
     obs_max_reported: [0.3]
-    obs_bins_det: [0, 0.02, 0.04, 0.06, 0.09, 0.12, 0.18, 0.3, 0.5, 0.7]
-    obs_bins_det_sys_binning: [0, 0.025, 0.045, 0.065, 0.085, 0.13, 0.15, 0.21, 0.3, 0.5, 0.7]
+    obs_bins_det: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5]
+    obs_bins_det_sys_binning: [0, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.15, 0.2, 0.3, 0.5]
     reg_param:
       0.2: 2
 
@@ -81,12 +81,12 @@ ang:
     R: 0.2
     alpha: 3
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.01, 0.02, 0.04, 0.06, 0.08, 0.12, 0.25, 0.35]
-    obs_max_reported: [0.25]
-    obs_bins_det: [0, 0.01, 0.02, 0.04, 0.06, 0.08, 0.12, 0.25, 0.35]
-    obs_bins_det_sys_binning: [0, 0.01, 0.025, 0.045, 0.065, 0.09, 0.13, 0.25, 0.35]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.01, 0.02, 0.03, 0.04, 0.055, 0.075, 0.1, 0.2, 0.4]
+    obs_max_reported: [0.2]
+    obs_bins_det: [0, 0.01, 0.02, 0.03, 0.04, 0.055, 0.075, 0.1, 0.2, 0.4]
+    obs_bins_det_sys_binning: [0, 0.006, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.08, 0.12, 0.2, 0.4]
     reg_param:
       0.2: 2
 
@@ -99,12 +99,12 @@ ang:
     R: 0.2
     alpha: 1
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.04, 0.08, 0.15, 0.2, 0.25, 0.3, 0.4, 0.55, 0.7]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.03, 0.05, 0.07, 0.09, 0.11, 0.15, 0.2, 0.3, 0.4, 0.55, 0.7]
     obs_max_reported: [0.55]
-    obs_bins_det: [0, 0.02, 0.04, 0.06, 0.08, 0.12, 0.16, 0.2, 0.25, 0.3, 0.4, 0.55, 0.7]
-    obs_bins_det_sys_binning: [0, 0.015, 0.035, 0.055, 0.075, 0.11, 0.15, 0.2, 0.26, 0.31, 0.41, 0.54, 0.7]
+    obs_bins_det: [0, 0.03, 0.05, 0.07, 0.09, 0.11, 0.14, 0.17, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+    obs_bins_det_sys_binning: [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.13, 0.16, 0.18, 0.28, 0.3, 0.4, 0.55, 0.7]
     reg_param:
       0.2: 2
 
@@ -115,12 +115,12 @@ ang:
     R: 0.2
     alpha: 1.5
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.015, 0.03, 0.06, 0.1, 0.15, 0.25, 0.4, 0.6]
-    obs_max_reported: [0.4]
-    obs_bins_det: [0, 0.015, 0.03, 0.045, 0.06, 0.08, 0.1, 0.15, 0.25, 0.4, 0.6]
-    obs_bins_det_sys_binning: [0, 0.01, 0.025, 0.04, 0.06, 0.08, 0.11, 0.16, 0.26, 0.42, 0.6]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.007, 0.01, 0.015, 0.02, 0.04, 0.07, 0.1, 0.25, 0.45, 0.65]
+    obs_max_reported: [0.45]
+    obs_bins_det: [0, 0.007, 0.01, 0.015, 0.02, 0.04, 0.07, 0.1, 0.17, 0.25, 0.45, 0.65]
+    obs_bins_det_sys_binning:  [0, 0.008, 0.015, 0.025, 0.035, 0.055, 0.08, 0.11, 0.16, 0.25, 0.45, 0.65]
     reg_param:
       0.2: 2
 
@@ -131,12 +131,12 @@ ang:
     R: 0.2
     alpha: 2
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.1, 0.2, 0.35, 0.55]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.002, 0.004, 0.007, 0.01, 0.02, 0.04, 0.1, 0.35, 0.5]
     obs_max_reported: [0.35]
-    obs_bins_det: [0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.2, 0.35, 0.55]
-    obs_bins_det_sys_binning: [0, 0.005, 0.015, 0.025, 0.035, 0.045, 0.055, 0.075, 0.11, 0.21, 0.37, 0.55]
+    obs_bins_det: [0, 0.002, 0.004, 0.007, 0.01, 0.02, 0.04, 0.07, 0.1, 0.2, 0.35, 0.5]
+    obs_bins_det_sys_binning: [0, 0.003, 0.005, 0.008, 0.015, 0.025, 0.045, 0.075, 0.11, 0.21, 0.35, 0.5]
     reg_param:
       0.2: 2
 
@@ -147,12 +147,12 @@ ang:
     R: 0.2
     alpha: 3
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
-    pt_bins_det: [40, 45, 50, 60, 80, 100, 150, 200]
-    pt_bins_det_sys_truncation: [45, 50, 60, 80, 100, 150]
-    obs_bins_truth: [0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.1, 0.15, 0.25, 0.45]
+    pt_bins_det: [40, 50, 60, 70, 80, 100, 150, 200]
+    pt_bins_det_sys_truncation: [50, 60, 70, 80, 100, 150]
+    obs_bins_truth: [0, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.35]
     obs_max_reported: [0.25]
-    obs_bins_det: [0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.15, 0.25, 0.45]
-    obs_bins_det_sys_binning: [0, 0.005, 0.015, 0.025, 0.035, 0.045, 0.055, 0.075, 0.11, 0.16, 0.26, 0.45]
+    obs_bins_det: [0, 0.001, 0.002, 0.005, 0.01, 0.02, 0.04, 0.1, 0.25, 0.35]
+    obs_bins_det_sys_binning: [0, 0.001, 0.003, 0.004, 0.008, 0.015, 0.025, 0.045, 0.075, 0.11, 0.26, 0.35]
     reg_param:
       0.2: 2
 
@@ -160,8 +160,7 @@ ang:
 ###############################################################################
 # Analysis & plotting parameters
 file_format: ".pdf"
-output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin3"
-results_pp: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin3/ang/final_results/fFinalResults.root"
+output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin5"
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'

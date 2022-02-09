@@ -92,6 +92,7 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
               h = ROOT.TH2F(name, name, len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
               h.GetXaxis().SetTitle('#it{p}_{T}^{ch jet}')
               h.GetYaxis().SetTitle(obs_name)
+              h.Sumw2()
               setattr(self, name, h)
 
           name = ('h_%s_JetPt_Truth_R%s_%s' % (observable, jetR, obs_label)) if \
@@ -99,6 +100,7 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
           h = ROOT.TH2F(name, name, len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
           h.GetXaxis().SetTitle('#it{p}_{T,truth}^{ch jet}')
           h.GetYaxis().SetTitle(obs_name + '^{truth}')
+          h.Sumw2()
           setattr(self, name, h)
 
   #---------------------------------------------------------------
@@ -152,6 +154,7 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
     h.GetYaxis().SetTitle(obs_name + '^{truth}')
     h.GetZaxis().SetTitle('#frac{%s^{det}-%s^{truth}}{%s^{truth}}' % \
       (obs_name, obs_name, obs_name))
+    h.Sumw2()
     setattr(self, name, h)
 
     if not self.is_pp and self.fill_delta_obs:
@@ -162,6 +165,7 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
         h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1, 1)
       elif observable == "mass":
         h = ROOT.TH2F(name, name, 300, 0, 300, 400, -100, 100)
+      h.Sumw2()
       setattr(self, name, h)
 
   #---------------------------------------------------------------
