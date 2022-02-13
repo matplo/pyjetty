@@ -37,14 +37,19 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   # Check if det-jet passes acceptance criteria
   #---------------------------------------------------------------
-  def is_det_jet_accepted(self, jet_det):
+  def is_det_jet_accepted(self, jet_det, min_leading_track_pT=None):
+
+    min_found = False
 
     for track in jet_det.constituents():
+
+      if min_leading_track_pT and not min_found and track.pt() >= min_leading_track_pT:
+        min_found = True
 
       if track.pt() > 100.:
         return False
 
-    return True
+    return min_found if min_leading_track_pT else True
 
   #---------------------------------------------------------------
   # Check if truth-jet passes acceptance criteria

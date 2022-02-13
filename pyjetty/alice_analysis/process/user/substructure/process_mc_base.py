@@ -114,6 +114,10 @@ class ProcessMCBase(process_base.ProcessBase):
     else:
       self.thermal_model = False
 
+    # Whether or not to require jets to contain a track with some leading track pT
+    self.min_leading_track_pT = config["min_leading_track_pT"] if \
+      "min_leading_track_pT" in config else None
+
     # Create dictionaries to store grooming settings and observable settings for each observable
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores the observable setting, e.g. subjetR
@@ -469,6 +473,8 @@ class ProcessMCBase(process_base.ProcessBase):
         print('')
         print('jet definition is:', jet_def)
         print('jet selector for det-level is:', jet_selector_det)
+        if self.min_leading_track_pT:
+          print('*** Requiring minimum leading track pT:', self.min_leading_track_pT)
         print('jet selector for truth-level matches is:', jet_selector_truth_matched)
 
       # Analyze
@@ -542,7 +548,7 @@ class ProcessMCBase(process_base.ProcessBase):
 
       # Check additional acceptance criteria
       # skip event if not satisfied -- since first jet in event is highest pt
-      if not self.utils.is_det_jet_accepted(jet_det):
+      if not self.utils.is_det_jet_accepted(jet_det, self.min_leading_track_pT):
         if self.fill_R_indep_hists:
           self.hNevents.Fill(0)
         if self.debug_level > 1:
@@ -559,28 +565,32 @@ class ProcessMCBase(process_base.ProcessBase):
 
     # Loop through jets and set jet matching candidates for each jet in user_info
     if self.is_pp:
-        [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR)) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
+      for jet_det in jets_det_selected:
+        for jet_truth in jets_truth_selected_matched:
+          self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR))
     else:
+      for jet_det_pp in jets_det_pp_selected:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
-        [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR,
-          'hDeltaR_combined_ppdet_R{}_Rmax'+str(R_max), fill_jet1_matches_only=True) for \
-          jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
-        [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR,
-          'hDeltaR_ppdet_pptrue_R{}_Rmax'+str(R_max)) for \
-          jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected]
+        for jet_det_combined in jets_det_selected:
+          self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR,
+            'hDeltaR_combined_ppdet_R{{}}_Rmax{}'.format(R_max), fill_jet1_matches_only=True)
+        for jet_truth in jets_truth_selected_matched:
+          self.set_matching_candidates(
+            jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{{}}_Rmax{}'.format(R_max))
 
     # Loop through jets and set accepted matches
     if self.is_pp:
-        hname = 'hJetMatchingQA_R'+str(jetR)
-        [self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected]
+      hname = 'hJetMatchingQA_R{}'.format(jetR)
+      for jet_det in jets_det_selected:
+        self.set_matches_pp(jet_det, hname)
     else:
-        hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
-        [self.set_matches_AA(jet_det_combined, jetR, hname) for \
-         jet_det_combined in jets_det_selected]
+      hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
+      for jet_det_combined in jets_det_selected:
+        self.set_matches_AA(jet_det_combined, jetR, hname)
 
     # Loop through jets and fill response histograms if both det and truth jets are unique match
-    result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes,
-              fj_particles_truth_holes) for jet_det in jets_det_selected]
+    for jet_det in jets_det_selected:
+      self.fill_jet_matches(jet_det, jetR, R_max)
 
   #---------------------------------------------------------------
   # Fill some background histograms

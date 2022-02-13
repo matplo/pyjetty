@@ -74,6 +74,9 @@ class ProcessDataBase(process_base.ProcessBase):
     else:
       self.is_pp = True
 
+    # Whether or not to require jets to contain a track with some leading track pT
+    self.min_leading_track_pT = config["min_leading_track_pT"] if "min_leading_track_pT" in config else None
+
     # Create dictionaries to store grooming settings and observable settings for each observable
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores the observable setting, e.g. subjetR
@@ -180,7 +183,9 @@ class ProcessDataBase(process_base.ProcessBase):
     # Fill track histograms
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     print('Fill track histograms')
-    [[self.fillTrackHistograms(track) for track in fj_particles] for fj_particles in self.df_fjparticles]
+    for fj_particles in self.df_fjparticles:
+      for track in fj_particles:
+        self.fillTrackHistograms(track)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
 
     print('Find jets...')
@@ -188,8 +193,9 @@ class ProcessDataBase(process_base.ProcessBase):
     print()
     self.event_number = 0
 
-    # Use list comprehension to do jet-finding and fill histograms
-    result = [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles]
+    # Do jet-finding and fill histograms
+    for fj_particles in self.df_fjparticles:
+      self.analyze_event(fj_particles)
 
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     print('Save thn...')
@@ -238,7 +244,10 @@ class ProcessDataBase(process_base.ProcessBase):
       jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
       if self.debug_level > 2:
         print('jet definition is:', jet_def)
-        print('jet selector is:', jet_selector,'\n')
+        print('jet selector is:', jet_selector)
+        if self.min_leading_track_pT:
+          print('*** Requiring minimum leading track pT:', self.min_leading_track_pT)
+        print()
 
       # Analyze
       if self.is_pp or self.include_no_subtraction:
@@ -287,7 +296,8 @@ class ProcessDataBase(process_base.ProcessBase):
       suffix = ''
 
     # Loop through jets and call user function to fill histos
-    result = [self.analyze_accepted_jet(jet, jetR, suffix) for jet in jets_selected]
+    for jet in jets_selected:
+      self.analyze_accepted_jet(jet, jetR, suffix)
 
   #---------------------------------------------------------------
   # Fill histograms
@@ -295,7 +305,7 @@ class ProcessDataBase(process_base.ProcessBase):
   def analyze_accepted_jet(self, jet, jetR, suffix):
 
     # Check additional acceptance criteria
-    if not self.utils.is_det_jet_accepted(jet):
+    if not self.utils.is_det_jet_accepted(jet, self.min_leading_track_pT):
       return
 
     # Fill base histograms
