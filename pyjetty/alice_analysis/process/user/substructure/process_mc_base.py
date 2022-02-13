@@ -590,7 +590,8 @@ class ProcessMCBase(process_base.ProcessBase):
 
     # Loop through jets and fill response histograms if both det and truth jets are unique match
     for jet_det in jets_det_selected:
-      self.fill_jet_matches(jet_det, jetR, R_max)
+      self.fill_jet_matches(
+        jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes)
 
   #---------------------------------------------------------------
   # Fill some background histograms
