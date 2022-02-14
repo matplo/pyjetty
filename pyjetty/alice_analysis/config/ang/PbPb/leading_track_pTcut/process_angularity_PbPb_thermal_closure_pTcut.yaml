@@ -1,0 +1,112 @@
+# Processing parameters
+jetR: [0.2, 0.4]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+# Require a minimum leading track pT (in GeV/c)
+min_leading_track_pT: 5
+# Uncomment for data // comment for MC
+#reject_tracks_fraction: 0
+
+# Background subtraction parameters for Pb-Pb
+constituent_subtractor:
+  max_distance: 
+    0.2: [0.1]
+    0.4: [0.25]
+  main_R_max:
+    0.2: 0.1
+    0.4: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+# Parameters needed for MC processing in Pb-Pb
+dry_run: False
+fast_simulation: False
+emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
+mc_fraction_threshold: 0.5
+# Uncommend for MC // comment for data
+reject_tracks_fraction: 0.02
+
+# Parameters for thermal model
+thermal_model:
+  beta: 0.425
+  N_avg: 2500
+  sigma_N: 500
+
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  common_settings:
+    xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
+
+  ############################################################################
+  # Different alpha configurations
+  config_1:
+    alpha: 1
+
+  config_1.5:
+    alpha: 1.5
+
+  config_2:
+    alpha: 2
+
+  config_3:
+    alpha: 3
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_1_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 1
+
+  config_1.5_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 1.5
+
+  config_2_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 2
+
+  config_3_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 3
+
+
+###############################################################################
+mass:
+
+  common_settings:
+    xtitle: '#it{m}_{jet}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
+
+  ############################################################################
+  # Different alpha configurations
+  config_m:
+    name: "mass"
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_m_SD:
+    name: "groomed mass"
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+
