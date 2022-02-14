@@ -35,7 +35,7 @@ class PlotSubjetZFigures(common_base.CommonBase):
 
         #------------------------------------------------------
 
-        self.observable = 'inclusive_subjet_z'
+        self.observable = 'leading_subjet_z'
         self.base_dir = f'/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/subjet_z/{self.observable}'
         self.data_file = 'fFinalResults.root'
         self.theory_file = 'folded_scet_R04_pT_80_120.root'
@@ -43,6 +43,7 @@ class PlotSubjetZFigures(common_base.CommonBase):
         self.r_list = [0.1, 0.2]
         self.pt_list = [80, 120]
         self.folding_labels = ['PYTHIA8', 'Herwig7']
+        self.folding_plot_labels = ['PYTHIA8', 'HERWIG7']
         self.z_leading_min = 0.7001
 
         self.xmin = -0.03
@@ -55,14 +56,14 @@ class PlotSubjetZFigures(common_base.CommonBase):
             self.ymax_ratio = 20
         if self.observable ==  'leading_subjet_z':
             self.logy = True 
-            self.ymin = 0.18
-            self.ymax = 1200
+            self.ymin = 0.16
+            self.ymax = 1400
             self.ymin_ratio = 0.3
             self.ymax_ratio = 12.9
 
         self.xtitle = '#it{z}_{#it{r}}'
         self.ytitle = '#frac{1}{ #it{#sigma}_{ 0.7 < #it{z}_{#it{r}} < #it{z}_{#it{r}}^{NP} } } ' + \
-                      '#frac{d#it{#sigma}}{d#it{#it{z}_{#it{r}}}}'
+                      '#frac{d#it{#sigma}}{d#it{z}_{#it{r}}}'
 
         self.left_offset = 0.26
         self.bottom_offset = 0.15
@@ -348,14 +349,17 @@ class PlotSubjetZFigures(common_base.CommonBase):
         leg.AddEntry(self.h,'ALICE','PE')
 
         # Draw theory
-        for i, folding_label in enumerate(self.folding_labels):
+        for i, folding_label in enumerate(self.folding_plot_labels):
 
             self.g_theory_dict[r][i].SetFillColorAlpha(self.colors[i], 0.25)
             self.g_theory_dict[r][i].SetLineColor(self.colors[i])
             self.g_theory_dict[r][i].SetLineWidth(3)
             self.g_theory_dict[r][i].Draw('L 3 same')
 
-            leg.AddEntry(self.g_theory_dict[r][i], 'NLL\' #otimes '+folding_label, 'lf')
+            if self.observable == 'leading_subjet_z':
+                leg.AddEntry(self.g_theory_dict[r][i], 'NLL\' #otimes '+folding_label, 'lf')
+            elif self.observable == 'inclusive_subjet_z':
+                leg.AddEntry(self.g_theory_dict[r][i], 'NLL #otimes '+folding_label, 'lf')
 
         self.h_sys.Draw('E2 same')
         line_np.Draw()
@@ -363,8 +367,8 @@ class PlotSubjetZFigures(common_base.CommonBase):
 
         if pad == 2:
             leg.AddEntry(self.h_sys, 'Syst. uncertainties', 'f')
-            leg.AddEntry(line_np, "#it{z}_{#it{r}}^{NP} #geq " + \
-                          "1 - #frac{#Lambda}{ #it{p}_{T} #it{z}_{#it{r}} }", 'lf')
+            leg.AddEntry(line_np, "#it{z}_{#it{r}}^{NP} = " + \
+                          "1 #font[122]{-} #frac{#Lambda}{ #it{p}_{T} #it{z}_{#it{r}} }", 'lf')
             leg.Draw('same')
 
         # # # # # # # # # # # # # # # # # # # # # # # #
@@ -634,6 +638,7 @@ class PlotSubjetZFigures(common_base.CommonBase):
         ROOT.gStyle.SetStatH(0.03)
         ROOT.gStyle.SetStatW(0.3)
         ROOT.gStyle.SetTickLength(0.02,"y")
+        ROOT.gStyle.SetTickLength(0.04,"x")
         ROOT.gStyle.SetEndErrorSize(3)
         ROOT.gStyle.SetLabelSize(0.05,"xyz")
         ROOT.gStyle.SetLabelFont(font,"xyz")
