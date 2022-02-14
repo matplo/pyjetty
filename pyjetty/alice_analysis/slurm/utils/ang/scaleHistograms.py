@@ -4,7 +4,8 @@
 # all output lists, subject to some simple criteria that covers basic use cases (can be adapted as needed).
 #
 # There is an option "bRemoveOutliers" to remove outliers from certain histograms. The features are
-# currently hard-coded below so you will need to modify the code as needed. This feature is adapted from code of Raymond Ehlers.
+# currently hard-coded below so you will need to modify the code as needed.
+# This feature is adapted from code of Raymond Ehlers.
 #
 # Author: James Mulligan (james.mulligan@berkeley.edu)
 #
@@ -15,6 +16,7 @@ import ctypes
 import os
 import sys
 import yaml
+from array import array
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -25,12 +27,13 @@ def scaleHistograms(configFile, remove_unscaled):
 
   # Option to remove outliers from specified histograms
   # If the average bin content stays below the "outlierLimit" for "outlierNBinsThreshold" bins, it is removed
-  bRemoveOutliers = False
-  outlierLimit = 2
-  outlierNBinsThreshold=4
+  bRemoveOutliers = True
+  outlierLimit = 10
+  # NOTE: CURRENTLY IGNORING IN "SIMPLE" IMPLEMENTATION!!
+  outlierNBinsThreshold=2
 
   # Option to print out detailed info about scaling and outlier removal
-  verbose = False
+  verbose = True
 
   # Read the cross-section, and scale histograms
   EndPtHardBin = 20
@@ -85,7 +88,7 @@ def scaleHistograms(configFile, remove_unscaled):
 # Function to iterate recursively through an object to scale all TH1/TH2/THnSparse
 def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limit=2,
                        nBinsThreshold=4, pTHardBin=0, EndPtHardBin=20, taskName=""):
-  
+
   # Set Sumw2 if not already done
   if obj.InheritsFrom(ROOT.THnBase.Class()):
     if obj.GetSumw2() is 0:
@@ -97,24 +100,29 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
       obj.Sumw2()
       if verbose:
         print('Set Sumw2 on %s' % obj.GetName())
-  
+
   if obj.InheritsFrom(ROOT.TProfile.Class()):
     if verbose:
       print("TProfile %s not scaled..." % obj.GetName())
   elif obj.InheritsFrom(ROOT.TH2.Class()):
+    if bRemoveOutliers:
+      simpleRemoveOutliers(obj, verbose, limit)
     obj.Scale(scaleFactor)
     if verbose:
       print("TH2 %s was scaled..." % obj.GetName())
   elif obj.InheritsFrom(ROOT.TH1.Class()):
     if bRemoveOutliers:
-      name = obj.GetName()
+      simpleRemoveOutliers(obj, verbose, limit)
+      #name = obj.GetName()
       #only perform outlier removal on these couple histograms
-      if "Pt" in name:
-        removeOutliers(pTHardBin, EndPtHardBin, obj, verbose, limit, nBinsThreshold, 1, taskName)
+      #if "Pt" in name:
+      #  removeOutliers(pTHardBin, EndPtHardBin, obj, verbose, limit, nBinsThreshold, 1, taskName)
     obj.Scale(scaleFactor)
     if verbose:
       print("TH1 %s was scaled..." % obj.GetName())
   elif obj.InheritsFrom(ROOT.THnBase.Class()):
+    if bRemoveOutliers:
+      simpleRemoveOutliersTHn(obj, verbose, limit, dim=obj.GetListOfAxes().GetEntries())
     obj.Scale(scaleFactor)
     if verbose:
       print("THnSparse %s was scaled..." % obj.GetName())
@@ -125,6 +133,50 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
     for subobj in obj:
       ScaleAllHistograms(subobj, scaleFactor, f, verbose, bRemoveOutliers, limit,
                          nBinsThreshold, pTHardBin, taskName)
+
+###################################################################################
+# "Simple" remove outliers function
+# Just delete any bin contents with N counts < limit
+def simpleRemoveOutliers(hist, verbose=False, limit=2):
+
+  if verbose:
+    print("Applying simple removal of outliers with counts < %i for %s" % (limit, hist.GetName()))
+
+  for i in range(1, hist.GetNcells()+1):
+    content = hist.GetBinContent(i)
+    if content < limit:
+      hist.SetBinContent(i, 0)
+      hist.SetBinError(i, 0)
+
+###################################################################################
+# "Simple" remove outliers function for THn using recursion
+# Just delete any bin contents with N counts < limit
+def simpleRemoveOutliersTHn(hist, verbose=False, limit=2, dim=4):
+
+  if verbose:
+    print("Applying simple removal of outliers with counts < %i for %s" % (limit, hist.GetName()))
+
+  n_bins = [0] * dim
+  for d in range(dim):
+    n_bins[d] = hist.GetAxis(d).GetNbins()
+  x = []
+  simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x)
+
+###################################################################################
+def simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x):
+
+  dims_decided = len(x)
+
+  if dims_decided == dim:
+    bin_x = array('i', x)
+    if hist.GetBinContent(bin_x) < limit:
+      hist.SetBinContent(bin_x, 0)
+      hist.SetBinError(bin_x, 0)
+    return
+
+  for i in range(1, n_bins[dims_decided] + 1):
+    x_new = x + [i]
+    simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x_new)
 
 ###################################################################################
 # Function to remove outliers from a TH3 (i.e. truncate the spectrum), based on projecting to the y-axis
@@ -150,23 +202,23 @@ def removeOutliers(pTHardBin, EndPtHardBin, hist, verbose, limit=2, nBinsThresho
 
   if verbose:
     (preMean, preMedian) = GetHistMeanAndMedian(histToCheck)
-    
+
   for index in range(0, histToCheck.GetNcells()):
     if verbose:
       print("---------")
     avg = MovingAverage(histToCheck, index = index, numberOfCountsBelowIndex = 2, numberOfCountsAboveIndex = 2)
     if verbose:
       print("Index: {0}, Avg: {1}, BinContent: {5}, foundAboveLimit: {2}, cutIndex: {3}, cutLimitReached: {4}".format(index, avg, foundAboveLimit, cutIndex, cutLimitReached, histToCheck.GetBinContent(index)))
-    if avg > limit:
+    if not foundAboveLimit and avg > limit:
       foundAboveLimit = True
-        
+
     if not cutLimitReached:
       if foundAboveLimit and avg <= limit:
         if cutIndex == -1:
           cutIndex = index
         nBinsBelowLimitAfterLimit += 1
-          
-      if nBinsBelowLimitAfterLimit != 0 and avg > limit:
+
+      elif nBinsBelowLimitAfterLimit != 0 and avg > limit:
         # Reset
         cutIndex = -1
         nBinsBelowLimitAfterLimit = 0
@@ -179,7 +231,7 @@ def removeOutliers(pTHardBin, EndPtHardBin, hist, verbose, limit=2, nBinsThresho
   # the limit and crossing the nBinsThreshold
   if verbose:
     print("Hist checked: {0}, cut index: {1}".format(histToCheck.GetName(), cutIndex))
-  
+
   # Use on both TH1 and TH2 since we don't start removing immediately, but instead only after the limit
   if cutLimitReached:
     if verbose:
@@ -249,7 +301,7 @@ def GetHistMeanAndMedian(hist):
   # Apparently needed to be safe(?)
   hist.ComputeIntegral()
   hist.GetQuantiles(1, x, q)
-    
+
   mean = hist.GetMean()
   return (mean, x.value)
 
@@ -261,7 +313,7 @@ def MovingAverage(hist, index, numberOfCountsBelowIndex = 0, numberOfCountsAbove
   # Check inputs
   if numberOfCountsBelowIndex < 0 or numberOfCountsAboveIndex < 0:
     print("Moving average number of counts above or below must be >= 0. Please check the values!")
-          
+
   count = 0.
   average = 0.
   for i in range(index - numberOfCountsBelowIndex, index + numberOfCountsAboveIndex + 1):
@@ -271,7 +323,7 @@ def MovingAverage(hist, index, numberOfCountsBelowIndex = 0, numberOfCountsAbove
     #print("Adding {}".format(hist.GetBinContent(i)))
     average += hist.GetBinContent(i)
     count += 1
-    
+
   #if count != (numberOfCountsBelowIndex + numberOfCountsAboveIndex + 1):
   #    print("Count: {}, summed: {}".format(count, (numberOfCountsBelowIndex + numberOfCountsAboveIndex + 1)))
   #exit(0)
@@ -343,7 +395,7 @@ def getRadiusFromlistName(listName):
 if __name__ == '__main__':
   print("Executing scaleHistograms.py...")
   print("")
-  
+
   # Define arguments
   parser = argparse.ArgumentParser(description='Plot analysis histograms')
   parser.add_argument('-c', '--configFile', action='store',
@@ -352,14 +404,14 @@ if __name__ == '__main__':
                       help="Path of config file for analysis")
   parser.add_argument("-r", "--remove_unscaled", help="Remove unscaled histograms",
                       action="store_true")
-  
+
   # Parse the arguments
   args = parser.parse_args()
 
   print('Configuring...')
   print('configFile: \'{0}\''.format(args.configFile))
   print('----------------------------------------------------------------')
-  
+
   # If invalid configFile is given, exit
   if not os.path.exists(args.configFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
