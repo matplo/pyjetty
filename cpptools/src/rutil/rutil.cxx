@@ -491,9 +491,79 @@ namespace RUtil
         return;
     }
 
-	// Create and return 2D histogram, convolving h with shape function
-	// ob & pT bins are identical in both old & new histograms 
-	// obs & pTs are arrays of the central bin values
+    //---------------------------------------------------------------
+    // Remove outliers from a TH1 via "simple" method:
+    //   delete any bin contents with N counts < limit
+    // Modifies histogram in-place and returns its pointer
+    //---------------------------------------------------------------
+    TH1* HistUtils::simpleRemoveOutliers(TH1* hist, bool verbose, int limit) {
+
+        if (verbose) {
+            std::cout << "Applying simple removal of outliers with counts < "
+                      << limit << " for " << hist->GetName() << std::endl;
+        }
+
+        for (int i = 1; i <= hist->GetNcells(); i++) {
+            if (hist->GetBinContent(i) < limit) {
+                hist->SetBinContent(i, 0);
+                hist->SetBinError(i, 0);
+            }
+        }
+
+        return hist;
+    }
+
+    //---------------------------------------------------------------
+    // Remove outliers from a THn via "simple" method:
+    //   delete any bin contents with N counts < limit
+    // Modifies histogram in-place and returns its pointer
+    //---------------------------------------------------------------
+    THn* HistUtils::simpleRemoveOutliersTHn(THn* hist, bool verbose, int limit, int dim) {
+
+        if (verbose) {
+            std::cout << "Applying simple removal of outliers with counts < "
+                      << limit << " for " << hist->GetName() << std::endl;
+        }
+
+        int n_bins[dim] = { 0 };
+        for(int d = 0; d < dim; d++) {
+            n_bins[d] = hist->GetAxis(d)->GetNbins();
+        }
+
+        // Recursively iterate through dimensions to remove extra counts
+        int x[dim] = { 0 };
+        int dim_to_update = 0;
+        simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x, dim_to_update);
+
+        return hist;
+    }
+
+    //---------------------------------------------------------------
+    void HistUtils::simpleRemoveOutliersTHn_recurse(
+        THn* hist, int limit, int dim, int* n_bins, int* x, int dim_to_update) {
+
+        // In the deepest recursion case, check bin and return
+        if (dim_to_update == dim) {
+            if (hist->GetBinContent(x) < limit) {
+                hist->SetBinContent(x, 0);
+                hist->SetBinError(x, 0);
+            }
+            return;
+        }
+
+        // Otherwise, go to next dimension
+        for (int i = 1; i <= n_bins[dim_to_update]; i++) {
+            x[dim_to_update] = i;
+            simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x, dim_to_update+1);
+        }
+
+        return;
+    }
+
+    //---------------------------------------------------------------
+    // Create and return 2D histogram, convolving h with shape function
+    // ob & pT bins are identical in both old & new histograms
+    // obs & pTs are arrays of the central bin values
     TH2D* HistUtils::convolve_F_np(const double & Omega, const double & R, const double & beta,
 								   const double* ob_bins, const int & n_ob_bins, const double* obs,
 								   const double* ob_bin_width,

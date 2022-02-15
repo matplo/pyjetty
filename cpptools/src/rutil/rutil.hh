@@ -19,7 +19,7 @@ namespace RUtil
         virtual ~Test() {;}
         void setMember(Double_t v) {fMember = v;}
         Double_t getMember() {return fMember;}
-        
+
     private:
         Double_t fMember;
 
@@ -57,7 +57,7 @@ namespace RUtil
         HistUtils() : TObject()
         {;}
         virtual ~HistUtils() {;}
-        
+
         // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
         TH2F* rebin_th2(TH2F & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
                         double* y_bins, int n_y_bins, bool move_y_underflow = false);
@@ -88,17 +88,31 @@ namespace RUtil
                         const bool use_miss_fake=false,
                         const bool do_roounfoldresponse=true);
 
-		//------------------------------------------------------
-		// Convolution of nonperturbative shape functions
+        //---------------------------------------------------------------
+        // Remove outliers from a TH1 via "simple" method:
+        //   delete any bin contents with N counts < limit
+        // Modifies histogram in-place and returns its pointer
+        //---------------------------------------------------------------
+        TH1* simpleRemoveOutliers(TH1* hist, bool verbose, int limit);
 
-		// Create and return 2D histogram, convolving h with shape function
-		TH2D* convolve_F_np(const double & Omega, const double & R, const double & beta,
-							const double* ob_bins, const int & n_ob_bins, const double* obs,
-							const double* ob_bin_width,
-							const double* pT_bins, const int & n_pT_bins, const double* pTs,
-							const TH2D & h, const std::string & name, const bool groomed = false,
-							const double & sd_beta = 0, const double & sd_zcut = 0.2,
-							const std::string & option = "");
+        //---------------------------------------------------------------
+        // Remove outliers from a THn via "simple" method:
+        //   delete any bin contents with N counts < limit
+        // Modifies histogram in-place and returns its pointer
+        //---------------------------------------------------------------
+        THn* simpleRemoveOutliersTHn(THn* hist, bool verbose, int limit, int dim);
+
+        //------------------------------------------------------
+        // Convolution of nonperturbative shape functions
+
+        // Create and return 2D histogram, convolving h with shape function
+        TH2D* convolve_F_np(const double & Omega, const double & R, const double & beta,
+                            const double* ob_bins, const int & n_ob_bins, const double* obs,
+                            const double* ob_bin_width,
+                            const double* pT_bins, const int & n_pT_bins, const double* pTs,
+                            const TH2D & h, const std::string & name, const bool groomed = false,
+                            const double & sd_beta = 0, const double & sd_zcut = 0.2,
+                            const std::string & option = "");
 
     private:
         // Create empty THn using provided axes
@@ -132,15 +146,19 @@ namespace RUtil
         // Set scaling of prior
         prior_scale_func prior_scale_factor_obs(const int & option);
 
-		//------------------------------------------------------
-		// Convolution of nonperturbative shape functions
+        // Recursive helper function for simpleRemoveOutliersTHn()
+        void simpleRemoveOutliersTHn_recurse(
+            THn* hist, int limit, int dim, int* n_bins, int* x, int dim_to_update);
+
+        //------------------------------------------------------
+        // Convolution of nonperturbative shape functions
 
         // Non-perturbative parameter with factored-out beta dependence
         // Omega is Omega_{a=0} == Omega_{beta=2}  (universal[?])
-		inline double Omega_beta(const double & Omega, const double & beta);
+        inline double Omega_beta(const double & Omega, const double & beta);
 
-		// Shape function for convolving nonperturbative effects
-		inline double F_np(const double & Omega, const double & k, const double & beta);
+        // Shape function for convolving nonperturbative effects
+        inline double F_np(const double & Omega, const double & k, const double & beta);
 
     ClassDef(HistUtils, 1)
     };

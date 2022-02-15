@@ -21,6 +21,10 @@ from array import array
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 
+# Load pyjetty ROOT utils
+ROOT.gSystem.Load("libpyjetty_rutil.so")
+histutils = ROOT.RUtil.HistUtils()
+
 ###################################################################################
 # Main function
 def scaleHistograms(configFile, remove_unscaled):
@@ -28,7 +32,7 @@ def scaleHistograms(configFile, remove_unscaled):
   # Option to remove outliers from specified histograms
   # If the average bin content stays below the "outlierLimit" for "outlierNBinsThreshold" bins, it is removed
   bRemoveOutliers = True
-  outlierLimit = 10
+  outlierLimit = 3
   # NOTE: CURRENTLY IGNORING IN "SIMPLE" IMPLEMENTATION!!
   outlierNBinsThreshold=2
 
@@ -104,15 +108,17 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
   if obj.InheritsFrom(ROOT.TProfile.Class()):
     if verbose:
       print("TProfile %s not scaled..." % obj.GetName())
+
   elif obj.InheritsFrom(ROOT.TH2.Class()):
     if bRemoveOutliers:
-      simpleRemoveOutliers(obj, verbose, limit)
+      histutils.simpleRemoveOutliers(obj, verbose, limit)
     obj.Scale(scaleFactor)
     if verbose:
       print("TH2 %s was scaled..." % obj.GetName())
+
   elif obj.InheritsFrom(ROOT.TH1.Class()):
     if bRemoveOutliers:
-      simpleRemoveOutliers(obj, verbose, limit)
+      histutils.simpleRemoveOutliers(obj, verbose, limit)
       #name = obj.GetName()
       #only perform outlier removal on these couple histograms
       #if "Pt" in name:
@@ -120,12 +126,14 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
     obj.Scale(scaleFactor)
     if verbose:
       print("TH1 %s was scaled..." % obj.GetName())
+
   elif obj.InheritsFrom(ROOT.THnBase.Class()):
     if bRemoveOutliers:
-      simpleRemoveOutliersTHn(obj, verbose, limit, dim=obj.GetListOfAxes().GetEntries())
+      histutils.simpleRemoveOutliersTHn(obj, verbose, limit, obj.GetListOfAxes().GetEntries())
     obj.Scale(scaleFactor)
     if verbose:
-      print("THnSparse %s was scaled..." % obj.GetName())
+      print("THn %s was scaled..." % obj.GetName())
+
   else:
     if verbose:
       print("Not a histogram!")
@@ -134,6 +142,7 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
       ScaleAllHistograms(subobj, scaleFactor, f, verbose, bRemoveOutliers, limit,
                          nBinsThreshold, pTHardBin, taskName)
 
+''' Python implementation too slow -- use C++ side
 ###################################################################################
 # "Simple" remove outliers function
 # Just delete any bin contents with N counts < limit
@@ -177,6 +186,7 @@ def simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x):
   for i in range(1, n_bins[dims_decided] + 1):
     x_new = x + [i]
     simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x_new)
+'''
 
 ###################################################################################
 # Function to remove outliers from a TH3 (i.e. truncate the spectrum), based on projecting to the y-axis
