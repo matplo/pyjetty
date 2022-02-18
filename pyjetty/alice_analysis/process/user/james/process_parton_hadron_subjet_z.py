@@ -59,7 +59,7 @@ class ProcessPH_subjet_z(process_parton_hadron_base.ProcessPHBase):
         grooming_setting = self.obs_grooming_settings[observable][i]
         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
-        obs_bins = np.linspace(0, 1., 100)
+        obs_bins = np.linspace(0, 1., 101)
 
         # Initialize 2D histograms for doing the MPI scaling at ch level
         self.init_MPI_scaling_hist(observable, self.obs_name, "ch", jetR, self.pt_bins, obs_bins, obs_label)
