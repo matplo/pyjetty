@@ -54,7 +54,7 @@ ang:
 # Analysis & plotting parameters
 file_format: ".pdf"
 output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin2_girth_comp/"
-results_pp: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin2_girth_comp/PbPb_girth_2.76TeV_R02_40-60.root"
+results_pp: "/rstorage/alice/AnalysisResults/ang/PbPb/PbPb_girth_2.76TeV_R02_40-60.root"
 roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'

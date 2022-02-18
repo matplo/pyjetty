@@ -105,7 +105,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     ROOT.gPad.SetRightMargin(0.15)
     c.SetLogz()
 
-    h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
+    h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet} (GeV/#it{c})')
     h.GetYaxis().SetTitle('#DeltaR_{match}')
     
     x_max = 200.
@@ -139,7 +139,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     if not histDeltaJES:
       name = 'hJES_R{}{}{}'.format(jetR, self.suffix, self.scaled_suffix)
       histDeltaJES = self.fMC.Get(name)
-    histDeltaJES.GetXaxis().SetTitle("#it{p}_{T}^{gen}")
+    histDeltaJES.GetXaxis().SetTitle("#it{p}_{T}^{gen} (GeV/#it{c})")
     histDeltaJES.GetYaxis().SetTitle("#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}")
     histDeltaJES.GetXaxis().SetRangeUser(0., 200.)
     outputFilename = os.path.join(self.output_dir, "histDeltaJES_R{}.pdf".format(self.remove_periods(jetR)))
@@ -165,8 +165,9 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
 
     cJES = ROOT.TCanvas('cJES','cJES: hist',600,450)
     cJES.cd()
+    cJES.SetLeftMargin(0.2)
     cJES.SetBottomMargin(0.2)
-    
+
     leg = ROOT.TLegend(0.55,0.55,0.88,0.85, '')
     leg.SetFillColor(10)
     leg.SetBorderSize(0)
@@ -174,32 +175,42 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetTextSize(0.04)
 
     # Loop through pt slices, and plot final result for each 1D theta_g distribution
+    projections = []
+    max = 0
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
-      
+
       hJESProj = self.getJESshiftProj(name, 'hJESproj{}'.format(i), min_pt_truth, max_pt_truth)
       hJESProj.SetMarkerStyle(20)
       hJESProj.SetMarkerColor(self.ColorArray[i])
       hJESProj.SetLineColor(self.ColorArray[i])
-      
+
+      projections.append(hJESProj)
+      new_max = hJESProj.GetMaximum()
+      if new_max > max:
+        max = new_max
+
+      leg.AddEntry(hJESProj, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV/#it{{c}}'.format(min_pt_truth, max_pt_truth), 'P')
+
+    for i in range(0, len(pt_bins) - 1):
+      hJESProj = projections[i]
+
       if i == 0:
-      
+
         hJESProj.GetXaxis().SetTitleOffset(1.6);
         hJESProj.GetYaxis().SetTitle('Probability density')
         hJESProj.GetXaxis().SetTitle('#frac{#it{p}_{T}^{det} - #it{p}_{T}^{gen}}{#it{p}_{T}^{gen}}')
-        
-        hJESProj.GetYaxis().SetRangeUser(0, 1.3*hJESProj.GetMaximum())
+
+        hJESProj.GetYaxis().SetRangeUser(0, 1.3*max)
         hJESProj.DrawCopy('P E')
-        
+
       else:
-      
+
         hJESProj.DrawCopy('P E same')
-    
-      leg.AddEntry(hJESProj, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
-      
+
     leg.Draw('same')
-    
+
     outputFilename = os.path.join(self.output_dir, 'jet/histDeltaJESproj_R{}.pdf'.format(self.remove_periods(jetR)))
     cJES.SaveAs(outputFilename)
     cJES.Close()
@@ -247,7 +258,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       histJER.SetBinContent(i, JER)
     
     histJER.GetYaxis().SetTitle('#frac{#sigma(#it{p}_{T}^{gen})}{#it{p}_{T}^{gen}}')
-    histJER.GetXaxis().SetTitle('#it{p}_{T}^{gen}')
+    histJER.GetXaxis().SetTitle('#it{p}_{T}^{gen} (GeV/#it{c})')
     histJER.GetYaxis().SetRangeUser(-0.01, 0.5)
     histJER.GetXaxis().SetRangeUser(5., 150.)
     outputFilename = os.path.join(self.output_dir, 'jet/histJER_R{}.pdf'.format(self.remove_periods(jetR)))
@@ -275,6 +286,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
     histPtGenMatched = hRM.ProjectionY("_py",1,hRM.GetNbinsX()) #avoid under and overflow bins
+    histPtGenMatched.Scale(1., "width")
     histPtGenMatched.SetName('histPtGenMatched_R{}_{}'.format(jetR, obs_label))
     hpgm_xbins = [histPtGenMatched.GetXaxis().GetBinLowEdge(i) for i in \
                  range(1, histPtGenMatched.GetXaxis().GetNbins()+2)]
@@ -283,22 +295,26 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     if hpg_xbins != hpgm_xbins:
       histPtGen = histPtGen.Rebin(len(hpgm_xbins) - 1, histPtGen.GetName() + "_rebin",
                                   array('d', hpgm_xbins))
+    histPtGen.Scale(1., "width")
 
     # Compute the ratio
     histEfficiency = histPtGenMatched.Clone()
     histEfficiency.SetName('histEfficiency_{}'.format(name))
     histEfficiency.Divide(histPtGenMatched, histPtGen, 1., 1., 'B')
-    
-    histEfficiency.GetXaxis().SetTitle('#it{p}_{T}^{gen}')
+
+    histEfficiency.GetXaxis().SetTitle('#it{p}_{T}^{gen} (GeV/#it{c})')
     histEfficiency.GetYaxis().SetTitle('Efficiency')
     histEfficiency.GetXaxis().SetRangeUser(0., 150.)
     histEfficiency.GetYaxis().SetRangeUser(0., 1.2)
     histEfficiency.SetMarkerStyle(21)
     histEfficiency.SetMarkerColor(1)
     histEfficiency.SetMarkerSize(3)
-    outputFilename = os.path.join(self.output_dir, 'jet/hJetRecoEfficiency_R{}.pdf'.format(self.remove_periods(jetR)))
-    self.plot_hist(histEfficiency, outputFilename)
-      
+    pad = ROOT.TPad()
+    pad.SetLogy()
+    outputFilename = os.path.join(
+      self.output_dir, 'jet/hJetRecoEfficiency_R{}.pdf'.format(self.remove_periods(jetR)))
+    self.plot_hist(histPtGen, outputFilename)
+
   #---------------------------------------------------------------
   def plot_obs_resolution(self, jetR, obs_label, xtitle, pt_bins):
 
@@ -340,7 +356,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       hResolution.SetMarkerStyle(21)
       hResolution.SetLineColor(self.ColorArray[i])
       hResolution.DrawCopy('P same')
-      myLegend.AddEntry(hResolution, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+      myLegend.AddEntry(hResolution, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV/#it{{c}}'.format(min_pt_truth, max_pt_truth), 'P')
       h_list.append(hResolution)
 
     myLegend.Draw('same')
@@ -418,7 +434,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
         hResidual.DrawCopy('P E same')
 
       leg.AddEntry(
-        hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+        hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV/#it{{c}}'.format(min_pt_truth, max_pt_truth), 'P')
 
     leg.Draw('same')
 
@@ -455,8 +471,13 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     elif 'z_{r}' in xtitle:
       obs_true_list = [0., 0.2, 0.4, 0.6, 0.8, 1.]
     elif 'lambda' in xtitle:
-      obs_true_list = [0, 0.05, 0.1, 0.2, 0.4, 0.7]
+      if "1" in obs_label:  # alpha = 1, 1.5
+        obs_true_list = [0, 0.05, 0.1, 0.2, 0.4, 0.7]
+      else:  # alpha = 2, 3
+        obs_true_list = [0, 0.05, 0.1, 0.2, 0.5]
 
+    max = 0
+    residuals = []
     for i in range(0, len(obs_true_list) - 1):
       min_obs_truth = obs_true_list[i]
       max_obs_truth = obs_true_list[i+1]
@@ -470,25 +491,33 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       if self.thermal:
         hResidual.SetMarkerStyle(self.OpenMarkerArray[i])
 
+      residuals.append(hResidual)
+      new_max = hResidual.GetMaximum()
+      if new_max > max:
+        max = new_max
+
+      leg.AddEntry(hResidual, '{} = {}-{}'.format('{}^{{{}}}'.format(xtitle, 'truth'),
+                                                  min_obs_truth, max_obs_truth), 'P')
+
+    for i in range(0, len(obs_true_list) - 1):
+      hResidual = residuals[i]
+
       if i == 0:
 
         hResidual.GetXaxis().SetTitleOffset(1.6);
         hResidual.GetYaxis().SetTitle('Probability density')
-        hResidual.GetYaxis().SetRangeUser(0, 2.*hResidual.GetMaximum())
+        hResidual.GetYaxis().SetRangeUser(0, 2.*max)
         hResidual.DrawCopy('P E')
 
       else:
 
         hResidual.DrawCopy('P E same')
 
-      leg.AddEntry(hResidual, '{} = {}-{}'.format('{}^{{{}}}'.format(xtitle, 'truth'),
-                                                  min_obs_truth, max_obs_truth), 'P')
-
     leg.Draw('same')
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt, max_pt)
+    text = '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV/#it{{c}}'.format(min_pt, max_pt)
     text_latex.DrawLatex(0.2, 0.8, text)
 
     outputFilename = os.path.join(
@@ -851,10 +880,10 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     hDeltaPt.GetYaxis().SetTitle('#frac{dN}{d#delta#it{p}_{T}}')
     if 'after' in CS_label:
       min = 0
-      hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T}^{RC}')
+      hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T}^{RC} (GeV/#it{c})')
     else:
       min = -50
-      hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T}^{RC} - #pi#rho#it{R}^{2}')
+      hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T}^{RC} - #pi#rho#it{R}^{2} (GeV/#it{c})')
     hDeltaPt.GetXaxis().SetRangeUser(min, 50)
     hDeltaPt.GetYaxis().SetRangeUser(10, 100*hDeltaPt.GetMaximum())
     
@@ -895,7 +924,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       
         hDeltaPt.GetXaxis().SetTitleOffset(1.6);
         hDeltaPt.GetYaxis().SetTitleOffset(1.6);
-        hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T,jet}^{combined} - #it{p}_{T,jet}^{pp-det}')
+        hDeltaPt.GetXaxis().SetTitle('#delta#it{p}_{T} #equiv #it{p}_{T,jet}^{combined} - #it{p}_{T,jet}^{pp-det} (GeV/#it{c})')
         hDeltaPt.GetYaxis().SetTitle('#frac{dN}{d#delta#it{p}_{T}}')
         hDeltaPt.GetXaxis().SetRangeUser(-50, 50)
         hDeltaPt.DrawCopy('P E')
@@ -904,7 +933,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
 
         hDeltaPt.DrawCopy('P E same')
 
-      leg.AddEntry(hDeltaPt, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
+      leg.AddEntry(hDeltaPt, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV/#it{{c}}'.format(min_pt_truth, max_pt_truth), 'P')
       
       mean = hDeltaPt.GetMean()
       std_dev = hDeltaPt.GetStdDev()

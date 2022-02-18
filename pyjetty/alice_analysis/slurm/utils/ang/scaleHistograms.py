@@ -31,7 +31,7 @@ def scaleHistograms(configFile, remove_unscaled):
 
   # Option to remove outliers from specified histograms
   # If the average bin content stays below the "outlierLimit" for "outlierNBinsThreshold" bins, it is removed
-  bRemoveOutliers = True
+  bRemoveOutliers = False
   outlierLimit = 3
   # NOTE: CURRENTLY IGNORING IN "SIMPLE" IMPLEMENTATION!!
   outlierNBinsThreshold=2
