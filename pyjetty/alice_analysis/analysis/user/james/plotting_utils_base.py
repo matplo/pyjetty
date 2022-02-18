@@ -286,7 +286,6 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
     histPtGenMatched = hRM.ProjectionY("_py",1,hRM.GetNbinsX()) #avoid under and overflow bins
-    histPtGenMatched.Scale(1., "width")
     histPtGenMatched.SetName('histPtGenMatched_R{}_{}'.format(jetR, obs_label))
     hpgm_xbins = [histPtGenMatched.GetXaxis().GetBinLowEdge(i) for i in \
                  range(1, histPtGenMatched.GetXaxis().GetNbins()+2)]
@@ -295,7 +294,6 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     if hpg_xbins != hpgm_xbins:
       histPtGen = histPtGen.Rebin(len(hpgm_xbins) - 1, histPtGen.GetName() + "_rebin",
                                   array('d', hpgm_xbins))
-    histPtGen.Scale(1., "width")
 
     # Compute the ratio
     histEfficiency = histPtGenMatched.Clone()
@@ -309,11 +307,9 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     histEfficiency.SetMarkerStyle(21)
     histEfficiency.SetMarkerColor(1)
     histEfficiency.SetMarkerSize(3)
-    pad = ROOT.TPad()
-    pad.SetLogy()
     outputFilename = os.path.join(
       self.output_dir, 'jet/hJetRecoEfficiency_R{}.pdf'.format(self.remove_periods(jetR)))
-    self.plot_hist(histPtGen, outputFilename)
+    self.plot_hist(histEfficiency, outputFilename)
 
   #---------------------------------------------------------------
   def plot_obs_resolution(self, jetR, obs_label, xtitle, pt_bins):
