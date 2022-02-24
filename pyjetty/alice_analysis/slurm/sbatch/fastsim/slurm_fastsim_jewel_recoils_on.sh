@@ -1,21 +1,21 @@
 #! /bin/bash
 
-#SBATCH --job-name="ang_MC"
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=3
+#SBATCH --job-name=fastsim-jewel
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=450-800
-#SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
+#SBATCH --array=1-1000
+#SBATCH --output=/rstorage/generators/jewel_alice/tree_fastsim_recoils_on/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/alice/data/LHC20g4/568/files.txt'
+FILE_PATHS='/rstorage/generators/jewel_alice/tree_gen/851894/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
 # Currently we have 8 nodes * 20 cores active
-FILES_PER_JOB=$(( $NFILES / 800 + 1 ))
+FILES_PER_JOB=8
 echo "Files per job: $FILES_PER_JOB"
 
-STOP=$(( SLURM_ARRAY_TASK_ID * FILES_PER_JOB ))
+STOP=$(( SLURM_ARRAY_TASK_ID*FILES_PER_JOB ))
 START=$(( $STOP - $(( $FILES_PER_JOB - 1 )) ))
 
 if (( $STOP > $NFILES ))
@@ -29,5 +29,5 @@ echo "STOP=$STOP"
 for (( JOB_N = $START; JOB_N <= $STOP; JOB_N++ ))
 do
   FILE=$(sed -n "$JOB_N"p $FILE_PATHS)
-  srun ang_LHC20g4_embedding_pTcut.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+  srun process_fastsim_jewel_recoils_on.sh $FILE $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
 done
