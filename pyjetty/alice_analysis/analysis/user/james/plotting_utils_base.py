@@ -234,7 +234,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     histPtGenProf = hRM.ProfileY('histPtGenProff', 1, -1, "s")
     
     # Create histo to be used to fill JER values
-    nBins = 60
+    nBins = histPtGenProf.GetNbinsX()
     histJER = ROOT.TH1D('histJER_R{}_{}'.format(jetR, obs_label), 'histJER_R{}_{}'.format(jetR, obs_label), nBins, 0., 300.) # same binning for pT^gen as in task
     
     # Loop through the bins, and fill the JER
