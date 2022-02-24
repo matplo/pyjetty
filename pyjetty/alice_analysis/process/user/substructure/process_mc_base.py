@@ -837,9 +837,9 @@ class ProcessMCBase(process_base.ProcessBase):
       getattr(self, name).Fill(jet_pt_truth_ungroomed, obs_truth, obs_resolution)
 
     # Fill prong-matched response
-    main_R_max = self.main_R_max if isinstance(self.main_R_max, float) else self.main_R_max[jetR]
-    if not self.is_pp and R_max == main_R_max:
-      if prong_match:
+    if not self.is_pp:
+      main_R_max = self.main_R_max if isinstance(self.main_R_max, float) else self.main_R_max[jetR]
+      if prong_match and R_max == main_R_max:
 
         name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}_matched'.format(
           observable, jetR, obs_label, R_max) if len(obs_label) else \

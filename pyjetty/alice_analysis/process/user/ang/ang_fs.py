@@ -403,8 +403,8 @@ class process_ang_mc(process_base.ProcessBase):
         if self.debug_level > 1:
           print('event rejected due to jet acceptance')
         return
-      
-      #self.fill_det_before_matching(jet_det, jetR)
+
+      self.fill_det_before_matching(jet_det, jetR)
 
     # Fill truth-level jet histograms (before matching)
     for jet_truth in jets_truth_selected:
@@ -420,7 +420,7 @@ class process_ang_mc(process_base.ProcessBase):
     hname_QA = 'hJetMatchingQA_R%s' % str(jetR).replace('.', '')
     for jet_det in jets_det_selected:
       self.set_matches_pp(jet_det, hname_QA)
-    
+
       # Fill matching histograms
       if jet_det.has_user_info():
         jet_truth = jet_det.python_info().match
@@ -462,15 +462,40 @@ class process_ang_mc(process_base.ProcessBase):
     getattr(self, 'hJetPt_Truth_R%s' % str(jetR).replace('.', '')).Fill(jet.pt())
     getattr(self, 'hJetPt_N_R%s' % str(jetR).replace('.', '')).Fill(jet.pt(), len(jet.constituents()))
 
+    kappa = 1
+    for alpha in self.alpha_list:
+      label = "R%s_%s" % (str(jetR), str(alpha))
 
-  '''
+      l = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
+      getattr(self, 'hAng_JetPt_tru_%s' % label).Fill(jet.pt(), l)
+
+      for i, gs in enumerate(self.grooming_settings):
+        gl = self.grooming_labels[i]
+
+        gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
+        jet_sd = self.utils.groom(gshop, gs, jetR).pair()
+        l_sd = fjext.lambda_beta_kappa(jet, jet_sd, alpha, kappa, jetR)
+        getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet.pt(), l_sd)
+
   #---------------------------------------------------------------
   # Fill det jet histograms
   #---------------------------------------------------------------
   def fill_det_before_matching(self, jet, jetR):
-    # Implement here
-    pass
-  '''
+
+    kappa = 1
+    for alpha in self.alpha_list:
+      label = "R%s_%s" % (str(jetR), str(alpha))
+
+      l = fjext.lambda_beta_kappa(jet, alpha, kappa, jetR)
+      getattr(self, 'hAng_JetPt_det_%s' % label).Fill(jet.pt(), l)
+
+      for i, gs in enumerate(self.grooming_settings):
+        gl = self.grooming_labels[i]
+
+        gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
+        jet_sd = self.utils.groom(gshop, gs, jetR).pair()
+        l_sd = fjext.lambda_beta_kappa(jet, jet_sd, alpha, kappa, jetR)
+        getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet.pt(), l_sd)
 
   #---------------------------------------------------------------
   # Loop through jets and fill matching histos
@@ -516,8 +541,8 @@ class process_ang_mc(process_base.ProcessBase):
       getattr(self, 'hAngResidual_JetPt_%s' % label).Fill(jet_pt_tru, lambda_resolution)
 
     # Observable plots
-    getattr(self, 'hAng_JetPt_det_%s' % label).Fill(jet_pt_det, l_det)
-    getattr(self, 'hAng_JetPt_tru_%s' % label).Fill(jet_pt_tru, l_tru)
+    #getattr(self, 'hAng_JetPt_det_%s' % label).Fill(jet_pt_det, l_det)
+    #getattr(self, 'hAng_JetPt_tru_%s' % label).Fill(jet_pt_tru, l_tru)
     getattr(self, 'hResponse_ang_%s' % label).Fill(l_det, l_tru)
 
     x = ([jet_pt_det, jet_pt_tru, l_det, l_tru])
@@ -538,8 +563,8 @@ class process_ang_mc(process_base.ProcessBase):
       l_sd_tru = fjext.lambda_beta_kappa(jet_tru, jet_sd_tru, alpha, kappa, jetR)
 
       # Should fill histograms using the ungroomed jet pT
-      getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_pt_det, l_sd_det)
-      getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet_pt_tru, l_sd_tru)
+      #getattr(self, 'hAng_JetPt_det_%s_%s' % (label, gl)).Fill(jet_pt_det, l_sd_det)
+      #getattr(self, 'hAng_JetPt_tru_%s_%s' % (label, gl)).Fill(jet_pt_tru, l_sd_tru)
       getattr(self, 'hResponse_ang_%s_%s' % (label, gl)).Fill(l_sd_det, l_sd_tru)
       x = ([jet_pt_det, jet_pt_tru, l_sd_det, l_sd_tru])
       x_array = array('d', x)

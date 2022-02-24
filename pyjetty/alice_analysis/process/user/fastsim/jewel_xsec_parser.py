@@ -14,7 +14,7 @@ import numpy as np
 ### USER-DEFINED CONSTANTS HERE:
 
 # Input directory where the pT-hat bins are stored
-IN_DIR = "/rstorage/generators/jewel_alice/tree_gen/746611/"
+IN_DIR = "/rstorage/generators/jewel_alice/tree_gen/851894/"
 
 # Output directory where the scaleFactors.yaml files should be created
 OUT_DIR = "./"

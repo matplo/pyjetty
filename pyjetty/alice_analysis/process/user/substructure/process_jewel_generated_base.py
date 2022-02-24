@@ -102,14 +102,14 @@ class CurvesFromJewelTracks():
 
             print('Constituent subtractor is enabled.')
             constituent_subtractor = config['constituent_subtractor']
-        
+
             max_distance = constituent_subtractor['max_distance']
             alpha = constituent_subtractor['alpha']
             max_eta = constituent_subtractor['max_eta']
             bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
             max_pt_correct = constituent_subtractor['max_pt_correct']
             ghost_area = constituent_subtractor['ghost_area']
-            
+
             self.constituent_subtractor = CEventSubtractor(max_distance=max_distance, 
                                                            alpha=alpha, 
                                                            max_eta=max_eta, 
@@ -129,10 +129,16 @@ class CurvesFromJewelTracks():
         self.observable_list = config['process_observables']
         self.obs_settings = {}
         self.obs_grooming_settings = {}
+        self.obs_names = {}
         for observable in self.observable_list:
 
             obs_config_dict = config[observable]
             obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+
+            if "common_settings" in list(obs_config_dict.keys()) and \
+              "xtitle" in list(obs_config_dict["common_settings"].keys()):
+
+              self.obs_names[observable] = obs_config_dict["common_settings"]["xtitle"]
 
             obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
             self.obs_settings[observable] = self.utils.obs_settings(observable, obs_config_dict, obs_subconfig_list)
@@ -205,7 +211,9 @@ class CurvesFromJewelTracks():
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9'
             if not self.recoils_off:
                 track_criteria += ' and Status != 3'
-            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3' # Not used by default, unless constituent subtraction is activated or user accesses thermal particles in user function
+            # Not used by default, unless constituent subtraction is activated or
+            #     user accesses thermal particles in user function
+            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9' #and Status == 3'
         elif 'gridsub' in self.thermal_subtraction_method.lower():
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
             bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
@@ -226,7 +234,7 @@ class CurvesFromJewelTracks():
     # This function was adapted from alice_analysis/process/base/process_io.py
     #---------------------------------------------------------------
     def group_fjparticles(self,df):
-        print("Transform the track dataframe into a series object of fastjet particles per event...")   
+        print("Transform the track dataframe into a series object of fastjet particles per event...")
         # (i) Group dataframe by event  track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
         df_grouped = None
         df_grouped = df.groupby(['run_number', 'ev_id'])
@@ -413,12 +421,12 @@ class CurvesFromJewelTracks():
 
         # Fill base histograms
         jet_pt_ungroomed = jet.pt()
-    
+
         # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
         # Note that the subconfigurations are defined by the first observable, if multiple are defined
-        observable = self.observable_list[0]
-        for i in range(len(self.obs_settings[observable])):
-            
+        for observable in self.observable_list:
+          for i in range(len(self.obs_settings[observable])):
+
             obs_setting = self.obs_settings[observable][i]
             grooming_setting = self.obs_grooming_settings[observable][i]
             obs_label = self.utils.obs_label(obs_setting, grooming_setting)
@@ -434,9 +442,9 @@ class CurvesFromJewelTracks():
 
             # Call user function to fill histograms
             if not diagnostic:
-                self.fill_jet_histograms(jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed, gridsize)
+                self.fill_jet_histograms(observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed, gridsize)
             else:
-                self.fill_jet_histograms(jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed, gridsize, '_diagnostics')
+                self.fill_jet_histograms(observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed, gridsize, '_diagnostics')
 
     #---------------------------------------------------------------
     # GridSub1 subtraction method
