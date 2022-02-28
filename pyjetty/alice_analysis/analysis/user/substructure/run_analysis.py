@@ -312,10 +312,8 @@ class RunAnalysis(common_base.CommonBase):
         R_max = self.R_max2
       elif systematic == 'prong_matching':
         prong_matching_response = True
-      elif systematic == 'fastsim_generator0':
-        response = self.fastsim_response_list[0]
-      elif systematic == 'fastsim_generator1':
-        response = self.fastsim_response_list[1]
+      elif 'fastsim_generator' in systematic:
+        response = self.fastsim_response_list[int(systematic[-1])]
       elif systematic == 'random_mass':
         data = self.randmass_data
         response = self.randmass_response
@@ -481,17 +479,17 @@ class RunAnalysis(common_base.CommonBase):
 
       self.compute_obs_systematic(jetR, obs_label, obs_setting, grooming_setting, reg_param_final,
                                   min_pt_truth, max_pt_truth, minbin, maxbin, final=True)
-                                  
+
       # Set SD tagging fraction for final reg parameter
       if grooming_setting and 'sd' in grooming_setting:
         f_tagging_name = 'tagging_fraction_R{}_{}_{}-{}'.format(
           jetR, obs_label, min_pt_truth, max_pt_truth)
         f_tagged = getattr(self, '{}_{}'.format(f_tagging_name, reg_param_final))
         setattr(self, f_tagging_name, f_tagged)
-        
+
       # Copy plots of final reg param, for convenience
       self.copy_unfolding_tests(jetR, obs_label, reg_param_final, min_pt_truth, max_pt_truth)
-      
+
   #----------------------------------------------------------------------
   def copy_unfolding_tests(self, jetR, obs_label, reg_param_final, min_pt, max_pt):
 
@@ -626,68 +624,90 @@ class RunAnalysis(common_base.CommonBase):
                              reg_param, min_pt_truth, max_pt_truth, minbin=None, maxbin=None, final=False):
 
     # Get main result
-    name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format('main', self.observable, jetR,
-                                            obs_label, reg_param, min_pt_truth, max_pt_truth)
+    name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
+      'main', self.observable, jetR, obs_label, reg_param, min_pt_truth, max_pt_truth)
     hMain = getattr(self, name)
     if final:
       # Also save under name without reg param, won't need this info later
-      name = 'h{}_{}_R{}_{}_{}-{}'.format('main', self.observable, jetR,
-                                              obs_label, min_pt_truth, max_pt_truth)
+      name = 'h{}_{}_R{}_{}_{}-{}'.format(
+        'main', self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       setattr(self, name, hMain)
 
     # Loop through all systematic variations, and take ratio to main result
     h_list = []
     h_unfolding_list = []
+    h_fastsim_list = []
     for systematic in self.systematics_list:
 
-      if final:
+      if final and 'generator' not in systematic:
 
         # ** For subjet JEWEL systematic, set a larger reg param so that it can converge
         reg_param_original = reg_param
-        if not self.is_pp and 'subjet_z' in self.observable and 'generator1' in systematic:
+        if not self.is_pp and 'subjet_z' in self.observable:
           reg_param = self.max_reg_param
 
-        h_systematic_ratio = self.retrieve_systematic(systematic, jetR, obs_label,
-                                                      reg_param, min_pt_truth, max_pt_truth)
+        h_systematic_ratio = self.retrieve_systematic(
+          systematic, jetR, obs_label, reg_param, min_pt_truth, max_pt_truth)
 
         # ** Reset reg param
         reg_param = reg_param_original
 
       else:
-        h_systematic_ratio = self.construct_systematic(systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
-                                                       reg_param, min_pt_truth, max_pt_truth, minbin, maxbin)
+        h_systematic_ratio = self.construct_systematic(
+          systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
+          reg_param, min_pt_truth, max_pt_truth, minbin, maxbin)
       if h_systematic_ratio:
         if systematic in ['main', 'prior1', 'truncation', 'binning']:
           h_unfolding_list.append(h_systematic_ratio)
+        elif 'generator' in systematic:
+          if h_systematic_ratio:
+            h_fastsim_list.append(h_systematic_ratio)
         else:
           h_list.append(h_systematic_ratio)
-            
+
     # Construct or retrieve unfolding uncertainty
     name = 'hSystematic_Unfolding_R{}_{}_n{}_{}-{}'.format(
-               self.utils.remove_periods(jetR), obs_label,
-               reg_param, int(min_pt_truth), int(max_pt_truth))
+      self.utils.remove_periods(jetR), obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
     if final:
       hSystematic_Unfolding = getattr(self, name)
-      name = 'hSystematic_Unfolding_R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
-                                                         int(min_pt_truth), int(max_pt_truth))
+      name = 'hSystematic_Unfolding_R{}_{}_{}-{}'.format(
+        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth))
       setattr(self, name, hSystematic_Unfolding)
-      
     else:
       hSystematic_Unfolding = self.construct_unfolding_uncertainty(h_unfolding_list)
       setattr(self, name, hSystematic_Unfolding)
     h_list.append(hSystematic_Unfolding)
 
+    # Construct or retrieve generator uncertainty
+    name = 'hSystematic_generator_R{}_{}_n{}_{}-{}'.format(
+      self.utils.remove_periods(jetR), obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
+    if final:
+      hSystematic_fastsim = getattr(self, name)
+      name = 'hSystematic_generator_R{}_{}_{}-{}'.format(
+        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth))
+      setattr(self, name, hSystematic_fastsim)
+    else:
+      # Get reference generator unfolded result (e.g. pythia fastsim)
+      name_reference = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
+        'fastsim_generator0', self.observable, jetR, obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
+      h_reference = getattr(self, name_reference)
+
+      # Calculate systematic average for final fast simulation uncertainty
+      hSystematic_fastsim = self.construct_systematic_average(
+        h_reference, 'fastsim_generator', jetR, obs_label, reg_param, min_pt_truth, max_pt_truth,
+        minbin, maxbin, n_ratios=len(self.fastsim_response_list)-1, takeMaxDev=False)
+      setattr(self, name, hSystematic_fastsim)
+    h_list.append(hSystematic_fastsim)
+
     # Construct total systematic uncertainty: Add all systematic uncertainties in quadrature
     name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
-                    self.utils.remove_periods(jetR), obs_label,
-                    reg_param, int(min_pt_truth), int(max_pt_truth))
+      self.utils.remove_periods(jetR), obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
     hSystematic_Total = self.add_in_quadrature(h_list, new_name=name)
     setattr(self, name, hSystematic_Total)
 
     # Attach total systematic to main result, and save as an attribute
     name = 'hResult_{}_systotal_R{}_{}_n{}_{}-{}'.format(
-                    self.observable, jetR, obs_label, reg_param,
-                    int(min_pt_truth), int(max_pt_truth))
+      self.observable, jetR, obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
     if grooming_setting and maxbin:
       hResult_sys = self.truncate_hist(hMain.Clone(), minbin, maxbin+1, name)
     else:
@@ -706,7 +726,7 @@ class RunAnalysis(common_base.CommonBase):
         self.observable, jetR, obs_label,
         int(min_pt_truth), int(max_pt_truth))
       setattr(self, name, hResult_sys)
-      
+
       if self.debug_level > 0:
         name = 'hSystematic_Total_R{}_{}_{}-{}{}'.format(
           self.utils.remove_periods(jetR), obs_label,
@@ -723,6 +743,12 @@ class RunAnalysis(common_base.CommonBase):
       self.plot_systematic_uncertainties(
         jetR, obs_label, obs_setting, grooming_setting,
         min_pt_truth, max_pt_truth, minbin, maxbin, h_unfolding_list, hSystematic_Unfolding, suffix='Unfolding')
+
+      # Plot fastsim uncertainties
+      self.plot_systematic_uncertainties(
+        jetR, obs_label, obs_setting, grooming_setting,
+        min_pt_truth, max_pt_truth, minbin, maxbin, h_fastsim_list, hSystematic_fastsim, suffix='fastsim_generator')
+
 
   #----------------------------------------------------------------------
   # Retrieve a given systematic histogram
@@ -741,8 +767,8 @@ class RunAnalysis(common_base.CommonBase):
         sys_label = 'subtraction'
       else:
         return None
-    elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
-      if systematic == 'fastsim_generator1':
+    elif 'fastsim_generator' in systematic:
+      if int(systematic[-1]) == (len(self.fastsim_response_list) - 1):
         sys_label = 'generator'
       else:
         return None
@@ -770,7 +796,7 @@ class RunAnalysis(common_base.CommonBase):
                  systematic, self.utils.remove_periods(jetR), obs_label,
                  int(min_pt_truth), int(max_pt_truth), self.file_format)
       outputFilename = os.path.join(output_dir, name)
-      self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')      
+      self.utils.plot_hist(h_systematic_ratio, outputFilename, 'P E')
 
     return h_systematic_ratio
 
@@ -778,10 +804,10 @@ class RunAnalysis(common_base.CommonBase):
   # Get systematic variation and save percentage difference as attribte
   def construct_systematic(self, systematic, hMain, jetR, obs_label, obs_setting, grooming_setting,
                            reg_param, min_pt_truth, max_pt_truth, minbin, maxbin):
-                           
+
     # Set whether to store signed uncertainty value or absolute value
     # For now, only use signed uncertainty in cases where we don't average/combine multiple sources
-    signed = systematic in ['trkeff', 'fastsim_generator1']
+    signed = (systematic == 'trkeff') or ('fastsim_generator' in systematic)
 
     if grooming_setting and maxbin:
       maxbin += 1
@@ -791,7 +817,7 @@ class RunAnalysis(common_base.CommonBase):
       h_systematic_ratio = self.construct_systematic_average(
             hMain, 'RegParam', jetR, obs_label, reg_param,
             min_pt_truth, max_pt_truth, minbin, maxbin, takeMaxDev=False)
-        
+
     elif systematic in ['prior1', 'prior2']:
       if systematic == 'prior1':
         h_systematic_ratio = self.construct_systematic_average(
@@ -799,23 +825,7 @@ class RunAnalysis(common_base.CommonBase):
               min_pt_truth, max_pt_truth, minbin, maxbin, takeMaxDev=True)
       else:
         return None
-            
-    # For model-depedence, take the difference between two fastsim generators
-    elif systematic in ['fastsim_generator0', 'fastsim_generator1']:
-      if systematic == 'fastsim_generator1':
-        # Get reference generator unfolded result (e.g. pythia fastsim)
-        name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
-              'fastsim_generator0', self.observable, jetR, obs_label,
-              reg_param, min_pt_truth, max_pt_truth)
-        h_reference = getattr(self, name)
-            
-        # Take the difference of generator to reference generator (e.g. herwig fastsim)
-        h_systematic_ratio = self.construct_systematic_percentage(
-              h_reference, 'fastsim_generator1', jetR, obs_label,
-              reg_param, min_pt_truth, max_pt_truth, minbin, maxbin, signed=signed)
-      else:
-        return None
-        
+
     elif systematic in ['subtraction1', 'subtraction2']:
       if systematic == 'subtraction1':
         h_systematic_ratio = self.construct_systematic_average(
@@ -823,7 +833,21 @@ class RunAnalysis(common_base.CommonBase):
               min_pt_truth, max_pt_truth, minbin, maxbin, takeMaxDev=True)
       else:
         return None
-        
+
+    elif "generator" in systematic:
+      if systematic[-1] != '0':
+        # Get reference generator unfolded result (e.g. pythia fastsim)
+        name_reference = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
+            'fastsim_generator0', self.observable, jetR, obs_label,
+            reg_param, int(min_pt_truth), int(max_pt_truth))
+        h_reference = getattr(self, name_reference)
+
+        h_systematic_ratio = self.construct_systematic_percentage(
+            h_reference, systematic, jetR, obs_label, reg_param,
+            min_pt_truth, max_pt_truth, minbin, maxbin, signed=signed)
+      else:
+        return None
+
     elif systematic == 'thermal_closure':
       fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_setting, grooming_setting, int(min_pt_truth), int(max_pt_truth))
       outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
@@ -841,15 +865,15 @@ class RunAnalysis(common_base.CommonBase):
       h_systematic_ratio_temp.SetMaximum(1.5*h_systematic_ratio_temp.GetMaximum())
       h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, minbin, maxbin, name_ratio)
       setattr(self, name_ratio, h_systematic_ratio)
-        
+
     else:
       h_systematic_ratio = self.construct_systematic_percentage(
             hMain, systematic, jetR, obs_label, reg_param,
             min_pt_truth, max_pt_truth, minbin, maxbin, signed=signed)
-              
+
     name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label, reg_param, min_pt_truth, max_pt_truth)
     setattr(self, name, h_systematic_ratio)
-              
+
     return h_systematic_ratio
 
   #----------------------------------------------------------------------
@@ -885,9 +909,9 @@ class RunAnalysis(common_base.CommonBase):
                                             reg_param, min_pt_truth, max_pt_truth)
     h_systematic = getattr(self, name)
 
-    if 'fastsim_generator1' in systematic:
-        systematic = 'generator'  # For generator systematic, need to set label here
-        
+    #if 'fastsim_generator1' in systematic:
+    #    systematic = 'generator'  # For generator systematic, need to set label here
+
     # Normalization
     #integral = hMain.Integral(2, hMain.GetNbinsX(), 'width')
     #hMain.Scale(1./integral)
@@ -916,20 +940,18 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   def construct_systematic_average(self, hMain, sys_label, jetR, obs_label,
                                   reg_param, min_pt_truth, max_pt_truth,
-                                  minbin, maxbin, takeMaxDev=False):
-  
-    h_systematic_ratio1 = self.construct_systematic_percentage(
-      hMain, '{}1'.format(sys_label), jetR, obs_label, reg_param,
-      min_pt_truth, max_pt_truth, minbin, maxbin)
-    h_systematic_ratio2 = self.construct_systematic_percentage(
-      hMain, '{}2'.format(sys_label), jetR, obs_label,
-      reg_param, min_pt_truth, max_pt_truth, minbin, maxbin)
+                                  minbin, maxbin, n_ratios=2, takeMaxDev=False):
 
-    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, sys_label, jetR, obs_label,
-                                                       reg_param, min_pt_truth, max_pt_truth)
-    h_systematic_ratio = self.build_average(h_systematic_ratio1, h_systematic_ratio2,
-                                            takeMaxDev=takeMaxDev)
-    h_systematic_ratio.SetName(name)
+    ratios = []
+    for i in range(1, n_ratios+1):
+      h_systematic_ratio = self.construct_systematic_percentage(
+        hMain, '%s%i' % (sys_label, i), jetR, obs_label, reg_param,
+        min_pt_truth, max_pt_truth, minbin, maxbin)
+      ratios.append(h_systematic_ratio)
+
+    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+      self.observable, sys_label, jetR, obs_label, reg_param, min_pt_truth, max_pt_truth)
+    h_systematic_ratio = self.build_average(ratios, name, takeMaxDev=takeMaxDev)
     setattr(self, name, h_systematic_ratio)
     return h_systematic_ratio
 
@@ -1007,13 +1029,11 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
-    myBlankHisto.SetMaximum(2.7*h_total.GetMaximum(50))
-    if not suffix=="Unfolding":
-      myBlankHisto.SetMinimum(-1.1*h_total.GetMaximum(50))
-    else:
-      # Unfolding uncertainties do not go below 0
-      myBlankHisto.SetMinimum(0)
-    myBlankHisto.Draw("E")
+    myBlankHisto.SetMaximum(2.7 * h_total.GetMaximum(50))
+    min_y = 0
+    # Unfolding uncertainties do not go below 0
+    if not suffix == "Unfolding":
+      min_y = -1.1 * h_total.GetMaximum(50)
 
     leg = ROOT.TLegend(0.67,0.6,0.8,0.92)
     self.utils.setup_legend(leg,0.04)
@@ -1026,17 +1046,19 @@ class RunAnalysis(common_base.CommonBase):
         h.SetLineColor(self.ColorArray[i])
         h.SetLineStyle(1)
         h.SetLineWidth(2)
-        if h.GetMaximum() > h_total.GetMaximum():
-          myBlankHisto.SetMaximum(1.7*h.GetMaximum())
-
-        h.DrawCopy('P X0 same')
+        if h.GetMaximum() > h_total.GetMaximum(50):
+          myBlankHisto.SetMaximum(1.7 * h.GetMaximum(50))
+        new_min_y = min([h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1)])
+        if new_min_y < min_y:
+          min_y = 1.1 * new_min_y
 
         legend_label = ''
         for systematic in self.systematics_list:
+          if systematic in h.GetName():
+            legend_label = systematic.replace('fastsim_', '')
+        if not legend_label:
           if 'Unfolding' in h.GetName():
             legend_label = 'unfolding'
-          elif systematic in h.GetName():
-            legend_label = systematic
           elif 'RegParam' in h.GetName():
             legend_label = 'reg param'
           elif 'prior' in h.GetName():
@@ -1047,11 +1069,18 @@ class RunAnalysis(common_base.CommonBase):
             legend_label = 'subtraction'
         leg.AddEntry(h, legend_label, 'P')
 
+    # Draw that now the maximum has been found
+    myBlankHisto.SetMinimum(min_y)
+    myBlankHisto.Draw("E")
+    for i, h in enumerate(h_list):
+      if h:
+        h.DrawCopy('P X0 same')
+
     h_total.SetLineStyle(1)
     h_total.SetLineColor(1)
     h_total.SetLineWidth(2)
     h_total.DrawCopy('same hist')
-    leg.AddEntry(h_total, 'Total {}'.format(suffix), 'l')
+    leg.AddEntry(h_total, 'Total {}'.format(suffix.replace('fastsim_', '')), 'l')
 
     leg.Draw()
 
@@ -1293,28 +1322,23 @@ class RunAnalysis(common_base.CommonBase):
     sys_unfolding = hepdata_lib.Uncertainty('sys,unfolding', is_symmetric=True)
     sys_unfolding.values = ['{:.2g}%'.format(y) for y in h_sys_unfolding['y']]
     y.add_uncertainty(sys_unfolding)
- 
+
     # Add systematic uncertainty breakdown
     for systematic in self.systematics_list:
- 
-        if systematic in ['main', 'prior1', 'truncation', 'binning']:
+
+        if systematic in ['main', 'prior1', 'truncation', 'binning'] or 'generator' in systematic:
             continue
 
-        h_sys = self.retrieve_systematic(systematic, jetR, obs_label,
-                                         None, min_pt, max_pt)
+        h_sys = self.retrieve_systematic(
+          systematic, jetR, obs_label, None, min_pt, max_pt)
         if not h_sys:
             continue
-            
-        if 'generator' in systematic:
-          sys_label = 'generator'
-        else:
-          sys_label = systematic
-        
+
         h_sys = hepdata_reader_systematics.read_hist_1d(h_sys.GetName())
         sys = hepdata_lib.Uncertainty('sys,{}'.format(sys_label), is_symmetric=True)
         sys.values = ['{:.2g}%'.format(y) for y in h_sys['y']]
         y.add_uncertainty(sys)
- 
+
     # Add table to the submission
     self.hepdata_submission.add_table(table)
 
@@ -1432,23 +1456,26 @@ class RunAnalysis(common_base.CommonBase):
       h.SetBinContent(bin, content_new*100)
 
   #----------------------------------------------------------------------
-  def build_average(self, h1, h2, takeMaxDev=False):
+  def build_average(self, h_list, name, takeMaxDev=False):
 
-    h_avg = h1.Clone()
-    h_avg.SetName('{}_avg'.format(h1.GetName()))
+    h_avg = h_list[0].Clone(name)
 
-    for i in range(1, h_avg.GetNbinsX()+1):
-      value1 = h1.GetBinContent(i)
-      value2 = h2.GetBinContent(i)
-      avg =  0.5*(value1 + value2)
+    if takeMaxDev:
+      for i in range(1, h_avg.GetNbinsX()+1):
+        max_val = -1
+        for h in h_list:
+          val = h.GetBinContent(i)
+          if val > max_val:
+            max_val = val
+        h_avg.SetBinContent(i, max_val)
 
-      if takeMaxDev:
-        if value1 > value2:
-          avg = value1
-        else:  # value2 > value1:
-          avg = value2
-
-      h_avg.SetBinContent(i, avg)
+    else:
+      for i in range(1, h_avg.GetNbinsX()+1):
+        sum = 0
+        for h in h_list:
+          sum += h.GetBinContent(i)
+        avg = sum / len(h_list)
+        h_avg.SetBinContent(i, avg)
 
     return h_avg
 

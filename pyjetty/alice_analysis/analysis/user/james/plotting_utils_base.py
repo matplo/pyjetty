@@ -247,9 +247,10 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     histPtGenProf = hRM.ProfileY('histPtGenProff', 1, -1, "s")
     
     # Create histo to be used to fill JER values
-    nBins = 60
-    histJER = ROOT.TH1D('histJER_R{}_{}'.format(jetR, obs_label), 'histJER_R{}_{}'.format(jetR, obs_label), nBins, 0., 300.) # same binning for pT^gen as in task
-    
+    nBins = histPtGenProf.GetNbinsX()
+    ptbins = array('d', [histPtGenProf.GetBinLowEdge(i) for i in range(1, nBins+2)])
+    histJER = ROOT.TH1D('histJER_R{}_{}'.format(jetR, obs_label), 'histJER_R{}_{}'.format(jetR, obs_label), nBins, ptbins) # same binning for pT^gen as in task
+
     # Loop through the bins, and fill the JER
     for i in range(0,nBins+1):
       sigma = histPtGenProf.GetBinError(i)
