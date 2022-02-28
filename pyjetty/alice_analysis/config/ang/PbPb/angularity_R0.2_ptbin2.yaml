@@ -169,7 +169,7 @@ roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfol
 
 analysis_observable: 'ang'
 do_unfolding: True
-force_rebin: False
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False

@@ -166,7 +166,7 @@ roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRo
 
 analysis_observable: 'ang'
 do_unfolding: True
-force_rebin: True
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
