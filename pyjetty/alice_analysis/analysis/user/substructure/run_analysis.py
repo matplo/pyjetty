@@ -1029,11 +1029,12 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
-    myBlankHisto.SetMaximum(2.7 * h_total.GetMaximum(50))
+    y_list = [h_total.GetBinContent(i) for i in range(1, h_total.GetNbinsX()+1)]
+    max_y = max(y_list + [50])
     min_y = 0
     # Unfolding uncertainties do not go below 0
     if not suffix == "Unfolding":
-      min_y = -1.1 * h_total.GetMaximum(50)
+      min_y = min(y_list)
 
     leg = ROOT.TLegend(0.67,0.6,0.8,0.92)
     self.utils.setup_legend(leg,0.04)
@@ -1046,11 +1047,13 @@ class RunAnalysis(common_base.CommonBase):
         h.SetLineColor(self.ColorArray[i])
         h.SetLineStyle(1)
         h.SetLineWidth(2)
-        if h.GetMaximum() > h_total.GetMaximum(50):
-          myBlankHisto.SetMaximum(1.7 * h.GetMaximum(50))
-        new_min_y = min([h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1)])
+        y_list = [h.GetBinContent(i) for i in range(1, h.GetNbinsX()+1)]
+        new_max_y = max(y_list)
+        if new_max_y > max_y:
+          max_y = new_max_y
+        new_min_y = min(y_list)
         if new_min_y < min_y:
-          min_y = 1.1 * new_min_y
+          min_y = new_min_y
 
         legend_label = ''
         for systematic in self.systematics_list:
@@ -1070,7 +1073,8 @@ class RunAnalysis(common_base.CommonBase):
         leg.AddEntry(h, legend_label, 'P')
 
     # Draw that now the maximum has been found
-    myBlankHisto.SetMinimum(min_y)
+    myBlankHisto.SetMaximum(1.9 * max_y)
+    myBlankHisto.SetMinimum(1.1 * min_y)
     myBlankHisto.Draw("E")
     for i, h in enumerate(h_list):
       if h:
@@ -1086,7 +1090,7 @@ class RunAnalysis(common_base.CommonBase):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
+    text = str(min_pt_truth) + ' < #it{p}_{T}^{ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.3, 0.85, text)
 
     text_latex = ROOT.TLatex()
