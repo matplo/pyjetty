@@ -521,40 +521,38 @@ class RunAnalysis(common_base.CommonBase):
         new_name = 'hFoldedTruth_{}_{}-{}_final{}'.format(
           label, min_det_pt, max_det_pt, self.file_format)
         shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      
-      # Copy statistical closure test
-      outputdir_test = os.path.join(outputdir_main, 'Test_StatisticalClosure')
-      old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
-      new_name = 'hStatisticalClosure_pt_{}_final{}'.format(label, self.file_format)
-      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      old_name = 'hClosure_{}_{}-{}_{}{}'.format(
-        label, min_pt, max_pt, reg_param_final, self.file_format)
-      new_name = 'hStatisticalClosure_{}_{}-{}_final{}'.format(
-        label, min_pt, max_pt, self.file_format)
-      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      
+
+      # Copy closure tests that don't depend on a shape parameter
+      for type in ["Statistical", "Thermal"]:
+        if type == "Thermal":
+          if "thermal_closure" in self.systematics_list:
+            outputdir_test = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
+          else:
+            continue
+        else:
+          outputdir_test = os.path.join(outputdir_main, 'Test_%sClosure' % type)
+        old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
+        new_name = 'h{}Closure_pt_{}_final{}'.format(type, label, self.file_format)
+        shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+        old_name = 'hClosure_{}_{}-{}_{}{}'.format(
+          label, min_pt, max_pt, reg_param_final, self.file_format)
+        new_name = 'h{}Closure_{}_{}-{}_final{}'.format(
+          type, label, min_pt, max_pt, self.file_format)
+        shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+
       # Copy shape closure test
-      parameter = self.utils.remove_periods(self.prior1_variation_parameter)
-      outputdir_test = os.path.join(outputdir_main, 'Test_ShapeClosure{}'.format(parameter))
-      old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
-      new_name = 'hShapeClosure{}_pt_{}_final{}'.format(parameter, label, self.file_format)
-      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      old_name = 'hClosure_{}_{}-{}_{}{}'.format(
-        label, min_pt, max_pt, reg_param_final, self.file_format)
-      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(
-        parameter, label, min_pt, max_pt, self.file_format)
-      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      
-      parameter = self.utils.remove_periods(self.prior2_variation_parameter)
-      outputdir_test = os.path.join(outputdir_main, 'Test_ShapeClosure{}'.format(parameter))
-      old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
-      new_name = 'hShapeClosure{}_pt_{}_final{}'.format(parameter, label, self.file_format)
-      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
-      old_name = 'hClosure_{}_{}-{}_{}{}'.format(
-        label, min_pt, max_pt, reg_param_final, self.file_format)
-      new_name = 'hShapeClosure{}_{}_{}-{}_final{}'.format(
-        parameter, label, min_pt, max_pt, self.file_format)
-      shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+      for type in ["Shape", "Prior"]:
+        for parameter in [self.utils.remove_periods(self.prior1_variation_parameter), \
+                          self.utils.remove_periods(self.prior2_variation_parameter)]:
+          outputdir_test = os.path.join(outputdir_main, 'Test_%sClosure%s' % (type, parameter))
+          old_name = 'hClosure_pt_{}_{}{}'.format(label, reg_param_final, self.file_format)
+          new_name = 'h{}Closure{}_pt_{}_final{}'.format(type, parameter, label, self.file_format)
+          shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
+          old_name = 'hClosure_{}_{}-{}_{}{}'.format(
+            label, min_pt, max_pt, reg_param_final, self.file_format)
+          new_name = 'h{}Closure{}_{}_{}-{}_final{}'.format(
+            type, parameter, label, min_pt, max_pt, self.file_format)
+          shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
 
   #----------------------------------------------------------------------
   def load_2D_observables(self, jetR, obs_label, obs_setting, grooming_setting, reg_param):
@@ -637,7 +635,11 @@ class RunAnalysis(common_base.CommonBase):
     h_list = []
     h_unfolding_list = []
     h_fastsim_list = []
+    do_generator = False
     for systematic in self.systematics_list:
+
+      if not do_generator and 'generator' in systematic:
+        do_generator = True
 
       if final and 'generator' not in systematic:
 
@@ -678,26 +680,27 @@ class RunAnalysis(common_base.CommonBase):
       setattr(self, name, hSystematic_Unfolding)
     h_list.append(hSystematic_Unfolding)
 
-    # Construct or retrieve generator uncertainty
-    name = 'hSystematic_generator_R{}_{}_n{}_{}-{}'.format(
-      self.utils.remove_periods(jetR), obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
-    if final:
-      hSystematic_fastsim = getattr(self, name)
-      name = 'hSystematic_generator_R{}_{}_{}-{}'.format(
-        self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth))
-      setattr(self, name, hSystematic_fastsim)
-    else:
-      # Get reference generator unfolded result (e.g. pythia fastsim)
-      name_reference = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
-        'fastsim_generator0', self.observable, jetR, obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
-      h_reference = getattr(self, name_reference)
+    if do_generator:
+      # Construct or retrieve generator uncertainty
+      name = 'hSystematic_generator_R{}_{}_n{}_{}-{}'.format(
+        self.utils.remove_periods(jetR), obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
+      if final:
+        hSystematic_fastsim = getattr(self, name)
+        name = 'hSystematic_generator_R{}_{}_{}-{}'.format(
+          self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth))
+        setattr(self, name, hSystematic_fastsim)
+      else:
+        # Get reference generator unfolded result (e.g. pythia fastsim)
+        name_reference = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(
+          'fastsim_generator0', self.observable, jetR, obs_label, reg_param, int(min_pt_truth), int(max_pt_truth))
+        h_reference = getattr(self, name_reference)
 
-      # Calculate systematic average for final fast simulation uncertainty
-      hSystematic_fastsim = self.construct_systematic_average(
-        h_reference, 'fastsim_generator', jetR, obs_label, reg_param, min_pt_truth, max_pt_truth,
-        minbin, maxbin, n_ratios=len(self.fastsim_response_list)-1, takeMaxDev=False)
-      setattr(self, name, hSystematic_fastsim)
-    h_list.append(hSystematic_fastsim)
+        # Calculate systematic average for final fast simulation uncertainty
+        hSystematic_fastsim = self.construct_systematic_average(
+          h_reference, 'fastsim_generator', jetR, obs_label, reg_param, min_pt_truth, max_pt_truth,
+          minbin, maxbin, n_ratios=len(self.fastsim_response_list)-1, takeMaxDev=False)
+        setattr(self, name, hSystematic_fastsim)
+      h_list.append(hSystematic_fastsim)
 
     # Construct total systematic uncertainty: Add all systematic uncertainties in quadrature
     name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
@@ -744,10 +747,11 @@ class RunAnalysis(common_base.CommonBase):
         jetR, obs_label, obs_setting, grooming_setting,
         min_pt_truth, max_pt_truth, minbin, maxbin, h_unfolding_list, hSystematic_Unfolding, suffix='Unfolding')
 
-      # Plot fastsim uncertainties
-      self.plot_systematic_uncertainties(
-        jetR, obs_label, obs_setting, grooming_setting,
-        min_pt_truth, max_pt_truth, minbin, maxbin, h_fastsim_list, hSystematic_fastsim, suffix='fastsim_generator')
+      if do_generator:
+        # Plot fastsim uncertainties
+        self.plot_systematic_uncertainties(
+          jetR, obs_label, obs_setting, grooming_setting,
+          min_pt_truth, max_pt_truth, minbin, maxbin, h_fastsim_list, hSystematic_fastsim, suffix='fastsim_generator')
 
 
   #----------------------------------------------------------------------

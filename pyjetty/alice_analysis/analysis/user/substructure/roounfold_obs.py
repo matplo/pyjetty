@@ -219,7 +219,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
             name_data_thermal = self.utils.name_data(self.observable, jetR, obs_label, self.R_max, self.thermal_model)
             setattr(self, 'name_data_thermal_R{}_{}'.format(jetR, obs_label), name_data_thermal)
 
-      self.reg_param_name = 'n_iter'
+      self.reg_param_name = '#it{n}_{iter}'
       self.errorType = ROOT.RooUnfold.kCovToy
 
   #---------------------------------------------------------------
@@ -1184,10 +1184,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       # Scale the prior distribution and unfold with nominal det/truth MC
       self.prior_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
 
-    # Plot thermal closure test
-    if self.thermal_model:
+      # Plot thermal closure test
+      if self.thermal_model:
 
-      self.plot_thermal_closure_test(jetR, obs_label, obs_setting, grooming_setting, reg_param_final)
+        self.plot_thermal_closure_test(i, jetR, obs_label, obs_setting, grooming_setting)
 
   #################################################################################################
   # Apply RM to unfolded result, and check that I obtain measured spectrum (simple technical check)
@@ -1237,18 +1237,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                                          min_pt_det, max_pt_det))
 
     legendTitle = ''
-    h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
+    h1LegendLabel = 'Folded truth'
     h2LegendLabel = 'Measured data'
     ratioYAxisTitle = 'Folded truth / Measured'
     output_dir = getattr(self, 'output_dir_Test_Refolding')
-    outf_name = 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(self.utils.remove_periods(jetR),
-                                                        obs_label, int(min_pt_det),
-                                                        int(max_pt_det), i, self.file_format)
+    outf_name = 'hFoldedTruth_R{}_{}_{}-{}_{}{}'.format(
+      self.utils.remove_periods(jetR), obs_label, int(min_pt_det), int(max_pt_det), i, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
-    self.plot_obs_ratio(hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle,
-                        int(min_pt_det), int(max_pt_det), jetR, obs_label, obs_setting,
-                        grooming_setting, outf_name, 'width', legendTitle,
-                        h1LegendLabel, h2LegendLabel, min_bin_for_normalization=2)
+    self.plot_obs_ratio(
+      hFolded_obs, hData_obs, None, self.ytitle, ratioYAxisTitle, int(min_pt_det), int(max_pt_det),
+      jetR, obs_label, obs_setting, grooming_setting, outf_name, 'width', legendTitle,
+      h1LegendLabel, h2LegendLabel, plotTitle="Refolding Test", reg_param=i, min_bin_for_normalization=2)
 
   #################################################################################################
   # Plot refolding test, for pt dimension
@@ -1269,16 +1268,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                                        min_pt_det, max_pt_det))
 
     legendTitle = ''
-    h1LegendLabel = 'Folded truth, {} = {}'.format(self.reg_param_name,i)
+    h1LegendLabel = 'Folded truth'
     h2LegendLabel = 'Measured data'
     ratioYAxisTitle = 'Folded truth / Measured'
     output_dir = getattr(self, 'output_dir_Test_Refolding')
     outf_name = 'hFoldedTruth_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR),
                                                      obs_label, i, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
-    self.plot_obs_ratio(hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0,
-                        jetR, obs_label, obs_setting, grooming_setting, outf_name,
-                        'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(
+      hFolded_pt, hData_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label, obs_setting,
+      grooming_setting, outf_name, 'width', legendTitle, h1LegendLabel, h2LegendLabel,
+      plotTitle="Refolding Test", reg_param=i)
 
   #################################################################################################
   # Statistical closure test: Smear data, then unfold and compare to original truth
@@ -1316,17 +1316,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     hUnfolded.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hUnfolded_obs = hUnfolded.ProjectionY()
-    hUnfolded_obs.SetName('hUnfolded_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i,
-                                                                 min_pt_truth, max_pt_truth))
+    hUnfolded_obs.SetName('hUnfolded_obs_R{}_{}_{}_{}-{}'.format(
+      jetR, obs_label, i, min_pt_truth, max_pt_truth))
 
     hMC_Truth.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
     hMCTruth_obs = hMC_Truth.ProjectionY()
-    hMCTruth_obs.SetName('hMCTruth_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, i,
-                                                               min_pt_truth, max_pt_truth))
+    hMCTruth_obs.SetName('hMCTruth_obs_R{}_{}_{}_{}-{}'.format(
+      jetR, obs_label, i, min_pt_truth, max_pt_truth))
 
     legendTitle = ''
-    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
-    h2LegendLabel = 'MC-truth'
+    h1LegendLabel = 'Unfolded MC det'
+    h2LegendLabel = 'MC truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
     output_dir = getattr(self, 'output_dir_Test_{}Closure{}'.format(option,
                          self.utils.remove_periods(suffix)))
@@ -1334,10 +1334,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                                                     obs_label, int(min_pt_truth),
                                                     int(max_pt_truth), i, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
-    self.plot_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle,
-                        ratioYAxisTitle, min_pt_truth, max_pt_truth, jetR,
-                        obs_label, obs_setting, grooming_setting, outf_name,
-                        'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(
+      hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle, min_pt_truth, max_pt_truth,
+      jetR, obs_label, obs_setting, grooming_setting, outf_name, 'width', legendTitle,
+      h1LegendLabel, h2LegendLabel, plotTitle="%s Closure Test" % option, reg_param=i)
 
   #################################################################################################
   # Plot closure test, for pt dimension
@@ -1355,17 +1355,18 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hMCTruth_pt.SetName('hMCTruth_pt_R{}_{}_{}_'.format(jetR, obs_label, i))
 
     legendTitle = ''
-    h1LegendLabel = 'Unfolded MC-det, {} = {}'.format(self.reg_param_name,i)
-    h2LegendLabel = 'MC-truth'
+    h1LegendLabel = 'Unfolded MC det'
+    h2LegendLabel = 'MC truth'
     ratioYAxisTitle = 'Unfolded MC det / Truth'
     output_dir = getattr(self, 'output_dir_Test_{}Closure{}'.format(option,
                          self.utils.remove_periods(suffix)))
     outf_name = 'hClosure_pt_R{}_{}_{}{}'.format(self.utils.remove_periods(jetR),
                                                  obs_label, i, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
-    self.plot_obs_ratio(hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle,
-                        0, 0, jetR, obs_label, obs_setting, grooming_setting, outf_name,
-                        'width', legendTitle, h1LegendLabel, h2LegendLabel)
+    self.plot_obs_ratio(
+      hUnfolded_pt, hMCTruth_pt, None, self.ytitle, ratioYAxisTitle, 0, 0, jetR, obs_label,
+      obs_setting, grooming_setting, outf_name, 'width', legendTitle, h1LegendLabel, h2LegendLabel,
+      plotTitle="%s Closure Test" % option, reg_param=i)
 
   #################################################################################################
   # Scale the shape of the det-level and truth-level spectra (by the same scaling as the prior),
@@ -1455,7 +1456,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Plot thermal closure test: unfolded result / truth
   #################################################################################################
-  def plot_thermal_closure_test(self, jetR, obs_label, obs_setting, grooming_setting, reg_param_final):
+  def plot_thermal_closure_test(self, i, jetR, obs_label, obs_setting, grooming_setting):
 
     # Get MC truth
     hMC_Truth = getattr(self, 'hMC_Truth_R{}_{}'.format(jetR, obs_label))
@@ -1468,27 +1469,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       max_pt_truth = truth_pt_bin_array[bin+1]
 
       # Get unfolded result
-      hUnfolded_obs = self.get_unfolded_result(jetR, obs_label, reg_param_final, min_pt_truth,
-                                               max_pt_truth, scaling_option='')
-
-      # Get MC truth projection
-      hMC_Truth.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
-      hMCTruth_obs = hMC_Truth.ProjectionY()
-      hMCTruth_obs.SetName('hMCTruth_obs_R{}_{}_{}_{}-{}'.format(jetR, obs_label, reg_param_final,
-                                                                 min_pt_truth, max_pt_truth))
+      hUnfolded = getattr(self, 'hUnfolded_{}_R{}_{}_{}'.format(self.observable, jetR, obs_label, i))
 
       # Plot ratio
-      legendTitle = ''
-      h1LegendLabel = 'Unfolded result'
-      h2LegendLabel = 'MC-truth'
-      ratioYAxisTitle = 'Unfolded / Truth'
-      output_dir = getattr(self, 'output_dir_Test_ThermalClosure')
-      outf_name = 'hThermalClosure_R{}_{}_{}-{}{}'.format(
-        self.utils.remove_periods(jetR), obs_label, min_pt_truth, max_pt_truth, self.file_format)
-      outf_name = os.path.join(output_dir, outf_name)
-      self.plot_obs_ratio(hUnfolded_obs, hMCTruth_obs, None, self.ytitle, ratioYAxisTitle,
-                          min_pt_truth, max_pt_truth, jetR, obs_label, obs_setting, grooming_setting, outf_name,
-                          'width', legendTitle, h1LegendLabel, h2LegendLabel)
+      self.plot_obs_closure_slice(
+        hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting,
+        grooming_setting, min_pt_truth, max_pt_truth, option='Thermal')
+
+    # Closure test for pt dimension
+    self.plot_pt_closure_slice(
+      hUnfolded, hMC_Truth, i, jetR, obs_label, obs_setting, grooming_setting,
+      self.pt_bins_reported[0], self.pt_bins_reported[-1], option='Thermal')
 
   #################################################################################################
   # Get errors from measured spectrum, stored as dictionary {bin:error}
@@ -1573,6 +1564,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                      max_pt_det, jetR, obs_label, obs_setting, grooming_setting,
                      outputFilename, scalingOptions = "", legendTitle = "",
                      hLegendLabel = "", h2LegendLabel = "", h3LegendLabel = "",
+                     plotTitle = "", reg_param = None,
                      yRatioMax = 2.2, min_bin_for_normalization=1):
 
     self.utils.set_plotting_options()
@@ -1708,7 +1700,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     pad1.cd()
 
-    leg2 = ROOT.TLegend(0.55,0.7,0.8,0.93,legendTitle)
+    leg2 = ROOT.TLegend(0.65,0.7,0.9,0.93,legendTitle)
     leg2.SetFillColor(10)
     leg2.SetBorderSize(0)
     leg2.SetFillStyle(0)
@@ -1720,36 +1712,54 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       leg2.AddEntry(h2, h2LegendLabel, "l")
     leg2.Draw("same")
 
+    y_pos = 0.85
+    if plotTitle:
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text_latex.DrawLatex(0.25, y_pos, plotTitle)
+      y_pos -= 0.07
+
+    if reg_param:
+      text_latex = ROOT.TLatex()
+      text_latex.SetNDC()
+      text = "%s = %s" % (self.reg_param_name, str(reg_param))
+      text_latex.DrawLatex(0.25, y_pos, text)
+      y_pos -= 0.07
+
     if not '_pt_' in outputFilename:
       text_latex = ROOT.TLatex()
       text_latex.SetNDC()
       text = str(min_pt_det) + ' < #it{p}_{T}^{ch jet} < ' + \
              str(max_pt_det) + ' GeV/#it{c}'
-      text_latex.DrawLatex(0.25, 0.85, text)
+      text_latex.DrawLatex(0.25, y_pos, text)
+      y_pos -= 0.07
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = '#it{R} = ' + str(jetR)
-    text_latex.DrawLatex(0.25, 0.78, text)
-
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     if subobs_label:
-      text = '{} = {}'.format(subobs_label, obs_setting)
-      text_latex.DrawLatex(0.25, 0.71, text)
+      text += ', {} = {}'.format(subobs_label, obs_setting)
+    text_latex.DrawLatex(0.25, y_pos, text)
+    y_pos -= 0.07
 
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting)
-      text_latex.DrawLatex(0.25, 0.64, text)
+      text_latex.DrawLatex(0.25, y_pos, text)
+      y_pos -= 0.07
 
     c.SaveAs(outputFilename)
     c.Close()
 
+    '''
     if 'ThermalClosure' in outputFilename:
-      fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_setting, grooming_setting, int(min_pt_det), int(max_pt_det))
+      fname = 'nonclosureR{}_{}_{}_n{}_{}-{}.root'.format(
+        jetR, obs_setting, grooming_setting, i, int(min_pt_det), int(max_pt_det))
       outf_name = os.path.join(getattr(self, 'output_dir_Test_ThermalClosure'), fname)
-      f = ROOT.TFile(outf_name, 'RECREATE')
-      hRatio.Write('hNonclosureRatio')
+      f = ROOT.TFile(outf_name, 'UPDATE')
+      hRatio.Write('hNonclosureRatio', ROOT.TFile.kOverwrite)
       f.Close()
+    '''
 
 #---------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
