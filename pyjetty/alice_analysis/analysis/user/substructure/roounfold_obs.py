@@ -1751,15 +1751,13 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     c.SaveAs(outputFilename)
     c.Close()
 
-    '''
     if 'ThermalClosure' in outputFilename:
-      fname = 'nonclosureR{}_{}_{}_n{}_{}-{}.root'.format(
-        jetR, obs_setting, grooming_setting, i, int(min_pt_det), int(max_pt_det))
+      fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(
+        jetR, obs_setting, grooming_setting, int(min_pt_det), int(max_pt_det))
       outf_name = os.path.join(getattr(self, 'output_dir_Test_ThermalClosure'), fname)
       f = ROOT.TFile(outf_name, 'UPDATE')
-      hRatio.Write('hNonclosureRatio', ROOT.TFile.kOverwrite)
+      hRatio.Write('hNonclosureRatio_n'+str(reg_param), ROOT.TFile.kOverwrite)
       f.Close()
-    '''
 
 #---------------------------------------------------------------------------------------------------
 if __name__ == '__main__':

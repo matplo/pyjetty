@@ -856,7 +856,7 @@ class RunAnalysis(common_base.CommonBase):
       fname = 'nonclosureR{}_{}_{}_{}-{}.root'.format(jetR, obs_setting, grooming_setting, int(min_pt_truth), int(max_pt_truth))
       outf_name = os.path.join(getattr(self, 'output_dir_thermal_closure'), 'Test_ThermalClosure')
       f_nonclosure = ROOT.TFile(os.path.join(outf_name, fname), 'READ')
-      h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio')
+      h_systematic_ratio_temp = f_nonclosure.Get('hNonclosureRatio_n' + str(reg_param))
       h_systematic_ratio_temp.SetDirectory(0)
       f_nonclosure.Close()
 
