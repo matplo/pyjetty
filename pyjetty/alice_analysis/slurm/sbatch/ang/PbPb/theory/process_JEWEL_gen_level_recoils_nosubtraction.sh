@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /home/ezra/pyjetty/pyjetty/alice_analysis
-python process/user/ezra/process_jewel_truth_level_jet_axis.py -c config/ang/PbPb/theory/JEWEL_yesrecoil_nosubtraction.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+python process/user/ang/process_jewel_truth_level_ang.py -c config/ang/PbPb/theory/JEWEL_yesrecoil_nosubtraction.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/ang/${JOB_ID}/

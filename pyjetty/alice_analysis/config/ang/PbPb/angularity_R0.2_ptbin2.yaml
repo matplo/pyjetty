@@ -33,7 +33,7 @@ ang:
       - ['config_R0.2_1', 'config_R0.2_1.5', 'config_R0.2_2', 'config_R0.2_3']
       - ['config_R0.2_1_SD', 'config_R0.2_1.5_SD', 'config_R0.2_2_SD', 'config_R0.2_3_SD']
     max_reg_param: 20
-    reg_param_variation: 1
+    reg_param_variation: 2
 
   ############################################################################
   # Different R & alpha configurations
@@ -48,7 +48,7 @@ ang:
     obs_bins_det: [0, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.42, 0.55, 0.75]
     obs_bins_det_sys_binning: [0, 0.07, 0.11, 0.15, 0.19, 0.24, 0.29, 0.33, 0.37, 0.42, 0.54, 0.75]
     reg_param:
-      0.2: 5
+      0.2: 15
 
   config_R0.2_1.5:
     R: 0.2
@@ -62,7 +62,7 @@ ang:
     obs_bins_det_sys_binning: [0, 0.045, 0.075, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19,
                                0.21, 0.25, 0.32, 0.5, 0.7]
     reg_param:
-      0.2: 5
+      0.2: 15
 
   config_R0.2_2:
     R: 0.2
@@ -76,7 +76,7 @@ ang:
     obs_bins_det_sys_binning: [0, 0.015, 0.045, 0.055, 0.065, 0.075, 0.085, 0.11, 0.13, 0.15,
                                0.17, 0.19, 0.21, 0.27, 0.40, 0.7]
     reg_param:
-      0.2: 5
+      0.2: 15
 
   config_R0.2_3:
     R: 0.2
@@ -90,7 +90,7 @@ ang:
     obs_bins_det_sys_binning: [0, 0.01, 0.025, 0.03, 0.04, 0.045, 0.055, 0.065,
                                0.095, 0.12, 0.15, 0.19, 0.25, 0.35]
     reg_param:
-      0.2: 5
+      0.2: 15
 
   ############################################################################
   # Different R & alpha configurations for SD
@@ -108,7 +108,7 @@ ang:
     obs_bins_det: [0, 0.04, 0.08, 0.12, 0.15, 0.18, 0.21, 0.24, 0.27, 0.3, 0.38, 0.55, 0.7]
     obs_bins_det_sys_binning: [0, 0.05, 0.09, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.38, 0.56, 0.7]
     reg_param:
-      0.2: 5
+      0.2: 10
 
   config_R0.2_1.5_SD:
     SoftDrop:
@@ -124,7 +124,7 @@ ang:
     obs_bins_det: [0, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7]
     obs_bins_det_sys_binning: [0, 0.01, 0.025, 0.04, 0.065, 0.085, 0.11, 0.16, 0.21, 0.31, 0.48, 0.7]
     reg_param:
-      0.2: 5
+      0.2: 10
 
   config_R0.2_2_SD:
     SoftDrop:
@@ -141,7 +141,7 @@ ang:
     obs_bins_det_sys_binning: [0, 0.005, 0.015, 0.025, 0.035, 0.05, 0.075, 0.1, 
                                 0.13, 0.16, 0.26, 0.45, 0.65]
     reg_param:
-      0.2: 5
+      0.2: 10
 
   config_R0.2_3_SD:
     SoftDrop:
@@ -157,7 +157,7 @@ ang:
     obs_bins_det: [0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15, 0.3, 0.5]
     obs_bins_det_sys_binning: [0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.06, 0.09, 0.11, 0.16, 0.32, 0.5]
     reg_param:
-      0.2: 5
+      0.2: 10
 
 
 ###############################################################################
@@ -169,7 +169,7 @@ roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfol
 
 analysis_observable: 'ang'
 do_unfolding: True
-force_rebin: True
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
@@ -191,6 +191,8 @@ systematics_list:
   - random_mass
   - fastsim_generator0
   - fastsim_generator1
+  - fastsim_generator2
+  - fastsim_generator3
   - subtraction1
   - subtraction2
   - thermal_closure
@@ -201,8 +203,11 @@ main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.
 trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFinal.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
 randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFinal.root'
+# fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
 fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root']
+                   '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
 
 # R_max variations

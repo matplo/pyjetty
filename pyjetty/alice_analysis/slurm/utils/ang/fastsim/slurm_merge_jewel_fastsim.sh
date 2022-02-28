@@ -7,4 +7,4 @@
 #SBATCH --array=1-20
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
-srun merge_jewel_fastsim0.sh $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+srun merge_jewel_fastsim.sh $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID

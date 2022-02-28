@@ -187,6 +187,8 @@ systematics_list:
 #  - random_mass
 #  - fastsim_generator0
 #  - fastsim_generator1
+#  - fastsim_generator2
+#  - fastsim_generator3
 #  - subtraction1
 #  - subtraction2
   - thermal_closure
@@ -197,7 +199,11 @@ main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.
 trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFinal.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
 randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFinal.root'
-fastsim_response: ['', '']
+# fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
 
 # R_max variations
