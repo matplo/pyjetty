@@ -1323,6 +1323,14 @@ class RunAnalysis(common_base.CommonBase):
     sys_unfolding.values = ['{:.2g}%'.format(y) for y in h_sys_unfolding['y']]
     y.add_uncertainty(sys_unfolding)
 
+    # Add generator systematic
+    name = 'hSystematic_generator_R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                                      int(min_pt), int(max_pt))
+    h_sys_generator = hepdata_reader_systematics.read_hist_1d(getattr(self, name).GetName())
+    sys_generator = hepdata_lib.Uncertainty('sys,generator', is_symmetric=True)
+    sys_generator.values = ['{:.2g}%'.format(y) for y in h_sys_generator['y']]
+    y.add_uncertainty(sys_generator)
+
     # Add systematic uncertainty breakdown
     for systematic in self.systematics_list:
 
@@ -1335,7 +1343,7 @@ class RunAnalysis(common_base.CommonBase):
             continue
 
         h_sys = hepdata_reader_systematics.read_hist_1d(h_sys.GetName())
-        sys = hepdata_lib.Uncertainty('sys,{}'.format(sys_label), is_symmetric=True)
+        sys = hepdata_lib.Uncertainty('sys,{}'.format(systematic), is_symmetric=True)
         sys.values = ['{:.2g}%'.format(y) for y in h_sys['y']]
         y.add_uncertainty(sys)
 
