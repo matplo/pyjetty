@@ -168,8 +168,8 @@ results_pp: "/rstorage/alice/AnalysisResults/ang/AngR02_ptbin2/ang/final_results
 roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: True
-force_rebin: True
+do_unfolding: False
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
