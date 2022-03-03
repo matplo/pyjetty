@@ -229,8 +229,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     c.cd()
     myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-    myPad.SetLeftMargin(0.2)
-    myPad.SetTopMargin(0.07)
+    myPad.SetLeftMargin(0.15)
+    myPad.SetTopMargin(0.03)
     myPad.SetRightMargin(0.04)
     myPad.SetBottomMargin(0.13)
     if self.set_logy:
@@ -289,15 +289,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myBlankHisto.Draw("E")
 
     plot_pythia = False; plot_herwig = False;
+    plot_jewel_no_recoils = False; plot_jewel_recoils = False;
     if plot_MC:
 
       hPythia = None; fraction_tagged_pythia = None;
-      if grooming_setting:
-        hPythia, fraction_tagged_pythia = self.MC_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1, 'Pythia')
-      else:
-        hPythia, fraction_tagged_pythia = self.MC_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, 'Pythia')
+      maxbin_adj = maxbin + 1 if grooming_setting else maxbin
+
+      hPythia, fraction_tagged_pythia = self.MC_prediction(
+        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Pythia')
+      hHerwig, fraction_tagged_herwig = self.MC_prediction(
+        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Herwig')
+      hJewel_no_recoils, fraction_tagged_jewel_no_recoils = self.MC_prediction(
+        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=False)
+      hJewel_recoils, fraction_tagged_jewel_no_recoils = self.MC_prediction(
+        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=True)
 
       if hPythia:
         hPythia.SetFillStyle(0)
@@ -311,56 +316,101 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       else:
         print('No PYTHIA prediction for %s %s' % (self.observable, obs_label))
 
+      if hHerwig:
+        hHerwig.SetFillStyle(0)
+        hHerwig.SetMarkerSize(1.5)
+        hHerwig.SetMarkerStyle(33)
+        hHerwig.SetMarkerColor(46)
+        hHerwig.SetLineColor(46)
+        hHerwig.SetLineWidth(1)
+        hHerwig.Draw('E2 same')
+        plot_herwig = True
+      else:
+        print('No Herwig prediction for %s %s' % (self.observable, obs_label))
+
+      if hJewel_no_recoils:
+        hJewel_no_recoils.SetFillStyle(0)
+        hJewel_no_recoils.SetMarkerSize(1.5)
+        hJewel_no_recoils.SetMarkerStyle(34)
+        hJewel_no_recoils.SetMarkerColor(42)
+        hJewel_no_recoils.SetLineColor(42)
+        hJewel_no_recoils.SetLineWidth(1)
+        hJewel_no_recoils.Draw('E2 same')
+        plot_jewel_no_recoils = True
+      else:
+        print('No JEWEL (recoils off) prediction for %s %s' % (self.observable, obs_label))
+
+      if hJewel_recoils:
+        hJewel_recoils.SetFillStyle(0)
+        hJewel_recoils.SetMarkerSize(1.5)
+        hJewel_recoils.SetMarkerStyle(47)
+        hJewel_recoils.SetMarkerColor(7)
+        hJewel_recoils.SetLineColor(7)
+        hJewel_recoils.SetLineWidth(1)
+        hJewel_recoils.Draw('E2 same')
+        plot_jewel_recoils = True
+      else:
+        print('No JEWEL (recoils on) prediction for %s %s' % (self.observable, obs_label))
+
+    h_sys.Draw("E2 same")
+    h.Draw("PE X0 same")
+
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text_xval = 0.6 if grooming_setting else 0.63
+    text_xval = 0.52 if grooming_setting else 0.55
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(text_xval, 0.87, text)
+    text_latex.DrawLatex(text_xval, 0.92, text)
 
-    text = 'Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
+    text = '0-10% Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(text_xval, 0.8, text)
+    text_latex.DrawLatex(text_xval, 0.85, text)
 
     text = "anti-#it{k}_{T} jets,   #it{R} = %s" % str(jetR)
-    text_latex.DrawLatex(text_xval, 0.73, text)
+    text_latex.DrawLatex(text_xval, 0.78, text)
 
-    if plot_theory and show_parton_theory and not show_everything_else:
+    if plot_theory and show_parton_theory:
       text = str(min_pt_truth) + ' < #it{p}_{T,jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     else:
       text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(text_xval, 0.66, text)
+    text_latex.DrawLatex(text_xval, 0.71, text)
 
     text = '| #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     if subobs_label:
       text += ',   %s = %s' % (subobs_label, obs_setting)
     delta = 0.07
-    text_latex.DrawLatex(text_xval, 0.66-delta, text)
-    
+    text_latex.DrawLatex(text_xval, 0.71-delta, text)
+
     if grooming_setting:
-      text = self.utils.formatted_grooming_label(grooming_setting)#.replace("#beta}", "#beta}_{SD}")
-      text_latex.DrawLatex(text_xval, 0.66-2*delta, text)
-      
+      text = self.utils.formatted_grooming_label(grooming_setting) #.replace("#beta}", "#beta}_{SD}")
+      text_latex.DrawLatex(text_xval, 0.71-2*delta, text)
+
       text_latex.SetTextSize(0.04)
       text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
       if plot_pythia:
         text += (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
       if plot_herwig:
         text += (', #it{f}_{tagged}^{herwig} = %3.3f' % fraction_tagged_herwig)
-      text_latex.DrawLatex(text_xval, 0.66-3*delta, text)
+      text_latex.DrawLatex(text_xval, 0.71-3*delta, text)
 
-    miny = 0.57
-    if plot_pythia:
-      if plot_herwig:
-        miny = 0.72  #TODO
-      else:
-        miny = 0.72
-    myLegend = ROOT.TLegend(0.23, miny, text_xval-0.02, 0.92)
+    miny = 0.62
+    #if plot_pythia:
+    #  if plot_herwig:
+    #    miny = 0.72  #TODO
+    #  else:
+    #    miny = 0.72
+    myLegend = ROOT.TLegend(0.16, miny, text_xval-0.02, 0.96)
     self.utils.setup_legend(myLegend, 0.035)
+    myLegend.AddEntry(h, 'ALICE Pb-Pb data', 'pe')
+    myLegend.AddEntry(h_sys, 'Syst. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     if plot_herwig:
-      myLegend.AddEntry(hHerwig, 'Herwig7 Default', 'pe')
+      myLegend.AddEntry(hHerwig, 'Herwig7 default tune', 'pe')
+    if plot_jewel_no_recoils:
+      myLegend.AddEntry(hJewel_no_recoils, 'JEWEL Pb-Pb (recoils off)', 'pe')
+    if plot_jewel_recoils:
+      myLegend.AddEntry(hJewel_recoils, 'JEWEL Pb-Pb (recoils on)', 'pe')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
@@ -387,6 +437,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hPythia.Write()
     if plot_herwig:
       hHerwig.Write()
+    if plot_jewel_no_recoils:
+      hJewel_no_recoils.Write()
+    if plot_jewel_recoils:
+      hJewel_recoils.Write()
     fFinalResults.Close()
 
 
@@ -442,7 +496,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
   #----------------------------------------------------------------------
   def MC_prediction(self, jetR, obs_setting, obs_label, min_pt_truth,
-                    max_pt_truth, maxbin, MC='Pythia', overlay=False):
+                    max_pt_truth, maxbin, MC='Pythia', overlay=False, recoils=False):
 
     if MC.lower() == 'pythia':
       hMC = self.get_pythia_from_response(jetR, obs_label, min_pt_truth,
@@ -450,8 +504,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     elif MC.lower() == 'herwig':
       hMC = self.get_herwig_from_response(jetR, obs_label, min_pt_truth,
                                           max_pt_truth, maxbin, overlay)
+    elif MC.lower() == "jewel":
+      hMC = self.get_jewel_from_response(
+        jetR, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay, recoils)
     else:
-      raise NotImplementedError("MC must be Pythia or Herwig.")
+      raise NotImplementedError("MC must be PYTHIA, Herwig, or JEWEL.")
 
     n_jets_inclusive = hMC.Integral(0, hMC.GetNbinsX()+1)
     n_jets_tagged = hMC.Integral(hMC.FindBin(
@@ -495,6 +552,26 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
       self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
+    h.SetDirectory(0)
+
+    return h
+
+  #----------------------------------------------------------------------
+  def get_jewel_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth,
+                               maxbin, overlay=False, recoils=False):
+
+    gen_to_use = 2 + int(recoils)
+    filepath = os.path.join(
+      getattr(self, "output_dir_fastsim_generator%i" % gen_to_use), 'response.root')
+    f = ROOT.TFile(filepath, 'READ')
+
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
+    thn = f.Get(thn_name)
+    thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+
+    name = 'hJewel_recoils_{}_{}_R{}_{}_{}-{}'.format(
+      "on" if recoils else "off", self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
     h.SetDirectory(0)
 

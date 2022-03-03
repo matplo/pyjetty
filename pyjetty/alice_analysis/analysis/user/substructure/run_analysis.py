@@ -1035,7 +1035,7 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
     y_list = [h_total.GetBinContent(i) for i in range(1, h_total.GetNbinsX()+1)]
-    max_y = max(y_list + [50])
+    max_y = max(y_list)
     min_y = 0
     # Unfolding uncertainties do not go below 0
     if not suffix == "Unfolding":
@@ -1078,7 +1078,7 @@ class RunAnalysis(common_base.CommonBase):
         leg.AddEntry(h, legend_label, 'P')
 
     # Draw that now the maximum has been found
-    myBlankHisto.SetMaximum(1.9 * max_y)
+    myBlankHisto.SetMaximum(1.9 * max([abs(min_y), max_y]))
     myBlankHisto.SetMinimum(1.1 * min_y)
     myBlankHisto.Draw("E")
     for i, h in enumerate(h_list):
