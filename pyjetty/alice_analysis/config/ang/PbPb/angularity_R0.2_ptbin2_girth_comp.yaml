@@ -42,12 +42,12 @@ ang:
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [40, 45, 50, 60, 70, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [45, 50, 60, 70, 80, 100, 120]
-    obs_bins_truth: [0, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.6, 0.8]
+    obs_bins_truth: [0, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.6, 0.75]
     obs_max_reported: [0.6]
-    obs_bins_det: [0, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.42, 0.55, 0.8]
+    obs_bins_det: [0, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.42, 0.55, 0.75]
     obs_bins_det_sys_binning: [0, 0.07, 0.11, 0.15, 0.19, 0.24, 0.29, 0.33, 0.37, 0.42, 0.54, 0.75]
-    reg_param:
-      0.2: 2
+    #reg_param:
+    #  0.2: 2
 
 
 ###############################################################################
@@ -58,7 +58,7 @@ results_pp: "/rstorage/alice/AnalysisResults/ang/PbPb/PbPb_girth_2.76TeV_R02_40-
 roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: False
+do_unfolding: True
 force_rebin: False
 do_systematics: True
 do_plot_final_result: True

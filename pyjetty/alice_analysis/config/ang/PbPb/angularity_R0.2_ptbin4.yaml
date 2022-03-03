@@ -106,7 +106,7 @@ ang:
     obs_bins_det: [0, 0.05, 0.1, 0.2, 0.3, 0.45, 0.7]
     obs_bins_det_sys_binning: [0, 0.04, 0.08, 0.17, 0.26, 0.47, 0.7]
     reg_param:
-      0.2: 4
+      0.2: 5
 
   config_R0.2_1.5_SD:
     SoftDrop:
@@ -122,7 +122,7 @@ ang:
     obs_bins_det: [0, 0.02, 0.05, 0.1, 0.35, 0.6]
     obs_bins_det_sys_binning: [0, 0.025, 0.06, 0.11, 0.37, 0.6]
     reg_param:
-      0.2: 4
+      0.2: 5
 
   config_R0.2_2_SD:
     SoftDrop:
@@ -138,7 +138,7 @@ ang:
     obs_bins_det: [0, 0.005, 0.01, 0.03, 0.08, 0.25, 0.5]
     obs_bins_det_sys_binning: [0, 0.005, 0.015, 0.035, 0.1, 0.28, 0.5]
     reg_param:
-      0.2: 4
+      0.2: 5
 
   config_R0.2_3_SD:
     SoftDrop:
@@ -154,7 +154,7 @@ ang:
     obs_bins_det: [0, 0.001, 0.005, 0.02, 0.05, 0.1, 0.3]
     obs_bins_det_sys_binning: [0, 0.002, 0.007, 0.015, 0.055, 0.15, 0.3]
     reg_param:
-      0.2: 4
+      0.2: 5
 
 
 ###############################################################################
@@ -201,10 +201,10 @@ trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFina
 randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
 randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFinal.root'
 # fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
-fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal.root',
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal_no1-5.root',
                    '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
                    '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
+                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal_no1-5.root']
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
 
 # R_max variations
