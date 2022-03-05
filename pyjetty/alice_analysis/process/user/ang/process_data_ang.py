@@ -101,7 +101,9 @@ class ProcessData_ang(process_data_base.ProcessDataBase):
 
     # Only do jet mass stuff once per set of angularity configs
     elif observable == "mass":
-      getattr(self, 'h_mass_JetPt_R%s%s' % (jetR, suffix)).Fill(
+      name = 'h_mass_JetPt_R%s_%s%s' % (jetR, obs_label, suffix) if \
+        grooming_setting else 'h_mass_JetPt_R%s%s' % (jetR, suffix)
+      getattr(self, name).Fill(
         jet_pt_ungroomed, jet_groomed_lund.pair().m() if grooming_setting else jet.m())
 
 
