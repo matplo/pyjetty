@@ -4,7 +4,7 @@ jetR: [0.2, 0.4]
 # For extra verbose output in some functions
 debug_level: 0
 
-process_observables: ['ang']
+process_observables: ['ang', 'mass']
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 # Uncomment for data // comment for MC
 #reject_tracks_fraction: 0
@@ -106,5 +106,3 @@ mass:
     SoftDrop:
       zcut: 0.2
       beta: 0
-
-
