@@ -164,7 +164,7 @@ class CurvesFromJewelTracks():
                     setattr(self,name,h)
 
         elif '4momsub' in self.thermal_subtraction_method or \
-             'negative_pt' in self.thermal_subtraction_method:
+             'negative_recombiner' in self.thermal_subtraction_method:
 
             print('no histograms will be initialized for this setting in initialize_histos')
 
@@ -215,8 +215,7 @@ class CurvesFromJewelTracks():
 
         # If we are using the GridSub method, then we won't be
         # using the dummy particles
-        if not self.thermal_subtraction_method or \
-          'negative_pt' in self.thermal_subtraction_method:
+        if not self.thermal_subtraction_method:
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9'
             if not self.recoils_off:
                 track_criteria += ' and Status != 3'
@@ -229,6 +228,9 @@ class CurvesFromJewelTracks():
         elif '4momsub' in self.thermal_subtraction_method:
             track_criteria = 'ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
             bck_criteria = 'ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
+        elif 'negative_recombiner' in self.thermal_subtraction_method:
+            track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
+            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
 
         self.jet_df = self.track_df.query(track_criteria)
         self.bck_df = None if self.recoils_off else self.track_df.query(bck_criteria)
@@ -365,9 +367,17 @@ class CurvesFromJewelTracks():
             jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
             jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
 
+            particles = fj_particles
+            # For negative pT treatment, add thermals and negative recombiner
+            if "negative_recombiner" in self.thermal_subtraction_method:
+                for part in thermal_particles_selected:
+                    part.set_user_index(-1)
+                    particles.push_back(part)
+                recombiner = fjext.NegativeEnergyRecombiner(-1)
+                jet_def.set_recombiner(recombiner)
+
             # Do jet finding
-            jets_selected = None
-            cs = fj.ClusterSequence(fj_particles, jet_def)
+            cs = fj.ClusterSequence(particles, jet_def)
             jets = fj.sorted_by_pt(cs.inclusive_jets())
             jets_selected = jet_selector(jets)
 
@@ -383,19 +393,8 @@ class CurvesFromJewelTracks():
             if not self.thermal_subtraction_method:
                 subtracted_jets = jets_selected
 
-            elif "negative_pt" in self.thermal_subtraction_method:
-
-                holes_in_jets = []
-                for jet in jets_selected:
-                    holes = []
-                    for thermal in thermal_particles_selected:
-                        # Require thermal to be within jet R
-                        if jet.delta_R(thermal) < jetR:
-                            holes.append(thermal)
-                            # Subtract 4-momentum of thermal from jet
-                            jet -= thermal
-                    subtracted_jets.append(jet)
-                    holes_in_jets.append(holes)
+            elif "negative_recombiner" in self.thermal_subtraction_method:
+                subtracted_jets = jets_selected
 
             elif '4momsub' in self.thermal_subtraction_method:
                 '''
@@ -448,13 +447,12 @@ class CurvesFromJewelTracks():
             #----------------------------------------------
 
             for i, jet in enumerate(subtracted_jets):
-                self.analyze_accepted_jet(
-                    jet, jetR, gridsize, diagnostic, holes_in_jets[i] if holes_in_jets else None)
+                self.analyze_accepted_jet(jet, jetR, gridsize, diagnostic)
 
     #---------------------------------------------------------------
     # Fill histograms
     #---------------------------------------------------------------
-    def analyze_accepted_jet(self, jet, jetR, gridsize, diagnostic=False, holes_in_jet=None):
+    def analyze_accepted_jet(self, jet, jetR, gridsize, diagnostic=False):
 
         # Fill base histograms
         jet_pt_ungroomed = jet.pt()
@@ -469,55 +467,29 @@ class CurvesFromJewelTracks():
 
             # Groom jet, if applicable
             holes_in_groomed_jet = None
+            jet_def = fj.JetDefinition(self.reclustering_algorithm, jetR)
             if grooming_setting:
-              gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
+              # For negative_recombiner case, we set the negative recombiner
+              if "negative_recombiner" in self.thermal_subtraction_method:
+                recombiner = fjext.NegativeEnergyRecombiner(-1)
+                jet_def.set_recombiner(recombiner)
+              gshop = fjcontrib.GroomerShop(jet, jet_def)
               jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
               if not jet_groomed_lund:
                 continue
-
-              if holes_in_jet:
-                holes_in_groomed_jet = []
-
-                # Recluster jet with thermals
-                constits = jet.constituents()
-                for hole in holes_in_jet:
-                  constits += (hole,)
-                jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-                cs = fj.ClusterSequence(constits, jet_def)
-                thermal_jets = fj.sorted_by_pt(cs.inclusive_jets())
-                if len(thermal_jets) > 1:
-                  print("Somehow thermals have created %i more jet(s)!" % (len(thermal_jets) - 1))
-                  for jet in thermal_jets:
-                    print("pT =", jet.perp(), "| y =", jet.rap(), "| phi =", jet.phi())
-
-                # Groom the reclustered jet
-                thermal_gshop = fjcontrib.GroomerShop(
-                  thermal_jets[0], jetR, self.reclustering_algorithm)
-                thermal_jet_groomed = self.utils.groom(thermal_gshop, grooming_setting, jetR)
-
-                # Determine which holes would survive grooming
-                if thermal_jet_groomed.pair().has_constituents():
-                  for hole in holes_in_jet:
-                    for constit in thermal_jet_groomed.pair().constituents():
-                      if hole.delta_R(constit) < 1e-10:
-                        holes_in_groomed_jet.append(hole)
-                        break
 
             else:
               jet_groomed_lund = None
 
             # Call user function to fill histograms
             if not diagnostic:
-              print("entering fill_jet_histograms")
               self.fill_jet_histograms(
                 observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                obs_label, jet_pt_ungroomed, gridsize, holes_in_jet, holes_in_groomed_jet)
-              print("finished fill_jet_histograms")
+                obs_label, jet_pt_ungroomed, gridsize)
             else:
               self.fill_jet_histograms(
                 observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                obs_label, jet_pt_ungroomed, gridsize, holes_in_jet, holes_in_groomed_jet,
-                suffix='_diagnostics')
+                obs_label, jet_pt_ungroomed, gridsize, suffix='_diagnostics')
 
     #---------------------------------------------------------------
     # GridSub1 subtraction method

@@ -95,10 +95,7 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
   #---------------------------------------------------------------
   def fill_jet_histograms(
       self, observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-      obs_label, jet_pt_ungroomed, holes_in_jet=None, holes_in_groomed_jet=None,
-      suffix=None, label=''):
-
-    print(observable, jetR, obs_setting, grooming_setting)
+      obs_label, jet_pt_ungroomed, suffix=None, label=''):
 
     if not self.thermal_subtraction_method or 'negative_pt' in self.thermal_subtraction_method:
       name = 'h_%s_JetPt_R%s_%s%s' % (observable, jetR, obs_label, label) if \
@@ -112,56 +109,32 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
     else:
       raise ValueError("Recoil subtraction method not recognized")
 
+    obs = None
+
     #######################################################################
     if observable == "ang":
-      ang = 0
+      kappa = 1
 
       if grooming_setting:
         groomed_jet = jet_groomed_lund.pair()
-        ''' Groomed jet 4-momentum isn't used in angularties
-        if holes_in_groomed_jet:
-          # Adjust groomed jet 4-momentum by the holes
-          for hole in holes_in_groomed_jet:
-            groomed_jet -= hole
-        '''
-        ang = fjext.lambda_beta_kappa(jet, groomed_jet, obs_setting, 1, jetR)
-        if holes_in_groomed_jet:
-          for hole in holes_in_groomed_jet:
-            ang -= (hole.perp() / jet_pt_ungroomed) * \
-              (hole.delta_R(jet) / jetR) ** (2 - obs_setting)
+        obs = fjext.lambda_beta_kappa(jet, groomed_jet, obs_setting, kappa, jetR)
 
       else:
-        # Ungroomed jet 4-mometnum is already adjusted by holes
-        ang = fjext.lambda_beta_kappa(jet, obs_setting, 1, jetR)
-        if holes_in_jet:
-          for hole in holes_in_jet:
-            ang -= (hole.perp() / jet_pt_ungroomed) * \
-              (hole.delta_R(jet) / jetR) ** (2 - obs_setting)
-
-      # Fill histograms
-      getattr(self, name).Fill(jet_pt_ungroomed, ang)
+        obs = fjext.lambda_beta_kappa(jet, obs_setting, kappa, jetR)
 
     #######################################################################
     elif observable == "mass":
-      mass = 0   # m^2 = E^2 - p^2
-      #E_list = [];  p_list = []
+      # m^2 = E^2 - p^2
 
       if grooming_setting:
         groomed_jet = jet_groomed_lund.pair()
-        mass_before = groomed_jet.m()
-        if holes_in_groomed_jet:
-          # Adjust groomed jet 4-momentum by the holes
-          for hole in holes_in_groomed_jet:
-            groomed_jet -= hole
-        mass = groomed_jet.m()
+        obs = groomed_jet.m()
 
       else:
-        # Ungroomed jet 4-mometnum is already adjusted by holes
-        mass = jet.m()
+        obs = jet.m()
 
-      getattr(self, name).Fill(jet_pt_ungroomed, mass)
-
-    print("finished filling hist")
+    # Fill histograms
+    getattr(self, name).Fill(jet_pt_ungroomed, obs)
 
 ##################################################################
 if __name__ == '__main__':
