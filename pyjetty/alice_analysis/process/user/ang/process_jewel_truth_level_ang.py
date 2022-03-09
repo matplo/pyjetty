@@ -111,6 +111,16 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
       raise ValueError("Recoil subtraction method not recognized")
 
     obs = None
+    groomed_jet = None
+
+    # Check to make sure that the jet is "real" with positive pT
+    if grooming_setting:
+      groomed_jet = jet_groomed_lund.pair()
+      if groomed_jet.user_index() < 0:
+        return
+    else:  # no grooming
+      if jet.user_index() < 0:
+        return
 
     #######################################################################
     if observable == "ang":
@@ -156,18 +166,18 @@ if __name__ == '__main__':
 
   # Parse the arguments
   args = parser.parse_args()
-  
+
   print('Configuring...')
   print('inputFile: \'{0}\''.format(args.inputFile))
   print('configFile: \'{0}\''.format(args.configFile))
   print('ouputDir: \'{0}\"'.format(args.outputDir))
   print('----------------------------------------------------------------')
-  
+
   # If invalid inputFile is given, exit
   if not os.path.exists(args.inputFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
     sys.exit(0)
-  
+
   # If invalid configFile is given, exit
   if not os.path.exists(args.configFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
