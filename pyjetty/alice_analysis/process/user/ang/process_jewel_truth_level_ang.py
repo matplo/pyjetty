@@ -69,7 +69,7 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
           # Histogram name based on recoil subtraction method
           names = []
           if not self.thermal_subtraction_method or \
-              'negative_pt' in self.thermal_subtraction_method:
+              'negative_recombiner' in self.thermal_subtraction_method:
             names.append('h_%s_JetPt_R%s_%s%s' % (observable, jetR, obs_label, label) if \
               len(obs_label) else 'h_%s_JetPt_R%s%s' % (observable, jetR, label))
           elif 'gridsub' in self.thermal_subtraction_method:
@@ -97,7 +97,8 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
       self, observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
       obs_label, jet_pt_ungroomed, suffix=None, label=''):
 
-    if not self.thermal_subtraction_method or 'negative_pt' in self.thermal_subtraction_method:
+    if not self.thermal_subtraction_method or \
+        'negative_recombiner' in self.thermal_subtraction_method:
       name = 'h_%s_JetPt_R%s_%s%s' % (observable, jetR, obs_label, label) if \
         len(obs_label) else 'h_%s_JetPt_R%s%s' % (observable, jetR, label)
     elif 'gridsub' in self.thermal_subtraction_method:
