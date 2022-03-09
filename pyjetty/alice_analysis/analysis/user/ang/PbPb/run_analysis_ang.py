@@ -301,7 +301,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Herwig')
       hJewel_no_recoils, fraction_tagged_jewel_no_recoils = self.MC_prediction(
         jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=False)
-      hJewel_recoils, fraction_tagged_jewel_no_recoils = self.MC_prediction(
+      hJewel_recoils, fraction_tagged_jewel_recoils = self.MC_prediction(
         jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=True)
 
       if hPythia:
@@ -357,7 +357,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text_xval = 0.52 if grooming_setting else 0.55
+    text_xval = 0.55
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(text_xval, 0.92, text)
 
@@ -386,12 +386,20 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       text_latex.DrawLatex(text_xval, 0.71-2*delta, text)
 
       text_latex.SetTextSize(0.04)
-      text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
+      text = ['#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged]
       if plot_pythia:
-        text += (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
+        text.append('#it{f}_{tagged}^{PYTHIA} = %3.3f' % fraction_tagged_pythia)
       if plot_herwig:
-        text += (', #it{f}_{tagged}^{herwig} = %3.3f' % fraction_tagged_herwig)
-      text_latex.DrawLatex(text_xval, 0.71-3*delta, text)
+        text.append('#it{f}_{tagged}^{Herwig} = %3.3f' % fraction_tagged_herwig)
+      if plot_jewel_no_recoils:
+        text.append('#it{f}_{tagged}^{JEWEL} = %3.3f' % fraction_tagged_jewel_no_recoils)
+      if plot_jewel_recoils:
+        text.append('#it{f}_{tagged}^{JEWEL rec.} = %3.3f' % fraction_tagged_jewel_recoils)
+
+      # Print two of each f_tagged on a line
+      for list_i, sublist in enumerate([text[i:i+2] for i in range(0, len(text), 2)]):
+        line = ", ".join(sublist)
+        text_latex.DrawLatex(text_xval, 0.71-(3+list_i)*delta, line)
 
     miny = 0.62
     #if plot_pythia:
@@ -499,16 +507,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                     max_pt_truth, maxbin, MC='Pythia', overlay=False, recoils=False):
 
     if MC.lower() == 'pythia':
-      hMC = self.get_pythia_from_response(jetR, obs_label, min_pt_truth,
-                                          max_pt_truth, maxbin, overlay)
+      hMC = self.get_pythia_from_response(
+        jetR, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay)
     elif MC.lower() == 'herwig':
-      hMC = self.get_herwig_from_response(jetR, obs_label, min_pt_truth,
-                                          max_pt_truth, maxbin, overlay)
+      hMC = self.get_herwig_from_response(
+        jetR, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay)
     elif MC.lower() == "jewel":
       hMC = self.get_jewel_from_response(
         jetR, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay, recoils)
     else:
       raise NotImplementedError("MC must be PYTHIA, Herwig, or JEWEL.")
+
+    if not hMC:
+      return [None, None]
 
     n_jets_inclusive = hMC.Integral(0, hMC.GetNbinsX()+1)
     n_jets_tagged = hMC.Integral(hMC.FindBin(
@@ -562,8 +573,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                maxbin, overlay=False, recoils=False):
 
     gen_to_use = 2 + int(recoils)
-    filepath = os.path.join(
-      getattr(self, "output_dir_fastsim_generator%i" % gen_to_use), 'response.root')
+    try:
+      filepath = os.path.join(
+        getattr(self, "output_dir_fastsim_generator%i" % gen_to_use), 'response.root')
+    except AttributeError:
+      # Not doing JEWEL for this case
+      return None
     f = ROOT.TFile(filepath, 'READ')
 
     thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
@@ -657,9 +672,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     c.cd()
     if plot_ratio:
-      pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
+      pad1 = ROOT.TPad('myPad', 'The pad', 0, 0.4, 1, 1)
     else:
-      pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+      pad1 = ROOT.TPad('myPad', 'The pad', 0, 0, 1, 1)
     pad1.SetLeftMargin(0.2)
     pad1.SetTopMargin(0.07)
     pad1.SetRightMargin(0.04)
@@ -678,9 +693,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.62, 0.6, 0.96, 0.91)
+    myLegend = ROOT.TLegend(0.57, 0.45, 0.96, 0.76)
     self.utils.setup_legend(myLegend, 0.045)
-    myLegend2 = ROOT.TLegend(0.81, 0.788, 1, 0.91)
+
+    myLegend2 = None
+    if plot_pp_data:
+      myLegend2 = ROOT.TLegend(0.76, 0.638, 1, 0.76)
+    else:
+      myLegend2 = ROOT.TLegend(0.76, 0.62, 1, 0.76)
     self.utils.setup_legend(myLegend2, 0.045)
 
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
@@ -786,7 +806,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
           if setlogy:  # the minimum value matters
-            myBlankHisto.SetMinimum(2*ymin/3)
+            myBlankHisto.SetMinimum(ymin/2)
           myBlankHisto.GetYaxis().SetTitleSize(0.065)
           myBlankHisto.GetYaxis().SetTitleOffset(1.1)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
@@ -796,9 +816,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if plot_ratio:
 
           c.cd()
-          pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
+          pad2 = ROOT.TPad("pad2", "pad2", 0, 0, 1, 0.4)
           pad2.SetTopMargin(0)
-          pad2.SetBottomMargin(0.5)
+          pad2.SetBottomMargin(0.2)
           pad2.SetLeftMargin(0.2)
           pad2.SetRightMargin(0.04)
           pad2.SetTicks(1,1)
@@ -816,7 +836,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           myBlankHisto2.SetXTitle(xtitle)
           myBlankHisto2.GetXaxis().SetTitleSize(30)
           myBlankHisto2.GetXaxis().SetTitleFont(43)
-          myBlankHisto2.GetXaxis().SetTitleOffset(4.)
+          myBlankHisto2.GetXaxis().SetTitleOffset(1.5)
           myBlankHisto2.GetXaxis().SetLabelFont(43)
           myBlankHisto2.GetXaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetTitleSize(20)
@@ -827,7 +847,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetNdivisions(505)
           if plot_ratio_same_scale:
             if jetR == 0.2:
-              myBlankHisto2.GetYaxis().SetRangeUser(0.4, 2.2)
+              myBlankHisto2.GetYaxis().SetRangeUser(0.2, 2.4)
             elif jetR == 0.4:
               myBlankHisto2.GetYaxis().SetRangeUser(0.5, 1.9)
             else:
@@ -1064,7 +1084,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(text_xval, 0.87, text)
 
-    text = 'Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
+    text = '0-10% Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(text_xval, 0.81, text)
 

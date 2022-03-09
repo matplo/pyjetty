@@ -62,16 +62,16 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       elif recluster_alg == 'AKT':
         self.reclustering_algorithm = 'anti-#it{k}_{T}'
 
-    main_data = config['main_data']
-    main_response = config['main_response']
+    self.main_data = config['main_data']
+    self.main_response = config['main_response']
     if thermal:
-        main_response = config['thermal_closure']
+        self.main_response = config['thermal_closure']
 
-    if os.path.exists(main_data):
-      self.fData = ROOT.TFile(main_data, 'READ')
+    if os.path.exists(self.main_data):
+      self.fData = ROOT.TFile(self.main_data, 'READ')
     else:
       self.fData = None
-    self.fMC = ROOT.TFile(main_response, 'READ')
+    self.fMC = ROOT.TFile(self.main_response, 'READ')
     
     if self.R_max:
       self.suffix = '_Rmax{}'.format(self.R_max)
@@ -236,8 +236,11 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   def plotJER(self, jetR, obs_label):
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix).replace("__", "_")
     hRM_4d = self.fMC.Get(name)
+    if not hRM_4d:
+      raise AttributeError("%s not found in file %s" % (name, self.main_response))
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
     
@@ -275,15 +278,20 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     
     # First, get the pT^gen spectrum
     name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(
-      self.observable, jetR, obs_label, self.scaled_suffix)
-    histPtGen = self.fMC.Get(name).ProjectionX()
+      self.observable, jetR, obs_label, self.scaled_suffix).replace("_Scaled", "Scaled")
+    histPtGen = self.fMC.Get(name)
+    if not histPtGen:
+      raise AttributeError("%s not found in file %s" % (name, self.main_response))
+    histPtGen = histPtGen.ProjectionX()
     hpg_xbins = [histPtGen.GetXaxis().GetBinLowEdge(i) for i in \
                  range(1, histPtGen.GetXaxis().GetNbins()+2)]
 
     # Then, get the pT^gen spectrum for matched jets
     name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(
-      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix).replace("__", "_")
     hRM_4d = self.fMC.Get(name)
+    if not hRM_4d:
+      raise AttributeError("%s not found in file %s" % (name, self.main_response))
     hRM = hRM_4d.Projection(1,0)
     hRM.SetName('hResponse_JetPt_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
     histPtGenMatched = hRM.ProjectionY("_py",1,hRM.GetNbinsX()) #avoid under and overflow bins
@@ -334,9 +342,12 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     self.setup_legend(myLegend,0.035)
     
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix).replace("__", '_')
     hRM_4d = self.fMC.Get(name)
-    
+    if not hRM_4d:
+      raise AttributeError("%s not found in file %s" % (name, self.main_response))
+
     h_list = [] # Store hists in a list, since otherwise it seems I lose the marker information
                 # (removed from memory?)
     
@@ -348,7 +359,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       hRM_4d_clone = hRM_4d.Clone()
       hRM_4d_clone.SetName('{}_{}'.format(hRM_4d_clone.GetName(), i))
       hResolution = self.get_resolution(hRM_4d_clone, jetR, obs_label, min_pt_truth, max_pt_truth, 'hResolution_{}'.format(i))
- 
+
       hResolution.SetMarkerColor(self.ColorArray[i])
       hResolution.SetMarkerStyle(21)
       hResolution.SetLineColor(self.ColorArray[i])
@@ -396,7 +407,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_obs_residual_pt(self, jetR, obs_label, xtitle, pt_bins):
 
     name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(
-      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix).replace("__", '_')
 
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
@@ -445,7 +456,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_obs_residual_obs(self, jetR, obs_label, xtitle):
 
     name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(
-      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix).replace("__", '_')
 
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
@@ -472,6 +483,8 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
         obs_true_list = [0, 0.05, 0.1, 0.2, 0.4, 0.7]
       else:  # alpha = 2, 3
         obs_true_list = [0, 0.05, 0.1, 0.2, 0.5]
+    elif "{m}_{jet}" in xtitle:
+      obs_true_list = [0, 10, 20, 40]
 
     max = 0
     residuals = []
@@ -528,6 +541,8 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   def get_residual_proj(self, name, label, min, max, option='pt', min_pt=80., max_pt=100.):
 
     h_residual_pt = self.fMC.Get(name)
+    if not h_residual_pt:
+      raise AttributeError("%s not found in file %s" % (name, self.main_response))
     h_residual_pt.SetName('{}_{}'.format(h_residual_pt.GetName(), label))
 
     if option == 'pt':
@@ -557,13 +572,18 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
 
     # (pt-det, pt-truth, obs-det, obs-truth)
     name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(
-      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+      self.observable, jetR, obs_label, self.suffix, self.scaled_suffix).replace("__", '_')
     hRM_obs = self.fMC.Get(name)
+    if not hRM_obs:
+      raise AttributeError("%s not found in file %s" % (name, self.main_response))
     if not hRM_obs.GetSumw2():
       hRM_obs.Sumw2()
 
-    name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, self.suffix)
+    name = 'h_{}_JetPt_R{}_{}{}'.format(
+      self.observable, jetR, obs_label, self.suffix).replace("__", '_')
     hObs_JetPt = self.fData.Get(name)
+    if not hObs_JetPt:
+      raise AttributeError("%s not found in file %s" % (name, self.main_data))
     if not hObs_JetPt.GetSumw2():
       hObs_JetPt.Sumw2()
 
@@ -588,9 +608,12 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_obs_truth(self, jetR, obs_label, obs_setting, grooming_setting,
                      xtitle, pt_bins):
 
-    name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, obs_label, self.scaled_suffix)
+    name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(
+      self.observable, jetR, obs_label, self.scaled_suffix).replace("_Scaled", "Scaled")
     h2D = self.fMC.Get(name)
-    
+    if not h2D:
+      raise AttributeError("%s not found in file %s" % (name, self.main_response))
+
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
@@ -733,6 +756,10 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       rebin_val_mcdet = 2
       rebin_val_mctruth = 2
       rebin_val_data = 2
+    elif self.observable == "mass":
+      rebin_val_mcdet = 5
+      rebin_val_mctruth = 5
+      rebin_val_data = 5
 
     # Get RM, for a given pt cut
     if option == 'det':

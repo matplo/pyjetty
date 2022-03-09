@@ -736,10 +736,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     else:
       output_dir = getattr(self, 'output_dir_Unfolded_obs')
 
-    outf_name = 'hUnfolded{}_{}_R{}_{}_{}-{}{}'.format(option, self.observable,
-                                                       self.utils.remove_periods(jetR),
-                                                       obs_label, int(min_pt_truth),
-                                                       int(max_pt_truth), self.file_format)
+    outf_name = 'hUnfolded{}_{}_R{}_{}_{}-{}{}'.format(
+      option, self.observable, self.utils.remove_periods(jetR), obs_label,
+      int(min_pt_truth), int(max_pt_truth), self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     c.SaveAs(outf_name)
     c.Close()

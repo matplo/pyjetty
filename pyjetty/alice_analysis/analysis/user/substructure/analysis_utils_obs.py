@@ -147,15 +147,16 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       else:
         name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
         
-      return name
+      return name.replace("__", '_')
 
   #---------------------------------------------------------------
   # Get name of response THn, rebinned
   #---------------------------------------------------------------
   def name_thn_rebinned(self, observable, jetR, obs_label):
   
-      return 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(observable, jetR, obs_label)
-  
+      return 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(
+        observable, jetR, obs_label).replace("__", '_')
+
   #---------------------------------------------------------------
   # Get name of 2D data histogram
   #---------------------------------------------------------------
@@ -163,18 +164,22 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
   
       if R_max:
         if thermal_model:
-          return 'h_{}_JetPt_R{}_{}_Rmax{}Scaled'.format(observable, jetR, obs_label, R_max)
+          return 'h_{}_JetPt_R{}_{}_Rmax{}Scaled'.format(
+            observable, jetR, obs_label, R_max).replace("__", '_')
         else:
-          return 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
+          return 'h_{}_JetPt_R{}_{}_Rmax{}'.format(
+            observable, jetR, obs_label, R_max).replace("__", '_')
       else:
-        return 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
-  
+        return 'h_{}_JetPt_R{}_{}'.format(
+          observable, jetR, obs_label).replace("__", '_')
+
   #---------------------------------------------------------------
   # Get name of 2D data histogram, rebinned
   #---------------------------------------------------------------
   def name_data_rebinned(self, observable, jetR, obs_label):
   
-      return 'h_{}_JetPt_R{}_{}_rebinned'.format(observable, jetR, obs_label)
+      return 'h_{}_JetPt_R{}_{}_rebinned'.format(
+        observable, jetR, obs_label).replace("__", '_')
 
   #---------------------------------------------------------------
   # Get custom regularization parameter
