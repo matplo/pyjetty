@@ -68,14 +68,15 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
 
           # Histogram name based on recoil subtraction method
           names = []
-          if not self.thermal_subtraction_method:
+          if not self.thermal_subtraction_method or \
+              'negative_pt' in self.thermal_subtraction_method:
             names.append('h_%s_JetPt_R%s_%s%s' % (observable, jetR, obs_label, label) if \
               len(obs_label) else 'h_%s_JetPt_R%s%s' % (observable, jetR, label))
-          elif 'gridsub' in self.thermal_subtraction_method.lower():
+          elif 'gridsub' in self.thermal_subtraction_method:
             for gridsize in self.gridsizes:
               names.append('h_%s_JetPt_R%s_%s_gridsub_%s%s' % (observable, jetR, obs_label, gridsize, label) \
                 if len(obs_label) else 'h_%s_JetPt_R%s_gridsub_%s%s' % (observable, jetR, gridsize, label))
-          elif '4momsub' in self.thermal_subtraction_method.lower():
+          elif '4momsub' in self.thermal_subtraction_method:
             names.append('h_%s_JetPt_R%s_%s_4momsub%s' % (self.observable, jetR, obs_label, label) \
               if len(obs_label) else 'h_%s_JetPt_R%s_4momsub%s' % (self.observable, jetR, label))
           else:
@@ -92,33 +93,75 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
   #---------------------------------------------------------------
-  def fill_jet_histograms(self, observable, jet, jet_groomed_lund, jetR, obs_setting,
-                          grooming_setting, obs_label, jet_pt_ungroomed, suffix=None, label=''):
+  def fill_jet_histograms(
+      self, observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
+      obs_label, jet_pt_ungroomed, holes_in_jet=None, holes_in_groomed_jet=None,
+      suffix=None, label=''):
 
-    if not self.thermal_subtraction_method:
+    print(observable, jetR, obs_setting, grooming_setting)
+
+    if not self.thermal_subtraction_method or 'negative_pt' in self.thermal_subtraction_method:
       name = 'h_%s_JetPt_R%s_%s%s' % (observable, jetR, obs_label, label) if \
         len(obs_label) else 'h_%s_JetPt_R%s%s' % (observable, jetR, label)
-    elif 'gridsub' in self.thermal_subtraction_method.lower():
+    elif 'gridsub' in self.thermal_subtraction_method:
       name = 'h_%s_JetPt_R%s_%s_gridsub_%s%s' % (observable, jetR, obs_label, suffix, label) \
         if len(obs_label) else 'h_%s_JetPt_R%s_gridsub_%s%s' % (observable, jetR, suffix, label)
-    elif '4momsub' in self.thermal_subtraction_method.lower():
+    elif '4momsub' in self.thermal_subtraction_method:
       name = 'h_%s_JetPt_R%s_%s_4momsub%s' % (self.observable, jetR, obs_label, label) \
         if len(obs_label) else 'h_%s_JetPt_R%s_4momsub%s' % (self.observable, jetR, label)
     else:
       raise ValueError("Recoil subtraction method not recognized")
 
+    #######################################################################
     if observable == "ang":
-      # Calculate angularity
-      ang = fjext.lambda_beta_kappa(jet, jet_groomed_lund.pair(), obs_setting, 1, jetR) \
-            if grooming_setting else fjext.lambda_beta_kappa(jet, obs_setting, 1, jetR)
+      ang = 0
+
+      if grooming_setting:
+        groomed_jet = jet_groomed_lund.pair()
+        ''' Groomed jet 4-momentum isn't used in angularties
+        if holes_in_groomed_jet:
+          # Adjust groomed jet 4-momentum by the holes
+          for hole in holes_in_groomed_jet:
+            groomed_jet -= hole
+        '''
+        ang = fjext.lambda_beta_kappa(jet, groomed_jet, obs_setting, 1, jetR)
+        if holes_in_groomed_jet:
+          for hole in holes_in_groomed_jet:
+            ang -= (hole.perp() / jet_pt_ungroomed) * \
+              (hole.delta_R(jet) / jetR) ** (2 - obs_setting)
+
+      else:
+        # Ungroomed jet 4-mometnum is already adjusted by holes
+        ang = fjext.lambda_beta_kappa(jet, obs_setting, 1, jetR)
+        if holes_in_jet:
+          for hole in holes_in_jet:
+            ang -= (hole.perp() / jet_pt_ungroomed) * \
+              (hole.delta_R(jet) / jetR) ** (2 - obs_setting)
 
       # Fill histograms
       getattr(self, name).Fill(jet_pt_ungroomed, ang)
 
-    # Only do jet mass stuff once per set of angularity configs
+    #######################################################################
     elif observable == "mass":
-      getattr(self, name).Fill(jet_pt_ungroomed, jet_groomed_lund.pair().m() if grooming_setting else jet.m())
+      mass = 0   # m^2 = E^2 - p^2
+      #E_list = [];  p_list = []
 
+      if grooming_setting:
+        groomed_jet = jet_groomed_lund.pair()
+        mass_before = groomed_jet.m()
+        if holes_in_groomed_jet:
+          # Adjust groomed jet 4-momentum by the holes
+          for hole in holes_in_groomed_jet:
+            groomed_jet -= hole
+        mass = groomed_jet.m()
+
+      else:
+        # Ungroomed jet 4-mometnum is already adjusted by holes
+        mass = jet.m()
+
+      getattr(self, name).Fill(jet_pt_ungroomed, mass)
+
+    print("finished filling hist")
 
 ##################################################################
 if __name__ == '__main__':
