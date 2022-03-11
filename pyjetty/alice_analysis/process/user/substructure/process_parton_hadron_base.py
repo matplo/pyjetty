@@ -65,31 +65,31 @@ class ProcessPHBase(process_base.ProcessBase):
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-  
+
     # Initialize base class
     super(ProcessPHBase, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
-    
+
     # Initialize configuration
     self.initialize_config()
-    
+
   #---------------------------------------------------------------
   # Initialize config file into class members
   #---------------------------------------------------------------
   def initialize_config(self):
-    
+
     # Call base class initialization
     process_base.ProcessBase.initialize_config(self)
 
     # C++ histogram rebinning functions
-    # Don't actually need any of these, but have to init to get other 
-    #     RUtil functions for some reason... 
+    # Don't actually need any of these, but have to init to get other
+    #     RUtil functions for some reason...
     self.histutils = ROOT.RUtil.HistUtils()
-    
+
     # Read config file
     config = None
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
-    
+
     self.jet_matching_distance = config['jet_matching_distance']
 
     # Load levels desired for the various RMs.
@@ -112,15 +112,15 @@ class ProcessPHBase(process_base.ProcessBase):
     self.obs_settings = {}
     self.obs_grooming_settings = {}
     for observable in self.observable_list:
-    
+
       obs_config_dict = config[observable]
       obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
-      
+
       obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
       self.obs_settings[observable] = self.utils.obs_settings(
         observable, obs_config_dict, obs_subconfig_list)
       self.obs_grooming_settings[observable] = self.utils.grooming_settings(obs_config_dict)
-      
+
     # Construct set of unique grooming settings
     self.grooming_settings = []
     lists_grooming = [self.obs_grooming_settings[obs] for obs in self.observable_list]
@@ -130,7 +130,7 @@ class ProcessPHBase(process_base.ProcessBase):
           self.grooming_settings.append(setting)
 
     # These values set the step size and control memory usage
-    self.track_df_step_size = 1e5
+    self.track_df_step_size = 20  #1e5
     self.max_ev_storage = 5e4
 
     fj.ClusterSequence.print_banner()
@@ -139,16 +139,16 @@ class ProcessPHBase(process_base.ProcessBase):
   # Initialize empty storage dictionaries to store events for use in next iteration
   #---------------------------------------------------------------
   def init_storage(self, level, MPI):
-    setattr(self, "df_fjparticles_storage_%s_MPI%s" % (level, MPI), 
+    setattr(self, "df_fjparticles_storage_%s_MPI%s" % (level, MPI),
             { "run_number": [], "ev_id": [], "fj_particle": [] })
     setattr(self, "run_numbers_storage_%s_MPI%s" % (level, MPI), [])
     setattr(self, "unique_ev_ids_per_run_storage_%s_MPI%s" % (level, MPI), [])
-  
+
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
   def process_mc(self):
-    
+
     self.start_time = time.time()
 
     # ------------------------------------------------------------------------
@@ -190,7 +190,7 @@ class ProcessPHBase(process_base.ProcessBase):
                 len(getattr(self, "df_fjparticles_storage_h_MPI"+MPI)["run_number"]))
 
         print("Load TTrees with MPI %s, iteration %i/%i (p) | %i/%i (h)..." % \
-              (MPI, getattr(self, "df_iter_p_MPI"+MPI), max_iter_p, 
+              (MPI, getattr(self, "df_iter_p_MPI"+MPI), max_iter_p,
                getattr(self, "df_iter_h_MPI"+MPI), max_iter_h))
         self.load_trees_to_dict(MPI)
         #print('--- {} seconds ---'.format(time.time() - self.start_time))
@@ -202,7 +202,7 @@ class ProcessPHBase(process_base.ProcessBase):
         self.analyze_events(MPI)
 
         print('\n--- {} seconds ---'.format(time.time() - self.start_time))
-    
+
     # ------------------------------------------------------------------------
 
     print("Scale histograms by appropriate weighting...")
@@ -214,14 +214,14 @@ class ProcessPHBase(process_base.ProcessBase):
     # Plot histograms
     print('Save histograms...')
     process_base.ProcessBase.save_output_objects(self)
-    
+
     print('--- {} seconds ---'.format(time.time() - self.start_time))
 
   #---------------------------------------------------------------
   # Intialize track tree readers and save sizes for proper looping
   #---------------------------------------------------------------
   def init_tree_readers(self, MPI):
-    setattr(self, "io_p_MPI"+MPI, 
+    setattr(self, "io_p_MPI"+MPI,
             process_io_parton_hadron.ProcessIO(input_file=self.input_file, level='p', MPI=MPI))
     setattr(self, "tree_len_p_MPI"+MPI, getattr(self, "io_p_MPI"+MPI).tree_length)
 
@@ -348,9 +348,30 @@ class ProcessPHBase(process_base.ProcessBase):
         if "fj" in key:
           getattr(self, name)[key][-1] += df_to_append[key][0]
         df_to_append[key].pop(0)
+
+    print("old ev tree")
+    self.print_df(getattr(self, name))
+    print("appending")
+    self.print_df(df_to_append)
+
     # Merge dfs
     for key, val in df_to_append.items():
       getattr(self, name)[key] += val
+
+
+  #---------------------------------------------------------------
+  # Function to look inside df in convenient way
+  #---------------------------------------------------------------
+  def print_df(self, df):
+    if len(df["run_number"]) < 1:
+      print("empty df")
+    print("run_number", "ev_id", "pt\t\t", "eta\t\t", "phi", sep='\t')
+    for i, run_number in enumerate(df["run_number"]):
+      ev_id = df["ev_id"][i]
+      for j, fj_particle in enumerate(df["fj_particle"][i]):
+        print("%s\t" % run_number, ev_id, fj_particle.pt(), fj_particle.eta(),
+              fj_particle.phi(), sep='\t')
+
 
   #---------------------------------------------------------------
   # Save the run_numbers and unique ev_ids as attributes for given io, level
@@ -432,7 +453,7 @@ class ProcessPHBase(process_base.ProcessBase):
     last_run_nums = [getattr(self, "df_fjparticles_p_MPI" + MPI)["run_number"][-1],
                      getattr(self, "df_fjparticles_h_MPI" + MPI)["run_number"][-1],
                      getattr(self, "df_fjparticles_ch_MPI" + MPI)["run_number"][-1]]
-    
+
     if len(np.unique(last_run_nums)) != 1:
 
       last_run = min(last_run_nums)  # assuming run_number is sorted in TTree
@@ -470,14 +491,22 @@ class ProcessPHBase(process_base.ProcessBase):
                    getattr(self, "df_fjparticles_h_MPI" + MPI)["ev_id"][-1],
                    getattr(self, "df_fjparticles_ch_MPI" + MPI)["ev_id"][-1]]
 
-    if len(np.unique(last_ev_ids)) != 1:
+    last_ev = min(last_ev_ids)  # assuming ev_id is sorted in TTree
+    # Unless there is only 1 ev, and only if it is the last event in the file,
+    #     move last ev to storage to make sure we have all its tracks
+    if getattr(self, "df_fjparticles_p_MPI" + MPI)["ev_id"][0] == max(last_ev_ids):
+      # Look for a case where we have not exhausted the datafile
+      for level in ["p", "h"]:
+        if getattr(self, "tree_len_%s_MPI%s" % (level, MPI)) <= \
+           getattr(self, "df_iter_%s_MPI%s" % (level, MPI)) * self.track_df_step_size:
+          last_ev -= 1
+          break
+    else:
+      last_ev -= 1
+    if self.debug_level > 1:
+      print("last_ev:", last_ev)
 
-      last_ev = min(last_ev_ids)  # assuming ev_id is sorted in TTree
-      # Unless there is only 1 ev, move last ev to storage to make sure we have all its tracks
-      if getattr(self, "df_fjparticles_p_MPI" + MPI)["ev_id"][0] != last_ev:
-        last_ev -= 1
-      if self.debug_level > 1:
-        print("last_ev:", last_ev)
+    if last_ev != min(last_ev_ids) or len(np.unique(last_ev_ids)) != 1:
 
       for i, level in zip([0, 1, 2], ["p", "h", "ch"]):
         if last_ev_ids[i] != last_ev:
@@ -578,9 +607,9 @@ class ProcessPHBase(process_base.ProcessBase):
     df_fjparticles_h = getattr(self, "df_fjparticles_h_MPI" + MPI)
     df_fjparticles_ch = getattr(self, "df_fjparticles_ch_MPI" + MPI)
 
-    # Need to figure out which ev_id to save. 
-    # For some reason, it can be the case that the ev_id does not exist 
-    #    at one level (e.g. parton), while it does at another (e.g. hadron). 
+    # Need to figure out which ev_id to save.
+    # For some reason, it can be the case that the ev_id does not exist
+    #    at one level (e.g. parton), while it does at another (e.g. hadron).
     # Deal with this by simply removing these bad run_numbers / ev_ids.
     # First, check if there are any bad run_numbers
     bad_index_p = None
@@ -609,7 +638,7 @@ class ProcessPHBase(process_base.ProcessBase):
                                for i in range(len(run_numbers_h))])
 
     bad_index_ch = None
-    bad_runs_ch = np.setdiff1d(run_numbers_ch, run_numbers_p)
+    bad_runs_ch = bad_runs_p  #np.setdiff1d(run_numbers_ch, run_numbers_p)
     if len(bad_runs_ch):
       print("bad_runs_ch:", bad_runs_ch)
       bad_index_ch = li_concat([
@@ -626,6 +655,7 @@ class ProcessPHBase(process_base.ProcessBase):
     run_index_h = 0
     overall_index_ch = 0
     run_index_ch = 0
+
     while run_index_p < len(run_numbers_p):
       ev_ids_p = unique_ev_ids_per_run_p[run_index_p][0]
       if run_numbers_p[run_index_p] in bad_runs_p:
@@ -672,12 +702,11 @@ class ProcessPHBase(process_base.ProcessBase):
       overall_index_ch += len(ev_ids_ch)
       run_index_ch += 1
 
-    ''' DEBUGGING CODE ONLY
+    # DEBUGGING CODE ONLY
     # Test random pairing rate by pairing incorrect events
-    bad_index_p[0] = bad_index_p[1] = True
-    bad_index_h[-1] = bad_index_h[0] = True
-    bad_index_ch[-2] = bad_index_ch[-1] = True
-    '''
+    #bad_index_p[0] = bad_index_p[1] = True
+    #bad_index_h[-1] = bad_index_h[0] = True
+    #bad_index_ch[-2] = bad_index_ch[-1] = True
 
     [df_fjparticles_p["run_number"].pop(i) and df_fjparticles_p["ev_id"].pop(i) and \
      df_fjparticles_p["fj_particle"].pop(i) for i in range(len(bad_index_p)-1, -1, -1) \
@@ -757,7 +786,7 @@ class ProcessPHBase(process_base.ProcessBase):
     for level in ['p', 'h', 'ch']:
       for fj_particles in df['fj_particles_%s' % level]:
         self.fill_track_histograms(fj_particles, level, MPI)
-        
+
     self.event_number = 0
 
     # match jets -- and fill histograms
@@ -766,11 +795,11 @@ class ProcessPHBase(process_base.ProcessBase):
 
       self.analyze_event(fj_particles_p, fj_particles_h, fj_particles_ch, MPI)
 
-    if self.debug_level > 0:
+    if self.debug_level > 2:
       for attr in dir(self):
         obj = getattr(self, attr)
         print('size of {}: {}'.format(attr, sys.getsizeof(obj)))
-    
+
   #---------------------------------------------------------------
   # Fill track histograms.
   #---------------------------------------------------------------
@@ -784,7 +813,7 @@ class ProcessPHBase(process_base.ProcessBase):
     for track in fj_particles:
       getattr(self, "hTrackEtaPhi_%s_MPI%s" % (level, MPI)).Fill(track.eta(), track.phi())
       getattr(self, "hTrackPt_%s_MPI%s" % (level, MPI)).Fill(track.pt())
-      
+
   #---------------------------------------------------------------
   # Analyze jets of a given event.
   # fj_particles is the list of fastjet pseudojets for a single fixed event.
@@ -813,7 +842,7 @@ class ProcessPHBase(process_base.ProcessBase):
 
     # Loop through jetR, and process event for each R
     for jetR in self.jetR_list:
-    
+
       # Keep track of whether to fill R-independent histograms
       self.fill_R_indep_hists = (jetR == self.jetR_list[0])
 
@@ -861,14 +890,12 @@ class ProcessPHBase(process_base.ProcessBase):
       self.fill_level_before_matching(jet_h, jetR, 'h', MPI)
     for jet_ch in jets_ch_selected:
       self.fill_level_before_matching(jet_ch, jetR, 'ch', MPI)
-  
+
     # Loop through jets and set jet matching candidates for each jet in user_info
     name_suffix = "MPI%s_R%s" % (MPI, str(jetR))
-    for jet_p in jets_p_selected:
-      for jet_h in jets_h_selected:
-        self.set_matching_candidates(jet_p, 'p', jet_h, 'h', jetR, MPI)
-
     for jet_h in jets_h_selected:
+      for jet_p in jets_p_selected:
+        self.set_matching_candidates(jet_p, 'p', jet_h, 'h', jetR, MPI)
       for jet_ch in jets_ch_selected:
         self.set_matching_candidates(jet_h, 'h', jet_ch, 'ch', jetR, MPI)
 
@@ -889,7 +916,7 @@ class ProcessPHBase(process_base.ProcessBase):
     deltaR = jet1.delta_R(jet2)
     getattr(self, "hDeltaR_All_%s_%s_MPI%s_R%s" % (
       level1, level2, MPI, str(jetR))).Fill(jet1.pt(), deltaR)
-  
+
     # Add a matching candidate to the list if it is within the geometrical cut
     if deltaR < self.jet_matching_distance * jetR:
       self.set_jet_info(jet1, level1, jet2, level2, deltaR)
@@ -899,7 +926,7 @@ class ProcessPHBase(process_base.ProcessBase):
   # Set 'jet_match' as a matching candidate in user_info of 'jet'
   #---------------------------------------------------------------
   def set_jet_info(self, jet1, level1, jet2, level2, deltaR):
-  
+
     # Get/create object to store list of matching candidates
     jet_user_info = None
     if jet1.has_user_info():
@@ -918,7 +945,7 @@ class ProcessPHBase(process_base.ProcessBase):
       if deltaR < jet_user_info.closest_jet_deltaR_ch:
         jet_user_info.closest_jet_ch = jet2
         jet_user_info.closest_jet_deltaR_ch = deltaR
-          
+
     jet1.set_python_info(jet_user_info)
 
   #---------------------------------------------------------------
@@ -934,9 +961,9 @@ class ProcessPHBase(process_base.ProcessBase):
     h_p.Fill('all', jet_h.pt(), 1)
     h_ch = getattr(self, hname_ch)
     h_ch.Fill('all', jet_h.pt(), 1)
-  
+
     if jet_h.has_user_info():
-        
+
       jet_info_h = jet_h.python_info()
 
       if len(jet_info_h.matching_candidates_p) > 0:
@@ -947,12 +974,12 @@ class ProcessPHBase(process_base.ProcessBase):
       # Match with parton-level jet
       if len(jet_info_h.matching_candidates_p) == 1:
         jet_p = jet_info_h.closest_jet_p
-          
+
         # Check that the match is unique
         if jet_p.has_user_info():
           jet_info_p = jet_p.python_info()
           if len(jet_info_p.matching_candidates_p) == 1:
-                  
+
             # Set accepted match
             jet_info_h.match_p = jet_p
             jet_h.set_python_info(jet_info_h)
@@ -961,12 +988,12 @@ class ProcessPHBase(process_base.ProcessBase):
       # Match with charged-level jet
       if len(jet_info_h.matching_candidates_ch) == 1:
         jet_ch = jet_info_h.closest_jet_ch
-          
+
         # Check that the match is unique
         if jet_ch.has_user_info():
           jet_info_ch = jet_ch.python_info()
           if len(jet_info_ch.matching_candidates_ch) == 1:
-                  
+
             # Set accepted match
             jet_info_h.match_ch = jet_ch
             jet_h.set_python_info(jet_info_h)
@@ -984,7 +1011,7 @@ class ProcessPHBase(process_base.ProcessBase):
       getattr(self, 'hZ_%s' % label).Fill(jet_pt, z)
 
     self.fill_unmatched_jet_histograms(jet, jetR, level, MPI)
-  
+
   #---------------------------------------------------------------
   # This function is called once for each jet
   #---------------------------------------------------------------
@@ -1006,11 +1033,11 @@ class ProcessPHBase(process_base.ProcessBase):
           continue
       else:
         jet_groomed_lund = None
-        
+
       # Call user function to fill histograms
       self.fill_observable_histograms(jet, jet_groomed_lund, jetR, level, MPI,
                                       obs_setting, grooming_setting, obs_label, jet.pt())
-  
+
   #---------------------------------------------------------------
   # Loop through jets and call user function to fill matched
   # histos if both det and truth jets are unique match.
@@ -1029,6 +1056,14 @@ class ProcessPHBase(process_base.ProcessBase):
         jet_pt_p_ungroomed = jet_p.pt()
         jet_pt_h_ungroomed = jet_h.pt()
         jet_pt_ch_ungroomed = jet_ch.pt()
+
+        # Check for weird events
+        if abs(jet_pt_p_ungroomed - jet_pt_h_ungroomed) > 100:
+          print("\nweird event!")
+          print("p jet momentum: (%s, %s, %s)" % (jet_p.px(), jet_p.py(), jet_p.pz()), "pT:", jet_p.pt())
+          print("h jet momentum: (%s, %s, %s)" % (jet_h.px(), jet_h.py(), jet_h.pz()), "pT:", jet_h.pt())
+          print("delta R: %s * jetR" % (jet_p.delta_R(jet_h) / jetR) )
+          #exit()
 
         JES = (jet_pt_h_ungroomed - jet_pt_p_ungroomed) / jet_pt_p_ungroomed
         getattr(self, 'hJES_p_h_%s' % suffix).Fill(jet_pt_p_ungroomed, JES)
@@ -1128,7 +1163,7 @@ class ProcessPHBase(process_base.ProcessBase):
                     jetR, pt_bins, obs_bins, obs_label):
 
     # Another set of THn for full hadron folding
-    title = ["p_{T}^{%s jet}" % level_2, "p_{T}^{%s jet}" % level_1, 
+    title = ["p_{T}^{%s jet}" % level_2, "p_{T}^{%s jet}" % level_1,
              "%s_{%s}^{%s}" % (obs_name, obs_label, level_2),
              "%s_{%s}^{%s}" % (obs_name, obs_label, level_1)]
 
@@ -1168,7 +1203,7 @@ class ProcessPHBase(process_base.ProcessBase):
 
     x_array = array('d', [jet_pt_level_2, jet_pt_level_1, obs_level_2, obs_level_1])
     getattr(self, "hResponse_JetPt_"+label).Fill(x_array)
-      
+
     if self.make_th3s and obs_level_1 > 0:
       obs_resolution = (obs_level_2 - obs_level_1) / obs_level_1
       getattr(self, "hResidual_JetPt_"+label).Fill(jet_pt_level_1, obs_level_1, obs_resolution)
@@ -1178,7 +1213,7 @@ class ProcessPHBase(process_base.ProcessBase):
   # You must implement this
   #---------------------------------------------------------------
   def initialize_user_output_objects_R(self, jetR, MPI):
-      
+
     raise NotImplementedError('You must implement initialize_user_output_objects_R()!')
 
   #---------------------------------------------------------------

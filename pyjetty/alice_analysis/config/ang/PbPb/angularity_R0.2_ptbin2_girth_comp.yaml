@@ -1,0 +1,111 @@
+# Processing parameters
+jetR: [0.2]
+alphas: [1, 1.5, 2, 3]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+
+# Background subtraction parameters for Pb-Pb
+constituent_subtractor:
+  max_distance: [0.05, 0.1, 0.5]
+  main_R_max: 0.1
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+# Max eta value (for plots)
+eta_max: 0.9
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  common_settings:
+    xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
+    pt_bins_reported: [40, 60]
+    plot_overlay_list:
+      - ['config_R0.2_1']
+    max_reg_param: 10
+    reg_param_variation: 1
+
+  ############################################################################
+  # Different R & alpha configurations
+  config_R0.2_1:
+    R: 0.2
+    alpha: 1
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [40, 45, 50, 60, 70, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [45, 50, 60, 70, 80, 100, 120]
+    obs_bins_truth: [0, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.6, 0.75]
+    obs_max_reported: [0.6]
+    obs_bins_det: [0, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.42, 0.55, 0.75]
+    obs_bins_det_sys_binning: [0, 0.07, 0.11, 0.15, 0.19, 0.24, 0.29, 0.33, 0.37, 0.42, 0.54, 0.75]
+    #reg_param:
+    #  0.2: 2
+
+
+###############################################################################
+# Analysis & plotting parameters
+file_format: ".pdf"
+output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin2_girth_comp/"
+results_pp: "/rstorage/alice/AnalysisResults/ang/PbPb/PbPb_girth_2.76TeV_R02_40-60.root"
+roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
+
+analysis_observable: 'ang'
+do_unfolding: False
+force_rebin: False
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: False
+figure_approval_status: 'Work In Progress'
+
+# Whether or not to use the previous measurement in ratio
+use_prev_result: True
+
+# List of which systematics to perform
+# Options: [main, trkeff, prior1, prior2, truncation, binning, \
+#           random_mass, fastsim_generator0, fastsim_generator1]
+systematics_list:
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
+  - random_mass
+  - fastsim_generator0
+  - fastsim_generator1
+  - fastsim_generator2
+#  - fastsim_generator3
+  - subtraction1
+  - subtraction2
+  - thermal_closure
+
+# Paths to processing output, to be used for unfolding
+#main_data: '/rstorage/alice/AnalysisResults/ang/872257/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/ang/1005381/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFinal.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFinal.root'
+# fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root']
+#                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
+thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
+
+# R_max variations
+R_max_variation1: 0.05
+R_max_variation2: 0.5
+
+# Prior variation parameters
+prior_variation_option: 1
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5

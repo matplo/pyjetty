@@ -55,21 +55,21 @@ class ProcessBase(common_base.CommonBase):
 
     # Initialize utils class
     self.utils = process_utils.ProcessUtils()
-  
+
   #---------------------------------------------------------------
   # Initialize config file into class members
   #---------------------------------------------------------------
   def initialize_config(self):
-  
+
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
-      
+
     if 'event_number_max' in config:
       self.event_number_max = config['event_number_max']
     else:
       self.event_number_max = sys.maxsize
-      
+
     self.jetR_list = config['jetR']
     self.debug_level = config['debug_level']
 
@@ -79,7 +79,7 @@ class ProcessBase(common_base.CommonBase):
       print('Constituent subtractor is enabled.')
       self.do_constituent_subtraction = True
       constituent_subtractor = config['constituent_subtractor']
-      
+
       self.max_distance = constituent_subtractor['max_distance']
       self.alpha = constituent_subtractor['alpha']
       if 'max_eta' in constituent_subtractor:
@@ -87,9 +87,14 @@ class ProcessBase(common_base.CommonBase):
       self.bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
       self.max_pt_correct = constituent_subtractor['max_pt_correct']
       self.ghost_area = constituent_subtractor['ghost_area']
+
+      # Optional flag to also create distributions without subtraction
+      self.include_no_subtraction = constituent_subtractor['include_no_subtraction'] if \
+        'include_no_subtraction' in constituent_subtractor else False
+
     else:
       print('Constituent subtractor is disabled.')
-      
+
     # Set reclustering algorithm (optional)
     if 'reclustering_algorithm' in config:
         self.recluster_alg = config['reclustering_algorithm']
@@ -102,7 +107,7 @@ class ProcessBase(common_base.CommonBase):
     else:
         self.recluster_alg = 'CA'
         self.reclustering_algorithm = fj.cambridge_algorithm
-        
+
     if 'm' in config:
         self.m = config['m']
     else:
@@ -113,7 +118,7 @@ class ProcessBase(common_base.CommonBase):
   #   and lists of nbins, xmin, xmax.
   #---------------------------------------------------------------
   def create_thn(self, name, title, dim, nbins, xmin, xmax):
-    
+
     nbins_arr = (nbins)
     xmin_arr = (min)
     xmax_arr = (max)

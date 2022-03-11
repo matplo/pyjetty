@@ -1,6 +1,6 @@
 # Processing parameters
 jetR: [0.2, 0.4]
-betas: [1.5, 2, 3]
+alphas: [1.5, 2, 3]
 
 # Initial detector-level binnings. Distributions are rebinned via configs before unfolding
 n_pt_bins: 195
@@ -11,10 +11,10 @@ n_rap_bins: 50            # just for fun, look at lambda distribution vs rapidit
 rap_limits: [-1, 1]
 
 # For extra verbose output in some functions
-debug_level: 0
+debug_level: 2
 
 process_observables: ['ang']
-jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+jet_matching_distance: 0.5        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0
 
 # SoftDrop setting (current same for all SD plots)
@@ -31,34 +31,34 @@ theory_pt_bins: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
 ang:
 
   ############################################################################
-  # Different R & beta configurations
+  # Different R & alpha configurations
 
-  config_B1.5:
-    beta: 1.5
+  config_1.5:
+    alpha: 1.5
 
-  config_B2:
-    beta: 2
+  config_2:
+    alpha: 2
 
-  config_B3:
-    beta: 3
+  config_3:
+    alpha: 3
 
   ############################################################################
-  # Different R & beta configurations for SoftDrop
+  # Different R & alpha configurations for SoftDrop
 
-  config_B1.5_SD:
+  config_1.5_SD:
     SoftDrop:
       zcut: 0.2
       beta: 0
-    beta: 1.5
+    alpha: 1.5
 
-  config_B2_SD:
+  config_2_SD:
     SoftDrop:
       zcut: 0.2
       beta: 0
-    beta: 2
+    alpha: 2
 
-  config_B3_SD:
+  config_3_SD:
     SoftDrop:
       zcut: 0.2
       beta: 0
-    beta: 3
+    alpha: 3

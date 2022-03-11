@@ -1,6 +1,6 @@
 # Processing parameters
 jetR: [0.4]
-betas: [1, 1.5, 2, 3]
+alphas: [1, 1.5, 2, 3]
 
 # Initial detector-level binnings. Distributions are rebinned via configs before unfolding
 n_pt_bins: 195
@@ -27,19 +27,19 @@ sd_beta: 0      # exponent on (deltaR / R)
 ang:
 
   common_settings:
-    xtitle: '#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}'
-    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}}'
+    xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
     pt_bins_reported: [80, 100]
     plot_overlay_list:
-      - ['config_R0.4_B1', 'config_R0.4_B1.5', 'config_R0.4_B2', 'config_R0.4_B3']
-      - ['config_R0.4_B1_SD', 'config_R0.4_B1.5_SD', 'config_R0.4_B2_SD', 'config_R0.4_B3_SD']
+      - ['config_R0.4_1', 'config_R0.4_1.5', 'config_R0.4_2', 'config_R0.4_3']
+      - ['config_R0.4_1_SD', 'config_R0.4_1.5_SD', 'config_R0.4_2_SD', 'config_R0.4_3_SD']
     max_reg_param: 10
 
   ############################################################################
-  # Different R & beta configurations
-  config_R0.4_B1:
+  # Different R & alpha configurations
+  config_R0.4_1:
     R: 0.4
-    beta: 1
+    alpha: 1
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -50,9 +50,9 @@ ang:
     reg_param:
       0.4: 3
 
-  config_R0.4_B1.5:
+  config_R0.4_1.5:
     R: 0.4
-    beta: 1.5
+    alpha: 1.5
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -63,9 +63,9 @@ ang:
     reg_param:
       0.4: 3
 
-  config_R0.4_B2:
+  config_R0.4_2:
     R: 0.4
-    beta: 2
+    alpha: 2
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -76,9 +76,9 @@ ang:
     reg_param:
       0.4: 3
 
-  config_R0.4_B3:
+  config_R0.4_3:
     R: 0.4
-    beta: 3
+    alpha: 3
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -90,13 +90,13 @@ ang:
       0.4: 3
 
   ############################################################################
-  # Different R & beta configurations for SoftDrop
-  config_R0.4_B1_SD:
+  # Different R & alpha configurations for SoftDrop
+  config_R0.4_1_SD:
     SoftDrop:
       zcut: 0.2
       beta: 0
     R: 0.4
-    beta: 1
+    alpha: 1
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -107,12 +107,12 @@ ang:
     reg_param:
       0.4: 3
 
-  config_R0.4_B1.5_SD:
+  config_R0.4_1.5_SD:
     SoftDrop:
       zcut: 0.2
       beta: 0
     R: 0.4
-    beta: 1.5
+    alpha: 1.5
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -123,12 +123,12 @@ ang:
     reg_param:
       0.4: 3
 
-  config_R0.4_B2_SD:
+  config_R0.4_2_SD:
     SoftDrop:
       zcut: 0.2
       beta: 0
     R: 0.4
-    beta: 2
+    alpha: 2
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -139,12 +139,12 @@ ang:
     reg_param:
       0.4: 3
 
-  config_R0.4_B3_SD:
+  config_R0.4_3_SD:
     SoftDrop:
       zcut: 0.2
       beta: 0
     R: 0.4
-    beta: 3
+    alpha: 3
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 120]
@@ -159,7 +159,7 @@ ang:
 ###############################################################################
 # Theory comparison parameters
 do_theory_comp: True
-theory_beta: [1.5, 2, 3]
+theory_alpha: [1.5, 2, 3]
 theory_dir: "/home/ezra/theory_predictions/"
 pt_scale_factors_filename: "qg_fractions-ALICE-R04.txt"
 response_levels: [["p", "ch", "off"], ["p", "h", "off"], ["h", "ch", "on"]]

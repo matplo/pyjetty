@@ -33,7 +33,7 @@ def li_concat(li):
 
 ################################################################
 class ProcessIO(common_base.CommonBase):
-  
+
   #---------------------------------------------------------------
   # Constructor
   # - level is either 'p' or 'h' (parton or hadron)
@@ -63,7 +63,7 @@ class ProcessIO(common_base.CommonBase):
                       'ParticlePx', 'ParticlePy', 'ParticlePz']
     elif level == 'h':
       self.columns = ['run_number', 'ev_id', 'ParticleE', 'ParticlePx',
-                        'ParticlePy', 'ParticlePz', 'is_charged']
+                      'ParticlePy', 'ParticlePz', 'is_charged']
     else:
       raise ValueError("Particle level %s not recognized / use either 'p' or 'h'")
 
@@ -191,10 +191,10 @@ class ProcessIO(common_base.CommonBase):
       # (i) Group the track dataframe by event
       #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
       track_df_grouped = track_df.groupby(self.unique_identifier)
-    
+
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
       df_fjparticles = track_df_grouped.apply(self.get_fjparticles)
-      
+
       # These are only useful for numpy implementation
       self.run_numbers = self.unique_ev_ids_per_run = None
       '''
@@ -219,12 +219,12 @@ class ProcessIO(common_base.CommonBase):
     else:
       # Transform the track dataframe into a dataframe of fastjet particles per track
       ''' Pandas implementation
-      df_fjparticles = pandas.DataFrame( 
-        {"run_number": track_df["run_number"], "ev_id": track_df["ev_id"], 
+      df_fjparticles = pandas.DataFrame(
+        {"run_number": track_df["run_number"], "ev_id": track_df["ev_id"],
          "fj_particle": self.get_fjparticles(track_df)} )
       '''
       df_fjparticles = {
-        "run_number": track_df["run_number"], "ev_id": track_df["ev_id"], 
+        "run_number": track_df["run_number"], "ev_id": track_df["ev_id"],
         "fj_particle": fj_particles }
 
     #print(df_fjparticles)

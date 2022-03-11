@@ -40,25 +40,25 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', debug_level=0, **kwargs):
-  
+
     # Initialize base class
     super(ProcessMC_jet_axis, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
-    
+
     self.observable = self.observable_list[0]
 
   #---------------------------------------------------------------
   # Initialize histograms
   #---------------------------------------------------------------
   def initialize_user_output_objects_R(self, jetR):
-      
+
     for i, axes in enumerate(self.obs_settings[self.observable]):
-    
+
       grooming_setting = self.obs_grooming_settings[self.observable][i]
       if grooming_setting:
         grooming_label = self.utils.grooming_label(grooming_setting)
       else:
         grooming_label = ''
-      
+
       name = 'hResidual_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
       h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
       h.GetXaxis().SetTitle('p_{T,truth}')
@@ -75,63 +75,64 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       self.create_thn(name, title, dim, nbins, min, max)
 
   #---------------------------------------------------------------
+  # Calculate the WTA jet given a 'standard' jet
+  #---------------------------------------------------------------
+  def get_wta_jet(self, jet, jetR):
+
+    # Recluster with WTA (with larger jet R)
+    jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
+    jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
+    if self.debug_level > 3:
+        print('WTA jet definition is:', jet_def_wta)
+    reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
+    return reclusterer_wta.result(jet)
+
+  #---------------------------------------------------------------
+  # Calculate the observable given a jet
+  #---------------------------------------------------------------
+  def calculate_observable(self, observable, jet, jet_groomed_lund,
+      jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed):
+
+    if obs_setting == 'Standard_SD':
+      return jet.delta_R(jet_groomed_lund.pair())
+
+    elif obs_setting == 'Standard_WTA':
+      return jet.delta_R(self.get_wta_jet(jet, jetR))
+
+    elif obs_setting == 'WTA_SD':
+      return jet_groomed_lund.pair().delta_R(self.get_wta_jet(jet, jetR))
+
+    # Should not be any other observable
+    raise ValueError("Observable %s not implemented" % observable)
+
+  #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
   # Fill 2D histogram of (pt, obs)
   #---------------------------------------------------------------
-  def fill_observable_histograms(self, hname, jet, jet_groomed_lund, jetR, obs_setting,
-                                 grooming_setting, obs_label, jet_pt_ungroomed):
-                                 
-    # Recluster with WTA (with larger jet R)
-    jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
-    jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
-    if self.debug_level > 3:
-        print('WTA jet definition is:', jet_def_wta)
-    reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
-    jet_wta = reclusterer_wta.result(jet)
+  def fill_observable_histograms(self, observable, hname, jet, jet_groomed_lund,
+      jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed):
 
-    # Compute jet axis differences
-    jet_groomed = jet_groomed_lund.pair()
-    if obs_setting == 'Standard_SD':
-        deltaR = jet.delta_R(jet_groomed)
-    elif obs_setting == 'Standard_WTA':
-        deltaR = jet.delta_R(jet_wta)
-    elif obs_setting == 'WTA_SD':
-        deltaR = jet_groomed.delta_R(jet_wta)
+    deltaR = self.calculate_observable(observable, jet, jet_groomed_lund,
+        jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed)
 
-    getattr(self,  hname.format(self.observable, jetR, obs_label)).Fill(jet_pt_ungroomed, deltaR)
-      
+    getattr(self, hname.format(observable, jetR, obs_label)).Fill(jet_pt_ungroomed, deltaR)
+
   #---------------------------------------------------------------
   # Fill matched jet histograms
   #---------------------------------------------------------------
-  def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth,
-                                  jet_truth_groomed_lund, jet_pp_det, jetR,
-                                  obs_setting, grooming_setting, obs_label,
-                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
+  def fill_matched_jet_histograms(self, observable, jet_det, jet_det_groomed_lund,
+      jet_truth, jet_truth_groomed_lund, jet_pp_det, jetR, obs_setting,
+      grooming_setting, obs_label, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+      R_max, suffix, **kwargs):
 
-    # Recluster with WTA (with larger jet R)
-    jet_def_wta = fj.JetDefinition(fj.cambridge_algorithm, 2*jetR)
-    jet_def_wta.set_recombination_scheme(fj.WTA_pt_scheme)
-    if self.debug_level > 3:
-        print('WTA jet definition is:', jet_def_wta)
-    reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
-    jet_det_wta = reclusterer_wta.result(jet_det)
-    jet_truth_wta = reclusterer_wta.result(jet_truth)
+    deltaR_det = self.calculate_observable(observable, jet_det, jet_det_groomed_lund,
+        jetR, obs_setting, grooming_setting, obs_label, jet_pt_det_ungroomed)
 
-    # Compute jet axis differences
-    jet_det_groomed = jet_det_groomed_lund.pair()
-    jet_truth_groomed = jet_truth_groomed_lund.pair()
-    if obs_setting == 'Standard_SD':
-        deltaR_det = jet_det.delta_R(jet_det_groomed)
-        deltaR_truth = jet_truth.delta_R(jet_truth_groomed)
-    elif obs_setting == 'Standard_WTA':
-        deltaR_det = jet_det.delta_R(jet_det_wta)
-        deltaR_truth = jet_truth.delta_R(jet_truth_wta)
-    elif obs_setting == 'WTA_SD':
-        deltaR_det = jet_det_groomed.delta_R(jet_det_wta)
-        deltaR_truth = jet_truth_groomed.delta_R(jet_truth_wta)
-      
+    deltaR_truth = self.calculate_observable(observable, jet_truth, jet_truth_groomed_lund,
+        jetR, obs_setting, grooming_setting, obs_label, jet_pt_truth_ungroomed)
+
     # Fill response
-    self.fill_response(self.observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
+    self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
                        deltaR_det, deltaR_truth, obs_label, R_max, prong_match = False)
 
 ##################################################################
@@ -150,10 +151,10 @@ if __name__ == '__main__':
                       type=str, metavar='outputDir',
                       default='./TestOutput',
                       help='Output directory for output to be written to')
-  
+
   # Parse the arguments
   args = parser.parse_args()
-  
+
   print('Configuring...')
   print('inputFile: \'{0}\''.format(args.inputFile))
   print('configFile: \'{0}\''.format(args.configFile))
@@ -163,7 +164,7 @@ if __name__ == '__main__':
   if not os.path.exists(args.inputFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.inputFile))
     sys.exit(0)
-  
+
   # If invalid configFile is given, exit
   if not os.path.exists(args.configFile):
     print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))

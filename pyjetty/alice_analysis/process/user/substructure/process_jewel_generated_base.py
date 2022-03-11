@@ -66,11 +66,11 @@ class CurvesFromJewelTracks():
         self.gridsizes = None
 
         if 'thermal_subtraction_method' in config:
-            self.thermal_subtraction_method = config['thermal_subtraction_method']
+            self.thermal_subtraction_method = config['thermal_subtraction_method'].lower()
 
         if not self.thermal_subtraction_method:
             print('Will not do recoil subtraction')
-        elif 'gridsub' in self.thermal_subtraction_method.lower():
+        elif 'gridsub' in self.thermal_subtraction_method:
             if 'gridsizes' in config:
                 self.gridsizes = config['gridsizes']
             else:
@@ -102,14 +102,14 @@ class CurvesFromJewelTracks():
 
             print('Constituent subtractor is enabled.')
             constituent_subtractor = config['constituent_subtractor']
-        
+
             max_distance = constituent_subtractor['max_distance']
             alpha = constituent_subtractor['alpha']
             max_eta = constituent_subtractor['max_eta']
             bge_rho_grid_size = constituent_subtractor['bge_rho_grid_size']
             max_pt_correct = constituent_subtractor['max_pt_correct']
             ghost_area = constituent_subtractor['ghost_area']
-            
+
             self.constituent_subtractor = CEventSubtractor(max_distance=max_distance, 
                                                            alpha=alpha, 
                                                            max_eta=max_eta, 
@@ -129,10 +129,16 @@ class CurvesFromJewelTracks():
         self.observable_list = config['process_observables']
         self.obs_settings = {}
         self.obs_grooming_settings = {}
+        self.obs_names = {}
         for observable in self.observable_list:
 
             obs_config_dict = config[observable]
             obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+
+            if "common_settings" in list(obs_config_dict.keys()) and \
+              "xtitle" in list(obs_config_dict["common_settings"].keys()):
+
+              self.obs_names[observable] = obs_config_dict["common_settings"]["xtitle"]
 
             obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
             self.obs_settings[observable] = self.utils.obs_settings(observable, obs_config_dict, obs_subconfig_list)
@@ -149,14 +155,22 @@ class CurvesFromJewelTracks():
 
         if not self.thermal_subtraction_method:
             print('no histograms will be initialized for this setting in initialize_histos')
-        elif 'gridsub' in self.thermal_subtraction_method.lower():
+
+        elif 'gridsub' in self.thermal_subtraction_method:
             for jetR in self.jetR_list:
                 for gridsize in self.gridsizes:
                     name = 'h_thermal_fraction_not_subtracted_v_pT_R{}_gridsize{}'.format(jetR,gridsize)
                     h = ROOT.TH2F(name,name,100,0,200,100,0,1.01)
                     setattr(self,name,h)
-        elif '4momsub' in self.thermal_subtraction_method.lower():
+
+        elif '4momsub' in self.thermal_subtraction_method or \
+             'negative_recombiner' in self.thermal_subtraction_method:
+
             print('no histograms will be initialized for this setting in initialize_histos')
+
+        else:
+            raise NotImplementedError(
+                "Subtraction method %s not implemented" % self.thermal_subtraction_method)
 
     #---------------------------------------------------------------
     # Main function
@@ -205,16 +219,21 @@ class CurvesFromJewelTracks():
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9'
             if not self.recoils_off:
                 track_criteria += ' and Status != 3'
-            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3' # Not used by default, unless constituent subtraction is activated or user accesses thermal particles in user function
-        elif 'gridsub' in self.thermal_subtraction_method.lower():
+            # Not used by default, unless constituent subtraction is activated or
+            #     user accesses thermal particles in user function
+            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
+        elif 'gridsub' in self.thermal_subtraction_method:
             track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
             bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
-        elif '4momsub' in self.thermal_subtraction_method.lower():
+        elif '4momsub' in self.thermal_subtraction_method:
             track_criteria = 'ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
             bck_criteria = 'ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
+        elif 'negative_recombiner' in self.thermal_subtraction_method:
+            track_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status != 3'
+            bck_criteria = 'ParticlePt > 1e-5 and ParticleEta < 0.9 and ParticleEta > -0.9 and Status == 3'
 
         self.jet_df = self.track_df.query(track_criteria)
-        self.bck_df = self.track_df.query(bck_criteria)
+        self.bck_df = None if self.recoils_off else self.track_df.query(bck_criteria)
         self.ev_idx = []
 
         print('Transforming track dataframe into SeriesGroupBy object of fastjet particles per event.')
@@ -226,7 +245,7 @@ class CurvesFromJewelTracks():
     # This function was adapted from alice_analysis/process/base/process_io.py
     #---------------------------------------------------------------
     def group_fjparticles(self,df):
-        print("Transform the track dataframe into a series object of fastjet particles per event...")   
+        print("Transform the track dataframe into a series object of fastjet particles per event...")
         # (i) Group dataframe by event  track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
         df_grouped = None
         df_grouped = df.groupby(['run_number', 'ev_id'])
@@ -264,15 +283,8 @@ class CurvesFromJewelTracks():
         print()
         self.event_number = 0
 
-        # Use list comprehension to do jet-finding and fill histograms
-        if not self.thermal_subtraction_method or '4momsub' in self.thermal_subtraction_method.lower():
-            if not self.thermal_subtraction_method:
-                print('No recoil removal method selected')
-            else:
-                print('Using 4MomSub method to remove recoils')
-            result = [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles]
-            print('--- {} seconds ---'.format(time.time() - self.start_time))
-        elif 'gridsub' in self.thermal_subtraction_method.lower():
+        # Do jet-finding and fill histograms
+        if 'gridsub' in self.thermal_subtraction_method:
             print('Using GridSub method to remove recoils')
             for gridsize in self.gridsizes:
                 print('Now doing the analysis for a gridsize =',gridsize)
@@ -280,13 +292,22 @@ class CurvesFromJewelTracks():
                 self.populated_cells_w_constit = []
                 self.grid_dict[gridsize] = self.create_grids(gridsize)
                 self.event_number = 0
-                result = [self.analyze_event(fj_particles,gridsize) for fj_particles in self.df_fjparticles]
-
-                if self.run_diagnostics:
-                    self.event_number = 0
-                    result_diagnostics = [self.analyze_event(fj_particles,gridsize,True) for fj_particles in self.df_fjparticles]
+                for fj_particles in self.df_fjparticles:
+                    self.analyze_event(fj_particles,gridsize)
+                    if self.run_diagnostics:
+                       self.event_number = 0
+                       self.analyze_event(fj_particles, gridsize, True)
                 del self.grid_dict[gridsize]
                 print('--- {} seconds ---'.format(time.time() - self.start_time))
+
+        else:
+            if not self.thermal_subtraction_method:
+                print('No recoil removal method selected')
+            else:
+                print('Using %s method to remove recoils' % self.thermal_subtraction_method)
+            for fj_particles in self.df_fjparticles:
+                self.analyze_event(fj_particles)
+            print('--- {} seconds ---'.format(time.time() - self.start_time))
 
     #---------------------------------------------------------------
     # Analyze jets of a given event.
@@ -294,44 +315,48 @@ class CurvesFromJewelTracks():
     #---------------------------------------------------------------
     def analyze_event(self, fj_particles, gridsize=None, diagnostic=False):
 
+        if self.event_number > self.nEvents:
+            return
+
         self.event_bck_df = None
         self.event_bck_df = self.bck_df[self.bck_df['ev_id']==self.ev_idx[self.event_number]]
         #print(self.event_number)
 
         self.event_number += 1
-        if self.event_number > self.nEvents:
-            return
 
-        if len(fj_particles) > 1:
-            if np.abs(fj_particles[0].eta() - fj_particles[1].eta()) <  1e-10:
-                if fj_particles[0].pt() < 1e-5:
-                    print('WARNING: Duplicate DUMMY particles may be present in event',self.event_number)
-                else:
-                    print('WARNING: Duplicate JET particles may be present in event',self.event_number)
-                    #[print(p.eta(),p.pt()) for p in fj_particles]
-
-        # If constituent subtraction is enabled, perform subtraction on the event
-        if self.constituent_subtractor:
-
-            # Convert df of pt/eta/phi of thermal particles to list of fastjet particles, for convenience
-            thermal_particles = []
-            if len(self.event_bck_df) != 0:
-                thermal_particles = self.get_fjparticles(self.event_bck_df)
-
-            # Drop specified fraction of thermal particles -- loop manually since the wrapped functions are a bit funky
-            thermal_particles_selected = []
-            for i,p in enumerate(thermal_particles):
+        # Convert df of pt/eta/phi of thermal particles to list of
+        #     fastjet particles, for convenience
+        thermal_particles = []
+        thermal_particles_selected = []
+        if len(self.event_bck_df):
+            thermal_particles = self.get_fjparticles(self.event_bck_df)
+            # Drop specified fraction of thermal particles
+            # Loop manually since the wrapped functions are a bit funky
+            for i, p in enumerate(thermal_particles):
                 if np.random.uniform() >= self.thermal_rejection_fraction:
                     thermal_particles_selected.append(p)
             #print(f'n_thermals before: {len(thermal_particles)}')
             #print(f'n_thermals after: {len(thermal_particles_selected)}')
+
+        if len(fj_particles) > 1:
+            if np.abs(fj_particles[0].eta() - fj_particles[1].eta()) < 1e-10:
+                if fj_particles[0].pt() < 1e-5:
+                    print('WARNING: Duplicate DUMMY particles may be present in event',
+                          self.event_number)
+                else:
+                    print('WARNING: Duplicate JET particles may be present in event',
+                          self.event_number)
+                    #[print(p.eta(),p.pt()) for p in fj_particles]
+
+        # If constituent subtraction is enabled, perform subtraction on the event
+        if self.constituent_subtractor:
 
             # Determine rho from thermal particles
             self.constituent_subtractor.bge_rho.set_particles(thermal_particles_selected)
 
             # Perform subtraction over full event (jet+recoil)
             fj_particles = self.constituent_subtractor.subtractor.subtract_event(fj_particles)
-            
+
             #rho = self.constituent_subtractor.bge_rho.rho()
             #print(f'rho: {rho}')
             #print()
@@ -342,14 +367,22 @@ class CurvesFromJewelTracks():
             jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
             jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
 
+            particles = fj_particles
+            # For negative pT treatment, add thermals and negative recombiner
+            if "negative_recombiner" in self.thermal_subtraction_method:
+                for part in thermal_particles_selected:
+                    part.set_user_index(-1)
+                    particles.push_back(part)
+                recombiner = fjext.NegativeEnergyRecombiner(-1)
+                jet_def.set_recombiner(recombiner)
+
             # Do jet finding
-            jets_selected = None
-            cs = fj.ClusterSequence(fj_particles, jet_def)
+            cs = fj.ClusterSequence(particles, jet_def)
             jets = fj.sorted_by_pt(cs.inclusive_jets())
             jets_selected = jet_selector(jets)
 
             # If no jets were selected, move on to next event
-            if len(jets_selected)==0:
+            if len(jets_selected) == 0:
                 continue
 
             #----------------------------------------------
@@ -358,7 +391,11 @@ class CurvesFromJewelTracks():
 
             if not self.thermal_subtraction_method:
                 subtracted_jets = jets_selected
-            elif '4momsub' in self.thermal_subtraction_method.lower():
+
+            elif "negative_recombiner" in self.thermal_subtraction_method:
+                subtracted_jets = jets_selected
+
+            elif '4momsub' in self.thermal_subtraction_method:
                 '''
                 ------------------------------------------------
                 Thermal subtraction using 4MomSub method
@@ -379,7 +416,7 @@ class CurvesFromJewelTracks():
                     if len(subtracted_jets) > 1:
                         print('WARNING: Got more than one subtracted jet out of one input jet')
 
-            elif 'gridsub' in self.thermal_subtraction_method.lower():
+            elif 'gridsub' in self.thermal_subtraction_method:
                 '''
                 ------------------------------------------------
                 Thermal subtraction using GridSub1 method
@@ -402,9 +439,14 @@ class CurvesFromJewelTracks():
                 cs = fj.ClusterSequence(fj_subtracted_constituents, jet_def)
                 subtracted_jets = fj.sorted_by_pt(cs.inclusive_jets())
 
+            else:
+                raise NotImplementedError("Thermal subtraction method %s not recognized" % \
+                                          self.thermal_subtraction_method)
+
             #----------------------------------------------
 
-            result = [self.analyze_accepted_jet(jet, jetR, gridsize, diagnostic) for jet in subtracted_jets]
+            for i, jet in enumerate(subtracted_jets):
+                self.analyze_accepted_jet(jet, jetR, gridsize, diagnostic)
 
     #---------------------------------------------------------------
     # Fill histograms
@@ -413,30 +455,39 @@ class CurvesFromJewelTracks():
 
         # Fill base histograms
         jet_pt_ungroomed = jet.pt()
-    
+
         # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
         # Note that the subconfigurations are defined by the first observable, if multiple are defined
-        observable = self.observable_list[0]
-        for i in range(len(self.obs_settings[observable])):
-            
+        for observable in self.observable_list:
+          for i in range(len(self.obs_settings[observable])):
             obs_setting = self.obs_settings[observable][i]
             grooming_setting = self.obs_grooming_settings[observable][i]
             obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
             # Groom jet, if applicable
+            jet_def = fj.JetDefinition(self.reclustering_algorithm, jetR)
             if grooming_setting:
-              gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
+              # For negative_recombiner case, we set the negative recombiner
+              if "negative_recombiner" in self.thermal_subtraction_method:
+                recombiner = fjext.NegativeEnergyRecombiner(-1)
+                jet_def.set_recombiner(recombiner)
+              gshop = fjcontrib.GroomerShop(jet, jet_def)
               jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
               if not jet_groomed_lund:
                 continue
+
             else:
               jet_groomed_lund = None
 
             # Call user function to fill histograms
             if not diagnostic:
-                self.fill_jet_histograms(jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed, gridsize)
+              self.fill_jet_histograms(
+                observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
+                obs_label, jet_pt_ungroomed, gridsize)
             else:
-                self.fill_jet_histograms(jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_ungroomed, gridsize, '_diagnostics')
+              self.fill_jet_histograms(
+                observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
+                obs_label, jet_pt_ungroomed, gridsize, suffix='_diagnostics')
 
     #---------------------------------------------------------------
     # GridSub1 subtraction method
@@ -459,20 +510,23 @@ class CurvesFromJewelTracks():
             jet_phi = jet.phi()
 
             if jet_phi > math.pi:
-                jet_phi -= 2.*math.pi
+                jet_phi -= 2. * math.pi
 
             # Add jet particles to grid
-            [self.populate_grid_with_constituents(constit,gridsize) for constit in jet.constituents()]
+            for constit in jet.constituents():
+                self.populate_grid_with_constituents(constit, gridsize)
 
             # Subtract thermal particles from grid
             if not diagnostic:
-                [self.subtract_thermals_from_grid(th,gridsize,jet_eta,jet_phi,jetR) for th in range(0,len(self.event_bck_df))]
-            
-            
-            if self.total_thermal_momentum > 0 and not diagnostic:
-                unsubtracted_thermal_pT_fraction = self.unsubtracted_thermal_momentum/self.total_thermal_momentum
-                name = 'h_thermal_fraction_not_subtracted_v_pT_R{}_gridsize{}'.format(jetR,gridsize)        
-                getattr(self,name).Fill(jet_pt,unsubtracted_thermal_pT_fraction)
+                for th in range(0, len(self.event_bck_df)):
+                    self.subtract_thermals_from_grid(th, gridsize, jet_eta, jet_phi, jetR)
+
+                if self.total_thermal_momentum > 0:
+                    unsubtracted_thermal_pT_fraction = \
+                        self.unsubtracted_thermal_momentum / self.total_thermal_momentum
+                    name = 'h_thermal_fraction_not_subtracted_v_pT_R{}_gridsize{}'.format(
+                        jetR, gridsize)
+                    getattr(self, name).Fill(jet_pt, unsubtracted_thermal_pT_fraction)
 
         # Create dataframe to store the surviving constituents
         jet_df = pd.DataFrame(columns = ['ParticlePt', 'ParticleEta', 'ParticlePhi','m'])
@@ -647,8 +701,10 @@ class CurvesFromJewelTracks():
     # This function is called once for each jet subconfiguration
     # You must implement this
     #---------------------------------------------------------------
-    def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                            obs_label, jet_pt_ungroomed, suffix=None):
+    def fill_jet_histograms(
+      self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label,
+      jet_pt_ungroomed, suffix=None):
+
       raise NotImplementedError('You must implement fill_jet_histograms()!')
 
     #---------------------------------------------------------------
@@ -669,7 +725,7 @@ class CurvesFromJewelTracks():
 
         for constit in jet.constituents():
             if constit.pt() < 1e-5:
-                for th in range(0,len(self.event_bck_df)):
+                for th in range(0, len(self.event_bck_df)):
                     th_eta = self.event_bck_df['ParticleEta'].iloc[th]
                     th_phi = self.event_bck_df['ParticlePhi'].iloc[th]
                     th_pt  = self.event_bck_df['ParticlePt' ].iloc[th]

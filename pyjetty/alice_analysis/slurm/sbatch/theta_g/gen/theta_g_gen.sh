@@ -27,7 +27,7 @@ else
 fi
 
 # Define output path from relevant sub-path of input file
-OUTPUT_PREFIX="AnalysisResults/james/$JOB_ID"
+OUTPUT_PREFIX="AnalysisResults/theta_g/$JOB_ID"
 # Note: depends on file structure of input file -- need to edit appropriately for each dataset
 OUTPUT_SUFFIX=$(echo $INPUT_FILE | cut -d/ -f7-8)
 #echo $OUTPUT_SUFFIX
@@ -43,8 +43,8 @@ module load pyjetty/1.0
 module list
 
 # Run python script via pipenv
-cd /home/james/pyjetty/pyjetty/alice_analysis
+cd /home/ezra/pyjetty/pyjetty/alice_analysis
 python process/user/james/process_parton_hadron_theta_g.py -c config/theta_g/pp/james_pp.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
-mv /rstorage/alice/AnalysisResults/james/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}
+mv /rstorage/alice/AnalysisResults/theta_g/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/theta_g/${JOB_ID}

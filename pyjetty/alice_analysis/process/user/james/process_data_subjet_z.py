@@ -94,52 +94,51 @@ class ProcessData_subjet_z(process_data_base.ProcessDataBase):
                   h.GetXaxis().SetTitle('p_{T,ch jet}')
                   h.GetYaxis().SetTitle('z')
                   setattr(self, name, h)
-      
+
   #---------------------------------------------------------------
   # This function is called once for each jet subconfiguration
   #---------------------------------------------------------------
-  def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
-                          obs_label, jet_pt_ungroomed, suffix):
-    
+  def fill_jet_histograms(self, observable, jet, jet_groomed_lund, jetR, obs_setting,
+                          grooming_setting, obs_label, jet_pt_ungroomed, suffix):
+
     if (jetR - obs_setting) < 1e-3:
       return
-    
+
     # For a given jet, find all inclusive subjets of a given subjet radius
     cs_subjet = fj.ClusterSequence(jet.constituents(), self.subjet_def[obs_setting])
     subjets = fj.sorted_by_pt(cs_subjet.inclusive_jets())
-    
-    for observable in self.observable_list:
 
-      # Fill inclusive subjets
-      if 'inclusive' in observable:
-        for subjet in subjets:
-          z = subjet.pt() / jet.pt()
-          
-          # If z=1, it will be default be placed in overflow bin -- prevent this
-          if np.isclose(z, 1.):
-            z = 0.999
-          
-          getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z)
-          
-      # Fill leading subjets
-      if 'leading' in observable:
-        leading_subjet = self.utils.leading_jet(subjets)
-        z_leading = leading_subjet.pt() / jet.pt()
-        
+    # Fill inclusive subjets
+    if 'inclusive' in observable:
+      for subjet in subjets:
+        z = subjet.pt() / jet.pt()
+
         # If z=1, it will be default be placed in overflow bin -- prevent this
-        if np.isclose(z_leading, 1.):
-            z_leading = 0.999
-            
-        getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z_leading)
-        
-        # Fill z of subjet constituents for z~1 subjets
-        if z_leading > 0.99:
-            name = 'h_{}_zconst_R{}_{}_z099_1{}'.format(observable, jetR, obs_setting, suffix)
-            for p in leading_subjet.constituents():
-                z = p.pt() / leading_subjet.pt()
-                if np.isclose(z, 1.):
-                    z = 0.999
-                getattr(self, name).Fill(jet.pt(), z)
+        if np.isclose(z, 1.):
+          z = 0.999
+
+        getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z)
+
+    # Fill leading subjets
+    if 'leading' in observable:
+      leading_subjet = self.utils.leading_jet(subjets)
+      z_leading = leading_subjet.pt() / jet.pt()
+
+      # If z=1, it will be default be placed in overflow bin -- prevent this
+      if np.isclose(z_leading, 1.):
+          z_leading = 0.999
+
+      getattr(self, 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, obs_setting, suffix)).Fill(jet.pt(), z_leading)
+
+      # Fill z of subjet constituents for z~1 subjets
+      if z_leading > 0.99:
+          name = 'h_{}_zconst_R{}_{}_z099_1{}'.format(observable, jetR, obs_setting, suffix)
+          for p in leading_subjet.constituents():
+              z = p.pt() / leading_subjet.pt()
+              if np.isclose(z, 1.):
+                  z = 0.999
+              getattr(self, name).Fill(jet.pt(), z)
+
 
 ##################################################################
 if __name__ == '__main__':

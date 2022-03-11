@@ -5,7 +5,7 @@
 #SBATCH --partition=long
 #SBATCH --time=48:00:00
 #SBATCH --array=1-2560
-#SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
+#SBATCH --output=/rstorage/alice/AnalysisResults/theta_g/slurm-%A_%a.out
 
 FILE_PATHS='/rstorage/alice/sim/pythia_gen/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)

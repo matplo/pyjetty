@@ -42,7 +42,7 @@ class mc_comparator(analysis_base.AnalysisBase):
         self.subconfig_list = [name for name in list(self.config["ang"].keys()) if 'config' in name ]
 
         self.jetR_list = self.config['jetR']
-        self.beta_list = self.config['betas']
+        self.alpha_list = self.config['alphas']
 
         self.pt_bins = self.config["ang"]["common_settings"]["pt_bins_reported"]
 
@@ -77,8 +77,8 @@ class mc_comparator(analysis_base.AnalysisBase):
         for jetR in self.jetR_list:
             for subconfig_name in self.subconfig_list:
                 subconfig = self.config["ang"][subconfig_name]
-                beta = subconfig["beta"]
-                label = "R%s_%s" % (str(jetR), str(beta))
+                alpha = subconfig["alpha"]
+                label = "R%s_%s" % (str(jetR), str(alpha))
 
                 # Load grooming setting if required
                 use_grooming = False
@@ -209,7 +209,7 @@ class mc_comparator(analysis_base.AnalysisBase):
                     text = "%i < #it{p}_{T, jet}^{ch} < %s GeV/#it{c}" % \
                            (self.pt_bins[i], self.pt_bins[i+1])
                     text_latex.DrawLatex(0.19, 0.82, text)
-                    text = "#it{R} = " + str(jetR) + ",  #it{#beta} = " + str(beta)
+                    text = "#it{R} = " + str(jetR) + ",  #it{#alpha} = " + str(alpha)
                     text_latex.DrawLatex(0.19, 0.75, text)
                     if use_grooming:
                         text = "SD: #it{z}_{cut} = %s,  #it{#beta}_{SD} = %s" % \
@@ -237,7 +237,7 @@ class mc_comparator(analysis_base.AnalysisBase):
                     h_ratio.GetXaxis().SetTitleOffset(4.)
                     h_ratio.GetXaxis().SetLabelFont(43)
                     h_ratio.GetXaxis().SetLabelSize(20)
-                    h_ratio.SetXTitle('#it{#lambda}_{#it{#beta}=%s}' % beta)
+                    h_ratio.SetXTitle('#it{#lambda}_{#it{#alpha}=%s}' % alpha)
                     h_ratio.GetYaxis().SetTitleSize(20)
                     h_ratio.GetYaxis().SetTitleFont(43)
                     h_ratio.GetYaxis().SetTitleOffset(2.2)
