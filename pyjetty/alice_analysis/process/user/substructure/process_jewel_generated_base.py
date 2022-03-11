@@ -388,7 +388,6 @@ class CurvesFromJewelTracks():
             #----------------------------------------------
             fj_subtracted_constituents = None
             subtracted_jets = []
-            holes_in_jets = None
 
             if not self.thermal_subtraction_method:
                 subtracted_jets = jets_selected
@@ -466,7 +465,6 @@ class CurvesFromJewelTracks():
             obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 
             # Groom jet, if applicable
-            holes_in_groomed_jet = None
             jet_def = fj.JetDefinition(self.reclustering_algorithm, jetR)
             if grooming_setting:
               # For negative_recombiner case, we set the negative recombiner
@@ -705,7 +703,7 @@ class CurvesFromJewelTracks():
     #---------------------------------------------------------------
     def fill_jet_histograms(
       self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting, obs_label,
-      jet_pt_ungroomed, holes_in_jet=None, holes_in_groomed_jet=None, suffix=None):
+      jet_pt_ungroomed, suffix=None):
 
       raise NotImplementedError('You must implement fill_jet_histograms()!')
 
