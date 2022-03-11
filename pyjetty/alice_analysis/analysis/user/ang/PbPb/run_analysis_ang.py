@@ -85,7 +85,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     #print('Plotting each individual result...')
 
     # Plot final result for each 1D substructure distribution (with PYTHIA)
-    self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting)
+    self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting, draw_ratio=True)
 
 
   #---------------------------------------------------------------
@@ -199,7 +199,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
 
   #----------------------------------------------------------------------
-  def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
+  def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting, draw_ratio=False):
     print('Plot final results for {}: R = {}, {}'.format(self.observable, jetR, obs_label))
 
     self.utils.set_plotting_options()
@@ -211,37 +211,37 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       max_pt_truth = self.pt_bins_reported[i+1]
       maxbin = self.obs_max_bins(obs_label)[i]
 
-      self.plot_observable(jetR, obs_label, obs_setting, grooming_setting,
-                           min_pt_truth, max_pt_truth, maxbin, plot_MC=True)
+      self.plot_observable(
+        jetR, obs_label, obs_setting, grooming_setting, min_pt_truth,
+        max_pt_truth, maxbin, plot_MC=True, draw_ratio=True)
 
   #----------------------------------------------------------------------
   def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting,
-                      min_pt_truth, max_pt_truth, maxbin, plot_MC=False,
-                      plot_theory=False, plot_theory_Fnp=False):
+                      min_pt_truth, max_pt_truth, maxbin, plot_MC=False, draw_ratio=False):
 
     self.set_logy = False
     #if grooming_setting:
     #  self.set_logy = True
 
+    make_ratio_plot = True if (plot_MC and draw_ratio) else False
+
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
-    c = ROOT.TCanvas(name, name, 600, 450)
+    c = ROOT.TCanvas(name, name, 600, 900 if make_ratio_plot else 450)
     c.Draw()
-    
+
     c.cd()
-    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad = ROOT.TPad('myPad', 'The pad', 0, 0.5 if make_ratio_plot else 0, 1, 1)
     myPad.SetLeftMargin(0.15)
     myPad.SetTopMargin(0.03)
     myPad.SetRightMargin(0.04)
-    myPad.SetBottomMargin(0.13)
+    myPad.SetBottomMargin(0 if make_ratio_plot else 0.13)
     if self.set_logy:
       myPad.SetLogy()
     myPad.Draw()
     myPad.cd()
-    
-    xtitle = getattr(self, 'xtitle')
-    ytitle = getattr(self, 'ytitle')
+
     color = 1   # black for data
-    
+
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
                                               min_pt_truth, max_pt_truth)
@@ -260,7 +260,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h.SetLineStyle(1)
     h.SetLineWidth(2)
     h.SetLineColor(color)
-    
+
     h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
       self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
     h_sys.SetLineColor(0)
@@ -276,13 +276,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       n_obs_bins_truth = len(truth_bin_array)-1
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
-    myBlankHisto.SetXTitle(xtitle)
-    myBlankHisto.GetXaxis().SetTitleOffset(1.02)
-    myBlankHisto.GetXaxis().SetTitleSize(0.055)
-    myBlankHisto.SetYTitle(ytitle)
+    if not make_ratio_plot:
+      myBlankHisto.SetXTitle(self.xtitle)
+      myBlankHisto.GetXaxis().SetTitleOffset(1.02)
+      myBlankHisto.GetXaxis().SetTitleSize(0.055)
+    myBlankHisto.SetYTitle(self.ytitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.1)
     myBlankHisto.GetYaxis().SetTitleSize(0.055)
-    ymin = 1e-4 if self.set_logy else 0
+    ymin = 1e-4 if self.set_logy else 1e-3  # Prevent ROOT from drawing 0 on plots
     myBlankHisto.SetMinimum(ymin)
     maxval = max(2.3*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
     myBlankHisto.SetMaximum(maxval)
@@ -358,32 +359,35 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text_xval = 0.55
+    text_yval = 0.92;  delta_y = 0.07
     text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(text_xval, 0.92, text)
+    text_latex.DrawLatex(text_xval, text_yval, text)
+    text_yval -= delta_y
 
     text = '0-10% Pb-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV'
     text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(text_xval, 0.85, text)
+    text_latex.DrawLatex(text_xval, text_yval, text)
+    text_yval -= delta_y
 
     text = "anti-#it{k}_{T} jets,   #it{R} = %s" % str(jetR)
-    text_latex.DrawLatex(text_xval, 0.78, text)
+    text_latex.DrawLatex(text_xval, text_yval, text)
+    text_yval -= delta_y
 
-    if plot_theory and show_parton_theory:
-      text = str(min_pt_truth) + ' < #it{p}_{T,jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    else:
-      text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(text_xval, 0.71, text)
+    text = str(min_pt_truth) + ' < #it{p}_{T}^{ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text_latex.DrawLatex(text_xval, text_yval, text)
+    text_yval -= delta_y
 
     text = '| #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     if subobs_label:
       text += ',   %s = %s' % (subobs_label, obs_setting)
-    delta = 0.07
-    text_latex.DrawLatex(text_xval, 0.71-delta, text)
+    text_latex.DrawLatex(text_xval, text_yval, text)
+    text_yval -= delta_y
 
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting) #.replace("#beta}", "#beta}_{SD}")
-      text_latex.DrawLatex(text_xval, 0.71-2*delta, text)
+      text_latex.DrawLatex(text_xval, text_yval, text)
+      text_yval -= delta_y
 
       text_latex.SetTextSize(0.04)
       text = ['#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged]
@@ -399,7 +403,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       # Print two of each f_tagged on a line
       for list_i, sublist in enumerate([text[i:i+2] for i in range(0, len(text), 2)]):
         line = ", ".join(sublist)
-        text_latex.DrawLatex(text_xval, 0.71-(3+list_i)*delta, line)
+        text_latex.DrawLatex(text_xval, text_yval, line)
+        text_yval -= delta_y
 
     miny = 0.62
     #if plot_pythia:
@@ -420,6 +425,101 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if plot_jewel_recoils:
       myLegend.AddEntry(hJewel_recoils, 'JEWEL Pb-Pb (recoils on)', 'pe')
     myLegend.Draw()
+
+    ##########################################################################
+    # Make ratio plot if desired
+
+    if make_ratio_plot:
+      c.cd()
+      pad2 = ROOT.TPad('pad2', 'Ratio pad', 0, 0, 1, 0.5)
+      pad2.SetLeftMargin(0.15)
+      pad2.SetTopMargin(0)
+      pad2.SetRightMargin(0.04)
+      pad2.SetBottomMargin(0.13)
+      #if self.set_logy:
+      #  pad2.SetLogy()
+      pad2.Draw()
+      pad2.cd()
+
+      myBlankHisto2 = ROOT.TH1F('myBlankHisto2','Blank Histogram for Ratio', n_obs_bins_truth, truth_bin_array)
+      myBlankHisto2.SetNdivisions(505)
+      myBlankHisto2.SetXTitle(self.xtitle)
+      myBlankHisto2.GetXaxis().SetTitleOffset(1.02)
+      myBlankHisto2.GetXaxis().SetTitleSize(0.055)
+      myBlankHisto2.SetYTitle("#frac{Theory}{Data}")
+      myBlankHisto2.GetYaxis().SetTitleOffset(1.1)
+      myBlankHisto2.GetYaxis().SetTitleSize(0.055)
+      myBlankHisto2.SetMinimum(0.3)
+      myBlankHisto2.SetMaximum(2.1)
+      myBlankHisto2.Draw("E")
+
+      # Draw dashed line at ratio = 1
+      line = ROOT.TLine(0, 1, h.GetBinLowEdge(h.GetNbinsX()+1), 1)
+      line.SetLineColor(920+2)
+      line.SetLineStyle(2)
+      line.Draw()
+
+      # Calculate MC ratio plots
+      if plot_pythia:
+        hPythiaRatio = hPythia.Clone(hPythia.GetName()+"_ratio")
+        hPythiaRatio.Divide(h)
+        hPythiaRatio.SetFillStyle(0)
+        hPythiaRatio.SetMarkerSize(1.5)
+        hPythiaRatio.SetMarkerStyle(21)
+        hPythiaRatio.SetMarkerColor(600-6)
+        hPythiaRatio.SetLineColor(600-6)
+        hPythiaRatio.SetLineWidth(1)
+        hPythiaRatio.Draw('E2 same')
+
+      if plot_herwig:
+        hHerwigRatio = hHerwig.Clone(hHerwig.GetName()+"_ratio")
+        hHerwigRatio.Divide(h)
+        hHerwigRatio.SetFillStyle(0)
+        hHerwigRatio.SetMarkerSize(1.5)
+        hHerwigRatio.SetMarkerStyle(33)
+        hHerwigRatio.SetMarkerColor(46)
+        hHerwigRatio.SetLineColor(46)
+        hHerwigRatio.SetLineWidth(1)
+        hHerwigRatio.Draw('E2 same')
+
+      if plot_jewel_no_recoils:
+        hJewelNoRecoilsRatio = hJewel_no_recoils.Clone(hJewel_no_recoils.GetName()+"_ratio")
+        hJewelNoRecoilsRatio.Divide(h)
+        hJewelNoRecoilsRatio.SetFillStyle(0)
+        hJewelNoRecoilsRatio.SetMarkerSize(1.5)
+        hJewelNoRecoilsRatio.SetMarkerStyle(34)
+        hJewelNoRecoilsRatio.SetMarkerColor(42)
+        hJewelNoRecoilsRatio.SetLineColor(42)
+        hJewelNoRecoilsRatio.SetLineWidth(1)
+        hJewelNoRecoilsRatio.Draw('E2 same')
+
+      if plot_jewel_recoils:
+        hJewelRecoilsRatio = hJewel_recoils.Clone(hJewel_recoils.GetName()+"_ratio")
+        hJewelRecoilsRatio.Divide(h)
+        hJewelRecoilsRatio.SetFillStyle(0)
+        hJewelRecoilsRatio.SetMarkerSize(1.5)
+        hJewelRecoilsRatio.SetMarkerStyle(47)
+        hJewelRecoilsRatio.SetMarkerColor(7)
+        hJewelRecoilsRatio.SetLineColor(7)
+        hJewelRecoilsRatio.SetLineWidth(1)
+        hJewelRecoilsRatio.Draw('E2 same')
+
+      # Draw data systematic uncertainties around ratio = 1
+      hSysRatio = h_sys.Clone(h_sys.GetName()+"_ratio")
+      for i in range(0, hSysRatio.GetNbinsX()+1):
+        old_content = hSysRatio.GetBinContent(i)
+        if old_content != 0:
+          hSysRatio.SetBinError(i, hSysRatio.GetBinError(i)/old_content)
+        hSysRatio.SetBinContent(i, 1)
+      hSysRatio.SetLineColor(0)
+      hSysRatio.SetFillColor(color)
+      hSysRatio.SetFillColorAlpha(color, 0.1)
+      hSysRatio.SetFillStyle(1001)
+      hSysRatio.SetLineWidth(0)
+      hSysRatio.Draw("E2 same")
+
+    ##########################################################################
+    # Save plot to output
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label,
                                              int(min_pt_truth), int(max_pt_truth), self.file_format)
@@ -539,8 +639,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     filepath = os.path.join(output_dir, 'response.root')
     f = ROOT.TFile(filepath, 'READ')
 
-    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(
+      self.observable, jetR, obs_label).replace("__", "_")
     thn = f.Get(thn_name)
+    if not thn:
+      raise AttributeError("%s not found in %s" % (thn_name, filepath))
     thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
     name = 'hPythia_{}_R{}_{}_{}-{}'.format(
@@ -557,8 +660,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     filepath = os.path.join(self.output_dir_fastsim_generator1, 'response.root')
     f = ROOT.TFile(filepath, 'READ')
 
-    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(
+      self.observable, jetR, obs_label).replace("__", "_")
     thn = f.Get(thn_name)
+    if not thn:
+      raise AttributeError("%s not found in %s" % (thn_name, filepath))
     thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
     name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
@@ -581,8 +687,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       return None
     f = ROOT.TFile(filepath, 'READ')
 
-    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(
+      self.observable, jetR, obs_label).replace("__", "_")
     thn = f.Get(thn_name)
+    if not thn:
+      raise AttributeError("%s not found in %s" % (thn_name, filepath))
     thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
     name = 'hJewel_recoils_{}_{}_R{}_{}_{}-{}'.format(
@@ -766,17 +875,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if subconfig_name == overlay_list[0]:
 
         pad1.cd()
-        xtitle = getattr(self, 'xtitle')
-        ytitle = getattr(self, 'ytitle')
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         if maxbin:
           xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
-        myBlankHisto.SetXTitle(xtitle)
+        myBlankHisto.SetXTitle(self.xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.3)
-        myBlankHisto.SetYTitle(ytitle)
+        myBlankHisto.SetYTitle(self.ytitle)
         if jetR == 0.2:
           if min_pt_truth == 20:
             myBlankHisto.SetMaximum(1.1*ymax)
@@ -833,7 +940,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
               myBlankHisto2.SetYTitle("#frac{5.02 TeV}{2.76 TeV}")
             else:
               myBlankHisto2.SetYTitle("#frac{Pb-Pb}{pp}")
-          myBlankHisto2.SetXTitle(xtitle)
+          myBlankHisto2.SetXTitle(self.xtitle)
           myBlankHisto2.GetXaxis().SetTitleSize(30)
           myBlankHisto2.GetXaxis().SetTitleFont(43)
           myBlankHisto2.GetXaxis().SetTitleOffset(1.5)
@@ -1095,7 +1202,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     text = '#it{R} = ' + str(jetR) + ',   | #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
     text_latex.DrawLatex(text_xval, 0.69, text)
 
-    text = str(min_pt_truth) + ' < #it{p}_{T,jet}^{ch} < ' + str(max_pt_truth) + ' GeV/#it{c}'
+    text = str(min_pt_truth) + ' < #it{p}_{T}^{ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(text_xval, 0.63, text)
 
