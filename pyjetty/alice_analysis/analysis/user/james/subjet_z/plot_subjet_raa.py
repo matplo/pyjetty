@@ -31,7 +31,7 @@ class PlotRAA(common_base.CommonBase):
     #---------------------------------------------------------------
     def initialize(self):
 
-        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v4'
+        self.output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v5'
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
@@ -65,15 +65,15 @@ class PlotRAA(common_base.CommonBase):
         ROOT.gStyle.SetLineStyleString(11,'30 12')
         
         self.theory_colors = {}
-        self.theory_colors['Medium jet functions'] = ROOT.kTeal-8
-        self.theory_colors['JETSCAPE'] = ROOT.kViolet-8
-        self.theory_colors['JETSCAPE AA'] = ROOT.kViolet-8
-        self.theory_colors['JETSCAPE pp'] = ROOT.kOrange+6
-        self.theory_colors['JEWEL, recoils on'] = ROOT.kAzure-4
-        self.theory_colors['JEWEL, recoils off'] = ROOT.kRed-7
+        self.theory_colors['Medium jet functions'] = ROOT.kTeal-8         #
+        self.theory_colors['JETSCAPE'] = ROOT.kViolet-7                   # 
+        self.theory_colors['JETSCAPE AA'] = ROOT.kViolet-7
+        self.theory_colors['JETSCAPE pp'] = ROOT.kGreen-6
+        self.theory_colors['JEWEL, recoils on'] = ROOT.kAzure-4           #
+        self.theory_colors['JEWEL, recoils off'] = ROOT.kRed-7            #
         self.theory_colors['JEWEL AA, recoils on'] = ROOT.kAzure-4
         self.theory_colors['JEWEL AA, recoils off'] = ROOT.kRed-7
-        # ROOT.kPink+1, ROOT.kBlue-10
+        # ROOT.kPink+1, ROOT.kBlue-10, ROOT.kAzure-4, ROOT.kOrange+6
 
         self.theory_alpha = 0.8
         
