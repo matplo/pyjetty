@@ -43,6 +43,7 @@ import ROOT
 import yaml
 import shutil
 import hepdata_lib
+import pickle
 
 from pyjetty.alice_analysis.analysis.base import common_base
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
@@ -1184,7 +1185,11 @@ class RunAnalysis(common_base.CommonBase):
   
     # Create submission
     self.hepdata_dir = os.path.join(getattr(self, 'output_dir_final_results'), 'hepdata')
+    if not os.path.exists(self.hepdata_dir):
+      os.makedirs(self.hepdata_dir)
+
     self.hepdata_submission = hepdata_lib.Submission()
+    self.hepdata_dict = {}
   
     # Loop through jet radii
     for jetR in self.jetR_list:
@@ -1202,15 +1207,19 @@ class RunAnalysis(common_base.CommonBase):
           max_pt_truth = self.pt_bins_reported[bin+1]
           
           self.add_hepdata_table(i, jetR, obs_label, obs_setting, grooming_setting,
-                                 min_pt_truth, max_pt_truth)
-      
+                                  min_pt_truth, max_pt_truth)
+                        
+    # Write tables to a dict -- this is useful if create_files fails, since can construct submission then with write_hepdata.py script
+    with open(os.path.join(self.hepdata_dir, 'tables.pkl'), 'wb') as f:
+      pickle.dump(self.hepdata_dict, f)
+
     # Write submission files
     self.hepdata_submission.create_files(self.hepdata_dir)
 
   #----------------------------------------------------------------------
   def add_hepdata_table(self, i, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
-  
-    index = self.set_hepdata_table_index(i, jetR, min_pt)
+
+    index = self.set_hepdata_table_index(i, jetR, min_pt, grooming_setting)
     table = hepdata_lib.Table(f'Table {index}')
     table.keywords["reactions"] = ['P P --> jet+X']
     table.keywords["cmenergies"] = ['5020']
@@ -1265,7 +1274,7 @@ class RunAnalysis(common_base.CommonBase):
     sys_unfolding = hepdata_lib.Uncertainty('sys,unfolding', is_symmetric=True)
     sys_unfolding.values = ['{:.2g}%'.format(y) for y in h_sys_unfolding['y']]
     y.add_uncertainty(sys_unfolding)
- 
+
     # Add systematic uncertainty breakdown
     for systematic in self.systematics_list:
  
@@ -1288,10 +1297,11 @@ class RunAnalysis(common_base.CommonBase):
         y.add_uncertainty(sys)
  
     # Add table to the submission
+    self.hepdata_dict[index] = table
     self.hepdata_submission.add_table(table)
 
   #----------------------------------------------------------------------
-  def set_hepdata_table_index(self, i, jetR, min_pt):
+  def set_hepdata_table_index(self, i, jetR, min_pt, grooming_setting=''):
   
     index = 1
     index += i
@@ -1312,7 +1322,25 @@ class RunAnalysis(common_base.CommonBase):
                 index += 48
             if np.isclose(min_pt, 80.):
                 index += 56
+
+    elif 'DG_a01' in self.obs_labels:
+
+        if 'sd' in grooming_setting:
+          beta = grooming_setting['sd'][1]
+
+          if self.observable == 'zg':
+            index = 1 + beta # Fig 2
+          elif self.observable == 'theta_g':
+            index = 4 + beta # Fig 3
+
+        elif 'dg' in grooming_setting:
+          a = grooming_setting['dg'][0]
                 
+          if self.observable == 'zg':
+            index = 7 + int(a) # Fig 5
+          elif self.observable == 'theta_g':
+            index = 10 + int(a) # Fig 6
+
     return index
 
   #----------------------------------------------------------------------
@@ -1361,7 +1389,40 @@ class RunAnalysis(common_base.CommonBase):
         elif np.isclose(min_pt, 80.):
             table.location += ' lower right'
             
-    elif self.observable in ['zg', 'theta_g']:
+    elif 'DG_a01' in self.obs_labels:
+            
+        if self.observable == 'zg':
+            table.description = r'Groomed jet momentum splitting fraction $z_{{\mathrm{g}}}$'
+            x_label = r'$z_{{\mathrm{g}}}$'
+            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{dz_{{\mathrm{g}}}}$'
+            if 'sd' in grooming_setting:
+                table.location = 'Figure 2'
+            elif 'dg' in grooming_setting:
+                table.location = 'Figure 5'
+            
+        elif self.observable == 'theta_g':
+            table.description = r'Groomed jet radius (scaled) $\theta_{{\mathrm{g}}}$'
+            x_label = r'$\theta_{{\mathrm{g}}}$'
+            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{d\theta_{{\mathrm{g}}}}$'
+            if 'sd' in grooming_setting:
+                table.location = 'Figure 3'
+            elif 'dg' in grooming_setting:
+                table.location = 'Figure 6'
+        
+        table.description += '\n'
+        if 'sd' in grooming_setting:
+          zcut = grooming_setting['sd'][0]
+          beta = grooming_setting['sd'][1]
+          table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, soft drop $z_{{\mathrm{{cut}}}}={}, \beta={}$.'.format(min_pt, max_pt, zcut, beta)
+          table.description += '\n\nNote: The first bin corresponds to the Soft Drop untagged fraction.'
+        elif 'dg' in grooming_setting:
+          a = grooming_setting['dg'][0]
+          table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, dynamical grooming $a={}$.'.format(min_pt, max_pt, a)
+
+        table.description += '\n\n'
+        table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
+
+    elif self.observable in ['zg', 'theta_g']: # Note: theta_g PbPb paper hepdata is constructed in plot_raa.py
             
         if self.observable == 'zg':
             table.description = r'Groomed jet momentum splitting fraction $z_{{\mathrm{g}}}$'
