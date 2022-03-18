@@ -1372,7 +1372,7 @@ class RunAnalysis(common_base.CommonBase):
 
             table.description = r'Jet angularity $\lambda_{{\alpha}}$ for $\alpha = {}$.'.format(obs_setting)
             table.description += '\n'
-            table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$.'.format(min_pt, max_pt)
+            table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch\;jet}}}}<{}$ GeV/$c$.'.format(min_pt, max_pt)
             
             x_label = r'$\lambda_{{\alpha}}$'
             y_label = r'$\frac{1}{\sigma} \frac{d\sigma}{d\lambda_{\alpha}}$'
@@ -1394,7 +1394,7 @@ class RunAnalysis(common_base.CommonBase):
         if self.observable == 'zg':
             table.description = r'Groomed jet momentum splitting fraction $z_{{\mathrm{g}}}$'
             x_label = r'$z_{{\mathrm{g}}}$'
-            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{dz_{{\mathrm{g}}}}$'
+            y_label = r'$\frac{1}{\sigma_{\mathrm{jet}}} \frac{d\sigma}{dz_{{\mathrm{g}}}}$'
             if 'sd' in grooming_setting:
                 table.location = 'Figure 2'
             elif 'dg' in grooming_setting:
@@ -1403,7 +1403,7 @@ class RunAnalysis(common_base.CommonBase):
         elif self.observable == 'theta_g':
             table.description = r'Groomed jet radius (scaled) $\theta_{{\mathrm{g}}}$'
             x_label = r'$\theta_{{\mathrm{g}}}$'
-            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{d\theta_{{\mathrm{g}}}}$'
+            y_label = r'$\frac{1}{\sigma_{\mathrm{jet}}} \frac{d\sigma}{d\theta_{{\mathrm{g}}}}$'
             if 'sd' in grooming_setting:
                 table.location = 'Figure 3'
             elif 'dg' in grooming_setting:
@@ -1413,11 +1413,11 @@ class RunAnalysis(common_base.CommonBase):
         if 'sd' in grooming_setting:
           zcut = grooming_setting['sd'][0]
           beta = grooming_setting['sd'][1]
-          table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, soft drop $z_{{\mathrm{{cut}}}}={}, \beta={}$.'.format(min_pt, max_pt, zcut, beta)
+          table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch\;jet}}}}<{}$ GeV/$c$, soft drop $z_{{\mathrm{{cut}}}}={}, \beta={}$.'.format(min_pt, max_pt, zcut, beta)
           table.description += '\n\nNote: The first bin corresponds to the Soft Drop untagged fraction.'
         elif 'dg' in grooming_setting:
           a = grooming_setting['dg'][0]
-          table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch jet}}}}<{}$, dynamical grooming $a={}$.'.format(min_pt, max_pt, a)
+          table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch\;jet}}}}<{}$ GeV/$c$, dynamical grooming $a={}$.'.format(min_pt, max_pt, a)
 
         table.description += '\n\n'
         table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
