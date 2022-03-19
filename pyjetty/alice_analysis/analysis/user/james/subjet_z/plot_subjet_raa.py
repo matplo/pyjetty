@@ -6,6 +6,8 @@ from array import *
 import numpy as np
 import ROOT
 import yaml
+import pickle
+import hepdata_lib
 
 from pyjetty.alice_analysis.process.base import common_base
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
@@ -108,10 +110,20 @@ class PlotRAA(common_base.CommonBase):
     #----------------------------------------------------------------------
     def plot_raa(self):
 
+        # Create HEPData submission
+        self.hepdata_dir = os.path.join(self.output_dir, 'hepdata')
+        self.hepdata_submission = hepdata_lib.Submission()
+        self.hepdata_dict = {}
+            
         for result in self.config_results:
             self.centrality = [0, 10]
             self.init_result(result)
             self.plot_result()
+
+        # Write submission files
+        with open(os.path.join(self.hepdata_dir, 'tables.pkl'), 'wb') as f:
+            pickle.dump(self.hepdata_dict, f)
+        self.hepdata_submission.create_files(self.hepdata_dir)
 
     #---------------------------------------------------------------
     # Initialize
@@ -217,6 +229,11 @@ class PlotRAA(common_base.CommonBase):
         # Load theory predictions
         if self.plot_theory:
             self.init_theory(result)
+
+        # Add HEPData tables
+        self.add_hepdata_table(is_pp=True)
+        self.add_hepdata_table(is_pp=False)
+        self.add_hepdata_table(is_ratio=True)
         
     #---------------------------------------------------------------
     # This function is called once for each subconfiguration
@@ -692,6 +709,144 @@ class PlotRAA(common_base.CommonBase):
             y_err_rebinned.append(h_rebinned.GetBinError(i+1))
           
         return (np.array(x_rebinned), np.array(y_rebinned), np.array(y_err_rebinned))
+
+    #----------------------------------------------------------------------
+    def add_hepdata_table(self, is_pp=False, is_ratio=False):
+  
+        result_index = self.set_hepdata_table_index()
+        if is_ratio:
+            h = self.h_ratio
+            h_sys = self.h_ratio_sys
+            index = result_index + 2
+        elif is_pp:
+            h = self.h_main_pp
+            h_sys = self.h_sys_pp
+            index = result_index 
+        else:
+            h = self.h_main_AA
+            h_sys = self.h_sys_AA
+            index = result_index + 1
+        table = hepdata_lib.Table(f'Table {index}')
+
+        if self.obs_label in ['0.1', '0.2']:
+            if is_ratio:
+                table.keywords["reactions"] = ['P P --> jet+X, Pb Pb --> jet+X']
+            elif is_pp:
+                table.keywords["reactions"] = ['P P --> jet+X']
+            else:
+                table.keywords["reactions"] = ['Pb Pb --> jet+X']
+        elif self.obs_label == '0.1-0.2':
+            if is_ratio:
+                table.keywords["reactions"] = ['Pb Pb --> jet+X, Pb Pb --> jet+X']
+            else:
+                table.keywords["reactions"] = ['Pb Pb --> jet+X']
+   
+        table.keywords["cmenergies"] = ['5020']
+        
+        # Set observable-specific info in table
+        x_label, y_label = self.set_hepdata_table_descriptors(table, result_index, is_pp, is_ratio)
+     
+        # Define variables
+        h = hepdata_lib.root_utils.get_hist_1d_points(h)
+     
+        n_significant_digits = 3 # Note: use 2 significant digits for uncertainties
+        
+        x = hepdata_lib.Variable(x_label, is_independent=True, is_binned=True, units='')
+        x.digits = n_significant_digits
+        x.values = h['x_edges']
+     
+        y = hepdata_lib.Variable(y_label, is_independent=False, is_binned=False, units='')
+        y.digits = n_significant_digits
+        y.values = h['y']
+        if is_ratio:
+            y.add_qualifier('RE', 'P P --> jet+X, Pb Pb --> jet+X')
+            y.add_qualifier('CENTRALITY', str(self.centrality))
+        elif is_pp and not self.obs_label == '0.1-0.2':
+            y.add_qualifier('RE', 'P P --> jet+X')
+        else:
+            y.add_qualifier('RE', 'Pb Pb --> jet+X')
+            y.add_qualifier('CENTRALITY', str(self.centrality))
+        y.add_qualifier('SQRT(S)', 5.02, 'TeV')
+        y.add_qualifier('ETARAP', '|0.9-R|')
+        y.add_qualifier('jet radius', self.jetR)
+        y.add_qualifier('jet method', 'Anti-$k_{T}$')
+ 
+        # Define uncertainties
+        stat = hepdata_lib.Uncertainty('stat', is_symmetric=True)
+        stat.values = [float('{:.2g}'.format(dy)) for dy in h['dy']]
+     
+        # Add tables to submission
+        table.add_variable(x)
+        table.add_variable(y)
+        y.add_uncertainty(stat)
+     
+        # Add systematic
+        h_sys = hepdata_lib.root_utils.get_hist_1d_points(h_sys)
+        sys = hepdata_lib.Uncertainty('sys', is_symmetric=True)
+        sys.values = [float('{:.2g}'.format(dy)) for dy in h_sys['dy']]
+        y.add_uncertainty(sys)
+     
+        # Add table to the submission
+        self.hepdata_dict[index] = table
+        self.hepdata_submission.add_table(table)
+
+    #----------------------------------------------------------------------
+    def set_hepdata_table_index(self):
+        
+        print(self.obs_label)
+        if self.obs_label == '0.1-0.2':
+            return 11
+        elif np.isclose(self.obs_label, 0.1):
+            return 5
+        elif np.isclose(self.obs_label, 0.2):
+            return 8
+
+    #----------------------------------------------------------------------
+    def set_hepdata_table_descriptors(self, table, result_index, is_pp=False, is_ratio=False):
+                    
+        x_label = r'$z_r$'
+
+        if self.obs_label == '0.1-0.2':
+            table.location = 'Figure 7'
+        elif np.isclose(self.obs_label, 0.1):
+            table.location = 'Figure 5'
+        elif np.isclose(self.obs_label, 0.2):
+            table.location = 'Figure 6'
+
+        if is_ratio:
+            if self.obs_label == '0.1-0.2':
+                y_label = 'PbPb $(r=0.1)$ / PbPb $(r=0.2)$'
+            else:
+                y_label = 'PbPb/pp'
+        else:
+            if self.obs_label == '0.1-0.2':
+                y_label = r'$\frac{1}{\sigma_{z_r>0.7}} \frac{d\sigma}{dz_r}$'
+            elif np.isclose(self.obs_label, 0.1):
+                y_label = r'$\frac{1}{\sigma_{z_r>0.6}} \frac{d\sigma}{dz_r}$'
+            elif np.isclose(self.obs_label, 0.2):
+                y_label = r'$\frac{1}{\sigma_{z_r>0.7}} \frac{d\sigma}{dz_r}$'
+
+        if self.obs_label == '0.1-0.2':
+            table.description = rf'Leading subjet $z_r$'
+            if is_ratio:
+                table.description += r' $-$ ratio of Pb-Pb $(r=0.1)$ to Pb-Pb $(r=0.2)$ collisions.'
+            elif is_pp:
+                table.description += r' in Pb-Pb collisions for $r=0.2$.'
+            else:
+                table.description += r' in Pb-Pb collisions for $r=0.1$.'
+        elif np.isclose(self.obs_label, 0.1) or np.isclose(self.obs_label, 0.2):
+            table.description = rf'Leading subjet $z_r$ '
+            if is_ratio:
+                table.description += r' $-$ ratio of Pb-Pb to pp collisions.'
+            elif is_pp:
+                table.description += rf'for $r={self.obs_label}$ in pp collisions.'
+            else:
+                table.description += rf'for $r={self.obs_label}$ in Pb-Pb collisions.'
+                
+        table.description += '\n'
+        table.description += rf'${self.min_pt}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch\;jet}}}}<{self.max_pt} \;\mathrm{{GeV}}/c$.'
+        
+        return x_label, y_label
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':

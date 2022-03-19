@@ -186,12 +186,12 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     c.Close()
 
     # Write result to ROOT file
-    final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
-    fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
-    h.Write()
-    h_sys.Write()
-    hPythia.Write()
-    fFinalResults.Close()
+    #final_result_root_filename = os.path.join(output_dir, 'fFinalResults.root')
+    #fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+    #h.Write()
+    #h_sys.Write()
+    #hPythia.Write()
+    #fFinalResults.Close()
 
   #----------------------------------------------------------------------
   def pythia_prediction(self, jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth):
@@ -616,6 +616,14 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           y = 0.33 - 0.8*float(obs_setting)
           text = f'#LT#it{{N}}^{{subjets }}_{{{subobs_label} = {obs_setting}}}#GT = {np.round(n_subjets,2):.1f}'
           text_latex.DrawLatex(x, y, text)
+
+      # Write result to ROOT file
+      final_result_root_filename = os.path.join(getattr(self, 'output_dir_final_results'), 'fFinalResults.root')
+      fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
+      h.Write()
+      h_sys.Write()
+      hPythia.Write()
+      fFinalResults.Close()
         
     pad1.cd()
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')

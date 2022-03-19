@@ -1219,7 +1219,7 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   def add_hepdata_table(self, i, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
 
-    index = self.set_hepdata_table_index(i, jetR, min_pt, grooming_setting)
+    index = self.set_hepdata_table_index(i, jetR, min_pt, grooming_setting, obs_setting)
     table = hepdata_lib.Table(f'Table {index}')
     table.keywords["reactions"] = ['P P --> jet+X']
     table.keywords["cmenergies"] = ['5020']
@@ -1301,7 +1301,7 @@ class RunAnalysis(common_base.CommonBase):
     self.hepdata_submission.add_table(table)
 
   #----------------------------------------------------------------------
-  def set_hepdata_table_index(self, i, jetR, min_pt, grooming_setting=''):
+  def set_hepdata_table_index(self, i, jetR, min_pt, grooming_setting='', obs_setting=None):
   
     index = 1
     index += i
@@ -1340,6 +1340,21 @@ class RunAnalysis(common_base.CommonBase):
             index = 7 + int(a) # Fig 5
           elif self.observable == 'theta_g':
             index = 10 + int(a) # Fig 6
+
+    elif 'subjet_z' in self.observable:
+            
+      if self.observable == 'leading_subjet_z':
+        if np.isclose(obs_setting, 0.1):
+          index = 3
+        elif np.isclose(obs_setting, 0.2):
+          index = 4
+          
+      elif self.observable == 'inclusive_subjet_z':
+        if np.isclose(obs_setting, 0.1):
+          index = 1
+        elif np.isclose(obs_setting, 0.2):
+          index = 2
+
 
     return index
 
@@ -1420,7 +1435,7 @@ class RunAnalysis(common_base.CommonBase):
           table.description += r'${}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch\;jet}}}}<{}$ GeV/$c$, dynamical grooming $a={}$.'.format(min_pt, max_pt, a)
 
         table.description += '\n\n'
-        table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
+        table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
 
     elif self.observable in ['zg', 'theta_g']: # Note: theta_g PbPb paper hepdata is constructed in plot_raa.py
             
@@ -1448,7 +1463,28 @@ class RunAnalysis(common_base.CommonBase):
             table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
         else:
             table.description += r'For the "trkeff" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables for a given centrality). For the remaining sources ("unfolding", "subtraction", "thermal_closure") no correlation information is specified ($\pm$ is always used).'
+    
+    elif 'subjet_z' in self.observable:
+            
+        if self.observable == 'leading_subjet_z':
+            table.description = rf'Leading subjet $z_r$ in pp collisions for $r={obs_setting}$'
+            x_label = r'$z_r$'
+            y_label = r'$\frac{1}{\sigma_{\mathrm{jet}}} \frac{d\sigma}{dz_r}$'
+            table.location = 'Figure 3'
+            
+        elif self.observable == 'inclusive_subjet_z':
+            table.description = rf'Inclusive subjet $z_r$ in pp collisions for $r={obs_setting}$'
+            x_label = r'$z_r$'
+            y_label = r'$\frac{1}{\sigma_{\mathrm{jet}}} \frac{d\sigma}{dz_r}$'
+            table.location = 'Figure 2'
         
+        table.description += '\n'
+        table.description += rf'${min_pt}<p_{{\mathrm{{T}}}}^{{\mathrm{{ch\;jet}}}}<{max_pt}$ GeV/$c$.'
+
+        table.description += '\n\n'
+        table.description += r'For the "trkeff" and "generator" systematic uncertainty sources, the signed systematic uncertainty breakdowns ($\pm$ vs. $\mp$), denote correlation across bins (both within this table, and across tables). For the remaining sources ("unfolding") no correlation information is specified ($\pm$ is always used).'
+
+
     return x_label, y_label
 
   #----------------------------------------------------------------------

@@ -1,9 +1,10 @@
 import hepdata_lib
 import pickle
 
-input_files = ['/Users/jamesmulligan/Analysis_theta_g_pp/roounfold_output/pp/343450/zg/final_results/hepdata/tables.pkl',
-               '/Users/jamesmulligan/Analysis_theta_g_pp/roounfold_output/pp/343450/theta_g/final_results/hepdata/tables.pkl']
-output_dir = '/Users/jamesmulligan/Analysis_theta_g_pp/roounfold_output/pp/343450/20220317_hepdata'
+input_files = ['/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04-paper/inclusive_subjet_z/final_results/hepdata/tables.pkl',
+               '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04-paper/leading_subjet_z/final_results/hepdata/tables.pkl',
+               '/Users/jamesmulligan/Analysis_subjet_z/paper/fig_v5/hepdata/tables.pkl']
+output_dir = '/Users/jamesmulligan/Analysis_subjet_z/paper/hepdata/20220318_hepdata'
 
 
 # Get all tables, and store them in a list
