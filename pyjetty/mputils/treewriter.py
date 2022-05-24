@@ -47,7 +47,7 @@ class RTreeWriter(MPBase):
 			print('[i] RTreeWriter {} tree {}: creating branch [{}]'.format(self.name, self.tree.GetName(), bname))
 			self.branch_containers[bname] = ROOT.std.vector('float')()
 			b = self.tree.Branch(bname, self.branch_containers[bname])
-		if b:
+		if b and value != []:
 			# print('filling branch:', bname, 'at', b)
 			self.branch_containers[bname].push_back(value)
 
@@ -67,6 +67,9 @@ class RTreeWriter(MPBase):
 			self._fill_branch(bname, value)
 			return
 		if type(value) in [tuple, list, self._fj_psj_vector_type]:
+			if not value:
+				self._fill_branch(bname, [])
+				return
 			if do_enumerate:
 				r = [self.fill_branch('{}_{}'.format(bname, i), x) for i,x in enumerate(value)]
 			else:
