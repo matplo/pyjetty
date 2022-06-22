@@ -41,7 +41,7 @@ The directory `analysis` contains the post-processing machinery:
 To process a single data file:
 
 ```
-python process/user/rg_pp/process_rg_data.py -f /path/to/AnalysisResults.root -c /path/to/my/config.yaml -o /path/to/my/outputdir
+python process/user/james/process_data_theta_g.py -f /path/to/AnalysisResults.root -c /path/to/my/config.yaml -o /path/to/my/outputdir
 ```
 
 
