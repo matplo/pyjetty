@@ -20,9 +20,9 @@ import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 # ROOT.gSystem.AddDynamicPath('$HEPPY_DIR/external/roounfold/roounfold-current/lib')
 # ROOT.gSystem.Load('libRooUnfold.dylib')
-ROOT.gSystem.AddDynamicPath('$PYJETTY_DIR/cpptools/lib')
-ROOT.gSystem.Load('libpyjetty_rutilext')
-_test = ROOT.RUtilExt.Test()
+# ROOT.gSystem.AddDynamicPath('$PYJETTY_DIR/cpptools/lib')
+# ROOT.gSystem.Load('libpyjetty_rutilext')
+# _test = ROOT.RUtilExt.Test()
 from tqdm import tqdm
 import argparse
 import os
