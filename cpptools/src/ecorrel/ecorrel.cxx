@@ -72,12 +72,9 @@ namespace EnergyCorrelators
 
     CorrelatorBuilder::CorrelatorBuilder()
     : fec()
-    , fncmax(4)
+    , fncmax(0)
     {
-        for (int i = 0; i < fncmax - 2 + 1; i++)
-        {
-            fec[i] = new CorrelatorsContainer();
-        }
+        ;
     }
 
     CorrelatorBuilder::CorrelatorBuilder(const std::vector<fastjet::PseudoJet> &parts, const double &scale, const int &nmax)
@@ -88,13 +85,13 @@ namespace EnergyCorrelators
         {
             throw std::overflow_error("asking for n-point correlator with n < 2?");
         }
-        if (fncmax > 4)
+        if (fncmax > 5)
         {
             throw std::overflow_error("max n for n-point correlator is currently 4");
         }
         for (int i = 0; i < fncmax - 2 + 1; i++)
         {
-            fec[i] = new CorrelatorsContainer();
+            fec.push_back(new CorrelatorsContainer());
         }
         for (size_t i = 0; i < parts.size(); i++)
         {
@@ -110,7 +107,7 @@ namespace EnergyCorrelators
                     double _d13 = parts[i].delta_R(parts[k]);
                     double _d23 = parts[j].delta_R(parts[k]);
                     double _w3 = parts[i].E() * parts[j].E() * parts[k].E() / std::pow(scale, 3);
-                    double _d3max = std::max(std::max(_d13, _d23), _d12);
+                    double _d3max = std::max({_d12, _d13, _d23});
                     fec[3 - 2]->addwr(_w3, _d3max);
                     if (fncmax < 4)
                         continue;
@@ -120,8 +117,20 @@ namespace EnergyCorrelators
                         double _d24 = parts[j].delta_R(parts[l]);
                         double _d34 = parts[k].delta_R(parts[l]);
                         double _w4 = parts[i].E() * parts[j].E() * parts[k].E() * parts[l].E() / std::pow(scale, 4);
-                        double _d4max = std::max(std::max(std::max(_d13, _d23), std::max(_d14, _d24)), std::max(_d34, _d12));
+                        double _d4max = std::max({_d12, _d13, _d23, _d14, _d24, _d34});
                         fec[4 - 2]->addwr(_w4, _d4max);
+                        if (fncmax < 5)
+                            continue;
+                        for (size_t m = l + 1; m < parts.size(); m++)
+                        {
+                            double _d15 = parts[i].delta_R(parts[m]);
+                            double _d25 = parts[j].delta_R(parts[m]);
+                            double _d35 = parts[k].delta_R(parts[m]);
+                            double _d45 = parts[l].delta_R(parts[m]);
+                            double _w5 = parts[i].E() * parts[j].E() * parts[k].E() * parts[l].E() * parts[m].E() / std::pow(scale, 5);
+                            double _d5max = std::max({_d12, _d13, _d23, _d14, _d24, _d34, _d15, _d25, _d35, _d45});
+                            fec[5 - 2]->addwr(_w5, _d5max);
+                        }
                     }
                 }
             }
@@ -143,10 +152,11 @@ namespace EnergyCorrelators
 
     CorrelatorBuilder::~CorrelatorBuilder()
     {
-        for (int i = 0; i < fncmax - 2 + 1; i++)
+        for (auto p : fec)
         {
-            delete fec[i];
+            delete p;
         }
+        fec.clear();
     }
 
 }

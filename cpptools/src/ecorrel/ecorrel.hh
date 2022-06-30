@@ -36,7 +36,7 @@ namespace EnergyCorrelators
 
 		private:
 			int fncmax;
-			CorrelatorsContainer* fec[4 - 1];
+			std::vector<CorrelatorsContainer*> fec;
 	};
 
 	std::vector<fastjet::PseudoJet> constituents_as_vector(const fastjet::PseudoJet &jet);

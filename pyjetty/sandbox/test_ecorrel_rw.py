@@ -68,7 +68,7 @@ def main():
 
 	hec0 = []
 	hec1 = []
-	for i in range(3):
+	for i in range(4):
 		h = ROOT.TH1F('hec0_{}'.format(i+2), 'hec0_{}'.format(i+2), nbins, lbins)
 		hec0.append(h)
 		h = ROOT.TH1F('hec1_{}'.format(i+2), 'hec1_{}'.format(i+2), nbins, lbins)
@@ -107,16 +107,16 @@ def main():
 			_ = [_vc.push_back(c) for c in j.constituents()
                             if pythiafjext.getPythia8Particle(c).isCharged()]
 			# n-point correlator with all charged particles
-			cb = ecorrel.CorrelatorBuilder(_v, j.perp(), 4)
+			cb = ecorrel.CorrelatorBuilder(_v, j.perp(), 5)
    
    			# select only charged constituents with 1 GeV cut
 			_vc1 = fj.vectorPJ()
 			_ = [_vc1.push_back(c) for c in pfc_selector1(j.constituents())
                             if pythiafjext.getPythia8Particle(c).isCharged()]
 			# n-point correlator with charged particles pt > 1
-			cb1 = ecorrel.CorrelatorBuilder(_vc1, j.perp(), 4)
+			cb1 = ecorrel.CorrelatorBuilder(_vc1, j.perp(), 5)
    
-			for i in range(3):
+			for i in range(4):
 				if cb.correlator(i+2).rs().size() > 0:
 					hec0[i].FillN(	cb.correlator(i+2).rs().size(), 
                    					array.array('d', cb.correlator(i+2).rs()), 
@@ -133,7 +133,7 @@ def main():
 	fout.cd()
 
 	for hg in [hec0, hec1]:
-		for i in range(3):
+		for i in range(4):
 			hg[i].Sumw2()
 			intg = hg[i].Integral()
 			if intg > 0:

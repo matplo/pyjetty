@@ -18,6 +18,8 @@
 <fname> 		:hec0_3 :hist l -k  : title=3-point all p_{T}
 <fname> 		:hec1_4 :p  : title=4-point p_{T}^{h} > 1 GeV/c
 <fname> 		:hec0_4 :hist l -k  : title=4-point all p_{T}
+<fname> 		:hec1_5 :p  : title=5-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec0_5 :hist l -k  : title=5-point all p_{T}
 
 #<fname> 		:heec_0 :p  : title=heec_0
 #<fname> 		:he3c_0 :p  : title=he3c_0
@@ -35,6 +37,8 @@
 <fname> 		:hec0_3_ratio_to_EEC :hist l -k  : title=3-p / 2-p all p_{T}
 <fname> 		:hec1_4_ratio_to_EEC :p +k4 : title=4-p / 2-p p_{T}^{h} > 1 GeV/c
 <fname> 		:hec0_4_ratio_to_EEC :hist l -k  : title=4-p / 2-p all p_{T}
+<fname> 		:hec1_5_ratio_to_EEC :p +k6 : title=5-p / 2-p p_{T}^{h} > 1 GeV/c
+<fname> 		:hec0_5_ratio_to_EEC :hist l -k  : title=5-p / 2-p all p_{T}
 #x R_{L}
 #y ENC(N>2) / EEC
 #-----------------------
