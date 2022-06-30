@@ -18,6 +18,12 @@ separator "heppy: ${BASH_SOURCE}"
 install_path=$(abspath ${THISD})
 build_path=${THISD}/build
 
+clean=$(get_opt "help" $@)
+if [ ! -z ${clean} ]; then
+    echo "[i] usage: ${BASH_SOURCE[0]} [--clean] [--help] [--verbose] [cxx-only] [--debug] [--tenngen] [--tglaubermc] [--configure-only] "
+    exit 0
+fi
+
 clean=$(get_opt "clean" $@)
 if [ ! -z ${clean} ]; then
     rm -rf ${build_path} ${THISD}/lib ${THISD}/lib64 
