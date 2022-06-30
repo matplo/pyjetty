@@ -61,7 +61,7 @@ def main():
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 	print(jet_def)
 
-	nbins = int(9.)
+	nbins = int(18.)
 	lbins = logbins(1.e-3, 1., nbins)
 	fout = ROOT.TFile(args.output, 'recreate')
 	fout.cd()
