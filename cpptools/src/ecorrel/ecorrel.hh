@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <fastjet/PseudoJet.hh>
-
 namespace EnergyCorrelators
 {
 	class CorrelatorsContainer
@@ -12,9 +11,13 @@ namespace EnergyCorrelators
 			CorrelatorsContainer();
 			virtual ~CorrelatorsContainer();
 			void addwr(const double &w, const double &r);
+			void clear();
 			std::vector<double> *weights();
 			std::vector<double> *rs();
 			std::vector<double> *rxw();
+
+			const double *wa();
+			const double *ra();
 
 		private:
 			std::vector<double> fr;
@@ -22,32 +25,22 @@ namespace EnergyCorrelators
 			std::vector<double> frxw;
 	};
 
-	CorrelatorsContainer EEC(const std::vector<fastjet::PseudoJet> &parts, const double &scale);
-	CorrelatorsContainer E3C(const std::vector<fastjet::PseudoJet> &parts, const double &scale);
-	CorrelatorsContainer E4C(const std::vector<fastjet::PseudoJet> &parts, const double &scale);
+	class CorrelatorBuilder
+	{
+		public:
+			CorrelatorBuilder();
+			// note by default we use energy correlators - one could use different weighting... future: pass as a param
+			CorrelatorBuilder(const std::vector<fastjet::PseudoJet> &parts, const double &scale, int nmax);
+			CorrelatorsContainer *correlator(int n);
+			virtual ~CorrelatorBuilder();
+
+		private:
+			int fncmax;
+			CorrelatorsContainer* fec[4 - 1];
+	};
 
 	std::vector<fastjet::PseudoJet> constituents_as_vector(const fastjet::PseudoJet &jet);
 	
-	//	class CorrelatorBuilder
-	//	{
-	//	public:
-	//		CorrelatorBuilder();
-	//		CorrelatorBuilder(std::vector<fastjet::PseudoJet> &parts, double scale);
-	//		~CorrelatorBuilder();
-	//
-	//		std::vector<double> EEC(double scale = 0.);
-	//		std::vector<double> E3C(double scale = 0.);
-	//		std::vector<double> E4C(double scale = 0.);
-	//
-	//		void setScale(double scale);
-	//		double getScale();
-	//
-	//		std::string description();
-	//	private:
-	//		std::vector<fastjet::PseudoJet> fparts;
-	//		double scale;
-	//	};
-
 };
 
 #endif

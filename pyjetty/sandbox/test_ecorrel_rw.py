@@ -18,10 +18,15 @@ import fjext
 import fastjet as fj
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
-
+# ROOT.gSystem.AddDynamicPath('$HEPPY_DIR/external/roounfold/roounfold-current/lib')
+# ROOT.gSystem.Load('libRooUnfold.dylib')
+ROOT.gSystem.AddDynamicPath('$PYJETTY_DIR/cpptools/lib')
+ROOT.gSystem.Load('libpyjetty_rutilext')
+_test = ROOT.RUtilExt.Test()
 from tqdm import tqdm
 import argparse
 import os
+import array
 
 
 def get_args_from_settings(ssettings):
@@ -61,20 +66,13 @@ def main():
 	fout = ROOT.TFile(args.output, 'recreate')
 	fout.cd()
 
-	heec_0 = ROOT.TH1F('heec_0', 'heec_0', nbins, lbins)
-	he3c_0 = ROOT.TH1F('he3c_0', 'he3c_0', nbins, lbins)
-	he4c_0 = ROOT.TH1F('he4c_0', 'he4c_0', nbins, lbins)
-
-	heec_1 = ROOT.TH1F('heec_1', 'heec_1', nbins, lbins)
-	he3c_1 = ROOT.TH1F('he3c_1', 'he3c_1', nbins, lbins)
-	he4c_1 = ROOT.TH1F('he4c_1', 'he4c_1', nbins, lbins)
-
-	# heec_s0 = ROOT.TH1F('heec_s0', 'heec_s0', nbins, lbins)
-	# he3c_s0 = ROOT.TH1F('he3c_s0', 'he3c_s0', nbins, lbins)
-	# he4c_s0 = ROOT.TH1F('he4c_s0', 'he4c_s0', nbins, lbins)
-	# heec_s1 = ROOT.TH1F('heec_s1', 'heec_s1', nbins, lbins)
-	# he3c_s1 = ROOT.TH1F('he3c_s1', 'he3c_s1', nbins, lbins)
-	# he4c_s1 = ROOT.TH1F('he4c_s1', 'he4c_s1', nbins, lbins)
+	hec0 = []
+	hec1 = []
+	for i in range(3):
+		h = ROOT.TH1F('hec0_{}'.format(i+2), 'hec0_{}'.format(i+2), nbins, lbins)
+		hec0.append(h)
+		h = ROOT.TH1F('hec1_{}'.format(i+2), 'hec1_{}'.format(i+2), nbins, lbins)
+		hec1.append(h)
 
 	hjpt = ROOT.TH1F('hjpt', 'hjpt', 10, 500, 550)
  
@@ -103,56 +101,49 @@ def main():
    			# alternative: push constutents to a vector in python
 			_v = fj.vectorPJ()
 			_ = [_v.push_back(c) for c in j.constituents()]
+
 			# select only charged constituents
 			_vc = fj.vectorPJ()
 			_ = [_vc.push_back(c) for c in j.constituents()
                             if pythiafjext.getPythia8Particle(c).isCharged()]
-			# select only charged constituents with 1 GeV cut
+			# n-point correlator with all charged particles
+			cb = ecorrel.CorrelatorBuilder(_v, j.perp(), 4)
+   
+   			# select only charged constituents with 1 GeV cut
 			_vc1 = fj.vectorPJ()
 			_ = [_vc1.push_back(c) for c in pfc_selector1(j.constituents())
                             if pythiafjext.getPythia8Particle(c).isCharged()]
-
-			eecs_cont2 = ecorrel.EEC(_v, j.perp())
-			eecs_cont3 = ecorrel.E3C(_v, j.perp())
-			eecs_cont4 = ecorrel.E4C(_v, j.perp())
+			# n-point correlator with charged particles pt > 1
+			cb1 = ecorrel.CorrelatorBuilder(_vc1, j.perp(), 4)
    
-			_ = [heec_0.Fill(eecs_cont2.rs()[i], eecs_cont2.weights()[i]) for i in range(0, eecs_cont2.rs().size())]
-			_ = [he3c_0.Fill(eecs_cont3.rs()[i], eecs_cont3.weights()[i]) for i in range(0, eecs_cont3.rs().size())]
-			_ = [he4c_0.Fill(eecs_cont4.rs()[i], eecs_cont4.weights()[i]) for i in range(0, eecs_cont4.rs().size())]
-
-			_v = fj.vectorPJ()
-			_ = [_v.push_back(c) for c in pfc_selector1(j.constituents()) if pythiafjext.getPythia8Particle(c).isCharged()]
-
-			eecs_cont2 = ecorrel.EEC(_v, j.perp())
-			eecs_cont3 = ecorrel.E3C(_v, j.perp())
-			eecs_cont4 = ecorrel.E4C(_v, j.perp())
-
-			_ = [heec_1.Fill(eecs_cont2.rs()[i], eecs_cont2.weights()[i]) for i in range(0, eecs_cont2.rs().size())]
-			_ = [he3c_1.Fill(eecs_cont3.rs()[i], eecs_cont3.weights()[i]) for i in range(0, eecs_cont3.rs().size())]
-			_ = [he4c_1.Fill(eecs_cont4.rs()[i], eecs_cont4.weights()[i]) for i in range(0, eecs_cont4.rs().size())]
+			for i in range(3):
+				if cb.correlator(i+2).rs().size() > 0:
+					hec0[i].FillN(	cb.correlator(i+2).rs().size(), 
+                   					array.array('d', cb.correlator(i+2).rs()), 
+                     				array.array('d', cb.correlator(i+2).weights()))
+				if cb1.correlator(i+2).rs().size() > 0:
+					hec1[i].FillN(	cb1.correlator(i+2).rs().size(),
+                   					array.array('d', cb1.correlator(i+2).rs()), 
+                     				array.array('d', cb1.correlator(i+2).weights()))
 
 	njets = hjpt.Integral()
 	if njets == 0:
 		njets = 1.
 
 	fout.cd()
-	for h in [heec_0, he3c_0, he4c_0, heec_1, he3c_1, he4c_1]:
-		h.Sumw2()
-		h.Scale(1./h.Integral())
 
-	for h in [he3c_0, he4c_0]:
-		fout.cd()
-		hc = h.Clone(h.GetName() + '_ratio_EEC')
-		hc.Sumw2()
-		hc.Divide(heec_0)  
-		hc.Write()
-
-	for h in [he3c_1, he4c_1]:
-		fout.cd()
-		hc = h.Clone(h.GetName() + '_ratio_EEC')
-		hc.Sumw2()
-		hc.Divide(heec_1)
-		hc.Write()
+	for hg in [hec0, hec1]:
+		for i in range(3):
+			hg[i].Sumw2()
+			intg = hg[i].Integral()
+			if intg > 0:
+				hg[i].Scale(1./intg)
+			if i > 0:
+				fout.cd()
+				hc = hg[i].Clone(hg[i].GetName() + '_ratio_to_EEC')
+				hc.Sumw2()
+				hc.Divide(hg[0])  
+				hc.Write()
 
 	pythia_hard.stat()
 
