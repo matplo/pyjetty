@@ -53,7 +53,6 @@ def main():
 	fj.ClusterSequence.print_banner()
 	print()
 	# set up our jet definition and a jet selector
-	jet_R0 = 0.4
 	jet_def = fj.JetDefinition(fj.antikt_algorithm, jet_R0)
 	print(jet_def)
 
