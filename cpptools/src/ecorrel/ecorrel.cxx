@@ -80,7 +80,7 @@ namespace EnergyCorrelators
         }
     }
 
-    CorrelatorBuilder::CorrelatorBuilder(const std::vector<fastjet::PseudoJet> &parts, const double &scale, int nmax)
+    CorrelatorBuilder::CorrelatorBuilder(const std::vector<fastjet::PseudoJet> &parts, const double &scale, const int &nmax)
     : fec()
     , fncmax(nmax)
     {

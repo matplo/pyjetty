@@ -30,7 +30,7 @@ namespace EnergyCorrelators
 		public:
 			CorrelatorBuilder();
 			// note by default we use energy correlators - one could use different weighting... future: pass as a param
-			CorrelatorBuilder(const std::vector<fastjet::PseudoJet> &parts, const double &scale, int nmax);
+			CorrelatorBuilder(const std::vector<fastjet::PseudoJet> &parts, const double &scale, const int &nmax);
 			CorrelatorsContainer *correlator(int n);
 			virtual ~CorrelatorBuilder();
 
