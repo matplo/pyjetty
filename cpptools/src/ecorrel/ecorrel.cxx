@@ -52,7 +52,7 @@ namespace EnergyCorrelators
         return _v;
     }
 
-    CorrelatorsContainer EECrw(const std::vector<fastjet::PseudoJet> &parts, const double &scale)
+    CorrelatorsContainer EEC(const std::vector<fastjet::PseudoJet> &parts, const double &scale)
     {   
         CorrelatorsContainer _c;
         for (size_t i = 0; i < parts.size(); i++)
@@ -68,7 +68,7 @@ namespace EnergyCorrelators
         return _c;
     }
 
-    CorrelatorsContainer E3Crw(const std::vector<fastjet::PseudoJet> &parts, const double &scale)
+    CorrelatorsContainer E3C(const std::vector<fastjet::PseudoJet> &parts, const double &scale)
     {
         CorrelatorsContainer _c;
         for (size_t i = 0; i < parts.size(); i++)
@@ -89,7 +89,7 @@ namespace EnergyCorrelators
         return _c;
     }
 
-    CorrelatorsContainer E4Crw(const std::vector<fastjet::PseudoJet> &parts, const double &scale)
+    CorrelatorsContainer E4C(const std::vector<fastjet::PseudoJet> &parts, const double &scale)
     {
         CorrelatorsContainer _c;
         for (size_t i = 0; i < parts.size(); i++)
