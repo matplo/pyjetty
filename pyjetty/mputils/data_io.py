@@ -1,6 +1,12 @@
 from pyjetty.mputils import MPBase
 import random
-import uproot3 as uproot
+try:
+	import uproot3 as uproot
+except:
+	try:
+		import uproot
+	except:
+		pass
 import pandas as pd
 import fastjet as fj
 import fjext
@@ -35,14 +41,20 @@ class DataEvent(object):
 
 class DataFileIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_input = None, tree_name='tree_Particle')
+		self.configure_from_args(file_input=None, tree_name='tree_Particle', selected_event_columns=[])
 		self.event_number = 0
 		self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
 		super(DataFileIO, self).__init__(**kwargs)
 		self.reset_dfs()
 		if self.file_input:
-			self.load_file(self.file_input, self.tree_name)
+			self.load_file(self.file_input, self.tree_name, self.selected_event_columns)
 
+	def set_select_columns_pbpb(self, selection=None):
+		if selection is not None:
+			self.selected_event_columns = selection
+		else:
+			self.selected_event_columns=['run_number', 'ev_id', 'z_vtx_reco', 'is_ev_rej', 'perc_v0m', 'n_tracks']
+   
 	def reset_dfs(self):
 		self.track_df_orig = None
 		self.track_df = None
@@ -79,8 +91,10 @@ class DataFileIO(MPBase):
 		if not self.event_tree:
 			print('[e] Tree {} not found in file {}'.format(self.event_tree_name, file_input))
 			return False
-		# self.event_df_orig = self.event_tree.pandas.df(['run_number', 'ev_id', 'z_vtx_reco','is_ev_rej'])
-		self.event_df_orig = self.event_tree.pandas.df()
+		if len(self.selected_event_columns) < 1:
+			self.event_df_orig = self.event_tree.pandas.df()
+		else:
+			self.event_df_orig = self.event_tree.pandas.df(self.selected_event_columns)
 		self.event_df_orig.reset_index(drop=True)
 		self.event_df = self.event_df_orig.query('is_ev_rej == 0')
 		self.event_df.reset_index(drop=True)
