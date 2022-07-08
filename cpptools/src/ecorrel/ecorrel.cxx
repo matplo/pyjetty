@@ -95,14 +95,14 @@ namespace EnergyCorrelators
         }
         for (size_t i = 0; i < parts.size(); i++)
         {
-            for (size_t j = i + 1; j < parts.size(); j++)
+            for (size_t j = 0; j < parts.size(); j++)
             {
                 double _d12 = parts[i].delta_R(parts[j]);
                 double _w2 = parts[i].E() * parts[j].E() / std::pow(scale, 2);
                 fec[2 - 2]->addwr(_w2, _d12);
                 if (fncmax < 3)
                     continue;
-                for (size_t k = j + 1; k < parts.size(); k++)
+                for (size_t k = 0; k < parts.size(); k++)
                 {
                     double _d13 = parts[i].delta_R(parts[k]);
                     double _d23 = parts[j].delta_R(parts[k]);
@@ -111,7 +111,7 @@ namespace EnergyCorrelators
                     fec[3 - 2]->addwr(_w3, _d3max);
                     if (fncmax < 4)
                         continue;
-                    for (size_t l = k + 1; l < parts.size(); l++)
+                    for (size_t l = 0; l < parts.size(); l++)
                     {
                         double _d14 = parts[i].delta_R(parts[l]);
                         double _d24 = parts[j].delta_R(parts[l]);
@@ -121,7 +121,7 @@ namespace EnergyCorrelators
                         fec[4 - 2]->addwr(_w4, _d4max);
                         if (fncmax < 5)
                             continue;
-                        for (size_t m = l + 1; m < parts.size(); m++)
+                        for (size_t m = 0; m < parts.size(); m++)
                         {
                             double _d15 = parts[i].delta_R(parts[m]);
                             double _d25 = parts[j].delta_R(parts[m]);
