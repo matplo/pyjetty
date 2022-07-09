@@ -98,7 +98,7 @@ namespace EnergyCorrelators
             for (size_t j = 0; j < parts.size(); j++)
             {
                 double _d12 = parts[i].delta_R(parts[j]);
-                double _w2 = parts[i].E() * parts[j].E() / std::pow(scale, 2);
+                double _w2 = parts[i].perp() * parts[j].perp() / std::pow(scale, 2);
                 fec[2 - 2]->addwr(_w2, _d12);
                 if (fncmax < 3)
                     continue;
@@ -106,7 +106,7 @@ namespace EnergyCorrelators
                 {
                     double _d13 = parts[i].delta_R(parts[k]);
                     double _d23 = parts[j].delta_R(parts[k]);
-                    double _w3 = parts[i].E() * parts[j].E() * parts[k].E() / std::pow(scale, 3);
+                    double _w3 = parts[i].perp() * parts[j].perp() * parts[k].perp() / std::pow(scale, 3);
                     double _d3max = std::max({_d12, _d13, _d23});
                     fec[3 - 2]->addwr(_w3, _d3max);
                     if (fncmax < 4)
@@ -116,7 +116,7 @@ namespace EnergyCorrelators
                         double _d14 = parts[i].delta_R(parts[l]);
                         double _d24 = parts[j].delta_R(parts[l]);
                         double _d34 = parts[k].delta_R(parts[l]);
-                        double _w4 = parts[i].E() * parts[j].E() * parts[k].E() * parts[l].E() / std::pow(scale, 4);
+                        double _w4 = parts[i].perp() * parts[j].perp() * parts[k].perp() * parts[l].perp() / std::pow(scale, 4);
                         double _d4max = std::max({_d12, _d13, _d23, _d14, _d24, _d34});
                         fec[4 - 2]->addwr(_w4, _d4max);
                         if (fncmax < 5)
@@ -127,7 +127,7 @@ namespace EnergyCorrelators
                             double _d25 = parts[j].delta_R(parts[m]);
                             double _d35 = parts[k].delta_R(parts[m]);
                             double _d45 = parts[l].delta_R(parts[m]);
-                            double _w5 = parts[i].E() * parts[j].E() * parts[k].E() * parts[l].E() * parts[m].E() / std::pow(scale, 5);
+                            double _w5 = parts[i].perp() * parts[j].perp() * parts[k].perp() * parts[l].perp() * parts[m].perp() / std::pow(scale, 5);
                             double _d5max = std::max({_d12, _d13, _d23, _d14, _d24, _d34, _d15, _d25, _d35, _d45});
                             fec[5 - 2]->addwr(_w5, _d5max);
                         }
