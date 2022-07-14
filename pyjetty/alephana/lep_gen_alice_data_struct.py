@@ -86,10 +86,10 @@ def main():
 	outf.cd()
 	tdf = ROOT.TDirectoryFile('PWGHF_TreeCreator', 'PWGHF_TreeCreator')
 	tdf.cd()
-	t_p = ROOT.TNtuple('tree_Particle_P', 'tree_Particle_P', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticleID:ParticleIDabs:ParticleCharge:isGluon:isQuark')
+	t_p = ROOT.TNtuple('tree_Particle_P', 'tree_Particle_P', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticleID:ParticleIDabs:ParticleCharge:isGluon:isQuark:mult')
 	# t_p = ROOT.TNtuple('tree_Particle_gen', 'tree_Particle_gen', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticleID:ParticleIDabs:ParticleCharge')
-	t_h = ROOT.TNtuple('tree_Particle_H', 'tree_Particle_H', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticleID:ParticleIDabs:ParticleCharge:isHadron:isLepton:isVisible')
-	t_e = ROOT.TNtuple('tree_event_char', 'tree_event_char', 'run_number:ev_id:z_vtx_reco:is_ev_rej')
+	t_h = ROOT.TNtuple('tree_Particle_H', 'tree_Particle_H', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticleID:ParticleIDabs:ParticleCharge:isHadron:isLepton:isVisible:mult')
+	t_e = ROOT.TNtuple('tree_event_char', 'tree_event_char', 'run_number:ev_id:z_vtx_reco:is_ev_rej:multP:multH')
 
 	if args.nev < 100:
 		args.nev = 100
@@ -104,7 +104,7 @@ def main():
 			pwarning('-- event', i)
 
 		#select particles
-		parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
+		parts_pythia_p = fj.sorted_by_pt(pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True))
 		parts_pythia_p_selected = parts_selector_p(parts_pythia_p)
 
 		# hadronize
@@ -113,7 +113,7 @@ def main():
 			pwarning('forceHadronLevel false event', iev)
 			continue
 
-		parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
+		parts_pythia_h = fj.sorted_by_pt(pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True))
 		parts_pythia_h_selected = parts_selector_h(parts_pythia_h)
 
 		# charged hadrons/particles only
@@ -124,7 +124,9 @@ def main():
 
 		# stream to trees
 		ev_id = i
-		t_e.Fill(run_number, ev_id, 0, 0)
+		multP = len(parts_pythia_p)
+		multH = len(parts_pythia_h)
+		t_e.Fill(run_number, ev_id, 0, 0, multP, multH)
 		_tmp = [
 				t_p.Fill(
 					run_number, ev_id, p.perp(), p.eta(), p.phi(), 
@@ -133,6 +135,7 @@ def main():
 					pythiafjext.getPythia8Particle(p).charge(),
 					pythiafjext.getPythia8Particle(p).isGluon(),
 					pythiafjext.getPythia8Particle(p).isQuark(),
+					multP
 					)
 				for p in parts_pythia_p
 				]
@@ -145,7 +148,8 @@ def main():
 					pythiafjext.getPythia8Particle(p).charge(),
 					pythiafjext.getPythia8Particle(p).isHadron(),
 					pythiafjext.getPythia8Particle(p).isLepton(),
-					pythiafjext.getPythia8Particle(p).isVisible()
+					pythiafjext.getPythia8Particle(p).isVisible(),
+					multH
 					)
 				for p in parts_pythia_h
 				]
