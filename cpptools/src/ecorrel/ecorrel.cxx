@@ -1,6 +1,7 @@
 #include "ecorrel.hh"
 #include <cmath>
 #include <stdexcept>
+#include <fastjet/Selector.hh>
 
 namespace EnergyCorrelators
 {
@@ -157,6 +158,37 @@ namespace EnergyCorrelators
             delete p;
         }
         fec.clear();
+    }
+
+
+	std::vector<fastjet::PseudoJet> merge_signal_background_pjvectors(const std::vector<fastjet::PseudoJet> &signal, 
+																	  const std::vector<fastjet::PseudoJet> &background,
+																      const double pTcut,
+																	  const int bg_index_start)
+    {
+        std::vector<fastjet::PseudoJet> _vreturn;
+        auto _selector = fastjet::SelectorPtMin(pTcut);
+        auto _signal = _selector(signal);
+        for (auto &_p : _signal)
+        {
+            _p.set_user_index(_p.user_index());
+            _vreturn.push_back(_p);
+        }
+        auto _background = _selector(background);
+        for (auto &_p : _background)
+        {
+            if (bg_index_start > 0)
+            {
+                int _index = &_p - &_background[0];
+                _p.set_user_index(bg_index_start + _index);
+            }
+            else
+            {
+                _p.set_user_index(_p.user_index());
+            }
+            _vreturn.push_back(_p);
+        }
+        return _vreturn;
     }
 
 }

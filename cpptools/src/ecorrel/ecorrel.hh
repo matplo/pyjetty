@@ -40,7 +40,11 @@ namespace EnergyCorrelators
 	};
 
 	std::vector<fastjet::PseudoJet> constituents_as_vector(const fastjet::PseudoJet &jet);
-	
+
+	std::vector<fastjet::PseudoJet> merge_signal_background_pjvectors(const std::vector<fastjet::PseudoJet> &signal, 
+																	  const std::vector<fastjet::PseudoJet> &background,
+																	  const double pTcut,
+																	  const int bg_index_start);
 };
 
 #endif
