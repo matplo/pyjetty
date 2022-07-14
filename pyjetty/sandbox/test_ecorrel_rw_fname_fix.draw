@@ -1,0 +1,112 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logx 1
+#logy 0
+##y 1/N_{jet} dN/dR_{L}
+#y P(dN/dR_{L})
+#y d#sigma/dR_{L} (normalization to N_{ev})
+#x R_{L}
+#scalebwidth 1 0
+#normalize self
+##scale const=1./2625.
+#scale const=1./50000.
+#maxy 1.5
+#comment 0.395,0.5,0.996,0.65, tx_size=0.035 item=PYTHIA8 [500-550 GeV/c] item=anti-k_{T} R=0.5 |#eta_{jet}| < 1.9 item=charged hadrons for E-correl
+<fname> 		:hec1_2 :p  : title=2-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec0_2 :hist l -k  : title=2-point all p_{T}
+<fname> 		:hec1_3 :p  : title=3-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec0_3 :hist l -k  : title=3-point all p_{T}
+<fname> 		:hec1_4 :p  : title=4-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec0_4 :hist l -k  : title=4-point all p_{T}
+<fname> 		:hec1_5 :p  : title=5-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec0_5 :hist l -k  : title=5-point all p_{T}
+
+#<fname> 		:heec_0 :p  : title=heec_0
+#<fname> 		:he3c_0 :p  : title=he3c_0
+#<fname> 		:he4c_0 :p  : title=he4c_0
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logx 1
+#logy 0
+##y 1/N_{jet} dN/dR_{L}
+#y P(dN/dR_{L})
+#y d#sigma/dR_{L} (normalization to N_{ev})
+#x R_{L}
+#scalebwidth 1 0
+#normalize self
+#comment 0.395,0.5,0.996,0.65, tx_size=0.035 item=PYTHIA8 [500-550 GeV/c] item=anti-k_{T} R=0.5 |#eta_{jet}| < 1.9 item=charged hadrons for E-correl
+<fname> 		:hec1_2 :p  : title=2-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec1_3 :p  : title=3-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec1_4 :p  : title=4-point p_{T}^{h} > 1 GeV/c
+<fname> 		:hec1_5 :p  : title=5-point p_{T}^{h} > 1 GeV/c
+
+#scale index=0 fout=ratios1_<fname>
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logx 1
+#logy 0
+##y 1/N_{jet} dN/dR_{L}
+#y P(dN/dR_{L})
+#y d#sigma/dR_{L} (normalization to N_{ev})
+#x R_{L}
+#scalebwidth 1 0
+#normalize self
+#comment 0.395,0.5,0.996,0.65, tx_size=0.035 item=PYTHIA8 [500-550 GeV/c] item=anti-k_{T} R=0.5 |#eta_{jet}| < 1.9 item=charged hadrons for E-correl
+<fname> 		:hec0_2 :hist l  : title=2-point all p_{T}
+<fname> 		:hec0_3 :hist l  : title=3-point all p_{T}
+<fname> 		:hec0_4 :hist l  : title=4-point all p_{T}
+<fname> 		:hec0_5 :hist l  : title=5-point all p_{T}
+
+#<fname> 		:heec_0 :p  : title=heec_0
+#<fname> 		:he3c_0 :p  : title=he3c_0
+#<fname> 		:he4c_0 :p  : title=he4c_0
+
+#scale index=0 fout=ratios0_<fname>
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ul 
+#comment 0.0727,0.5,0.674,0.65, tx_size=0.035 item=PYTHIA8 [500-550 GeV/c] item=anti-k_{T} R=0.5 |#eta_{jet}| < 1.9 item=charged hadrons for E-correl
+#maxy 4
+#logx 1
+#<fname> 		:hec1_3_ratio_to_EEC :p +k1 : title=3-p / 2-p p_{T}^{h} > 1 GeV/c
+#<fname> 		:hec0_3_ratio_to_EEC :hist l -k  : title=3-p / 2-p all p_{T}
+#<fname> 		:hec1_4_ratio_to_EEC :p +k4 : title=4-p / 2-p p_{T}^{h} > 1 GeV/c
+#<fname> 		:hec0_4_ratio_to_EEC :hist l -k  : title=4-p / 2-p all p_{T}
+#<fname> 		:hec1_5_ratio_to_EEC :p +k6 : title=5-p / 2-p p_{T}^{h} > 1 GeV/c
+#<fname> 		:hec0_5_ratio_to_EEC :hist l -k  : title=5-p / 2-p all p_{T}
+
+ratios1_<fname> 		:o_0 :p +k1 : title=3-p / 2-p p_{T}^{h} > 1 GeV/c
+ratios0_<fname> 		:o_0 :hist l -k  : title=3-p / 2-p all p_{T}
+ratios1_<fname> 		:o_1 :p +k4 : title=4-p / 2-p p_{T}^{h} > 1 GeV/c
+ratios0_<fname> 		:o_1 :hist l -k  : title=4-p / 2-p all p_{T}
+ratios1_<fname> 		:o_2 :p +k6 : title=5-p / 2-p p_{T}^{h} > 1 GeV/c
+ratios0_<fname> 		:o_2 :hist l -k  : title=5-p / 2-p all p_{T}
+
+#x R_{L}
+#y ENC(N>2) / EEC
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+#logy 1
+<fname> 		:hjpt :p  : title=hjpt
