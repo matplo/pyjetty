@@ -33,6 +33,7 @@ def get_args_from_settings(ssettings):
 	sys.argv = sys.argv + ssettings.split()
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly')
 	pyconf.add_standard_pythia_args(parser)
+	parser.add_argument('--ncorrel', help='max n correlator', type=int, default=3)
 	parser.add_argument('--output', default="test_ecorrel_rw.root", type=str)
 	parser.add_argument('--user-seed', help='pythia seed',
 											default=1111, type=int)
@@ -68,7 +69,12 @@ def main():
 
 	hec0 = []
 	hec1 = []
-	for i in range(4):
+	if args.ncorrel < 2:
+		args.ncorrel = 2
+	if args.ncorrel > 5:
+		args.ncorrel = 5
+	print('[i] n correl up to', args.ncorrel)
+	for i in range(args.ncorrel - 1):
 		h = ROOT.TH1F('hec0_{}'.format(i+2), 'hec0_{}'.format(i+2), nbins, lbins)
 		hec0.append(h)
 		h = ROOT.TH1F('hec1_{}'.format(i+2), 'hec1_{}'.format(i+2), nbins, lbins)
@@ -107,16 +113,16 @@ def main():
 			_ = [_vc.push_back(c) for c in j.constituents()
                             if pythiafjext.getPythia8Particle(c).isCharged()]
 			# n-point correlator with all charged particles
-			cb = ecorrel.CorrelatorBuilder(_v, j.perp(), 5)
+			cb = ecorrel.CorrelatorBuilder(_v, j.perp(), args.ncorrel)
    
    			# select only charged constituents with 1 GeV cut
 			_vc1 = fj.vectorPJ()
 			_ = [_vc1.push_back(c) for c in pfc_selector1(j.constituents())
                             if pythiafjext.getPythia8Particle(c).isCharged()]
 			# n-point correlator with charged particles pt > 1
-			cb1 = ecorrel.CorrelatorBuilder(_vc1, j.perp(), 5)
+			cb1 = ecorrel.CorrelatorBuilder(_vc1, j.perp(), args.ncorrel)
    
-			for i in range(4):
+			for i in range(args.ncorrel - 1):
 				if cb.correlator(i+2).rs().size() > 0:
 					hec0[i].FillN(	cb.correlator(i+2).rs().size(), 
                    					array.array('d', cb.correlator(i+2).rs()), 
@@ -133,17 +139,17 @@ def main():
 	fout.cd()
 
 	for hg in [hec0, hec1]:
-		for i in range(4):
+		for i in range(args.ncorrel - 1):
 			hg[i].Sumw2()
-			intg = hg[i].Integral()
-			if intg > 0:
-				hg[i].Scale(1./intg)
-			if i > 0:
-				fout.cd()
-				hc = hg[i].Clone(hg[i].GetName() + '_ratio_to_EEC')
-				hc.Sumw2()
-				hc.Divide(hg[0])  
-				hc.Write()
+			# intg = hg[i].Integral()
+			# if intg > 0:
+			# 	hg[i].Scale(1./intg)
+			# if i > 0:
+			# 	fout.cd()
+			# 	hc = hg[i].Clone(hg[i].GetName() + '_ratio_to_EEC')
+			# 	hc.Sumw2()
+			# 	hc.Divide(hg[0])  
+			# 	hc.Write()
 
 	pythia_hard.stat()
 
