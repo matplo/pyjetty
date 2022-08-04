@@ -169,7 +169,7 @@ force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Work In Progress'
+figure_approval_status: 'Preliminary'
 
 # Whether or not to use the previous measurement in ratio
 use_prev_result: False
@@ -195,7 +195,7 @@ systematics_list:
 
 # Paths to processing output, to be used for unfolding
 #main_data: '/rstorage/alice/AnalysisResults/ang/872257/AnalysisResultsFinal.root'
-main_data: '/rstorage/alice/AnalysisResults/ang/1005381/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/ang/1020932/AnalysisResultsFinal.root'
 main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.root'
 trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFinal.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
@@ -203,9 +203,17 @@ randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFi
 # fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
 fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal_no1-5.root',
                    '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root']
-#                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal_no1-5.root']
+                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal_no1-5.root']
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
+
+# Histograms for theory predictions
+theory_predictions: ['/rstorage/alice/AnalysisResults/ang/998707/AnalysisResultsFinal.root',
+                     '/rstorage/alice/AnalysisResults/ang/1007194/AnalysisResultsFinal_no1-8.root',
+                     '/rstorage/alice/AnalysisResults/ang/1003267/AnalysisResultsFinal_no1-8.root',
+                     '/rstorage/alice/AnalysisResults/ang/PbPb/jetscape_results.root']
+theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)",
+                           "JEWEL pp", "JETSCAPE (MATTER+LBT)"]
 
 # R_max variations
 R_max_variation1: 0.05

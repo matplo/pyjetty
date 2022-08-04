@@ -715,12 +715,16 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       h = hObs_JetPt
     else:
       ROOT.gPad.SetLogz(1)
-      xbins = [5, 20, 40, 60, 80, 100, 150, 200]
+      # No need to plot 5-20 for now -- statistics mess up readability
+      xbins = [20, 40, 60, 80, 100, 150, 200]
       ybins = [hObs_JetPt.GetYaxis().GetBinLowEdge(i) for i in range(1, hObs_JetPt.GetYaxis().GetNbins()+2)]
       h = self.rebin_data(
         hObs_JetPt, hObs_JetPt.GetName() + "_rebin", len(xbins) - 1, array('d', xbins),
         len(ybins) - 1, array('d', ybins), move_underflow=False)
       h.RebinY(5)
+      h.GetXaxis().SetTitle("#it{p}_{T}^{ch jet} (GeV/#it{c})")
+      alpha = obs_label.split("_")[0]
+      h.GetYaxis().SetTitle("#it{#lambda}_{#it{#alpha}=%s}^{#it{#kappa}=1}" % alpha)
 
     h.Draw('text colz')
 
@@ -734,7 +738,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting,
                          grooming_setting, xtitle, min_pt, max_pt, option='truth'):
 
-    ytitle = '#frac{{1}}{{N}} #frac{{dN}}{{d{}}}'.format(xtitle)
+    ytitle = '#frac{1}{#it{#sigma}} #frac{d#it{#sigma}}{d%s}' % xtitle
 
     if self.observable == 'theta_g':
       rebin_val_mcdet = 5
@@ -962,7 +966,8 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       mean = hDeltaPt.GetMean()
       std_dev = hDeltaPt.GetStdDev()
       text = 'Mean: {:.2f}, #sigma: {:.2f}'.format(mean, std_dev)
-      leg.AddEntry(None, text, '')
+      #leg.AddEntry(None, text, '')
+      leg.AddEntry(hDeltaPt, text, '')
 
     leg.Draw('same')
     

@@ -46,7 +46,9 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
     self.pt_bins = array('d', list(range(5, 305, 5)))
     self.obs_bins_ang = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
                                         np.linspace(0.11, 0.8, 70)))
-    self.obs_bins_mass = array('d', list(range(0, 61, 1)))
+    self.obs_bins_mass = np.concatenate(
+      (np.linspace(0, 0.9, 10), np.linspace(1, 9.8, 45), np.linspace(10, 14.5, 10),
+       np.linspace(15, 19, 5), np.linspace(20, 60, 9)))
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -138,11 +140,16 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
       # m^2 = E^2 - p^2
 
       if grooming_setting:
-        groomed_jet = jet_groomed_lund.pair()
-        obs = groomed_jet.m()
+        j_groomed = jet_groomed_lund.pair()
+        if not j_groomed.has_constituents():
+          # Untagged jet -- record underflow value
+          obs = -1
+        else:
+          obs = j_groomed.m()
 
       else:
         obs = jet.m()
+
 
     # Fill histograms
     getattr(self, name).Fill(jet_pt_ungroomed, obs)

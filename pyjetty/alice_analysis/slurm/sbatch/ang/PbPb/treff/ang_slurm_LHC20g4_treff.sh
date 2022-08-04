@@ -2,8 +2,8 @@
 
 #SBATCH --job-name="ang_treff"
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=3
-#SBATCH --partition=std
-#SBATCH --time=24:00:00
+#SBATCH --partition=long
+#SBATCH --time=72:00:00
 #SBATCH --array=1-1000
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 

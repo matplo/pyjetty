@@ -1,6 +1,6 @@
 #! /bin/bash
 
-#SBATCH --job-name=jwl_rec_nosub
+#SBATCH --job-name=jwl_pp
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=2
 #SBATCH --partition=quick
 #SBATCH --time=2:00:00

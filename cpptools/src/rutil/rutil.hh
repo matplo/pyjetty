@@ -96,11 +96,25 @@ namespace RUtil
         TH1* simpleRemoveOutliers(TH1* hist, bool verbose, int limit);
 
         //---------------------------------------------------------------
+        // Remove outliers from a TH1 via pT-hat method:
+        //   delete any bin contents with pT > limit
+        // Modifies histogram in-place and returns its pointer
+        //---------------------------------------------------------------
+        TH1* pThatRemoveOutliers(TH1* hist, bool verbose, const double & limit);
+
+        //---------------------------------------------------------------
         // Remove outliers from a THn via "simple" method:
         //   delete any bin contents with N counts < limit
         // Modifies histogram in-place and returns its pointer
         //---------------------------------------------------------------
         THn* simpleRemoveOutliersTHn(THn* hist, bool verbose, int limit, int dim);
+
+        //---------------------------------------------------------------
+        // Remove outliers from a THn via pT-hat method:
+        //   delete any bin contents with pT_truth > limit
+        // Modifies histogram in-place and returns its pointer
+        //---------------------------------------------------------------
+        THn* pThatRemoveOutliers(THn* hist, bool verbose, const double & limit, int dim, int pTdim);
 
         //------------------------------------------------------
         // Convolution of nonperturbative shape functions
@@ -151,6 +165,10 @@ namespace RUtil
         // Recursive helper function for simpleRemoveOutliersTHn()
         void simpleRemoveOutliersTHn_recurse(
             THn* hist, int limit, int dim, int* n_bins, int* x, int dim_to_update);
+        // Recursive helper function for pThatRemoveOutliersTHn()
+        void pThatRemoveOutliersTHn_recurse(
+            THn* hist, int limit, int dim, int pTdim, int max_bin_number,
+            int* n_bins, int* x, int dim_to_update, bool verbose);
 
         //------------------------------------------------------
         // Convolution of nonperturbative shape functions

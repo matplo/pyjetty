@@ -30,9 +30,23 @@ histutils = ROOT.RUtil.HistUtils()
 def scaleHistograms(configFile, remove_unscaled):
 
   # Option to remove outliers from specified histograms
+  # Remove outliers that are above some amount of the max of the pT-hat bin
+  pThatRemoveOutliers = True
+  #pThatMaxMultiplier = 4
+  pThatBins = [5, 7, 9, 12, 16, 21, 28, 36, 45, 57, 70, 85,
+               99, 115, 132, 150, 169, 190, 212, 235, None]  ## PYTHIA
+  #pThatBins = [7, 9, 12, 16, 21, 28, 36, 45, 57, 70, 85, 99,
+  #             115, 132, 150, 169, 190, 212, 235, 260, None]  ## HERWIG
+  # Histograms to scale; must have pT on x-axis (or axis 1)
+  pThatHistogramsToCut = [
+    "h_ang_JetPt_", "h_mass_JetPt_", "hResponse_JetPt_", "hResidual_JetPt_",
+    "hJES_R", "hDeltaR_", "hDeltaObs_", "hDeltaPt_emb_R", "hZ_", "hTrackPt"]
+  # Dimension in the THn to do the cut
+  pTdimForTHn = 1
+
   # If the average bin content stays below the "outlierLimit" for "outlierNBinsThreshold" bins, it is removed
   bRemoveOutliers = False
-  outlierLimit = 3
+  bOutlierLimit = 3
   # NOTE: CURRENTLY IGNORING IN "SIMPLE" IMPLEMENTATION!!
   outlierNBinsThreshold=2
 
@@ -76,9 +90,23 @@ def scaleHistograms(configFile, remove_unscaled):
       elif "hNevents" in name:
         continue
       obj = f.Get(name)
+
       if obj:
-        ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers, outlierLimit,
-                           outlierNBinsThreshold, i-1, EndPtHardBin, name)
+        pThatHighEdge = pThatBins[i]
+        if pThatHighEdge != None:
+          #if pThatHighEdge < 20:
+          pThatHighEdge *= 3 #pThatMaxMultiplier
+          if pThatHighEdge < 40:
+            pThatHighEdge = 40
+          #else:
+          #  pThatHighEdge *= 2
+          #  if pThatHighEdge < 60:
+          #    pThatHighEdge = 60
+
+        ScaleAllHistograms(
+          obj, scaleFactor, f, verbose, pThatRemoveOutliers, pThatHistogramsToCut,
+          pThatHighEdge, pTdimForTHn, bRemoveOutliers,
+          bOutlierLimit, outlierNBinsThreshold, i-1, EndPtHardBin, name)
       else:
         print('obj not found!')
 
@@ -90,8 +118,9 @@ def scaleHistograms(configFile, remove_unscaled):
 
 ###################################################################################
 # Function to iterate recursively through an object to scale all TH1/TH2/THnSparse
-def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limit=2,
-                       nBinsThreshold=4, pTHardBin=0, EndPtHardBin=20, taskName=""):
+def ScaleAllHistograms(
+  obj, scaleFactor, f, verbose, pThatRemoveOutliers, pThatHistogramsToCut, pThatHighEdge, pTdimForTHn,
+  bRemoveOutliers=False, bOutlierLimit=2, nBinsThreshold=4, pTHardBin=0, EndPtHardBin=20, taskName=""):
 
   # Set Sumw2 if not already done
   if obj.InheritsFrom(ROOT.THnBase.Class()):
@@ -110,26 +139,41 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
       print("TProfile %s not scaled..." % obj.GetName())
 
   elif obj.InheritsFrom(ROOT.TH2.Class()):
+    if pThatRemoveOutliers and pThatHighEdge != None:
+      for name in pThatHistogramsToCut:
+        if name in obj.GetName():
+          histutils.pThatRemoveOutliers(obj, verbose, pThatHighEdge)
+          break
     if bRemoveOutliers:
-      histutils.simpleRemoveOutliers(obj, verbose, limit)
+      histutils.simpleRemoveOutliers(obj, verbose, bOutlierLimit)
     obj.Scale(scaleFactor)
     if verbose:
       print("TH2 %s was scaled..." % obj.GetName())
 
   elif obj.InheritsFrom(ROOT.TH1.Class()):
+    if pThatRemoveOutliers and pThatHighEdge != None:
+      for name in pThatHistogramsToCut:
+        if name in obj.GetName():
+          histutils.pThatRemoveOutliers(obj, verbose, pThatHighEdge)
+          break
     if bRemoveOutliers:
-      histutils.simpleRemoveOutliers(obj, verbose, limit)
+      histutils.simpleRemoveOutliers(obj, verbose, bOutlierLimit)
       #name = obj.GetName()
       #only perform outlier removal on these couple histograms
       #if "Pt" in name:
-      #  removeOutliers(pTHardBin, EndPtHardBin, obj, verbose, limit, nBinsThreshold, 1, taskName)
+      #  removeOutliers(pTHardBin, EndPtHardBin, obj, verbose, bOutlierLimit, nBinsThreshold, 1, taskName)
     obj.Scale(scaleFactor)
     if verbose:
       print("TH1 %s was scaled..." % obj.GetName())
 
   elif obj.InheritsFrom(ROOT.THnBase.Class()):
+    if pThatRemoveOutliers and pThatHighEdge != None:
+      for name in pThatHistogramsToCut:
+        if name in obj.GetName():
+          histutils.pThatRemoveOutliers(obj, verbose, pThatHighEdge, obj.GetListOfAxes().GetEntries(), pTdimForTHn)
+          break
     if bRemoveOutliers:
-      histutils.simpleRemoveOutliersTHn(obj, verbose, limit, obj.GetListOfAxes().GetEntries())
+      histutils.simpleRemoveOutliersTHn(obj, verbose, bOutlierLimit, obj.GetListOfAxes().GetEntries())
     obj.Scale(scaleFactor)
     if verbose:
       print("THn %s was scaled..." % obj.GetName())
@@ -139,53 +183,53 @@ def ScaleAllHistograms(obj, scaleFactor, f, verbose, bRemoveOutliers=False, limi
       print("Not a histogram!")
       print(obj.GetName())
     for subobj in obj:
-      ScaleAllHistograms(subobj, scaleFactor, f, verbose, bRemoveOutliers, limit,
+      ScaleAllHistograms(subobj, scaleFactor, f, verbose, bRemoveOutliers, bOutlierLimit,
                          nBinsThreshold, pTHardBin, taskName)
 
 ''' Python implementation too slow -- use C++ side
 ###################################################################################
 # "Simple" remove outliers function
-# Just delete any bin contents with N counts < limit
-def simpleRemoveOutliers(hist, verbose=False, limit=2):
+# Just delete any bin contents with N counts < bOutlierLimit
+def simpleRemoveOutliers(hist, verbose=False, bOutlierLimit=2):
 
   if verbose:
-    print("Applying simple removal of outliers with counts < %i for %s" % (limit, hist.GetName()))
+    print("Applying simple removal of outliers with counts < %i for %s" % (bOutlierLimit, hist.GetName()))
 
   for i in range(1, hist.GetNcells()+1):
     content = hist.GetBinContent(i)
-    if content < limit:
+    if content < bOutlierLimit:
       hist.SetBinContent(i, 0)
       hist.SetBinError(i, 0)
 
 ###################################################################################
 # "Simple" remove outliers function for THn using recursion
-# Just delete any bin contents with N counts < limit
-def simpleRemoveOutliersTHn(hist, verbose=False, limit=2, dim=4):
+# Just delete any bin contents with N counts < bOutlierLimit
+def simpleRemoveOutliersTHn(hist, verbose=False, bOutlierLimit=2, dim=4):
 
   if verbose:
-    print("Applying simple removal of outliers with counts < %i for %s" % (limit, hist.GetName()))
+    print("Applying simple removal of outliers with counts < %i for %s" % (bOutlierLimit, hist.GetName()))
 
   n_bins = [0] * dim
   for d in range(dim):
     n_bins[d] = hist.GetAxis(d).GetNbins()
   x = []
-  simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x)
+  simpleRemoveOutliersTHn_recurse(hist, bOutlierLimit, dim, n_bins, x)
 
 ###################################################################################
-def simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x):
+def simpleRemoveOutliersTHn_recurse(hist, bOutlierLimit, dim, n_bins, x):
 
   dims_decided = len(x)
 
   if dims_decided == dim:
     bin_x = array('i', x)
-    if hist.GetBinContent(bin_x) < limit:
+    if hist.GetBinContent(bin_x) < bOutlierLimit:
       hist.SetBinContent(bin_x, 0)
       hist.SetBinError(bin_x, 0)
     return
 
   for i in range(1, n_bins[dims_decided] + 1):
     x_new = x + [i]
-    simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x_new)
+    simpleRemoveOutliersTHn_recurse(hist, bOutlierLimit, dim, n_bins, x_new)
 '''
 
 ###################################################################################

@@ -2,9 +2,9 @@
 
 #SBATCH --job-name="ang_data"
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --partition=std
-#SBATCH --time=24:00:00
-#SBATCH --array=161-327
+#SBATCH --partition=long
+#SBATCH --time=72:00:00
+#SBATCH --array=1-640
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 FILE_PATHS='/rstorage/alice/data/LHC18qr/570/files.txt'

@@ -160,13 +160,13 @@ ang:
 ###############################################################################
 # Analysis & plotting parameters
 file_format: ".pdf"
-output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR04_ptbin4"
-results_pp: "/rstorage/alice/AnalysisResults/ang/AngR04_ptbin4/ang/final_results/fFinalResults.root"
+output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/pTcut/AngR04_ptbin4"
+#results_pp: "/rstorage/alice/AnalysisResults/ang/AngR04_ptbin4/ang/final_results/fFinalResults.root"
 roounfold_path: "/home/ezra/heppy/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'ang'
-do_unfolding: False
-force_rebin: False
+do_unfolding: True
+force_rebin: True
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
@@ -189,24 +189,29 @@ systematics_list:
   - fastsim_generator0
   - fastsim_generator1
   - fastsim_generator2
-  - fastsim_generator3
   - subtraction1
   - subtraction2
   - thermal_closure
 
 # Paths to processing output, to be used for unfolding
-#main_data: '/rstorage/alice/AnalysisResults/ang/872257/AnalysisResultsFinal.root'
-main_data: '/rstorage/alice/AnalysisResults/ang/1020932/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFinal.root'
-randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
-randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFinal.root'
-# fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
-fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
-thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/ang/1039270/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/1047710/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/1047711/AnalysisResultsFinal.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/1047713/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/1047712/AnalysisResultsFinal.root'
+thermal_closure: '/rstorage/alice/AnalysisResults/ang/1039432/AnalysisResultsFinal.root'
+# fastsim order: PYTHIA, Herwig, JEWEL (recoils off)
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/1047714/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/1052084/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/1047715/AnalysisResultsFinal.root']
+
+# Histograms for theory predictions
+#theory_predictions: ['/rstorage/alice/AnalysisResults/ang/998707/AnalysisResultsFinal.root',
+#                     '/rstorage/alice/AnalysisResults/ang/1007194/AnalysisResultsFinal_no1-4.root',
+#                     '/rstorage/alice/AnalysisResults/ang/1003267/AnalysisResultsFinal.root',
+#                     '/rstorage/alice/AnalysisResults/ang/PbPb/jetscape_results.root']
+#theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)",
+#                           "JEWEL pp", "JETSCAPE (MATTER+LBT)"]
 
 # R_max variations
 R_max_variation1: 0.05

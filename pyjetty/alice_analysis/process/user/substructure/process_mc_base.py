@@ -549,11 +549,9 @@ class ProcessMCBase(process_base.ProcessBase):
       # Check additional acceptance criteria
       # skip event if not satisfied -- since first jet in event is highest pt
       if not self.utils.is_det_jet_accepted(jet_det, self.min_leading_track_pT):
-        if self.fill_R_indep_hists:
-          self.hNevents.Fill(0)
         if self.debug_level > 1:
-          print('event rejected due to jet acceptance')
-        return
+          print('jet rejected due to acceptance')
+        continue
 
       self.fill_det_before_matching(jet_det, jetR, R_max)
 

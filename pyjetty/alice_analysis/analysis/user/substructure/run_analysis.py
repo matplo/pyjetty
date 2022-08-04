@@ -697,9 +697,10 @@ class RunAnalysis(common_base.CommonBase):
 
         # Calculate systematic average for final fast simulation uncertainty
         maxbin_adj = maxbin + 1 if (grooming_setting and maxbin) else maxbin
+        n_generators = len([i for i in self.systematics_list if 'generator' in i])
         hSystematic_fastsim = self.construct_systematic_average(
           h_reference, 'fastsim_generator', jetR, obs_label, reg_param, min_pt_truth, max_pt_truth,
-          minbin, maxbin_adj, n_ratios=len(self.fastsim_response_list)-1, takeMaxDev=False)
+          minbin, maxbin_adj, n_ratios=n_generators-1, takeMaxDev=False)
         setattr(self, name, hSystematic_fastsim)
       h_list.append(hSystematic_fastsim)
 

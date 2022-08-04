@@ -433,7 +433,7 @@ class PlotAngularityFigures(common_base.CommonBase):
         x = 0.45 + shift + shift2
     
         if pad == 1:
-            system0 = ROOT.TLatex(x,ymax,'ALICE')
+            system0 = ROOT.TLatex(x,ymax,'ALICE Preliminary')
             system0.SetNDC()
             system0.SetTextSize(size / 1.2)#*scale_factor)
             system0.Draw()

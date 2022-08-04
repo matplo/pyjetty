@@ -284,7 +284,7 @@ class CurvesFromJewelTracks():
         self.event_number = 0
 
         # Do jet-finding and fill histograms
-        if 'gridsub' in self.thermal_subtraction_method:
+        if self.thermal_subtraction_method and 'gridsub' in self.thermal_subtraction_method:
             print('Using GridSub method to remove recoils')
             for gridsize in self.gridsizes:
                 print('Now doing the analysis for a gridsize =',gridsize)
@@ -318,8 +318,10 @@ class CurvesFromJewelTracks():
         if self.event_number > self.nEvents:
             return
 
-        self.event_bck_df = None
-        self.event_bck_df = self.bck_df[self.bck_df['ev_id']==self.ev_idx[self.event_number]]
+        try:
+          self.event_bck_df = self.bck_df[self.bck_df['ev_id'] == self.ev_idx[self.event_number]]
+        except:
+          self.event_bck_df = None
         #print(self.event_number)
 
         self.event_number += 1
@@ -328,7 +330,7 @@ class CurvesFromJewelTracks():
         #     fastjet particles, for convenience
         thermal_particles = []
         thermal_particles_selected = []
-        if len(self.event_bck_df):
+        if self.event_bck_df and len(self.event_bck_df):
             thermal_particles = self.get_fjparticles(self.event_bck_df)
             # Drop specified fraction of thermal particles
             # Loop manually since the wrapped functions are a bit funky
@@ -369,7 +371,9 @@ class CurvesFromJewelTracks():
 
             particles = fj_particles
             # For negative pT treatment, add thermals and negative recombiner
-            if "negative_recombiner" in self.thermal_subtraction_method:
+            if self.thermal_subtraction_method and \
+              "negative_recombiner" in self.thermal_subtraction_method:
+
                 for part in thermal_particles_selected:
                     part.set_user_index(-1)
                     particles.push_back(part)
@@ -468,9 +472,12 @@ class CurvesFromJewelTracks():
             jet_def = fj.JetDefinition(self.reclustering_algorithm, jetR)
             if grooming_setting:
               # For negative_recombiner case, we set the negative recombiner
-              if "negative_recombiner" in self.thermal_subtraction_method:
+              if self.thermal_subtraction_method and \
+                "negative_recombiner" in self.thermal_subtraction_method:
+
                 recombiner = fjext.NegativeEnergyRecombiner(-1)
                 jet_def.set_recombiner(recombiner)
+
               gshop = fjcontrib.GroomerShop(jet, jet_def)
               jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)
               if not jet_groomed_lund:

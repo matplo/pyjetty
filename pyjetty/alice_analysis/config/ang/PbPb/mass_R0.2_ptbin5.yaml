@@ -79,8 +79,8 @@ output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin5"
 roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'mass'
-do_unfolding: True
-force_rebin: True
+do_unfolding: False
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
@@ -94,32 +94,40 @@ use_prev_result: False
 #           random_mass, fastsim_generator0, fastsim_generator1]
 systematics_list:
   - main
-#  - trkeff
+  - trkeff
 #  - prior1
 #  - prior2
   - truncation
   - binning
-#  - random_mass
+  - random_mass
   - fastsim_generator0
   - fastsim_generator1
   - fastsim_generator2
 #  - fastsim_generator3
   - subtraction1
   - subtraction2
-#  - thermal_closure
+  - thermal_closure
 
 # Paths to processing output, to be used for unfolding
-main_data: '/rstorage/alice/AnalysisResults/ang/1005381/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.root'
-#trkeff_response: '/rstorage/alice/AnalysisResults/ang/1005349/AnalysisResultsFinal.root'
-#randmass_data: '/rstorage/alice/AnalysisResults/ang/1005351/AnalysisResultsFinal.root'
-#randmass_response: '/rstorage/alice/AnalysisResults/ang/1005350/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/ang/1020932/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/1021096/AnalysisResultsFinal_no1-4.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/1021095/AnalysisResultsFinal_no1-4.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/1028380/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/1028397/AnalysisResultsFinal_no1-4.root'
 # fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
-fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal_no1-5.root',
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/1028398/AnalysisResultsFinal_no1-5.root',
                    '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root']
-#                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
-#thermal_closure: '/rstorage/alice/AnalysisResults/ang/1005348/AnalysisResultsFinal.root'
+                   '/rstorage/alice/AnalysisResults/ang/1028399/AnalysisResultsFinal_no1-4.root',
+                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
+thermal_closure: '/rstorage/alice/AnalysisResults/ang/1021094/AnalysisResultsFinal.root'
+
+# Histograms for theory predictions
+theory_predictions: ['/rstorage/alice/AnalysisResults/ang/998707/AnalysisResultsFinal.root',
+                     '/rstorage/alice/AnalysisResults/ang/1007194/AnalysisResultsFinal_no1-4.root',
+                     '/rstorage/alice/AnalysisResults/ang/1003267/AnalysisResultsFinal.root',
+                     '/rstorage/alice/AnalysisResults/ang/PbPb/jetscape_results.root']
+theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)",
+                           "JEWEL pp", "JETSCAPE (MATTER+LBT)"]
 
 # R_max variations
 R_max_variation1: 0.05

@@ -528,6 +528,117 @@ namespace RUtil
     }
 
     //---------------------------------------------------------------
+    // Remove outliers from a TH1 via pT-hat method:
+    //   delete any bin contents with pT > limit
+    // Modifies histogram in-place and returns its pointer
+    //---------------------------------------------------------------
+    TH1* HistUtils::pThatRemoveOutliers(TH1* hist, bool verbose, const double & limit) {
+
+        // First search for the pT bin to start the cut
+        int max_cell_number = -1;
+        // Assume that pT is on the x-axis
+        for (int i = 1; i <= hist->GetNbinsX(); i++) {
+            if (hist->GetXaxis()->GetBinLowEdge(i) > limit) {
+                max_cell_number = hist->GetBin(i, 0, 0);
+                break;
+            }
+        }
+
+        // Apply cut if necessary
+        if (max_cell_number >= 0) {
+            if (verbose) {
+                std::cout << "Applying pT-hat removal of outliers for pT > "
+                          << limit << " for " << hist->GetName() << std::endl;
+            }
+
+            for (int i = max_cell_number; i <= hist->GetNcells(); i++) {
+                if (hist->GetBinContent(i)) {
+                    hist->SetBinContent(i, 0);
+                    hist->SetBinError(i, 0);
+                }
+            }
+        }
+
+        return hist;
+    }
+
+    //---------------------------------------------------------------
+    // Remove outliers from a THn via pT-hat method:
+    //   delete any bin contents with pT_truth > limit
+    // Modifies histogram in-place and returns its pointer
+    //---------------------------------------------------------------
+    THn* HistUtils::pThatRemoveOutliers(THn* hist, bool verbose, const double & limit, int dim, int pTdim) {
+
+        // Safety check
+        if (pTdim > dim) {
+            std::cerr << "ERROR: cannot have pTdim = " << pTdim
+                      << " for a THn of dim = " << dim << std::endl;
+            throw pTdim;
+        }
+
+        // First search for the pT bin to start the cut
+        int max_bin_number = -1;
+        for (int i = 1; i <= hist->GetAxis(pTdim)->GetNbins(); i++) {
+            if (hist->GetAxis(pTdim)->GetBinLowEdge(i) > limit) {
+                max_bin_number = i;
+                break;
+            }
+        }
+
+        if (max_bin_number >= 0) {
+            if (verbose) {
+                std::cout << "Applying pT-hat removal of outliers for pT > "
+                          << limit << " for " << hist->GetName() << std::endl;
+            }
+
+            int n_bins[dim] = { 0 };
+            for (int d = 0; d < dim; d++) {
+                n_bins[d] = hist->GetAxis(d)->GetNbins();
+            }
+
+            // Recursively iterate through dimensions to remove extra counts
+            int x[dim] = { 0 };
+            int dim_to_update = 0;
+            pThatRemoveOutliersTHn_recurse(
+                hist, limit, dim, pTdim, max_bin_number, n_bins, x, dim_to_update, verbose);
+
+        }
+
+        return hist;
+    }
+
+    //---------------------------------------------------------------
+    void HistUtils::pThatRemoveOutliersTHn_recurse(
+        THn* hist, int limit, int dim, int pTdim, int max_bin_number,
+        int* n_bins, int* x, int dim_to_update, bool verbose) {
+
+        // In the deepest recursion case, empty the bin and return
+        if (dim_to_update == dim) {
+            if (hist->GetBinContent(x)) {
+                if (verbose) {
+                   std::cout << "Erasing point " << x << " from " << hist->GetName()
+                             << " with min pT-truth " << hist->GetAxis(pTdim)->GetBinLowEdge(x[pTdim])
+                             << std::endl;
+                }
+                hist->SetBinContent(x, 0);
+                hist->SetBinError(x, 0);
+            }
+            return;
+        }
+
+        // Otherwise, go to next dimension
+        for (int i = 1; i <= n_bins[dim_to_update]; i++) {
+            if (dim_to_update == pTdim && i < max_bin_number) {
+                continue;
+            }
+            x[dim_to_update] = i;
+            simpleRemoveOutliersTHn_recurse(hist, limit, dim, n_bins, x, dim_to_update+1);
+        }
+
+        return;
+    }
+
+    //---------------------------------------------------------------
     // Remove outliers from a THn via "simple" method:
     //   delete any bin contents with N counts < limit
     // Modifies histogram in-place and returns its pointer
@@ -540,7 +651,7 @@ namespace RUtil
         }
 
         int n_bins[dim] = { 0 };
-        for(int d = 0; d < dim; d++) {
+        for (int d = 0; d < dim; d++) {
             n_bins[d] = hist->GetAxis(d)->GetNbins();
         }
 

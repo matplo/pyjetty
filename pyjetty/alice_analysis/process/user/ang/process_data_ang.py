@@ -40,7 +40,10 @@ class ProcessData_ang(process_data_base.ProcessDataBase):
     self.pt_bins = array('d', list(range(5, 305, 5)))
     self.obs_bins_ang = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
                                         np.linspace(0.11, 0.8, 70)))
-    self.obs_bins_mass = array('d', list(range(0, 61, 1)))
+    self.obs_bins_mass = np.concatenate(
+      (np.linspace(0, 0.9, 10), np.linspace(1, 9.8, 45), np.linspace(10, 14.5, 10),
+       np.linspace(15, 19, 5), np.linspace(20, 60, 9)))
+
 
   #---------------------------------------------------------------
   # Initialize histograms
@@ -101,10 +104,19 @@ class ProcessData_ang(process_data_base.ProcessDataBase):
 
     # Only do jet mass stuff once per set of angularity configs
     elif observable == "mass":
-      name = 'h_mass_JetPt_R%s_%s%s' % (jetR, obs_label, suffix) if \
-        grooming_setting else 'h_mass_JetPt_R%s%s' % (jetR, suffix)
-      getattr(self, name).Fill(
-        jet_pt_ungroomed, jet_groomed_lund.pair().m() if grooming_setting else jet.m())
+
+      if grooming_setting:
+        name = 'h_mass_JetPt_R%s_%s%s' % (jetR, obs_label, suffix)
+        j_groomed = jet_groomed_lund.pair()
+        if not j_groomed.has_constituents():
+          # Untagged jet -- record underflow value
+          getattr(self, name).Fill(jet_pt_ungroomed, -1)
+        else:
+          getattr(self, name).Fill(jet_pt_ungroomed, j_groomed.m())
+
+      else:
+        name = 'h_mass_JetPt_R%s%s' % (jetR, suffix)
+        getattr(self, name).Fill(jet_pt_ungroomed, jet.m())
 
 
 ##################################################################

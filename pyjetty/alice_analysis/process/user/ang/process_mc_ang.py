@@ -45,7 +45,9 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
     self.pt_bins = array('d', list(range(5, 100, 5)) + list(range(100, 210, 10)))
     self.obs_bins_ang = np.concatenate((np.linspace(0, 0.009, 10), np.linspace(0.01, 0.1, 19),
                                         np.linspace(0.11, 0.8, 70)))
-    self.obs_bins_mass = array('d', list(range(0, 61, 1)))
+    self.obs_bins_mass = np.concatenate(
+      (np.linspace(0, 0.9, 10), np.linspace(1, 9.8, 45), np.linspace(10, 14.5, 10),
+       np.linspace(15, 19, 5), np.linspace(20, 60, 9)))
 
     # Override default behavior to create delta-observable histograms in Pb-Pb case
     self.fill_delta_obs = True
@@ -181,7 +183,15 @@ class ProcessMC_ang(process_mc_base.ProcessMCBase):
 
     elif observable == "mass":
 
-      return jet_groomed_lund.pair().m() if grooming_setting else jet.m()
+      if grooming_setting:
+        j_groomed = jet_groomed_lund.pair()
+        if not j_groomed.has_constituents():
+          # Untagged jet -- record underflow value
+          return -1
+        else:
+          return j_groomed.m()
+
+      return jet.m()
 
     # Should not be any other observable
     raise ValueError("Observable %s not implemented" % observable)
