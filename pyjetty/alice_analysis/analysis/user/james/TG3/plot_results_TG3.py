@@ -84,10 +84,10 @@ class PlotResults(common_base.CommonBase):
         self.plot_mass()
         
         # Charged Soft Drop zg
-        self.plot_zg()
+        #self.plot_zg()
         
         # Charged Soft Drop theta_g
-        self.plot_tg()
+        #self.plot_tg()
         
         # h-jet
         self.plot_hjet_IAA()
@@ -161,14 +161,16 @@ class PlotResults(common_base.CommonBase):
         self.observable = 'mass'
         self.init_result(self_normalize=True)
              
-        # Plot distribution + ratio
-        self.y_max = 0.3
-        self.y_ratio_min = 0.
-        self.y_ratio_max = 2.49
+        # Plot distribution
+        self.x_min = 0.
+        self.x_max = 22.
+        self.y_ratio_min = -0.01
+        self.y_ratio_max = 0.34
         pp_label = 'PYTHIA6'
         self.ytitle = f'#frac{{1}}{{#it{{#sigma}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
-        self.plot_distribution_and_ratio(pp_label=pp_label, plot_ratio=False)
-        
+        self.plot_distribution(pp_label=pp_label)
+        #self.plot_distribution_and_ratio(pp_label=pp_label, plot_ratio=False)
+
     #-------------------------------------------------------------------------------------------
     def plot_zg(self):
         
@@ -239,7 +241,7 @@ class PlotResults(common_base.CommonBase):
         self.x_max = 3.2
         self.y_ratio_min = -0.005
         self.y_ratio_max = 0.1
-        self.ytitle = '#Phi(#Delta#it{#varphi})'
+        self.ytitle = '#Delta_{recoil}' # '#Phi(#Delta#it{#varphi})'
         self.plot_distribution()
 
     #---------------------------------------------------------------
@@ -591,12 +593,13 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['prediction_distribution_labels'].append('JEWEL, recoils off')
             
         if self.observable == 'hadron_raa':
-            jewel_x = np.array(result['jewel_x'])
-            jewel_RAA = np.array(result['jewel_RAA'])
-            n = len(jewel_x)
-            g = ROOT.TGraph(n, jewel_x, jewel_RAA)
-            self.observable_settings['prediction_ratio_list'].append(g)
-            self.observable_settings['prediction_ratio_labels'].append('JEWEL, recoils on?')
+            if 'jewel_x' in result:
+                jewel_x = np.array(result['jewel_x'])
+                jewel_RAA = np.array(result['jewel_RAA'])
+                n = len(jewel_x)
+                g = ROOT.TGraph(n, jewel_x, jewel_RAA)
+                self.observable_settings['prediction_ratio_list'].append(g)
+                self.observable_settings['prediction_ratio_labels'].append('JEWEL, recoils on?')
             
         if self.observable == 'jet_raa':
             jewel_x = np.array(result['jewel_x'])
@@ -999,7 +1002,10 @@ class PlotResults(common_base.CommonBase):
         cname = 'c'
         c = ROOT.TCanvas(cname, cname, 600, 450)
         c.SetRightMargin(0.05)
-        c.SetLeftMargin(0.15)
+        if self.observable == 'mass':
+            c.SetLeftMargin(0.17)
+        else:
+            c.SetLeftMargin(0.15)
         c.SetTopMargin(0.05)
         c.SetBottomMargin(0.17)
         c.SetTicks(0,1)
@@ -1017,25 +1023,35 @@ class PlotResults(common_base.CommonBase):
         myBlankHisto.GetXaxis().SetTitleOffset(1.2)
         myBlankHisto.GetXaxis().SetLabelSize(0.05)
         myBlankHisto.GetYaxis().SetTitleSize(0.07)
-        myBlankHisto.GetYaxis().SetTitleOffset(1.)
+        if self.observable == 'mass':
+            myBlankHisto.GetYaxis().SetTitleOffset(1.1)
+        else:
+            myBlankHisto.GetYaxis().SetTitleOffset(1.)
         myBlankHisto.GetYaxis().SetLabelSize(0.05)
         myBlankHisto.SetLineWidth(0)
         myBlankHisto.Draw()
         
         if self.observable in ['hjet_dphi']:
             y_leg = 0.52
-        leg = ROOT.TLegend(0.2,y_leg,0.4,y_leg+0.11)
+            leg = ROOT.TLegend(0.2,y_leg,0.4,y_leg+0.11)
+        if self.observable in ['mass']:
+            y_leg = 0.73
+            leg = ROOT.TLegend(0.65,y_leg,0.8,y_leg+0.13)
         self.utils.setup_legend(leg, 0.04, sep=-0.1)
         
         if self.observable == 'hjet_dphi':
             y_leg = 0.32
             leg2 = ROOT.TLegend(0.2,y_leg,0.5,y_leg+0.16)
+        if self.observable == 'mass':
+            y_leg = 0.47
+            leg2 = ROOT.TLegend(0.51,y_leg,0.7,y_leg+0.2)
         self.utils.setup_legend(leg2, 0.04, sep=-0.1)
         
         # Draw theory predictions
         for i, prediction in enumerate(self.observable_settings['prediction_distribution_list']):
 
             label = self.observable_settings['prediction_distribution_labels'][i]
+            print(label)
             color = self.theory_colors[i]
            
             prediction.SetFillColor(color)
@@ -1057,12 +1073,21 @@ class PlotResults(common_base.CommonBase):
                 if 'scaled' in label:
                     prediction.SetFillStyle(3001)
               
-            if type(prediction) in [ROOT.TH1D]:
+            if type(prediction) in [ROOT.TH1D, ROOT.TH1F]:
                 prediction.Draw('E3 same')
                 if self.observable == 'hjet_dphi':
                     leg2.AddEntry(prediction, label, 'F')
                 else:
                     leg2.AddEntry(prediction, label, 'L')
+
+            elif type(prediction) in [ROOT.TGraph, ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                 
+                if type(prediction) in [ROOT.TGraphErrors, ROOT.TGraphAsymmErrors]:
+                    prediction.Draw('3 same')
+                elif type(prediction) == ROOT.TGraph:
+                    prediction.Draw('same')
+
+                leg2.AddEntry(prediction, label, 'L')
                 
         # Draw experimental data
         if self.observable == 'hjet_dphi':
@@ -1087,6 +1112,81 @@ class PlotResults(common_base.CommonBase):
             self.observable_settings['g_pp'].Draw('PE Z same')
             self.observable_settings['g_AA'].Draw('PE Z same')
 
+        else:
+
+            # pp distribution
+            if 'h_pp_sys' in self.observable_settings:
+                self.observable_settings['h_pp_sys'].SetLineColor(0)
+                self.observable_settings['h_pp_sys'].SetFillColor(self.data_color)
+                #self.observable_settings['h_pp_sys'].SetFillColorAlpha(self.data_color, 0.3)
+                self.observable_settings['h_pp_sys'].SetFillStyle(3004)
+                self.observable_settings['h_pp_sys'].SetLineWidth(0)
+                self.observable_settings['h_pp_sys'].SetMarkerStyle(0)
+            
+            if 'g_pp' in self.observable_settings:
+                self.observable_settings['g_pp'].SetMarkerSize(self.marker_size)
+                self.observable_settings['g_pp'].SetMarkerStyle(self.data_markers[0])
+                self.observable_settings['g_pp'].SetMarkerColor(self.data_color)
+                self.observable_settings['g_pp'].SetLineStyle(self.line_style)
+                self.observable_settings['g_pp'].SetLineWidth(self.line_width)
+                self.observable_settings['g_pp'].SetLineColor(self.data_color)
+            elif 'h_pp' in self.observable_settings:
+                self.observable_settings['h_pp'].SetMarkerSize(self.marker_size)
+                self.observable_settings['h_pp'].SetMarkerStyle(self.data_markers[0])
+                self.observable_settings['h_pp'].SetMarkerColor(self.data_color)
+                self.observable_settings['h_pp'].SetLineStyle(self.line_style)
+                self.observable_settings['h_pp'].SetLineWidth(self.line_width)
+                self.observable_settings['h_pp'].SetLineColor(self.data_color)
+            
+            # AA distribution
+            self.observable_settings['h_AA_stat'].SetMarkerSize(self.marker_size)
+            self.observable_settings['h_AA_stat'].SetMarkerStyle(self.data_markers[1])
+            self.observable_settings['h_AA_stat'].SetMarkerColor(self.data_color)
+            self.observable_settings['h_AA_stat'].SetLineStyle(self.line_style)
+            self.observable_settings['h_AA_stat'].SetLineWidth(self.line_width)
+            self.observable_settings['h_AA_stat'].SetLineColor(self.data_color)
+            
+            if 'g_AA_sys' in self.observable_settings:
+                self.observable_settings['g_AA_sys'].SetLineColor(0)
+                self.observable_settings['g_AA_sys'].SetFillColor(self.data_color)
+                self.observable_settings['g_AA_sys'].SetFillColorAlpha(self.data_color, 0.3)
+                self.observable_settings['g_AA_sys'].SetFillStyle(1001)
+                self.observable_settings['g_AA_sys'].SetLineWidth(0)
+            if 'h_AA_sys' in self.observable_settings:
+                self.observable_settings['h_AA_sys'].SetLineColor(0)
+                self.observable_settings['h_AA_sys'].SetFillColor(self.data_color)
+                self.observable_settings['h_AA_sys'].SetFillColorAlpha(self.data_color, 0.3)
+                self.observable_settings['h_AA_sys'].SetFillStyle(1001)
+                self.observable_settings['h_AA_sys'].SetLineWidth(0)
+
+            # Add legend
+            if not pp_label:
+                pp_label = 'pp'
+            if 'g_pp' in self.observable_settings:
+                leg.AddEntry(self.observable_settings['g_pp'], pp_label, 'P')
+            else:
+                leg.AddEntry(self.observable_settings['h_pp'], pp_label, 'PE')
+            leg.AddEntry(self.observable_settings['h_AA_stat'], 'Pb#font[122]{{-}}Pb {}#font[122]{{-}}{}%'.format(int(self.centrality[0]), int(self.centrality[1])), 'PE')
+            if 'g_AA_sys' in self.observable_settings:
+                leg.AddEntry(self.observable_settings['g_AA_sys'], 'Sys. uncertainty', 'f')
+            elif 'h_AA_sys' in self.observable_settings:
+                leg.AddEntry(self.observable_settings['h_AA_sys'], 'Sys. uncertainty', 'f')
+
+            # Draw distribution
+            if 'h_pp_sys' in self.observable_settings:
+                self.observable_settings['h_pp_sys'].Draw('E2 same')
+            if 'g_pp' in self.observable_settings:
+                self.observable_settings['g_pp'].Draw('P same')
+            elif 'h_pp' in self.observable_settings:
+                self.observable_settings['h_pp'].Draw('PE X0 same')
+                
+            if 'g_AA_sys' in self.observable_settings:
+                self.observable_settings['g_AA_sys'].Draw('E2 same')
+            elif 'h_AA_sys' in self.observable_settings:
+                self.observable_settings['h_AA_sys'].Draw('E2 same')
+            self.observable_settings['h_AA_stat'].DrawCopy('PE X0 same')
+
+
         leg.Draw('same')
         leg2.Draw('same')
         
@@ -1095,7 +1195,10 @@ class PlotResults(common_base.CommonBase):
         # # # # # # # # # # # # # # # # # # # # # # # #
         x = 0.2
         dx = 0.4
-        y = 0.87
+        if self.observable == 'mass':
+            y = 0.89
+        else:
+            y = 0.87
         dy = 0.06
         text_latex = ROOT.TLatex()
         text_latex.SetNDC()
@@ -1110,6 +1213,14 @@ class PlotResults(common_base.CommonBase):
             text_latex.DrawLatex(x, y-2.2*dy, text)
             text = 'TT{20,50} - TT{8,9}'
             text_latex.DrawLatex(x, y-3.4*dy, text)
+
+        if self.observable in ['mass']:
+            text = 'Charged-particle jets'
+            text_latex.DrawLatex(x, y-dy, text)
+            text = f'#it{{R}} = {self.jetR}, anti-#it{{k}}_{{T}}, |#it{{#eta}}_{{jet}}| < {0.9-self.jetR}'
+            text_latex.DrawLatex(x, y-2.*dy, text)
+            pt_label = f'{self.pt[0]} < #it{{p}}_{{T, ch jet}} < {self.pt[1]} GeV/#it{{c}}'
+            text_latex.DrawLatex(x, y-3.3*dy, pt_label)
 
         output_filename = os.path.join(self.output_dir, f'h_{self.observable}.pdf')
         c.SaveAs(output_filename)
