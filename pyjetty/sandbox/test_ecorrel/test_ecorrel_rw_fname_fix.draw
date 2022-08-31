@@ -18,6 +18,7 @@
 #comment 0.395,0.5,0.996,0.65, tx_size=0.035 item=PYTHIA8 [500-550 GeV/c] item=anti-k_{T} R=0.5 |#eta_{jet}| < 1.9 item=charged hadrons for E-correl
 <fname> 		:hec1_2 :p  : title=2-point p_{T}^{h} > 1 GeV/c
 <fname> 		:hec0_2 :hist l -k  : title=2-point all p_{T}
+<fname> 		:hec1_bg_2 :p  -k: title=2-point p_{T}^{h} > 1 GeV/c
 <fname> 		:hec1_3 :p  : title=3-point p_{T}^{h} > 1 GeV/c
 <fname> 		:hec0_3 :hist l -k  : title=3-point all p_{T}
 <fname> 		:hec1_4 :p  : title=4-point p_{T}^{h} > 1 GeV/c
