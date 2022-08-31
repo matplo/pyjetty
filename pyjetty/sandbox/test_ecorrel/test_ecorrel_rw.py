@@ -204,6 +204,10 @@ def main():
 			# 	hc.Write()
 
 	pythia_hard.stat()
+	if be:
+		be.histogram_pt.Write()
+		be.histogram_phi.Write()
+		be.histogram_eta.Write()
 
 	fout.Write()
 	fout.Close()
