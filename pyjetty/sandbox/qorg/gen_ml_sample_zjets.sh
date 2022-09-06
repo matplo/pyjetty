@@ -17,7 +17,7 @@ source ${HEPPY_DIR}/scripts/util.sh
 
 nev=$(get_opt "nev" $@)
 if [ -z ${nev} ]; then
-	nev=10
+	nev=1000
 fi
 
 for seed in 123456
