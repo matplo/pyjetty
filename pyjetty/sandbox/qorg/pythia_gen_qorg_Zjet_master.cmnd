@@ -1,0 +1,20 @@
+! List of all modified PYTHIA 8.244 settings.
+WeakBosonAndParton:qqbar2gmZg = on
+WeakBosonAndParton:qg2gmZq = on
+23:onMode = off
+23:onIfAny = 1 2 3 4 5
+23:mMin = 70.
+23:mMax = 120.
+
+Next:numberCount = 0
+Next:numberShowEvent = 0
+Next:numberShowInfo = 0
+Next:numberShowProcess = 0
+
+PartonLevel:ISR = off
+PartonLevel:MPI = off
+
+Random:seed = 123456
+Random:setSeed = on
+
+PhaseSpace:pTHatMin = 500.
