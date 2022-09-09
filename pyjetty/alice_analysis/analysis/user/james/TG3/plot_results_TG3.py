@@ -514,6 +514,18 @@ class PlotResults(common_base.CommonBase):
             h_ratio_jetscape.Divide(h_jetscape_pp)
             self.observable_settings['prediction_ratio_list'].append(h_ratio_jetscape)
             self.observable_settings['prediction_ratio_labels'].append('JETSCAPE')
+
+            # Load PYTHIA theory prediction for IAA R=0.2/0.5 ratio
+            if self.observable == 'hjet_IAA_ratio':
+
+                bins = np.array(h_ratio_jetscape.GetXaxis().GetXbins())
+                x = (bins[1:] + bins[:-1]) / 2
+                n = len(x)
+                y_pythia = np.array(result['y_pythia'])
+                y_err_pythia = np.array(result['y_err_pythia'])
+                g_pythia = ROOT.TGraphErrors(n, x, y_pythia, np.zeros(n), y_err_pythia)
+                self.observable_settings['prediction_ratio_list'].append(g_pythia)
+                self.observable_settings['prediction_ratio_labels'].append('PYTHIA')
             
             if self.observable in ['mass']:
                 self.observable_settings['prediction_distribution_list'].append(h_jetscape_AA)
@@ -770,6 +782,8 @@ class PlotResults(common_base.CommonBase):
         
             label = self.observable_settings['prediction_ratio_labels'][i]
             color = self.theory_colors[i]
+            if self.observable == 'hjet_IAA_ratio' and label == 'PYTHIA':
+                color = self.theory_colors[i+1]
             
             prediction.SetFillColor(color)
             prediction.SetFillColorAlpha(color, self.alpha)

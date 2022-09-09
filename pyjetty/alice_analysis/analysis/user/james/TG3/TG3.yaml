@@ -257,7 +257,12 @@ hjet_IAA_ratio:
   hname_jetscape_low_R05: 'h_semi_inclusive_chjet_IAA_lowTrigger_alice_R0.5_276_pt0.15Scaled'
   c_ref_R02: 0.99
   c_ref_R05: 0.93
-  
+
+  # PYTHIA -- from Peter
+  # Same x bins as Pb-Pb data
+  y_pythia: [0.71, 0.63, 0.58, 0.62, 0.65]
+  y_err_pythia: [0.01, 0.03, 0.05, 0.01, 0.01]
+    
 #------------------------------------------------------------------
 # ALICE R = 0.4, https://www.hepdata.net/record/ins1376027
 # jetscape jet Raa
