@@ -59,7 +59,7 @@ def main():
 	args = parser.parse_args()
 
 	if args.hepmc:
-		hepmc2_output_base = "pythia_gen_qorg.hepmc"
+		hepmc2_output_base = "pythia_test_tagger.hepmc"
 		hepmc2_output_name = None
 		hepmc2_writer = None
 		hepmc2_fileno = 0
@@ -68,7 +68,7 @@ def main():
 		if root_avail is None:
 			print('[error] unable to load ROOT so --ml is defunct')
 			args.ml = False
-		ml_root_output_base = "pythia_gen_qorg.root"
+		ml_root_output_base = "pythia_test_tagger.root"
 		ml_root_output_name = None
 		ml_root_file = None
 		ml_root_ntuple_parts = None
@@ -155,6 +155,7 @@ def main():
 				FT_print_psj(j, '-         jet', show_constituents=False)
 				j_flavor_psj = fT.flavor_tag_psj(j)
 				if j_flavor_psj:
+					# example usage commented out:
 					# j_flavor_pythia_part = fT.flavor_tag_pythia_particle(j)
 					# j_flavor = fT.flavor_tag_id(j)
 					# or j_flavor = j_flavor_pythia_part.id() 
@@ -168,7 +169,7 @@ def main():
 
 	pythia.stat()
 	pythia.settings.writeFile(
-		format_output_file('pythia_gen_qorg.cmnd', -1, args))
+		format_output_file('pythia_test_tagger.cmnd', -1, args))
 
 	if args.ml:
 		if ml_root_file:
