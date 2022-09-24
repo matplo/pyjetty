@@ -58,6 +58,8 @@ def main():
 	parser.add_argument('--mDT', help='mDT clean up with z_cut=0.04 (default) on the Zjets', default=False, action='store_true')
 	parser.add_argument('--mDTzcut', help='mDT clean up with z_cut=0.04 (default) on the Zjets', default=0.04, type=float)
 	parser.add_argument('--ZjetR', help='specify the radius of the anti-kT jet for Z-match - default is R=1.0', default=1.0, type=float)
+	parser.add_argument('--jet-ptmin', help='minimum pT cut on jets', default=5., type=float)
+	parser.add_argument('--jet-ptmax', help='maximum pT cut on jets', default=1e4, type=float)
 	pyconf.add_standard_pythia_args(parser)
 	args = parser.parse_args()
 
@@ -90,6 +92,7 @@ def main():
 
 	jet_def_akt = fj.JetDefinition ( fj.antikt_algorithm, args.ZjetR);
 	jet_def_ca = fj.JetDefinition ( fj.cambridge_algorithm, fj.JetDefinition.max_allowable_R)
+	jet_selector = fj.SelectorPtMin(args.jet_ptmin) * fj.SelectorPtMax(args.jet_ptmax) * fj.SelectorAbsRapMax(1.7)
 
 	mDT = None
 	if args.mDT:
@@ -105,12 +108,13 @@ def main():
 	run_number = args.py_seed
 	event_number = 0
 	pbar = tqdm.tqdm(range(args.nev))
-	for i in pbar:
+	# for i in pbar:
+	n_total_jets_accepted = 0
+	while n_total_jets_accepted < args.nev:
 		if not pythia.next():
-			pbar.update(-1)
 			continue
 		event_number = event_number + 1
-		if i == 0 or i % args.nperfile == 0:
+		if n_total_jets_accepted % args.nperfile == 0:
 			if args.hepmc:
 				if hepmc2_writer:
 					del hepmc2_writer
@@ -129,8 +133,7 @@ def main():
 					ml_root_file.Close()
 					ml_root_file = None
 					ml_root_ntuple = None
-				ml_root_output_name = format_output_file(
-					ml_root_output_base, ml_root_fileno, args)
+				ml_root_output_name = format_output_file(ml_root_output_base, ml_root_fileno, args)
 				ml_root_file = ROOT.TFile(ml_root_output_name, 'recreate')
 				ml_root_ntuple_parts = ROOT.TNtuple('tree_Particle_gen', 'particles from PYTHIA8 - {} jets'.format(parton_type_from_args(args)),
                                         'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
@@ -138,20 +141,18 @@ def main():
                                         'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
 				ml_root_ntuple_ev = ROOT.TNtuple('tree_Event_gen', 'event info from PYTHIA8 - {} jets'.format(parton_type_from_args(args)),
                                      'run_number:ev_id:xsec:code')
+				ml_root_ntuple_zjet = ROOT.TNtuple('tree_Zjet_gen', 'Zjet kinematics','run_number:ev_id:ZjetPt:ZjetEta:ZjetPhi:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:dR')
 				ml_root_fileno = ml_root_fileno + 1
 
 		if args.hepmc:
 			hepmc2_writer.fillEvent(pythia)
 
 		if args.ml:
-			parts_pythia_h = pythiafjext.vectorize_select(
-				pythia, [pythiafjext.kFinal], 0, True)
-			ml_root_ntuple_ev.Fill(run_number, event_number,
-			                       pythia.info.sigmaGen(), pythia.info.code())
+			parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
+			ml_root_ntuple_ev.Fill(run_number, event_number, pythia.info.sigmaGen(), pythia.info.code())
 			if args.Zjet:
 				# take all particles and find the Z
-				parts_pythia_all = pythiafjext.vectorize_select(
-					pythia, [pythiafjext.kAny], 0, True)
+				parts_pythia_all = pythiafjext.vectorize_select(pythia, [pythiafjext.kAny], 0, True)
 				zs = [p for p in parts_pythia_all if pythiafjext.getPythia8Particle(p).id() == 23]
 				# if len(zs) > 1:
 				# 	print('[debug] more than one Z in the stack', len(zs), zs[0].perp(), zs[0].phi(), zs[1].perp(), zs[1].phi())
@@ -181,6 +182,13 @@ def main():
 					print('[w] unable to match Z and and any jet within R < 1.', Zjet0R, Zjet1R, ZjetDR)
 					continue
 				# stream the anti-kT jets
+				if len(jet_selector([Zjet])) < 1:
+					continue
+				ml_root_ntuple_zjet.Fill(run_number, event_number, 
+										Zjet.pt(), Zjet.eta(), Zjet.phi(), 
+										psjZ.pt(), psjZ.eta(), psjZ.phi(), 
+										pythiafjext.getPythia8Particle(psjZ).id(),
+										ZjetDR)
 				for p in Zjet.constituents():
 					ml_root_ntuple_parts.Fill(run_number, event_number, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
 				if mDT:
@@ -194,11 +202,13 @@ def main():
 						for p in taggedJet.constituents():
 							ml_root_ntuple_parts_mDT.Fill(run_number, event_number, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
 					pass
+				n_total_jets_accepted += 1
 			else:
 				# kept for ref for the q or glue
 				for p in parts_pythia_h:
 					ml_root_ntuple_parts.Fill(run_number, event_number, p.pt(
 					), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
+			pbar.update()
 
 	pythia.stat()
 	pythia.settings.writeFile(
