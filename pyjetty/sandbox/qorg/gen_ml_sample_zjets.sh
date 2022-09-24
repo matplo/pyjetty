@@ -23,5 +23,5 @@ fi
 for seed in 123456
 do
   # only z+jet
-	${THISD}/pythia_gen_Zjets.py --py-noue --py-seed ${seed} --ml --hepmc --nev ${nev} --Zjet --ZjetR 0.8 --mDT --mDTzcut 0.04 --py-cmnd pythia_gen_qorg_Zjet_master.cmnd --jet-ptmin 500 --jet-ptmax 550 $@
+	${THISD}/pythia_gen_Zjets.py --py-noue --py-seed ${seed} --ml --hepmc --Zjet --ZjetR 0.8 --mDT --mDTzcut 0.04 --py-cmnd pythia_gen_qorg_Zjet_master.cmnd --jet-ptmin 500 --jet-ptmax 550 $@
 done
