@@ -97,8 +97,10 @@ def main():
 	mDT = None
 	if args.mDT:
 		mDT = fjcontrib.ModifiedMassDropTagger(args.mDTzcut)
-		hepmc2_output_base = hepmc2_output_base.replace('.hepmc', '_mDT{}.hepmc'.format(args.mDTzcut))
-		ml_root_output_base = ml_root_output_base.replace('.root', '_mDT{}.root'.format(args.mDTzcut))
+		if args.hepmc:
+			hepmc2_output_base = hepmc2_output_base.replace('.hepmc', '_mDT{}.hepmc'.format(args.mDTzcut))
+		if args.ml:
+			ml_root_output_base = ml_root_output_base.replace('.root', '_mDT{}.root'.format(args.mDTzcut))
 
 
 	mycfg = []
@@ -199,8 +201,9 @@ def main():
 					else:
 						# Use modified mass-drop tagger to clean up jet.
 						taggedJet = mDT.result(ca_jets[0])
-						for p in taggedJet.constituents():
-							ml_root_ntuple_parts_mDT.Fill(run_number, event_number, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
+						if taggedJet.has_constituents():
+							for p in taggedJet.constituents():
+								ml_root_ntuple_parts_mDT.Fill(run_number, event_number, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
 					pass
 				n_total_jets_accepted += 1
 			else:
