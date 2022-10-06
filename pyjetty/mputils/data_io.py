@@ -1,16 +1,18 @@
+from matplotlib.style import library
 from pyjetty.mputils import MPBase
 import random
 try:
 	import uproot3 as uproot
+	uproot_version = 3
 except:
 	try:
 		import uproot
+		uproot_version = 4 # assumed
 	except:
 		pass
 import pandas as pd
-import fastjet as fj
 import fjext
-
+from tqdm import tqdm
 
 #class DataEvent(MPBase):
 #	def __init__(self, **kwargs):
@@ -41,13 +43,13 @@ class DataEvent(object):
 
 class DataFileIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_input=None, tree_name='tree_Particle', selected_event_columns=[])
+		self.configure_from_args(file_input=None, tree_name='tree_Particle', event_tree_name='tree_event_char', selected_event_columns=[], is_data=True)
 		self.event_number = 0
-		self.event_tree_name = 'PWGHF_TreeCreator/tree_event_char'
 		super(DataFileIO, self).__init__(**kwargs)
 		self.reset_dfs()
+		self.is_valid = False
 		if self.file_input:
-			self.load_file(self.file_input, self.tree_name, self.selected_event_columns)
+			self.is_valid = self.load_file(self.file_input, self.tree_name)
 
 	def set_select_columns_pbpb(self, selection=None):
 		if selection is not None:
@@ -92,26 +94,49 @@ class DataFileIO(MPBase):
 			print('[e] Tree {} not found in file {}'.format(self.event_tree_name, file_input))
 			return False
 		if len(self.selected_event_columns) < 1:
-			self.event_df_orig = self.event_tree.pandas.df()
+			if uproot_version < 4:
+				self.event_df_orig = self.event_tree.pandas.df()
+			else:
+				self.event_df_orig = self.event_tree.arrays(library='pd')
 		else:
-			self.event_df_orig = self.event_tree.pandas.df(self.selected_event_columns)
+			if uproot_version < 4:
+				self.event_df_orig = self.event_tree.pandas.df(self.selected_event_columns)
+			else:
+				self.event_df_orig = self.event_tree.arrays(self.selected_event_columns, library='pd')
 		self.event_df_orig.reset_index(drop=True)
-		self.event_df = self.event_df_orig.query('is_ev_rej == 0')
-		self.event_df.reset_index(drop=True)
+		if 'is_ev_rej' in self.event_df_orig.columns:
+			self.event_df = self.event_df_orig.query('is_ev_rej == 0')
+			self.event_df.reset_index(drop=True)
+		else:
+			self.event_df = self.event_df_orig
 		# Load track tree into dataframe
-		self.track_tree_name = 'PWGHF_TreeCreator/{}'.format(tree_name)
+		if self.is_data:
+			self.track_tree_name = 'PWGHF_TreeCreator/{}'.format(tree_name)
+		else:
+			self.track_tree_name = tree_name
 		self.track_tree = uproot.open(file_input)[self.track_tree_name]
 		if not self.track_tree:
 			print('[e] Tree {} not found in file {}'.format(tree_name, file_input))
 			return False
-		self.track_df_orig = self.track_tree.pandas.df()
+		if uproot_version < 4:
+			self.track_df_orig = self.track_tree.pandas.df()
+		else:
+			self.track_df_orig = self.track_tree.arrays(library='pd')
 		# Merge event info into track tree
 		self.track_df = pd.merge(self.track_df_orig, self.event_df, on=['run_number', 'ev_id'])
 		# (i) Group the track dataframe by event
 		#     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
 		self.track_df_grouped = self.track_df.groupby(['run_number','ev_id'])
 		# (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
+		if len(self.event_df) < 1:
+			return False
+		if len(self.track_df_grouped) < 1:
+			return False
 		self.df_events = self.track_df_grouped.apply(self.get_event)
+		# print('debug: number of events in df_events:', len(self.df_events))
+		# for e in self.df_events:
+		# 	print(e)
+		# 	break
 		self.event_number = self.event_number + len(self.df_events)
 		return True
 
@@ -119,7 +144,7 @@ class DataFileIO(MPBase):
 #random order of files; files do not repeat; load_event - single event return
 class DataIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_list='PbPb_file_list.txt', tree_name='tree_Particle', random_file_order=True)
+		self.configure_from_args(file_list='PbPb_file_list.txt', tree_name='tree_Particle', event_tree_name='tree_event_char', random_file_order=True, is_data=True)
 		super(DataIO, self).__init__(**kwargs)
 		self.current_event_in_file = 0
 		self.file_io = None
@@ -148,7 +173,7 @@ class DataIO(MPBase):
 			print('[w] no more files to open.')
 			return
 		print('[i] opening data file', afile)
-		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name, event_tree_name=self.event_tree_name, is_data=self.is_data)
 		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)
 		print('    files to go', len(self.list_of_files))
 
@@ -180,6 +205,30 @@ class DataIO(MPBase):
 			p.set_user_index(offset + ip)
 			self.particles.push_back(p)
 		return self.particles
+
+	def next_event_current_file(self, offset = 0):
+		# you should iterate on files here...
+		if self.file_io is None:
+			self.open_file()
+		if self.file_io is None:
+			print('[e] unable to load the data file')
+			yield None
+		if self.current_event_in_file >= self.current_file_number_of_events():
+			self.current_event_in_file = 0
+			self.file_io = None
+			yield self.load_event(offset=offset)
+		for i, e in enumerate(self.file_io.df_events):
+			last_event = (i == len(self.file_io.df_events) - 1)
+			yield e, last_event
+
+	def next_event(self):
+		for afile in tqdm(self.list_of_files):
+			self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name, event_tree_name=self.event_tree_name, is_data=self.is_data)
+			# print('    ', afile, 'number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)
+			if self.file_io.is_valid is False:
+				continue
+			for e in self.file_io.df_events:
+				yield e		
 
 	def open_afile(self, afile):
 		if self.file_io:

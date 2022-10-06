@@ -134,7 +134,10 @@ def main():
 					ml_root_file.Purge()
 					ml_root_file.Close()
 					ml_root_file = None
-					ml_root_ntuple = None
+					ml_root_ntuple_ev = None
+					ml_root_ntuple_zjet = None
+					ml_root_ntuple_parts = None
+					ml_root_ntuple_parts_mDT = None
 				ml_root_output_name = format_output_file(ml_root_output_base, ml_root_fileno, args)
 				ml_root_file = ROOT.TFile(ml_root_output_name, 'recreate')
 				ml_root_ntuple_parts = ROOT.TNtuple('tree_Particle_gen', 'particles from PYTHIA8 - {} jets'.format(parton_type_from_args(args)),
