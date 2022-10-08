@@ -13,10 +13,16 @@ def main():
 	parser = argparse.ArgumentParser(
 	description='analysis of jets from an ntuple', prog=os.path.basename(__file__))
 	parser.add_argument('-i', '--input', help='input file', type=str, required=True)
+	parser.add_argument('-o', '--output', help='output filename - optional', type=str, required=False)
+	parser.add_argument('--ptree', help='particle tree to analyze', type=str, default='tree_Particle_gen')
+	parser.add_argument('--etree', help='event tree to analyze', type=str, default='tree_Event_gen')
 	args = parser.parse_args()
 	print(args)
- 
-	rfout = ROOT.TFile(args.input.replace('.txt', '_jets.root'), 'recreate')
+
+	outfname =  args.input.replace('.txt', '_jets.root')
+	if args.output:
+		outfname = args.output
+	rfout = ROOT.TFile(outfname, 'recreate')
 	rfout.cd()
 	tnjets = ROOT.TNtuple('tnjets', 'tnjets', 'pt:eta:y:phi:mult:tag:lead_part_pid:tau21')
 
@@ -27,7 +33,7 @@ def main():
 	nSub1_beta1 = fjcontrib.Nsubjettiness(1,   fjcontrib.OnePass_WTA_KT_Axes(), fjcontrib.UnnormalizedMeasure(beta))
 	nSub2_beta1 = fjcontrib.Nsubjettiness(2,   fjcontrib.OnePass_WTA_KT_Axes(), fjcontrib.UnnormalizedMeasure(beta))
 
-	dfio = DataIO(file_list=args.input, tree_name='tree_Particle_gen', event_tree_name='tree_Event_gen', is_data=False)
+	dfio = DataIO(file_list=args.input, tree_name=args.ptree, event_tree_name=args.etree, is_data=False)
 	number_of_events = 0
 	for e in dfio.next_event(): 
 		number_of_events += 1
