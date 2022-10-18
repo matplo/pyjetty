@@ -11,7 +11,8 @@ Next:numberShowEvent = 0
 Next:numberShowInfo = 0
 Next:numberShowProcess = 0
 
-PartonLevel:ISR = off
+! PartonLevel:ISR = off
+PartonLevel:ISR = on
 PartonLevel:MPI = off
 
 Random:seed = 123456
