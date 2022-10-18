@@ -24,7 +24,7 @@ def main():
 		outfname = args.output
 	rfout = ROOT.TFile(outfname, 'recreate')
 	rfout.cd()
-	tnjets = ROOT.TNtuple('tnjets', 'tnjets', 'pt:eta:y:phi:mult:tag:lead_part_pid:tau21')
+	tnjets = ROOT.TNtuple('tnjets', 'tnjets', 'pt:eta:y:phi:m:mult:tag:lead_part_pid:tau21')
 
 	fj.ClusterSequence.print_banner()
 	jet_def = fj.JetDefinition ( fj.antikt_algorithm, 0.8 )
@@ -50,7 +50,7 @@ def main():
 			tau_ratio = -1
 			if tau1 != 0:
 				tau_ratio = tau2/tau1
-			tnjets.Fill(j.perp(), j.eta(), j.rap(), j.phi(), mult, tag, lead_pid, tau_ratio)
+			tnjets.Fill(j.perp(), j.eta(), j.rap(), j.phi(), j.m(), mult, tag, lead_pid, tau_ratio)
 	print('[i] total number of events analyzed', number_of_events)
 
 	rfout.Write()
