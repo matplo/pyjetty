@@ -127,8 +127,8 @@ girth:
 # Plot ratio of Pb-Pb to pPb? We need the theory vacuum distributions...
 # See also README_laura.txt
 mass:
-  xtitle: '#it{m}'
-  sqrts: 5020
+  xtitle: '#it{M}'
+  sqrts: 2760
   centrality: [0., 10.]
   jetR: 0.4
   pt: [60, 80]
