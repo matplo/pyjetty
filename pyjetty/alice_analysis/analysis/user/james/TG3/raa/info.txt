@@ -1,0 +1,75 @@
+ALICE jet RAA:
+https://www.hepdata.net/record/ins1755387
+PbPb 5 TeV
+0-10%, anti-kt, R=0.4
+lead track requirement of 7 GeV on both PbPb and pp
+@article{Acharya:2019jyg,
+    author = "Acharya, Shreyasi and others",
+    collaboration = "ALICE",
+    title = "{Measurements of inclusive jet spectra in pp and central Pb-Pb collisions at $\sqrt{s_{\rm{NN}}}$ = 5.02 TeV}",
+    eprint = "1909.09718",
+    archivePrefix = "arXiv",
+    primaryClass = "nucl-ex",
+    reportNumber = "CERN-EP-2019-200",
+    doi = "10.1103/PhysRevC.101.034911",
+    journal = "Phys. Rev. C",
+    volume = "101",
+    number = "3",
+    pages = "034911",
+    year = "2020"
+}
+
+ALICE charged hadrons:
+https://www.hepdata.net/record/ins1657384
+PbPb 5 TeV, 0-5%
+@article{Acharya:2018qsh,
+    author = "Acharya, S. and others",
+    collaboration = "ALICE",
+    title = "{Transverse momentum spectra and nuclear modification factors of charged particles in pp, p-Pb and Pb-Pb collisions at the LHC}",
+    eprint = "1802.09145",
+    archivePrefix = "arXiv",
+    primaryClass = "nucl-ex",
+    reportNumber = "CERN-EP-2018-025",
+    doi = "10.1007/JHEP11(2018)013",
+    journal = "JHEP",
+    volume = "11",
+    pages = "013",
+    year = "2018"
+}
+
+ATLAS jets:
+https://www.hepdata.net/record/ins1673184. Fig. 4
+PbPb 5 TeV 0.49/nb. pp 5 TeV 25/pb
+0-10%, anti-kT R=0.4, |eta|<
+@article{Aaboud:2018twu,
+    author = "Aaboud, Morad and others",
+    collaboration = "ATLAS",
+    title = "{Measurement of the nuclear modification factor for inclusive jets in Pb+Pb collisions at $\sqrt{s_\mathrm{NN}}=5.02$ TeV with the ATLAS detector}",
+    eprint = "1805.05635",
+    archivePrefix = "arXiv",
+    primaryClass = "nucl-ex",
+    reportNumber = "CERN-EP-2018-105",
+    doi = "10.1016/j.physletb.2018.10.076",
+    journal = "Phys. Lett. B",
+    volume = "790",
+    pages = "108--128",
+    year = "2019"
+}
+
+
+CMS charged hadrons:
+PbPb 5 TeV, 0-5%
+@article{Khachatryan:2016odn,
+    author = "Khachatryan, Vardan and others",
+    collaboration = "CMS",
+    title = "{Charged-particle nuclear modification factors in PbPb and pPb collisions at $ \sqrt{s_{\mathrm{N}\;\mathrm{N}}}=5.02 $ TeV}",
+    eprint = "1611.01664",
+    archivePrefix = "arXiv",
+    primaryClass = "nucl-ex",
+    reportNumber = "CMS-HIN-15-015, CERN-EP-2016-242",
+    doi = "10.1007/JHEP04(2017)039",
+    journal = "JHEP",
+    volume = "04",
+    pages = "039",
+    year = "2017"
+}
