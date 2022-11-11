@@ -1,7 +1,7 @@
 #! /bin/bash
 
 #SBATCH --job-name=ml-pp
-#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=6
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=7
 #SBATCH --partition=long
 #SBATCH --time=24:00:00
 #SBATCH --array=1-1000
