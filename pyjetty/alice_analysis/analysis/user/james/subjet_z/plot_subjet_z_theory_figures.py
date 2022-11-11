@@ -35,7 +35,7 @@ class PlotSubjetZFigures(common_base.CommonBase):
 
         #------------------------------------------------------
 
-        self.observable = 'leading_subjet_z'
+        self.observable = 'inclusive_subjet_z'
         self.base_dir = f'/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/subjet_z/{self.observable}'
         self.data_file = 'fFinalResults.root'
         self.theory_file = 'folded_scet_R04_pT_80_120.root'
@@ -356,10 +356,7 @@ class PlotSubjetZFigures(common_base.CommonBase):
             self.g_theory_dict[r][i].SetLineWidth(3)
             self.g_theory_dict[r][i].Draw('L 3 same')
 
-            if self.observable == 'leading_subjet_z':
-                leg.AddEntry(self.g_theory_dict[r][i], 'NLL\' #otimes '+folding_label, 'lf')
-            elif self.observable == 'inclusive_subjet_z':
-                leg.AddEntry(self.g_theory_dict[r][i], 'NLL #otimes '+folding_label, 'lf')
+            leg.AddEntry(self.g_theory_dict[r][i], 'NLL\' #otimes '+folding_label, 'lf')
 
         self.h_sys.Draw('E2 same')
         line_np.Draw()
