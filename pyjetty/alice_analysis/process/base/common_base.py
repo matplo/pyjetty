@@ -6,6 +6,8 @@
   Author: Mateusz Ploskon
 """
 
+from collections import defaultdict
+
 ################################################################
 class CommonBase(object):
   
@@ -32,3 +34,9 @@ class CommonBase(object):
     for v in variables:
       s.append('{} = {}'.format(v, self.__dict__[v]))
     return "[i] {} with \n .  {}".format(self.__class__.__name__, '\n .  '.join(s))
+
+  #---------------------------------------------------------------
+  # Create a nested defaultdict
+  #---------------------------------------------------------------
+  def recursive_defaultdict(self):
+    return defaultdict(self.recursive_defaultdict)
