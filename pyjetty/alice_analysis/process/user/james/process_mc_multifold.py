@@ -26,13 +26,11 @@ from collections import defaultdict
 # Fastjet via python (from external library heppy)
 import fastjet as fj
 import fjcontrib
-import fjtools
 import fjext
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_io_emb
-from pyjetty.alice_analysis.process.base import jet_info
 from pyjetty.alice_analysis.process.base import thermal_generator
 from pyjetty.mputils import CEventSubtractor
 

@@ -44,7 +44,8 @@ module list
 
 # Run python script via pipenv
 cd /software/users/james/pyjetty/pyjetty/alice_analysis
-pipenv run python process/user/james/process_mc_multifold.py -c config/multifold/pp/james.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+pipenv run python process/user/james/process_mc_multifold.py -c config/multifold/pp/process.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
-mv /rstorage/alice/AnalysisResults/james/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}/
+mkdir -p /rstorage/alice/AnalysisResults/james/${JOB_ID}/slurm
+mv /rstorage/alice/AnalysisResults/james/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/james/${JOB_ID}/slurm/

@@ -1,0 +1,107 @@
+# Configuration specifying observables for processing step.
+
+# The observables are structured into observable blocks (e.g. theta_g, subjet_z, etc.)
+# each containing multiple individual subconfigurations (e.g. zcut, beta, subjetR, etc.),
+# where each subconfiguration corresponds to a single observable to be calculated.
+# One can also specify a list of jetR, which will be looped over.
+
+process_observables: ['theta_g', 'zg', 'leading_subjet_z', 'jet_axis', 'ang']
+jetR: [0.4]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.0
+eta_max: 0.9
+debug_level: 0
+fast_simulation: False
+#event_number_max: 1000
+
+# Observable block
+theta_g:
+
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+# Observable block
+zg:
+  
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config2:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+# Observable block
+leading_subjet_z:
+
+  config1:
+    subjet_R: 0.1
+
+  config2:
+    subjet_R: 0.2
+
+# Observable block
+jet_axis:
+  
+  config1:
+    axis: 'Standard_WTA'
+
+  config2:
+    axis: 'Standard_SD'
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+  config3:
+    axis: 'WTA_SD'
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+
+# Observable block
+ang:
+
+  config1:
+    beta: 1
+
+  config2:
+    beta: 1.5
+
+  config3:
+    beta: 2
+
+  config4:
+    beta: 3
+
+  config5:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 1
+
+  config6:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 1.5
+
+  config7:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 2
+
+  config8:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 3
