@@ -13,6 +13,7 @@ import yaml
 import numpy as np
 import array
 import ROOT
+import ctypes
 
 # Suppress some annoying warnings
 np.finfo(np.dtype("float32")) 
@@ -106,6 +107,7 @@ class RunAnalysis(common_base.CommonBase):
 
         self.observable_info = self.recursive_defaultdict()
         for observable in self.observables:
+            print(observable)
 
             obs_subconfig_list = analysis_observable_subconfigs[observable]
             obs_config_dict = dict((key,config[observable][key]) for key in obs_subconfig_list)
@@ -116,15 +118,17 @@ class RunAnalysis(common_base.CommonBase):
                                                                                    self.observable_info[observable]['obs_grooming_settings'][i])
                                                               for i in range(len(obs_subconfig_list))]
             self.observable_info[observable]['obs_keys'] = [f'{observable}_{obs_label}' if obs_label else observable for obs_label in self.observable_info[observable]['obs_labels']]
-            self.observable_info[observable]['obs_bins_truth'] = [np.array(obs_config_dict[obs_subconfig_list[i]]['obs_bins_truth'])
-                                                                  for i in range(len(obs_subconfig_list))]
-            self.observable_info[observable]['obs_bins_det'] = [np.array(obs_config_dict[obs_subconfig_list[i]]['obs_bins_det'])
-                                                                for i in range(len(obs_subconfig_list))]
             self.observable_info[observable]['xtitle'] = config[observable]['common_settings']['xtitle']
             self.observable_info[observable]['ytitle'] = config[observable]['common_settings']['ytitle']
-            #self.observable_info[observable]['y_min'] = [obs_config_dict[obs_subconfig_list[i]]['y_min'] for i in range(len(obs_subconfig_list))]
-            #self.observable_info[observable]['y_max'] = [obs_config_dict[obs_subconfig_list[i]]['y_max'] for i in range(len(obs_subconfig_list))]
 
+            # Load HEPData binnings and TGraphs
+            # These consist of nested lists: 
+            #   self.observable_info[observable]['hepdata_tgraph'] = [ [config1_pt1, config1_pt2, ...], [config2_pt1, config2_pt2, ...], ... ]
+            self.observable_info[observable]['obs_bins'] = [self.bins_from_hepdata(obs_config_dict[obs_subconfig_list[i]]) 
+                                                                                   for i in range(len(obs_subconfig_list))]
+            self.observable_info[observable]['hepdata_tgraph'] = [self.tgraph_from_hepdata(obs_config_dict[obs_subconfig_list[i]]) 
+                                                                                           for i in range(len(obs_subconfig_list))]
+                                                                  
             # For jet_pt, store the binnings we will report
             if 'pt_bins_reported' in config[observable]['common_settings']:
                 self.observable_info[observable]['pt_bins_reported'] = config[observable]['common_settings']['pt_bins_reported']
@@ -153,18 +157,6 @@ class RunAnalysis(common_base.CommonBase):
         # Figure info
         self.file_format = config['file_format']
         self.figure_approval_status = config['figure_approval_status']
-
-    #---------------------------------------------------------------
-    # Create a single output subdirectory
-    #---------------------------------------------------------------
-    def create_output_subdir(self, output_dir, name):
-
-        output_subdir = os.path.join(output_dir, name)
-        setattr(self, f'output_dir_{name}', output_subdir)
-        if not os.path.isdir(output_subdir):
-            os.makedirs(output_subdir)
-
-        return output_subdir
 
     #---------------------------------------------------------------
     # Main processing function
@@ -271,23 +263,31 @@ class RunAnalysis(common_base.CommonBase):
                 obs_key = self.observable_info[observable]['obs_keys'][i]
 
                 # Loop over pt bins
-                for pt_bin_pair in pt_bin_pairs:
+                for j,pt_bin_pair in enumerate(pt_bin_pairs):
                     pt_min = pt_bin_pair[0]
                     pt_max = pt_bin_pair[1]
                     pt_cut_key = f'jet_pt{pt_min}-{pt_max}'
-                    self.plot_1D_projection(result=result_dict[obs_key][pt_cut_key], observable=observable, subobservable_index=i, 
+                    self.plot_1D_projection(result=result_dict[obs_key][pt_cut_key], observable=observable, 
+                                            subobservable_index=i, jet_pt_index=j,
                                             pt_min=pt_min, pt_max=pt_max)
 
     #---------------------------------------------------------------
     # Plot a 1D histogram from numpy array of result
     #---------------------------------------------------------------
-    def plot_1D_projection(self, result=None, observable='', subobservable_index=0, pt_min=0, pt_max=0):  
+    def plot_1D_projection(self, result=None, observable='', subobservable_index=0, jet_pt_index=0, pt_min=0, pt_max=0):  
 
         self.utils.set_plotting_options()
         ROOT.gROOT.ForceStyle()
 
-        # Get bins and labels
-        bins = self.observable_info[observable]['obs_bins_det'][subobservable_index]
+        # Get bins -- only continue if we find bins in hepdata
+        bins_list = self.observable_info[observable]['obs_bins'][subobservable_index]
+        if not bins_list:
+            return
+        bins = bins_list[jet_pt_index]
+        if not bins.any():
+            return
+
+        # Get labels
         obs_key = self.observable_info[observable]['obs_keys'][subobservable_index]
         obs_setting = self.observable_info[observable]['obs_settings'][subobservable_index]
         grooming_setting = self.observable_info[observable]['obs_grooming_settings'][subobservable_index]
@@ -298,11 +298,8 @@ class RunAnalysis(common_base.CommonBase):
             grooming_label = ''
         xtitle = self.observable_info[observable]['xtitle']
         ytitle = self.observable_info[observable]['ytitle']
-        #y_min = self.observable_info[observable]['y_min'][subobservable_index]
-        #y_max = self.observable_info[observable]['y_max'][subobservable_index]
 
-        # Create hist
-        
+        # Create hist   
         hname = f'h_{obs_key}_pt{pt_min}-{pt_max}'
         #h = ROOT.TH1F(hname, hname, bins.size-1, bins)
         h = ROOT.TH1F(hname, hname, bins.size-1, array.array('d', bins))
@@ -333,12 +330,9 @@ class RunAnalysis(common_base.CommonBase):
             f_tagging = None
         h.Scale(1./n_jets_inclusive)
 
-        # Plot HEPData
-        # Load them into class members at initialization?
-        # Can use plot_utils.tgraph_from_hepdata(), divide_histogram_by_tgraph() from jetscape plot script
-
         # Generate and save plot
-        self.plot_distribution_and_ratio(h, pt_min=pt_min, pt_max=pt_max, 
+        self.plot_distribution_and_ratio(h, observable=observable, subobservable_index=subobservable_index,
+                                         jet_pt_index=jet_pt_index, pt_min=pt_min, pt_max=pt_max, 
                                          subobs_label=subobs_label, obs_setting=obs_setting, 
                                          grooming_label=grooming_label, f_tagging=f_tagging,
                                          xtitle=xtitle, ytitle=ytitle)
@@ -346,7 +340,8 @@ class RunAnalysis(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     # Plot distributions in upper panel, and ratio in lower panel
     #-------------------------------------------------------------------------------------------
-    def plot_distribution_and_ratio(self, h, pt_min=0, pt_max=0, subobs_label='',
+    def plot_distribution_and_ratio(self, h, observable, subobservable_index=0, jet_pt_index=0, 
+                                    pt_min=0, pt_max=0, subobs_label='',
                                     obs_setting='', grooming_label='', f_tagging=0,
                                     xtitle='', ytitle='', logy = False):
         c = ROOT.TCanvas(f'c_{h.GetName()}', f'c_{h.GetName()}', 600, 650)
@@ -366,10 +361,10 @@ class RunAnalysis(common_base.CommonBase):
             pad1.SetLogy()
         pad1.cd()
 
-        legend = ROOT.TLegend(0.25,0.8,0.4,0.9)
+        legend = ROOT.TLegend(0.25,0.75,0.4,0.88)
         self.utils.setup_legend(legend, 0.05, sep=-0.1)
 
-        legend_ratio = ROOT.TLegend(0.25,0.8,0.45,1.07)
+        legend_ratio = ROOT.TLegend(0.25,0.25,0.45,0.4)
         self.utils.setup_legend(legend_ratio, 0.07, sep=-0.1)
 
         bins = np.array(h.GetXaxis().GetXbins())
@@ -378,7 +373,7 @@ class RunAnalysis(common_base.CommonBase):
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.SetYTitle(ytitle)
         myBlankHisto.SetMaximum(1.7*h.GetMaximum())
-        myBlankHisto.SetMinimum(0.)
+        myBlankHisto.SetMinimum(1e-3)
         myBlankHisto.GetYaxis().SetTitleSize(0.08)
         myBlankHisto.GetYaxis().SetTitleOffset(1.1)
         myBlankHisto.GetYaxis().SetLabelSize(0.06)
@@ -410,74 +405,46 @@ class RunAnalysis(common_base.CommonBase):
         myBlankHisto2.GetYaxis().SetLabelSize(20)
         myBlankHisto2.GetYaxis().SetNdivisions(505)
         y_ratio_min = 0.
-        y_ratio_max = 2.
+        y_ratio_max = 2.1
         myBlankHisto2.GetYaxis().SetRangeUser(y_ratio_min, y_ratio_max)
         myBlankHisto2.Draw('')
 
         # Draw distribution
         pad1.cd()
+        h.SetMarkerColorAlpha(self.colors[0], self.alpha)
         h.SetMarkerSize(self.marker_size)
         h.SetMarkerStyle(self.data_marker)
-        h.SetMarkerColor(self.data_color)
+        h.SetLineColorAlpha(self.colors[0], self.alpha)
         h.SetLineStyle(self.line_style)
         h.SetLineWidth(self.line_width)
-        h.SetLineColor(self.data_color)
-        h.Draw('PE Z same')
+        h.Draw('PE same') # X0
         legend.AddEntry(h, 'Uncorrected Data', 'PE')
 
         # Draw HEPData
-        #self.output_dict[f'jetscape_distribution_{label}'] =  self.observable_settings[f'jetscape_distribution']
-        #if self.observable_settings[f'jetscape_distribution'].GetNbinsX() > 1:
-        #    self.observable_settings[f'jetscape_distribution'].SetFillColor(self.jetscape_color[0])
-        #    self.observable_settings[f'jetscape_distribution'].SetFillColorAlpha(self.jetscape_color[0], self.jetscape_alpha[0])
-        #    self.observable_settings[f'jetscape_distribution'].SetFillStyle(1001)
-        #    self.observable_settings[f'jetscape_distribution'].SetMarkerSize(0.)
-        #    self.observable_settings[f'jetscape_distribution'].SetMarkerStyle(0)
-        #    self.observable_settings[f'jetscape_distribution'].SetLineWidth(0)
-        #    self.observable_settings[f'jetscape_distribution'].DrawCopy('E3 same')
-        #elif self.observable_settings[f'jetscape_distribution'].GetNbinsX() == 1:
-        #    self.observable_settings[f'jetscape_distribution'].SetMarkerSize(self.marker_size)
-        #    self.observable_settings[f'jetscape_distribution'].SetMarkerStyle(self.data_marker+1)
-        #    self.observable_settings[f'jetscape_distribution'].SetMarkerColor(self.jetscape_color[0])
-        #    self.observable_settings[f'jetscape_distribution'].SetLineStyle(self.line_style)
-        #    self.observable_settings[f'jetscape_distribution'].SetLineWidth(self.line_width)
-        #    self.observable_settings[f'jetscape_distribution'].SetLineColor(self.jetscape_color[0])
-        #    self.observable_settings[f'jetscape_distribution'].DrawCopy('PE same')
-        #legend.AddEntry(self.observable_settings[f'jetscape_distribution'], 'JETSCAPE', 'f')
+        g = self.observable_info[observable]['hepdata_tgraph'][subobservable_index][jet_pt_index]
+        if g:
+            g.SetMarkerColorAlpha(self.data_color, self.alpha)
+            g.SetMarkerSize(self.marker_size)
+            g.SetMarkerStyle(self.data_marker)
+            g.SetLineColorAlpha(self.data_color, self.alpha)
+            g.SetLineWidth(self.line_width)
+            g.Draw('PE Z same')
+            legend.AddEntry(g, 'Published Data', 'PE')
 
         legend.Draw()
 
         # Draw ratio
         pad2.cd()
-        #if self.observable_settings['data_distribution']:
-        #    data_ratio = self.utils.divide_tgraph_by_tgraph(self.observable_settings['data_distribution'],
-        #                                                         self.observable_settings['data_distribution'])
-        #    data_ratio.Draw('PE Z same')
-        #    self.output_dict[f'data_ratio_{label}'] = data_ratio
-        #if self.observable_settings['ratio']:
-        #    self.output_dict[f'ratio_{label}'] = self.observable_settings['ratio']
-        #    if self.observable_settings['ratio'].GetN() > 1:
-        #        self.observable_settings['ratio'].SetFillColor(self.jetscape_color[0])
-        #        self.observable_settings['ratio'].SetFillColorAlpha(self.jetscape_color[0], self.jetscape_alpha[0])
-        #        self.observable_settings['ratio'].SetFillStyle(1001)
-        #        self.observable_settings['ratio'].SetMarkerSize(0.)
-        #        self.observable_settings['ratio'].SetMarkerStyle(0)
-        #        self.observable_settings['ratio'].SetLineWidth(0)
-        #        self.observable_settings['ratio'].Draw('E3 same')
-        #    elif self.observable_settings['ratio'].GetN() == 1:
-        #        self.observable_settings['ratio'].SetMarkerSize(self.marker_size)
-        #        self.observable_settings['ratio'].SetMarkerStyle(self.data_marker+1)
-        #        self.observable_settings['ratio'].SetMarkerColor(self.jetscape_color[0])
-        #        self.observable_settings['ratio'].SetLineStyle(self.line_style)
-        #        self.observable_settings['ratio'].SetLineWidth(self.line_width)
-        #        self.observable_settings['ratio'].SetLineColor(self.jetscape_color[0])
-        #        self.observable_settings['ratio'].Draw('PE same')
-
-        #if self.observable_settings['ratio']:
-        #    legend_ratio.AddEntry(self.observable_settings['ratio'], 'JETSCAPE/Data', 'f')
-        #if self.observable_settings['data_distribution']:
-        #    legend_ratio.AddEntry(data_ratio, 'Data uncertainties', 'PE')
-        #legend_ratio.Draw()
+        g_ratio = self.divide_histogram_by_tgraph(h, g)
+        if g_ratio:
+            g_ratio.SetMarkerColorAlpha(self.colors[0], self.alpha)
+            g_ratio.SetMarkerSize(self.marker_size)
+            g_ratio.SetMarkerStyle(self.data_marker)
+            g_ratio.SetLineColorAlpha(self.colors[0], self.alpha)
+            g_ratio.SetLineWidth(self.line_width)
+            g_ratio.Draw('PE Z same')
+            legend_ratio.AddEntry(g_ratio, 'Uncorrected / Published (uncertainties combined)', 'PE')
+            legend_ratio.Draw()
 
         line = ROOT.TLine(bins[0], 1, bins[-1], 1)
         line.SetLineColor(920+2)
@@ -586,117 +553,225 @@ class RunAnalysis(common_base.CommonBase):
     def plot_single_result(self, jetR, obs_label, obs_setting, grooming_setting):    
         print(f'Plot final results for {self.observable}: R = {jetR}, {obs_label}')
 
-        name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
-        c = ROOT.TCanvas(name, name, 600, 450)
-        c.Draw()
-        
-        c.cd()
-        myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-        myPad.SetLeftMargin(0.2)
-        myPad.SetTopMargin(0.07)
-        myPad.SetRightMargin(0.04)
-        myPad.SetBottomMargin(0.13)
-        myPad.Draw()
-        myPad.cd()
-        
-        xtitle = getattr(self, 'xtitle')
-        ytitle = getattr(self, 'ytitle')
-        color = 600-6
-        
-        # Get histograms
-        name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-        h = getattr(self, name)
-        h.SetName(name)
-        h.SetMarkerSize(1.5)
-        h.SetMarkerStyle(20)
-        h.SetMarkerColor(color)
-        h.SetLineStyle(1)
-        h.SetLineWidth(2)
-        h.SetLineColor(color)
-        
-        name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-        h_sys = getattr(self, name)
-        h_sys.SetName(name)
-        h_sys.SetLineColor(0)
-        h_sys.SetFillColor(color)
-        h_sys.SetFillColorAlpha(color, 0.3)
-        h_sys.SetFillStyle(1001)
-        h_sys.SetLineWidth(0)
-        
-        n_obs_bins_truth = self.n_bins_truth(obs_label)
-        truth_bin_array = self.truth_bin_array(obs_label)
-        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
-        myBlankHisto.SetNdivisions(505)
-        myBlankHisto.SetXTitle(xtitle)
-        myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-        myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(1.7*h.GetMaximum())
-        myBlankHisto.SetMinimum(0.)
-        myBlankHisto.Draw("E")
+    # ---------------------------------------------------------------
+    # Get bin array (for each pt bin) from hepdata file
+    # ---------------------------------------------------------------
+    def bins_from_hepdata(self, block):
 
-        if plot_pythia:
-        
-            hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
-            if hPythia:
-                hPythia.SetFillStyle(0)
-                hPythia.SetMarkerSize(1.5)
-                hPythia.SetMarkerStyle(21)
-                hPythia.SetMarkerColor(1)
-                hPythia.SetLineColor(1)
-                hPythia.SetLineWidth(1)
-                hPythia.Draw('E2 same')
+        if 'hepdata' in block:
+
+            # Open the HEPData file
+            hepdata_filename = block['hepdata']['file']        
+            f = ROOT.TFile(hepdata_filename, 'READ')
+
+            # The list of tables contains one entry per pt bin
+            tables = block['hepdata']['tables'][self.jetR]
+            h_name = block['hepdata']['hname']
+            bins_list = []
+            for table in tables:
+
+                # Get the histogram, and return the bins
+                if table:
+                    dir = f.Get(table)
+                    h = dir.Get(h_name)
+                    bins = np.array(h.GetXaxis().GetXbins())
+
+                    # For Soft Drop observables, we need to exclude the "untagged" bin so that it will become underflow
+                    if 'SoftDrop' in block:
+                        bins = bins[1:]
+
+                else:
+                    bins = np.array([])
+
+                bins_list.append(bins)
+
+            f.Close()
+
+        else: 
+            bins_list = None
+
+        return bins_list
+
+    # ---------------------------------------------------------------
+    # Get tgraph (for each pt bin) from hepdata file
+    # ---------------------------------------------------------------
+    def tgraph_from_hepdata(self, block):
+
+        if 'hepdata' in block:
+
+            # Open the HEPData file
+            hepdata_filename = block['hepdata']['file']        
+            f = ROOT.TFile(hepdata_filename, 'READ')
+
+            # The list of tables contains one entry per pt bin
+            tables = block['hepdata']['tables'][self.jetR]
+            g_name = block['hepdata']['gname']
+            tgraph_list = []
+            for table in tables:
+
+                # Get the TGraph
+                if table:
+                    dir = f.Get(table)
+                    g = dir.Get(g_name)
+                else:
+                    g = None
+
+                tgraph_list.append(g)
+
+            f.Close()
+
+        else: 
+            tgraph_list = None
+
+        return tgraph_list
+
+    #---------------------------------------------------------------
+    # Divide a histogram by a tgraph, point-by-point
+    #---------------------------------------------------------------
+    def divide_histogram_by_tgraph(self, h, g, include_tgraph_uncertainties=True):
+
+        # Truncate tgraph to range of histogram bins
+        g_truncated = self.truncate_tgraph(g, h)
+        if not g_truncated:
+            return None
+
+        # Clone tgraph, in order to return a new one
+        g_new = g_truncated.Clone(f'{g_truncated.GetName()}_divided')
+
+        nBins = h.GetNbinsX()
+        for bin in range(1, nBins+1):
+
+            # Get histogram (x,y)
+            h_x = h.GetBinCenter(bin)
+            h_y = h.GetBinContent(bin)
+            h_error = h.GetBinError(bin)
+
+            # Get TGraph (x,y) and errors
+            gx, gy, yErrLow, yErrUp = self.get_gx_gy(g_truncated, bin-1)
+
+            #print(f'h_x: {h_x}')
+            #print(f'gx: {gx}')
+            #print(f'h_y: {h_y}')
+            #print(f'gy: {gy}')
+
+            if not np.isclose(h_x, gx):
+                print(f'WARNING: hist x: {h_x}, graph x: {gx} -- will not plot ratio')
+                return None
+
+            new_content = h_y / gy
+
+            # Combine tgraph and histogram relative uncertainties in quadrature
+            if gy > 0. and h_y > 0.:
+                if include_tgraph_uncertainties:
+                    new_error_low = np.sqrt( pow(yErrLow/gy,2) + pow(h_error/h_y,2) ) * new_content
+                    new_error_up = np.sqrt( pow(yErrUp/gy,2) + pow(h_error/h_y,2) ) * new_content
+                else:
+                    new_error_low = h_error/h_y * new_content
+                    new_error_up = h_error/h_y * new_content
             else:
-                print('No PYTHIA prediction for {} {}'.format(self.observable, obs_label))
-                plot_pythia = False
-            
-        h_sys.DrawCopy('E2 same')
-        h.DrawCopy('PE X0 same')
-    
-        text_latex = ROOT.TLatex()
-        text_latex.SetNDC()
-        text = 'ALICE {}'.format(self.figure_approval_status)
-        text_latex.DrawLatex(0.57, 0.87, text)
-        
-        text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-        text_latex.SetTextSize(0.045)
-        text_latex.DrawLatex(0.57, 0.8, text)
+                new_error_low = (yErrLow/gy) * new_content
+                new_error_up = (yErrUp/gy) * new_content
 
-        text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-        text_latex.DrawLatex(0.57, 0.73, text)
+            g_new.SetPoint(bin-1, h_x, new_content)
+            g_new.SetPointError(bin-1, 0, 0, new_error_low, new_error_up)
 
-        text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
-        text_latex.DrawLatex(0.57, 0.66, text)
-        
-        subobs_label = self.utils.formatted_subobs_label(self.observable)
-        delta = 0.
-        if subobs_label:
-            text = '{} = {}'.format(subobs_label, obs_setting)
-            text_latex.DrawLatex(0.57, 0.59, text)
-            delta = 0.07
-        
-        if grooming_setting:
-            text = self.utils.formatted_grooming_label(grooming_setting)
-            text_latex.DrawLatex(0.57, 0.59-delta, text)
-        
-        if 'sd' in grooming_setting:
-            fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
-            text_latex.SetTextSize(0.04)
-            text = '#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged
-            text_latex.DrawLatex(0.57, 0.52-delta, text)
-        
-            if plot_pythia:
-                text_latex.SetTextSize(0.04)
-                text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
-                text_latex.DrawLatex(0.57, 0.52-delta, text)
+        return g_new
 
-        myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
-        self.utils.setup_legend(myLegend,0.035)
-        myLegend.AddEntry(h, 'ALICE pp', 'pe')
-        myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
-        if plot_pythia:
-            myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
-        myLegend.Draw()
-            
+    #---------------------------------------------------------------
+    # Truncate data tgraph to histogram binning range
+    #---------------------------------------------------------------
+    def truncate_tgraph(self, g, h):
+
+        #print('truncate_tgraph')
+        #print(h.GetName())
+        #print(np.array(h.GetXaxis().GetXbins()))
+
+        # Create new TGraph with number of points equal to number of histogram bins
+        nBins = h.GetNbinsX()
+        g_new = ROOT.TGraphAsymmErrors(nBins)
+        g_new.SetName(f'{g.GetName()}_truncated')
+
+        h_offset = 0
+        for bin in range(1, nBins+1):
+
+            # Get histogram (x)
+            h_x = h.GetBinCenter(bin)
+
+            # Get TGraph (x,y) and errors
+            gx, gy, yErrLow, yErrUp = self.get_gx_gy(g, bin-1)
+
+            #print(f'h_x: {h_x}')
+            #print(f'gx: {gx}')
+            #print(f'gy: {gy}')
+
+            # If traph is offset from center of the bin, center it
+            xErrLow = g.GetErrorXlow(bin-1)
+            xErrUp = g.GetErrorXhigh(bin-1)
+            if xErrLow > 0 and xErrUp > 0:
+                x_min = gx - xErrLow
+                x_max = gx + xErrUp
+                x_center = (x_min + x_max)/2.
+                if h_x > x_min and h_x < x_max:
+                    if not np.isclose(gx, x_center):
+                        gx = x_center
+
+            # If tgraph starts below hist (e.g. when hist has min cut), try to get next tgraph point
+            g_offset = 0
+            while gx+1e-8 < h_x and g_offset < g.GetN()+1:
+                g_offset += 1
+                gx, gy, yErrLow, yErrUp = self.get_gx_gy(g, bin-1+g_offset)
+            #print(f'new gx: {gx}')
+
+            # If tgraph started above hist (see below) and we exhausted the tgraph points, skip
+            if h_offset > 0 and np.isclose(gx, 0):
+                continue
+
+            # If tgraph starts above hist, try to get next hist bin
+            h_offset = 0
+            while gx-1e-8 > h_x and h_offset < nBins+1:
+                h_offset += 1
+                h_x = h.GetBinCenter(bin+h_offset)
+                #print(f'h_x: {h_x}')
+                #print(f'gx: {gx}')
+
+            if not np.isclose(h_x, gx):
+                print(f'WARNING: hist x: {h_x}, graph x: {gx}')
+                return None
+
+            g_new.SetPoint(bin-1, gx, gy)
+            g_new.SetPointError(bin-1, 0, 0, yErrLow, yErrUp)
+            #print()
+
+        return g_new
+
+    #---------------------------------------------------------------
+    # Get points from tgraph by index
+    #---------------------------------------------------------------
+    def get_gx_gy(self, g, index):
+
+        g_x = ctypes.c_double(0)
+        g_y = ctypes.c_double(0)
+        g.GetPoint(index, g_x, g_y)
+        yErrLow = g.GetErrorYlow(index)
+        yErrUp  = g.GetErrorYhigh(index)
+
+        gx = g_x.value
+        gy = g_y.value
+
+        return gx, gy, yErrLow, yErrUp
+
+    #---------------------------------------------------------------
+    # Create a single output subdirectory
+    #---------------------------------------------------------------
+    def create_output_subdir(self, output_dir, name):
+
+        output_subdir = os.path.join(output_dir, name)
+        setattr(self, f'output_dir_{name}', output_subdir)
+        if not os.path.isdir(output_subdir):
+            os.makedirs(output_subdir)
+
+        return output_subdir
+
 #----------------------------------------------------------------------
 if __name__ == '__main__':
 
