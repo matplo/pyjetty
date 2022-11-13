@@ -11,9 +11,14 @@ import os
 import argparse
 import yaml
 import numpy as np
+import pandas as pd
 import array
 import ROOT
 import ctypes
+
+from matplotlib import pyplot as plt
+import seaborn as sns
+sns.set_context('paper', rc={'font.size':18,'axes.titlesize':18,'axes.labelsize':18})
 
 # Suppress some annoying warnings
 np.finfo(np.dtype("float32")) 
@@ -203,6 +208,7 @@ class RunAnalysis(common_base.CommonBase):
         print()
         print(f'Plotting pairplot...')
         self.plot_pairplot(results_dict, pt_bin_pairs)
+        print('Done'!)
 
     #---------------------------------------------------------------
     # Mask all results according to specified conditions
@@ -474,7 +480,7 @@ class RunAnalysis(common_base.CommonBase):
         
         delta = 0.
         if subobs_label:
-            text = '{} = {}'.format(subobs_label, obs_setting)
+            text = f'{subobs_label} = {obs_setting}'
             text_latex.DrawLatex(x, y-0.29, text)
             delta = 0.07
         
@@ -493,10 +499,43 @@ class RunAnalysis(common_base.CommonBase):
     # Plot pairplot for all observables
     #---------------------------------------------------------------
     def plot_pairplot(self, result_dict, pt_bin_pairs):
-        
-        # Build a dataframe of all observables
-        df = ''  
 
+        self.create_output_subdir(self.output_dir_plot_observables, '2D_projections')
+
+        # For each pt bin, construct dataframe containing all observables (except pt)
+
+        # Loop over pt bins
+        dataframes_dict = {}
+        for pt_bin_pair in pt_bin_pairs:
+            pt_min = pt_bin_pair[0]
+            pt_max = pt_bin_pair[1]
+            pt_cut_key = f'jet_pt{pt_min}-{pt_max}'
+            dataframes_dict[pt_cut_key] = pd.DataFrame()
+
+            # Loop over observables
+            for observable in self.observables:
+
+                # Loop over subobservables
+                for i in range(self.observable_info[observable]['n_subobservables']):
+                    obs_key = self.observable_info[observable]['obs_keys'][i]
+                    if obs_key != 'jet_pt':
+                        dataframes_dict[pt_cut_key][obs_key] = result_dict[obs_key][pt_cut_key][:1000]
+
+            # Plot scatter matrix
+            print(f'  Plotting {pt_cut_key}...')
+            g = sns.pairplot(dataframes_dict[pt_cut_key], corner=True, plot_kws={'alpha':0.1})
+            #g.legend.set_bbox_to_anchor((0.75, 0.75))
+            #plt.savefig(os.path.join(self.output_dir_2D_projections, f'pairplot_{pt_cut_key}.pdf'), dpi=50)
+            plt.savefig(os.path.join(self.output_dir_2D_projections, f'pairplot_{pt_cut_key}.pdf'))
+            plt.close()
+        
+            # Plot correlation matrix
+            corr_matrix = dataframes_dict[pt_cut_key].corr()
+            sns.heatmap(corr_matrix)
+            plt.savefig(os.path.join(self.output_dir_2D_projections, f'correlation_matrix_{pt_cut_key}.pdf'))
+            plt.close()
+
+        # TODO: For MC, we can overlay the det-level and truth-level pairplot
         # Separate PYTHIA/JEWEL
         #jewel_indices = y_train
         #pythia_indices = 1 - y_train
@@ -513,20 +552,32 @@ class RunAnalysis(common_base.CommonBase):
         #df_pythia['generator'] = np.repeat(self.pp_label, X_Nsub_pythia.shape[0])
         #df = df_jewel.append(df_pythia, ignore_index=True)
 
-        ## Plot scatter matrix
-        #g = sns.pairplot(df, corner=True, hue='generator', plot_kws={'alpha':0.1})
-        ##g.legend.set_bbox_to_anchor((0.75, 0.75))
-        ##plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}.png'), dpi=50)
-        #plt.savefig(os.path.join(self.output_dir_i, f'training_data_scatter_matrix_K{K}_{suffix}.pdf'))
-        #plt.close()
-        
-        ## Plot correlation matrix
-        #df.drop(columns=['generator'])
-        #corr_matrix = df.corr()
-        #sns.heatmap(corr_matrix)
-        #plt.savefig(os.path.join(self.output_dir_i, f'training_data_correlation_matrix_K{K}_{suffix}.pdf'))
-        #plt.close()
+        # Plot scatter matrix
+        #g = sns.pairplot(dataframes_dict[pt_cut_key], corner=True, hue='generator', plot_kws={'alpha':0.1})
 
+        # Plot correlation matrix
+        #dataframes_dict[pt_cut_key].drop(columns=['generator'])
+
+    #---------------------------------------------------------------
+    # Return formatted observable key
+    #---------------------------------------------------------------
+    def obs_key_formatted(self, observable, i_subobservable):
+
+        s = self.observable_info[observable]['xtitle']
+
+        obs_setting = self.observable_info[observable]['obs_settings'][i_subobservable]
+        subobs_label_list = self.utils.formatted_subobs_label(observable)
+        if subobs_label_list:
+            subobs_label = subobs_label_list
+            s += f' {subobs_label} = {obs_setting}'
+
+        grooming_setting = self.observable_info[observable]['obs_grooming_settings'][i_subobservable]
+        if grooming_setting:
+            s += f' {self.utils.formatted_grooming_label(grooming_setting)}'
+
+        print(s)
+
+        return s
 
     #---------------------------------------------------------------
     # Perform unfolding
