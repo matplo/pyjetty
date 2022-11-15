@@ -1,0 +1,157 @@
+# Config file for pp vs AA jet classification
+
+#------------------------------------------------------------------------------
+# These parameters are used in the process script
+#------------------------------------------------------------------------------
+
+K_max: 20
+jetR: [0.4]
+jet_pt_bins: [[100.,125.]]
+eta_max: 2.
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+min_pt: 0.
+leading_track_pt: 0.
+
+# Option for photon-jet -- WIP
+# If true, then jet_pt interval above becomes [photon_E_min, jet_pt_min]
+photon_jet: False
+
+thermal_model: 
+  beta: 0.4
+  N_avg: 10000
+  sigma_N: 500
+
+constituent_subtractor:
+  max_distance: [0, 0.25]
+  alpha: 0
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+#------------------------------------------------------------------------------
+# All parameters below are only used in the analysis script
+#------------------------------------------------------------------------------
+
+# Classification labels
+pp_label: 'PYTHIA8'
+AA_label: 'JEWEL'
+
+# Load labeled data
+n_train: 150000
+n_val: 30000
+n_test: 30000
+
+# Select model: nsub_linear, efp_linear, nsub_lasso, efp_lasso, nsub_dnn, efp_dnn, pfn, efn
+models: [nsub_linear]
+
+# Option to perform constituent subtraction study, using particles in cone before and after CS
+# For now, each of these uses the same config block as 'pfn' or 'nsub_dnn' below
+constituent_subtraction_study: 
+  pfn: False
+  pfn_min_pt: False
+  nsub: False
+
+# Define Nsubjettiness observable basis sets to train models
+# The K-body phase space is (3K-4)-dimensional
+K: [5,15,20,25,30]
+
+# efp parameters
+dmax: 4                                             # maximal degree of the EFPs
+efp_measure: 'hadr'                                 # 
+efp_beta: 0.5                                       # Exponent of the pairwise distance
+
+nsub_dnn:
+
+    # Model hyperparameters
+    learning_rate: [1., 0.1, 0.01, 1.e-3, 1.e-4]    # (0.0001 cf 1810.05165)
+    loss: 'binary_crossentropy'                     # loss function - use categorical_crossentropy instead ?
+    metrics: ['accuracy']                           # measure accuracy during training
+    batch_size: 1000                    
+    epochs: 30                                      # number of training epochs
+    
+nsub_linear:
+
+    # Model hyperparameters -- SGDClassifier
+    sgd_loss: 'hinge'                               # cost function
+    sgd_penalty: ['l2', 'l1']                       # regularization term
+    sgd_alpha: [1e-5, 1e-4, 1e-3]                   # regularization strength
+    sgd_max_iter: 1000                              # max number of epochs
+    sgd_tol: [1e-5, 1e-4, 1e-3]                     # criteria to stop training
+    sgd_learning_rate: 'optimal'                    # learning schedule (learning rate decreases over time in proportion to alpha)
+    sgd_early_stopping: False                       # whether to stop training based on validation score
+
+    lda_tol: [1e-6, 1e-5, 1e-4, 1e-3, 5e-3, 1e-2]   # criteria to stop training
+
+    # Hyperparameter tuning
+    n_iter: 10                                      # number of random hyperparameter sets to try
+    cv: 5                                           # number of cross-validation folds
+    
+nsub_lasso:
+
+    # Set K value to train Lasso on
+    K_lasso: 15
+
+    # Model hyperparameters
+    alpha: [0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.3, 0.5, 1.0]         # Constant multiplying the L1 term. 0 corresponds to the standard regression
+    alpha_plot: [0.01, 0.1]
+    max_iter: 10000                                 # max number of epochs
+    tol: 1e-6                                       # criteria to stop training
+
+efp_dnn:                    
+
+    learning_rate: [0.1, 0.01, 1.e-3, 1.e-4]    # (0.0001 cf 1810.05165)
+    loss: 'binary_crossentropy'                     # loss function - use categorical_crossentropy instead ?
+    metrics: ['accuracy']                           # measure accuracy during training
+    batch_size: 1000                    
+    epochs: 30                                      # number of training epochs
+
+efp_linear:
+
+    # Model hyperparameters -- SGDClassifier
+    sgd_loss: 'hinge'                               # cost function
+    sgd_penalty: ['l2', 'l1']                       # regularization term
+    sgd_alpha: [1e-5, 1e-4, 1e-3]                   # regularization strength
+    sgd_max_iter: 1000                              # max number of epochs
+    sgd_tol: [1e-5, 1e-4, 1e-3]                     # criteria to stop training
+    sgd_learning_rate: 'optimal'                    # learning schedule (learning rate decreases over time in proportion to alpha)
+    sgd_early_stopping: False                       # whether to stop training based on validation score
+
+    lda_tol: [1e-6, 1e-5, 1e-4, 1e-3, 5e-3]   # criteria to stop training
+
+    # Hyperparameter tuning
+    n_iter: 10                                      # number of random hyperparameter sets to try
+    cv: 5                                           # number of cross-validation folds
+
+efp_lasso:
+
+    # Set d value to train Lasso on
+    d_lasso: 4
+
+    alpha: [1.e-4, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.05, 0.1]   # Constant multiplying the L1 term
+    max_iter: 10000                                 # max number of epochs
+    tol: 1e-6                                       # criteria to stop training
+
+pfn:
+
+    # Network architecture parameters
+    Phi_sizes: [100, 100, 256]
+    F_sizes: [100, 100, 100]
+
+    # Network training parameters
+    epochs: 10
+    batch_size: 500
+    use_pids: True                                  # Use PID information (this option is currently ignored)
+
+    # Train using constituent min_pt=0 and again using the min_pt specified here
+    min_pt: 1.
+    
+efn:
+
+    # Network architecture parameters
+    Phi_sizes: [100, 100, 256]
+    F_sizes: [100, 100, 100]
+
+    # Network training parameters
+    learning_rate: 0.001
+    epochs: 10
+    batch_size: 500
