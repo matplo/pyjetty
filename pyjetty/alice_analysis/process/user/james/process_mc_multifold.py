@@ -208,7 +208,8 @@ class ProcessMCMultifold(process_base.ProcessBase):
         
         # Save output
         n_jets = len(next(iter(self.output_dict[self.jetR_list[0]]['det_matched'].values())))
-        print(f'Save output arrays (n_jets_matched={n_jets})...')
+        print(f'Save output arrays (n_jets_matched={n_jets} from n_events={self.event_number})...')
+        self.output_dict['n_events'] = self.event_number
         self.utils.write_data(self.output_dict, self.output_dir, filename = 'AnalysisResults.h5')
         
         print(f'--- {time.time()-self.start_time} seconds ---')
