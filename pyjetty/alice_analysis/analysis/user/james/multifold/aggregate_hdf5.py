@@ -11,9 +11,9 @@ from collections import defaultdict
 
 from pyjetty.alice_analysis.process.base import process_utils
 utils = process_utils.ProcessUtils()
- 
+
 #---------------------------------------------------------------
-def aggregate(config_file, filename_list, is_mc, pt_hat_cross_section_dict, output_dir):
+def aggregate(filename_list, is_mc, pt_hat_cross_section_dict, output_dir):
     '''
     Main
 
@@ -25,11 +25,6 @@ def aggregate(config_file, filename_list, is_mc, pt_hat_cross_section_dict, outp
 
     n_files_max = 100000                       # Option to only aggregate n_files_max files
     n_files_total = len(filename_list)
-
-    # Read config file
-    #with open(config_file, 'r') as stream:
-    #    config = yaml.safe_load(stream)
-    #jetR_list = config['jetR']
 
     # First, get the (nested) keys that we want to merge
     print('Loading sample result to get keys to merge:')
@@ -108,16 +103,17 @@ def aggregate(config_file, filename_list, is_mc, pt_hat_cross_section_dict, outp
     # Note: This is mainly to protect against the subtle issue with  
     #       HDF5 virtual datasets that the files are not closed and one can therefore  
     #       hit the ulimit which results in some empty data without any error.
-    print('Checking that we can read the virtual dataset...')
+    print('Checking that we can read the virtual dataset with standard file opening...')
     with h5py.File(os.path.join(output_dir, output_filename), 'r') as hf:
         for level in levels:
             if 'jet_pt' in hf[level].keys():
                 result_total = hf[level]['jet_pt'][:]
-                scale_factor = hf[level]['total_scale_factor'][:]
                 print(f'  {level}')
                 print(f'  n_jets: {result_total.shape[0]}')
                 print(f'  mean pt: {np.mean(result_total)}')
-                print(f'  pt-hat scale factors: {scale_factor}')
+                if is_mc:
+                    scale_factor = hf[level]['total_scale_factor'][:]
+                    print(f'  pt-hat scale factors: {scale_factor}')
                 print()
                 index=0
                 for i,filename in enumerate(filename_list_stage0):
@@ -131,6 +127,10 @@ def aggregate(config_file, filename_list, is_mc, pt_hat_cross_section_dict, outp
                         print(f'{result}')
                         sys.exit('ERROR -- check the max number of files open (ulimit -Hn)')
                     index += shapes[level][i][0]
+
+    print('Checking that we can read the virtual dataset with silx...')
+    utils.read_data(os.path.join(output_dir, output_filename))
+
     print('Done!')
     print()
 
@@ -183,13 +183,15 @@ def merge_stage0(filename_list, levels, observables, jetR, is_mc, pt_hat_cross_s
         # Then concatenate and write the arrays for each pt-hat bin
         for pt_hat_bin in pt_hat_bins:
             print(f'  pt-hat bin {pt_hat_bin}: {len(file_dict[pt_hat_bin])} files')
-            output_dict = {}
             n_events_pt_hat_bin = 0
-            for filename in file_dict[pt_hat_bin][:int(n_files_max/20)]:
+            output_dict = {}            
+            for level in levels:
+                output_dict[level] = {}
+
+            for filename in file_dict[pt_hat_bin][:int(n_files_max/n_pt_hat_bins)]:
                 with h5py.File(filename, 'r') as hf:
-                    n_events_pt_hat_bin += hf['n_events'][()]
                     for level in levels:
-                        output_dict[level] = {}
+                        n_events_pt_hat_bin += hf['n_events'][()]
                         for observable in hf[jetR][level].keys():
                             if observable in output_dict[level].keys():
                                 output_dict[level][observable] = np.concatenate((output_dict[level][observable], hf[f'{jetR}/{level}/{observable}'][:]))
@@ -197,13 +199,14 @@ def merge_stage0(filename_list, levels, observables, jetR, is_mc, pt_hat_cross_s
                                 output_dict[level][observable] = hf[f'{jetR}/{level}/{observable}'][:]
 
             # Also write the pt-hat cross-section, event_scale_factor, and total_scale_factor
-            for filename in file_dict[pt_hat_bin][:int(n_files_max/20)]:
+            extra_observables = {'pt_hat_cross_section': pt_hat_cross_section_dict[pt_hat_bin],
+                                 'event_scale_factor': n_events_pt_hat_bin / n_events_avg,
+                                 'total_scale_factor': pt_hat_cross_section_dict[pt_hat_bin] / (n_events_pt_hat_bin / n_events_avg)
+                                }
+            for filename in file_dict[pt_hat_bin][:int(n_files_max/n_pt_hat_bins)]:
                 with h5py.File(filename, 'r') as hf:
                     for level in levels:
                         n_jets = next(iter(hf[jetR][level].values())).shape[0]
-                        extra_observables = {'pt_hat_cross_section': pt_hat_cross_section_dict[pt_hat_bin],
-                                             'event_scale_factor': n_events_pt_hat_bin / n_events_avg,
-                                             'total_scale_factor': pt_hat_cross_section_dict[pt_hat_bin] / (n_events_pt_hat_bin / n_events_avg)}
                         for observable in extra_observables.keys():
                             if observable in output_dict[level].keys():
                                 output_dict[level][observable] = np.concatenate((output_dict[level][observable], np.repeat(extra_observables[observable], n_jets)))
@@ -211,6 +214,9 @@ def merge_stage0(filename_list, levels, observables, jetR, is_mc, pt_hat_cross_s
                                 output_dict[level][observable] = np.repeat(extra_observables[observable], n_jets)
             
             utils.write_data(output_dict, outputdir_stage0, filename = f'MergedResults{pt_hat_bin}.h5')
+
+            #print('Checking that we can read the intermediate dataset...')
+            #utils.read_data(os.path.join(outputdir_stage0, f'MergedResults{pt_hat_bin}.h5'))
 
         filename_list_stage0 = [os.path.join(outputdir_stage0, f'MergedResults{i}.h5') for i in range(1, n_pt_hat_bins+1)]
 
@@ -257,7 +263,7 @@ def determine_shapes(levels, observables, filename_list):
 
     # First, get a list of n_jets for each file
     shapes = defaultdict(list)
-    for i,filename in enumerate(filename_list):
+    for filename in filename_list:
         with h5py.File(filename,'r') as hdf:
             for level in levels:
                 shapes[level].append(hdf[level][observables[level][0]][:].shape)
@@ -301,10 +307,6 @@ if __name__ == '__main__':
 
     # Define arguments
     parser = argparse.ArgumentParser(description='Aggregate data')
-    parser.add_argument('-c', '--configFile', action='store',
-                        type=str, metavar='configFile',
-                        default='../../../../config/multifold/pp/process.yaml',
-                        help='Path of config file for analysis')
     parser.add_argument('-o', '--outputDir', action='store',
                         type=str, metavar='outputDir',
                         default='/rstorage/alice/AnalysisResults/james/XXXXXX/',
@@ -314,13 +316,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print('Configuring...')
-    print('configFile: \'{0}\''.format(args.configFile))
     print('ouputDir: \'{0}\"'.format(args.outputDir))
-
-    # If invalid configFile is given, exit
-    if not os.path.exists(args.configFile):
-        print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
-        sys.exit(0)
 
     # If invalid outputdir is given, exit
     fileList = os.path.join(args.outputDir, 'processing_output_files.txt')
@@ -335,6 +331,7 @@ if __name__ == '__main__':
     # Check if data or MC, and get the pt-hat scale factors if MC
     is_mc, pt_hat_cross_section_dict = check_if_mc(filename_list[0])
 
-    aggregate(config_file=args.configFile, filename_list=filename_list, 
-              is_mc=is_mc, pt_hat_cross_section_dict=pt_hat_cross_section_dict, 
+    aggregate(filename_list=filename_list, 
+              is_mc=is_mc, 
+              pt_hat_cross_section_dict=pt_hat_cross_section_dict, 
               output_dir=args.outputDir)
