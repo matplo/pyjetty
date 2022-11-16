@@ -210,9 +210,9 @@ def merge_stage0(filename_list, levels, observables, jetR, is_mc, pt_hat_cross_s
                             else:
                                 output_dict[level][observable] = np.repeat(extra_observables[observable], n_jets)
             
-            utils.write_data(output_dict, outputdir_stage0, filename = f'AnalysisResults{pt_hat_bin}.h5')
+            utils.write_data(output_dict, outputdir_stage0, filename = f'MergedResults{pt_hat_bin}.h5')
 
-        filename_list_stage0 = [os.path.join(outputdir_stage0, f'AnalysisResults{i}.h5') for i in range(1, n_pt_hat_bins+1)]
+        filename_list_stage0 = [os.path.join(outputdir_stage0, f'MergedResults{i}.h5') for i in range(1, n_pt_hat_bins+1)]
 
     else:
 
@@ -235,9 +235,9 @@ def merge_stage0(filename_list, levels, observables, jetR, is_mc, pt_hat_cross_s
                             else:
                                 output_dict[level][observable] = hf[f'{jetR}/{level}/{observable}'][:]
 
-            utils.write_data(output_dict, outputdir_stage0, filename = f'AnalysisResults{i_chunk}.h5')
+            utils.write_data(output_dict, outputdir_stage0, filename = f'MergedResults{i_chunk}.h5')
 
-        filename_list_stage0 = [os.path.join(outputdir_stage0, f'AnalysisResults{i}.h5') for i in range(len(filename_chunk_list))]
+        filename_list_stage0 = [os.path.join(outputdir_stage0, f'MergedResults{i}.h5') for i in range(len(filename_chunk_list))]
 
     # Return the new filelist
     return filename_list_stage0
