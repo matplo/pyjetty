@@ -231,10 +231,12 @@ def merge_stage0(filename_list, levels, observables, jetR, is_mc, pt_hat_cross_s
         # Loop through chunks, and for each chunk concatenate the arrays for each observable
         for i_chunk,filename_chunk in enumerate(filename_chunk_list):
             output_dict = {}
+            for level in levels:
+                output_dict[level] = {}
+
             for filename in filename_chunk:
                 with h5py.File(filename, 'r') as hf:
                     for level in levels:
-                        output_dict[level] = {}
                         for observable in observables[level]:
                             if observable in output_dict[level].keys():
                                 output_dict[level][observable] = np.concatenate((output_dict[level][observable], hf[f'{jetR}/{level}/{observable}'][:]))
