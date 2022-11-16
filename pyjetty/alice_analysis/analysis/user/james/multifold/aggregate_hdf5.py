@@ -7,12 +7,13 @@ import argparse
 import h5py
 import numpy as np
 import shutil
+from collections import defaultdict
 
 from pyjetty.alice_analysis.process.base import process_utils
 utils = process_utils.ProcessUtils()
  
 #---------------------------------------------------------------
-def aggregate(config_file, filename_list, output_dir):
+def aggregate(config_file, filename_list, is_mc, pt_hat_cross_section_dict, output_dir):
     '''
     Main
 
@@ -22,66 +23,83 @@ def aggregate(config_file, filename_list, output_dir):
     Note: We only consider a single jet radius for now.
     '''
 
-    n_files_max = 100
+    n_files_max = 100000                       # Option to only aggregate n_files_max files
     n_files_total = len(filename_list)
 
     # Read config file
-    with open(config_file, 'r') as stream:
-        config = yaml.safe_load(stream)
+    #with open(config_file, 'r') as stream:
+    #    config = yaml.safe_load(stream)
     #jetR_list = config['jetR']
 
     # First, get the (nested) keys that we want to merge
     print('Loading sample result to get keys to merge:')
     sample_result = utils.read_data(filename_list[0])
     jetR = list(sample_result.keys())[0]
-    observables = list(sample_result[jetR].keys())
+    levels = [level for level in sample_result[jetR].keys() if len(list(sample_result[jetR][level].values()))>0]
+    observables = {}
+    for level in levels:
+        observables[level] = list(sample_result[jetR][level].keys())
     print(f'Merging: ')
     print(f'  jetR: {jetR}')
-    print(f'  observables: {observables}')
+    print(f'  levels: {levels}')
+    for level in levels:
+        print()
+        print(f'  observables ({level}): {observables[level]}')
+    print()
+    if n_files_max < n_files_total:
+        print(f'Only aggregating {n_files_max} out of {n_files_total} files')
     print()
 
-    # Do a preprocessing stage of merging, to condense down to ~100 files
+
+    # Do a preprocessing stage of merging
     # This avoids bumping into the ulimit, and also is probably more efficient
-    filename_list_stage0 =  merge_stage0(filename_list, observables, jetR, output_dir)
+    # For data: Condense down to ~100 files
+    # For MC: Condense each pt-hat bin to 1 file
+    filename_list_stage0 =  merge_stage0(filename_list, levels, observables, jetR, 
+                                         is_mc, pt_hat_cross_section_dict, 
+                                         n_files_max, output_dir)
 
     # Now will create a virtual dataset for each observable
     # See: https://docs.h5py.org/en/stable/vds.html
-    
+
     # First, we need to find the total shape for each observable set
     print('Determining shapes...')
-    shapes, total_shape = determine_shapes(jetR, observables, filename_list_stage0, n_files_max, n_files_total)
-    print(f'Done determining shapes: n_jets = {total_shape}')
+    shapes, total_shape = determine_shapes(levels, observables, filename_list_stage0)
+    print(f'Done determining shapes:')
+    for level in levels:
+        print(f'  n_jets = {total_shape[level]} ({level})')
     print()
 
     # Now, create the virtual dataset
-    # We use keys equal to the keys in the input file
+    # We use output keys equal to the keys in the input file
     output_filename = 'processing_output_merged.h5'
     with h5py.File(os.path.join(output_dir, output_filename), 'w') as hf:
         
-        for observable in observables:
+        for level in levels:
+            if is_mc:
+                observables[level] += ['pt_hat_cross_section', 'event_scale_factor', 'total_scale_factor']
+            for observable in observables[level]:
 
-            print(f'Creating virtual dataset for {observable} (total shape = {total_shape})')
-            layout = h5py.VirtualLayout(shape=total_shape, dtype=np.float64)
+                print(f'Creating virtual dataset for {level} {observable} (total shape = {total_shape[level]})')
+                layout = h5py.VirtualLayout(shape=total_shape[level], dtype=np.float64)
 
-            # Loop through file list
-            layout_index = 0
-            for i,filename in enumerate(filename_list_stage0):
-                if not accept_file(i, n_files_max, n_files_total, log=False):
-                    break
+                # Loop through file list
+                layout_index = 0
+                for i,filename in enumerate(filename_list_stage0):
 
-                # Create virtual source
-                #print(f'  Creating virtual source for file {i} with shape {shapes[i]}')
-                source = h5py.VirtualSource(filename, observable, shapes[i], dtype=np.float64)
+                    # Create virtual source
+                    #print(f'  Creating virtual source for file {i} with shape {shapes[i]}')
+                    source = h5py.VirtualSource(filename, f'{level}/{observable}', shapes[level][i], dtype=np.float64)
 
-                # Insert the source into the layout
-                new_layout_index = layout_index + shapes[i][0]
-                layout[layout_index:new_layout_index] = source
-                
-                layout_index = new_layout_index
-                #print(f'new layout_index: {layout_index}')
-                
-            # Add virtual dataset to output file
-            hf.create_virtual_dataset(observable, layout)
+                    # Insert the source into the layout
+                    new_layout_index = layout_index + shapes[level][i][0]
+                    layout[layout_index:new_layout_index] = source
+                    
+                    layout_index = new_layout_index
+                    #print(f'new layout_index: {layout_index}')
+                    
+                # Add virtual dataset to output file
+                hf.create_virtual_dataset(f'{level}/{observable}', layout)
 
     print('Virtual dataset created.')
     print()
@@ -92,29 +110,38 @@ def aggregate(config_file, filename_list, output_dir):
     #       hit the ulimit which results in some empty data without any error.
     print('Checking that we can read the virtual dataset...')
     with h5py.File(os.path.join(output_dir, output_filename), 'r') as hf:
-        result_total = hf['jet_pt'][:]
-        print(f'  n_jets: {result_total.shape[0]}')
-        print(f'  mean pt: {np.mean(result_total)}')
-        print()
-        index=0
-        for i,filename in enumerate(filename_list_stage0):
-            result = result_total[index:index+shapes[i][0]]
-            if np.mean(result) < 5.:
-                print(f'mean={np.mean(result)}')
-                print(f'index={i}')
-                print(f'{filename}')
-                print(f'{result.shape}')
-                print(f'{result}')
-                sys.exit('ERROR -- check the max number of files open (ulimit -Hn)')
-            index += shapes[i][0]
+        for level in levels:
+            if 'jet_pt' in hf[level].keys():
+                result_total = hf[level]['jet_pt'][:]
+                scale_factor = hf[level]['total_scale_factor'][:]
+                print(f'  {level}')
+                print(f'  n_jets: {result_total.shape[0]}')
+                print(f'  mean pt: {np.mean(result_total)}')
+                print(f'  pt-hat scale factors: {scale_factor}')
+                print()
+                index=0
+                for i,filename in enumerate(filename_list_stage0):
+                    result = result_total[index:index+shapes[level][i][0]]
+                    if np.mean(result) < 5.:
+                        print(f'mean={np.mean(result)}')
+                        print(f'index={i}')
+                        print(f'{filename}')
+                        print(level)
+                        print(f'{result.shape}')
+                        print(f'{result}')
+                        sys.exit('ERROR -- check the max number of files open (ulimit -Hn)')
+                    index += shapes[level][i][0]
     print('Done!')
     print()
 
 #---------------------------------------------------------------
-def merge_stage0(filename_list, observables, jetR, output_dir, n_chunks=100):
+def merge_stage0(filename_list, levels, observables, jetR, is_mc, pt_hat_cross_section_dict, n_files_max, output_dir, n_chunks=100):
     '''
     Merge the processing output into a smaller number of files.
     This avoids bumping into the ulimit, and also is probably more efficient.
+
+    For data: Condense down to n_chunks files
+    For MC: Condense each pt-hat bin to 1 file
     '''
     print('Performing Stage0 merge...')
 
@@ -122,32 +149,101 @@ def merge_stage0(filename_list, observables, jetR, output_dir, n_chunks=100):
     outputdir_stage0 = os.path.join(output_dir, 'Stage0')
     if os.path.exists(outputdir_stage0):
         shutil.rmtree(outputdir_stage0)
-    os.makedirs(outputdir_stage0)        
+    os.makedirs(outputdir_stage0)    
 
-    # Split the filelist up into chunks
-    n_files = len(filename_list)
-    n_files_per_chunk = int(n_files/n_chunks)+1
-    filename_chunk_list = [filename_list[x:x+n_files_per_chunk] for x in range(0,n_files,n_files_per_chunk)]    
+    if is_mc:
 
-    # Loop through chunks, and for each chunk concatenate the arrays for each observable
-    for i_chunk,filename_chunk in enumerate(filename_chunk_list):
-        output_dict = {}
-        for filename in filename_chunk:
+        # First, create a dict that separates the filelist by pt-hat bin
+        file_dict = defaultdict(list)
+        for filename in filename_list:
+            pt_hat_bin = int(filename.split('/')[9])
+            if pt_hat_bin not in range(1,21):
+                raise ValueError(f'Unexpected pt-ht bin {pt_hat_bin} -- check parsing of path')
+            file_dict[pt_hat_bin].append(filename)
+
+        # Check that we found 20 pt hat bins
+        pt_hat_bins = sorted(list(file_dict.keys()))
+        n_pt_hat_bins = len(pt_hat_bins)
+        print(f'Found {n_pt_hat_bins} pt-hat bins: {pt_hat_bins}')
+        print()
+        if n_pt_hat_bins != 20:
+            raise KeyError(f'We only found {n_pt_hat_bins}!')
+
+        # Get the total number of events
+        print('Computing total number of events...')
+        n_events_total = 0
+        for filename in filename_list[:n_files_max]:
             with h5py.File(filename, 'r') as hf:
-                for observable in observables:
-                    if observable in output_dict:
-                        output_dict[observable] = np.concatenate((output_dict[observable], hf[f'{jetR}/{observable}'][:]))
-                    else:
-                        output_dict[observable] = hf[f'{jetR}/{observable}'][:]
+                n_events_total += hf['n_events'][()]
+        n_events_avg = n_events_total / n_pt_hat_bins
+        print(f'n_events_total: {n_events_total}')
+        print(f'n_events_avg per pt-hat bin: {n_events_avg}')
+        print()
 
-        utils.write_data(output_dict, outputdir_stage0, filename = f'AnalysisResults{i_chunk}.h5')
+        # Then concatenate and write the arrays for each pt-hat bin
+        for pt_hat_bin in pt_hat_bins:
+            print(f'  pt-hat bin {pt_hat_bin}: {len(file_dict[pt_hat_bin])} files')
+            output_dict = {}
+            n_events_pt_hat_bin = 0
+            for filename in file_dict[pt_hat_bin][:int(n_files_max/20)]:
+                with h5py.File(filename, 'r') as hf:
+                    n_events_pt_hat_bin += hf['n_events'][()]
+                    for level in levels:
+                        output_dict[level] = {}
+                        for observable in hf[jetR][level].keys():
+                            if observable in output_dict[level].keys():
+                                output_dict[level][observable] = np.concatenate((output_dict[level][observable], hf[f'{jetR}/{level}/{observable}'][:]))
+                            else:
+                                output_dict[level][observable] = hf[f'{jetR}/{level}/{observable}'][:]
+
+            # Also write the pt-hat cross-section, event_scale_factor, and total_scale_factor
+            for filename in file_dict[pt_hat_bin][:int(n_files_max/20)]:
+                with h5py.File(filename, 'r') as hf:
+                    for level in levels:
+                        n_jets = next(iter(hf[jetR][level].values())).shape[0]
+                        extra_observables = {'pt_hat_cross_section': pt_hat_cross_section_dict[pt_hat_bin],
+                                             'event_scale_factor': n_events_pt_hat_bin / n_events_avg,
+                                             'total_scale_factor': pt_hat_cross_section_dict[pt_hat_bin] / (n_events_pt_hat_bin / n_events_avg)}
+                        for observable in extra_observables.keys():
+                            if observable in output_dict[level].keys():
+                                output_dict[level][observable] = np.concatenate((output_dict[level][observable], np.repeat(extra_observables[observable], n_jets)))
+                            else:
+                                output_dict[level][observable] = np.repeat(extra_observables[observable], n_jets)
+            
+            utils.write_data(output_dict, outputdir_stage0, filename = f'AnalysisResults{pt_hat_bin}.h5')
+
+        filename_list_stage0 = [os.path.join(outputdir_stage0, f'AnalysisResults{i}.h5') for i in range(1, n_pt_hat_bins+1)]
+
+    else:
+
+        # Split the filelist up into chunks
+        filename_list = filename_list[:n_files_max]
+        n_files = len(filename_list)
+        n_files_per_chunk = int(n_files/n_chunks)+1
+        filename_chunk_list = [filename_list[x:x+n_files_per_chunk] for x in range(0,n_files,n_files_per_chunk)]    
+
+        # Loop through chunks, and for each chunk concatenate the arrays for each observable
+        for i_chunk,filename_chunk in enumerate(filename_chunk_list):
+            output_dict = {}
+            for filename in filename_chunk:
+                with h5py.File(filename, 'r') as hf:
+                    for level in levels:
+                        output_dict[level] = {}
+                        for observable in observables[level]:
+                            if observable in output_dict[level].keys():
+                                output_dict[level][observable] = np.concatenate((output_dict[level][observable], hf[f'{jetR}/{level}/{observable}'][:]))
+                            else:
+                                output_dict[level][observable] = hf[f'{jetR}/{level}/{observable}'][:]
+
+            utils.write_data(output_dict, outputdir_stage0, filename = f'AnalysisResults{i_chunk}.h5')
+
+        filename_list_stage0 = [os.path.join(outputdir_stage0, f'AnalysisResults{i}.h5') for i in range(len(filename_chunk_list))]
 
     # Return the new filelist
-    filename_list_stage0 = [os.path.join(outputdir_stage0, f'AnalysisResults{i}.h5') for i in range(len(filename_chunk_list))]
     return filename_list_stage0
 
 #---------------------------------------------------------------
-def determine_shapes(jetR, observables, filename_list, n_files_max, n_files_total):
+def determine_shapes(levels, observables, filename_list):
     '''
     Determine the shape of the data (i.e. number of jets) in all files.
 
@@ -160,29 +256,45 @@ def determine_shapes(jetR, observables, filename_list, n_files_max, n_files_tota
     '''
 
     # First, get a list of n_jets for each file
-    shapes = []
+    shapes = defaultdict(list)
     for i,filename in enumerate(filename_list):
         with h5py.File(filename,'r') as hdf:
-            if not accept_file(i, n_files_max, n_files_total):
-                break
-            shapes.append(hdf[observables[0]][:].shape)
+            for level in levels:
+                shapes[level].append(hdf[level][observables[level][0]][:].shape)
 
     # Also return the total n_jets over all files
-    total_shape = (np.sum([shape[0] for shape in shapes]),)
+    total_shape = {}
+    for level in levels:
+        total_shape[level] = (np.sum([shape[0] for shape in shapes[level]]),)
 
     return shapes, total_shape
 
 #---------------------------------------------------------------
-def accept_file(i, n_files_max, n_files_total, log=True):
+def check_if_mc(file):
     '''
-    Function called for each file while aggregating.
+    Function to check whether the production is data or MC
     '''
-    if log:
-        if i%10 == 0:
-            print(f'{i}/{n_files_total}')
-    if i > n_files_max:
-        return False
-    return True
+    if 'LHC18b8' in file:
+        pt_hat_cross_section_filename = '/rstorage/alice/data/LHC18b8/scaleFactors.yaml'
+    elif 'LHC18b8' in file:
+        pt_hat_cross_section_filename = '/rstorage/alice/data/LHC20g4/scaleFactors.yaml'
+    else:
+        pt_hat_cross_section_filename = None
+
+    if pt_hat_cross_section_filename:
+        is_mc = True
+        with open(pt_hat_cross_section_filename, 'r') as stream:
+            pt_hat_cross_section_dict = yaml.safe_load(stream)
+    else:
+        is_mc = False
+        pt_hat_cross_section_dict = None
+
+    print(f'is_mc: {is_mc}')
+    if is_mc:
+        print(f'Using pt-hat scale factors from {pt_hat_cross_section_filename}')
+    print()
+
+    return is_mc, pt_hat_cross_section_dict
 
 ##################################################################
 if __name__ == '__main__':
@@ -220,4 +332,9 @@ if __name__ == '__main__':
     with open(fileList) as f:
         filename_list = [line.rstrip() for line in f.readlines()]
 
-    aggregate(config_file=args.configFile, filename_list=filename_list, output_dir=args.outputDir)
+    # Check if data or MC, and get the pt-hat scale factors if MC
+    is_mc, pt_hat_cross_section_dict = check_if_mc(filename_list[0])
+
+    aggregate(config_file=args.configFile, filename_list=filename_list, 
+              is_mc=is_mc, pt_hat_cross_section_dict=pt_hat_cross_section_dict, 
+              output_dir=args.outputDir)
