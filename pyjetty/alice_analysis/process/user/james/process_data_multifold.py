@@ -59,7 +59,8 @@ class ProcessDataMultifold(process_base.ProcessBase):
         # We will check that the size is the same for all observables
         self.output_dict = {}
         for R in self.jetR_list:
-            self.output_dict[R] = defaultdict(list)
+            self.output_dict[R] = {}
+            self.output_dict[R]['data'] = defaultdict(list)
 
     #---------------------------------------------------------------
     # Initialize config file into class members
@@ -144,7 +145,8 @@ class ProcessDataMultifold(process_base.ProcessBase):
         self.analyze_events()
     
         # Save output
-        print(f'Save output arrays (n_jets={len(next(iter(self.output_dict[self.jetR_list[0]].values())))})...')
+        n_jets = {len(next(iter(self.output_dict[self.jetR_list[0]]['data'].values())))}
+        print(f'Save output arrays (n_jets={n_jets})...')
         self.utils.write_data(self.output_dict, self.output_dir, filename = 'AnalysisResults.h5')
 
         print('--- {} seconds ---'.format(time.time() - self.start_time))
@@ -256,8 +258,8 @@ class ProcessDataMultifold(process_base.ProcessBase):
         jet_pt_ungroomed = jet.pt()
 
         # Append the jet pt, eta
-        self.output_dict[jetR][f'jet_pt{suffix}'].append(jet_pt_ungroomed)
-        self.output_dict[jetR][f'jet_eta{suffix}'].append(jet.eta())
+        self.output_dict[jetR]['data'][f'jet_pt{suffix}'].append(jet_pt_ungroomed)
+        self.output_dict[jetR]['data'][f'jet_eta{suffix}'].append(jet.eta())
 
         # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
         # Note that the subconfigurations are defined by the first observable, if multiple are defined
@@ -281,9 +283,9 @@ class ProcessDataMultifold(process_base.ProcessBase):
                                           grooming_setting, jet_pt_ungroomed, suffix)
 
         # Check that the output size is correct, i.e. that we have filled each observable for every jet
-        expected_size = len(next(iter(self.output_dict[jetR].values())))
+        expected_size = len(next(iter(self.output_dict[jetR]['data'].values())))
         for jetR in self.jetR_list:
-            for observable_label,result in self.output_dict[jetR].items():
+            for observable_label,result in self.output_dict[jetR]['data'].items():
                 if len(result) != expected_size:
                     raise ValueError(f'Observable {observable_label} does not have expected length of {expected_size}! {self.output_dict}')
 
@@ -335,7 +337,7 @@ class ProcessDataMultifold(process_base.ProcessBase):
             sys.exit(f'Observable {observable} not found!')
 
         # Append to the output
-        self.output_dict[jetR][observable_label].append(result)
+        self.output_dict[jetR]['data'][observable_label].append(result)
 
 ##################################################################
 if __name__ == '__main__':

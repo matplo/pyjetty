@@ -409,6 +409,8 @@ class ProcessMCMultifold(process_base.ProcessBase):
     #---------------------------------------------------------------
     def fill_jet_observables_before_matching(self, jet, jetR, suffix, key=''):
 
+        self.output_dict[jetR]['truth_before_matching'][f'jet_pt{suffix}'].append(jet.pt())
+
         # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
         for observable in self.observable_list:
             for i in range(len(self.obs_settings[observable])):
