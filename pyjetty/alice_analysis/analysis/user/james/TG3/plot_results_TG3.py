@@ -553,8 +553,8 @@ class PlotResults(common_base.CommonBase):
             
             self.observable_settings['prediction_distribution_list'].append(h_pp)
             self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp')
-            self.observable_settings['prediction_distribution_list'].append(h_pp_scaled)
-            self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp (scaled)')
+            #self.observable_settings['prediction_distribution_list'].append(h_pp_scaled)
+            #self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp (scaled)')
             self.observable_settings['prediction_distribution_list'].append(h_AA)
             self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, Pb-Pb')
             self.observable_settings['prediction_distribution_list'].append(h_AA_scaled)
