@@ -20,6 +20,8 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set_context('paper', rc={'font.size':18, 'axes.titlesize':18, 'axes.labelsize':18, 'text.usetex':True})
 
+import sklearn.preprocessing
+
 # Suppress some annoying warnings
 np.finfo(np.dtype("float32")) 
 np.finfo(np.dtype("float64"))
@@ -252,7 +254,7 @@ class RunAnalysis(common_base.CommonBase):
         # Plot 1D projections of each observable
         print()
         print(f'Plotting 1D projections...')
-        #self.plot_1D_projections(results_dict, pt_bin_pairs)
+        self.plot_1D_projections(results_dict, pt_bin_pairs)
 
         # Plot pairplot between each pair of observables
         print()
@@ -609,13 +611,10 @@ class RunAnalysis(common_base.CommonBase):
 
         self.create_output_subdir(self.output_dir_plot_observables, f'2D_projections')
 
-        # TODO: remove negative entries?
-        # TODO: should scale and center all observables?
-
         # For each pt bin, construct dataframe containing all observables (except pt)
 
         # Plot only a subset of values for speed and image size
-        n_values = 100
+        n_values = 1000
 
         # Loop over pt bins
         dataframes_dict = self.recursive_defaultdict()
@@ -626,7 +625,7 @@ class RunAnalysis(common_base.CommonBase):
 
             # Construct a separate dataframe for each data_type, then we will append them
             for data_type in result_dict.keys():
-                dataframes_dict[pt_cut_key][data_type] = pd.DataFrame()
+                df = pd.DataFrame()
 
                 # Loop over data_type and observables
                 for observable in self.observables:
@@ -635,7 +634,16 @@ class RunAnalysis(common_base.CommonBase):
                     for i in range(self.observable_info[observable]['n_subobservables']):
                         obs_key = self.observable_info[observable]['obs_keys'][i]
                         obs_key_new = self.obs_key_formatted(observable, i)
-                        dataframes_dict[pt_cut_key][data_type][obs_key_new] = result_dict[data_type][obs_key][pt_cut_key][:n_values]
+                        if obs_key != 'jet_pt':
+                            df[obs_key_new] = result_dict[data_type][obs_key][pt_cut_key][:n_values]
+
+                # For simplicity, remove jets with SD untagged entries
+                for col in df.columns: 
+                    df = df.drop(df.index[df[col] < 0])
+
+                # Center and scale all columns of the df
+                dataframes_dict[pt_cut_key][data_type] = pd.DataFrame(sklearn.preprocessing.scale(df,with_mean=True, with_std=True),
+                                                                      columns = df.columns)
 
                 # Also store the data_type
                 n_jets = dataframes_dict[pt_cut_key][data_type].iloc[:,0].shape[0]

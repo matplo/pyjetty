@@ -141,11 +141,8 @@ class CommonUtils(common_base.CommonBase):
   # Note: all keys should be strings
   #---------------------------------------------------------------
   def write_data(self, results, output_dir, filename = 'results.h5'):
-      print()
-  
       print(f'Writing results to {output_dir}/{filename}...')
       dicttoh5(results, os.path.join(output_dir, filename), overwrite_data=True)
-  
       print('done.')
       print()
   
@@ -154,12 +151,7 @@ class CommonUtils(common_base.CommonBase):
   # Note: all keys should be strings
   #---------------------------------------------------------------
   def read_data(self, input_file):
-      print()
       print(f'Loading results from {input_file}...')
-  
       results = h5todict(input_file)
-  
       print('done.')
-      print()
-  
       return results
