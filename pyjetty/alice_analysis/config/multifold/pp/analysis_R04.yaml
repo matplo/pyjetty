@@ -163,8 +163,8 @@ jet_axis:
 ang:
 
   common_settings:
-    xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
-    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
+    xtitle: '#it{#lambda}_{#it{#alpha}}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}}'
 
   config1:
     beta: 1
@@ -262,7 +262,7 @@ ang:
 # Analysis parameters
 
 # Directory to write analysis output to
-output_dir: '/rstorage/alice/AnalysisResults/james/1107540/output_analysis/'
+output_dir: '/rstorage/alice/AnalysisResults/james/1110260/output_analysis/'
 
 # Set which analysis steps to perform
 do_plot_observables: True
@@ -278,8 +278,8 @@ systematics_list:
   - fastsim_generator1
 
 # Paths to processing output, to be used for unfolding
-main_data: '/rstorage/alice/AnalysisResults/james/1107540/processing_output_merged.h5'
-main_response: '/rstorage/alice/AnalysisResults/james/1107541/processing_output_merged.h5'
+main_data: '/rstorage/alice/AnalysisResults/james/1110260/processing_output_merged.h5'
+main_response: '/rstorage/alice/AnalysisResults/james/1110137/processing_output_merged.h5'
 trkeff_response: ''
 fastsim_response:
  - ''

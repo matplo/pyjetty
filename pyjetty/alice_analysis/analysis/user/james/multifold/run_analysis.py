@@ -18,7 +18,7 @@ import ctypes
 
 from matplotlib import pyplot as plt
 import seaborn as sns
-sns.set_context('paper', rc={'font.size':18,'axes.titlesize':18,'axes.labelsize':18})
+sns.set_context('paper', rc={'font.size':18, 'axes.titlesize':18, 'axes.labelsize':18, 'text.usetex':True})
 
 # Suppress some annoying warnings
 np.finfo(np.dtype("float32")) 
@@ -46,8 +46,9 @@ class RunAnalysis(common_base.CommonBase):
         # Initialize yaml config
         self.initialize_config()
         
-        self.colors = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
-                       ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4, ROOT.kOrange-3]
+        self.colors = [ROOT.kBlue-4, ROOT.kGreen-2, ROOT.kRed-4, 
+                       ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
+                       ROOT.kBlue-6, ROOT.kPink-4, ROOT.kOrange-3]
         self.markers = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
         self.fillstyles = [1001, 3144, 1001, 3144]
 
@@ -55,25 +56,69 @@ class RunAnalysis(common_base.CommonBase):
         self.data_marker = 21
         self.theory_marker = 20
         self.marker_size = 1.5
-        self.alpha = 0.7
+        self.alpha = 0.6
         self.line_width = 2
         self.line_style = 1
 
         print(self)
 
-        # Load aggregated results
-        # The results are stored with keys: self.observable_info[observable]['obs_key'][i]
-        # i.e. f'{observable}_{self.utils.obs_label(obs_setting, grooming_setting)}'
-        self.results = self.utils.read_data(self.main_data)
+        # Load aggregated results for both data and MC
+        # The results will be stored with keys: 'data', 'mc_det_matched', 'mc_truth_matched'
+        # The arrays are stored with keys specified in self.observable_info: self.observable_info[observable]['obs_key'][i]
+        #   i.e. f'{observable}_{self.utils.obs_label(obs_setting, grooming_setting)}'
+        print()
+        print('Loading data...')
+        results = {}
+        results['data'] = self.utils.read_data(self.main_data)['data']
+        print()
+        print('Loading MC...')
+        results_mc = self.utils.read_data(self.main_response)
+        results['mc_det_matched'] = results_mc['det_matched']
+        results['mc_truth_matched'] = results_mc['truth_matched']
+        print()
 
-        self.n_jets_total = next(iter(self.results.values())).shape[0]
-        print(f'Analyzing the following observables: (n_jets={self.n_jets_total})')
-        for observable in self.observables:
-            for i in range(self.observable_info[observable]['n_subobservables']):
-                obs_key = self.observable_info[observable]['obs_keys'][i]
-                print(f'  {obs_key}')
-                if self.results[obs_key].shape[0] != self.n_jets_total:
-                    raise ValueError(f'{obs_key} has unexpected number of jets: {self.results[obs_key].shape}')
+        self.n_jets = {}
+        for data_type in results.keys():
+            self.n_jets[data_type] = next(iter(results[data_type].values())).shape[0]
+        n_jets_total_data = self.n_jets['data'] 
+        n_jets_total_mc = self.n_jets['mc_truth_matched']
+        print(f'Analyzing the following observables: (n_jets={n_jets_total_data} in data, n_jets={n_jets_total_mc} in mc)')
+        [print(obs_key) for obs_key in results['data'].keys()]
+        print()
+
+        # Shuffle all of the arrays 
+        #   - Data/MC shuffled separately (same shuffling for matched det/truth MC)
+        #   - Same shuffling for all observables
+        print('Shuffling dataset...')
+        idx_data = np.random.permutation(self.n_jets['data'])
+        idx_mc = np.random.permutation(self.n_jets['mc_truth_matched'])
+        idx = {'data': idx_data,
+               'mc_det_matched': idx_mc,
+               'mc_truth_matched': idx_mc}
+
+        self.results = self.recursive_defaultdict()
+        for data_type in results:
+            for observable in self.observables:
+                for i in range(self.observable_info[observable]['n_subobservables']):
+                    obs_key = self.observable_info[observable]['obs_keys'][i]
+
+                    # Check number of jets is as expected for each observable
+                    if results[data_type][obs_key].shape[0] != self.n_jets[data_type] or idx[data_type].shape[0] != self.n_jets[data_type]:
+                        shape = results[data_type][obs_key].shape
+                        raise ValueError(f'{data_type} {obs_key} in data has unexpected number of jets: {shape}')
+
+                    # Shuffle
+                    self.results[data_type][obs_key] = results[data_type][obs_key][idx[data_type]]
+                    if 'mc' in data_type:
+                        self.results[data_type]['total_scale_factor'] = results[data_type]['total_scale_factor'][idx[data_type]]
+        print('Done.')
+
+        # Make some labels for plotting
+        self.data_type_label = {'data': 'Uncorrected Data',
+                                'mc_det_matched': 'MC det-level (matched)',
+                                'mc_truth_matched': 'MC truth-level (matched)',
+                                }
+
         print()
 
     #---------------------------------------------------------------
@@ -189,26 +234,31 @@ class RunAnalysis(common_base.CommonBase):
         self.create_output_subdir(self.output_dir, 'plot_observables')
 
         # First, apply pt cuts to a copy of results
+        # TODO: bin both mc_det_matched and mc_truth_matched by e.g. truth-level pt
+        print('Binning results into pt bins to make some plots...')
+        print()
         pt_bins = self.observable_info['jet_pt']['pt_bins_reported']
         pt_bin_pairs = [[pt_bins[i],pt_bins[i+1]] for i in range(len(pt_bins)-1)]
         pt_bin_pairs_nested = [[pt_bin_pair] for pt_bin_pair in pt_bin_pairs]
         variables = [['jet_pt']] * len(pt_bin_pairs_nested)
-        results_dict = self.apply_cut(variables, pt_bin_pairs_nested)
+        results_dict = self.apply_cut(variables, pt_bin_pairs_nested, n_jets_max=1000000)
 
         # Print number of jets passing each cut
-        n_jets = [results_dict['jet_pt'][f'jet_pt{x[0]}-{x[1]}'].shape[0] for x in pt_bin_pairs]
-        [print(f'pt={pt_bin_pairs[i]} has n_jets={n_jets[i]}') for i in range(len(n_jets))]
+        for data_type in results_dict.keys():
+            n_jets = [results_dict[data_type]['jet_pt'][f'jet_pt{x[0]}-{x[1]}'].shape[0] for x in pt_bin_pairs]
+            print(data_type)
+            [print(f'  pt={pt_bin_pairs[i]} has n_jets={n_jets[i]}') for i in range(len(n_jets))]
 
         # Plot 1D projections of each observable
         print()
         print(f'Plotting 1D projections...')
-        self.plot_1D_projections(results_dict, pt_bin_pairs)
+        #self.plot_1D_projections(results_dict, pt_bin_pairs)
 
         # Plot pairplot between each pair of observables
         print()
         print(f'Plotting pairplot...')
         self.plot_pairplot(results_dict, pt_bin_pairs)
-        print('Done'!)
+        print('Done!')
 
     #---------------------------------------------------------------
     # Mask all results according to specified conditions
@@ -217,40 +267,46 @@ class RunAnalysis(common_base.CommonBase):
     #
     # Each entry in the variables/cuts list corresponds to a set of cuts that will be simultanously appled
     #
-    # A dictionary will be returned, containing the different cut combinations specified:
-    #   result_dict[f'{variable1}{variable1_min}-{variable1_max}] = result1
-    #   result_dict[f'{variable2}{variable2_min}-{variable2_max}_{variable3}{variable3_min}-{variable3_max}] = result2
+    # A dictionary will be returned, containing the different cut combinations specified, e.g.:
+    #   result_dict['data'][f'{variable1}{variable1_min}-{variable1_max}] = result1
+    #   result_dict['data'][f'{variable2}{variable2_min}-{variable2_max}_{variable3}{variable3_min}-{variable3_max}] = result2
+    # The dictionary will include both data and MC and det/truth levels.
     #
     # The reason for this is that we want to support both:
     #   - Returning multiple different cuts on the same variable (e.g. pt=[20,40,60,80])
     #   - Cutting on multiple variables simultaneously
     #---------------------------------------------------------------
-    def apply_cut(self, variables_list, cuts_list):
+    def apply_cut(self, variables_list, cuts_list, n_jets_max=100000000):
 
         if len(variables_list) != len(cuts_list):
             raise ValueError(f'variables_list has different length than cuts_list! {variables_list} vs. {cuts_list}')
 
         results_dict = self.recursive_defaultdict()
         
-        # Loop over all cut combinations
-        for variables, cuts in zip(variables_list, cuts_list):
+        # Loop through both data and MC
+        for data_type in self.results.keys():
 
-            # Loop through all cuts in a given combination and construct mask
-            total_mask = np.zeros(self.n_jets_total, dtype=bool) # For simplicity: cut_mask[i]=True means we will discard index i
-            cut_key = ''
-            for i in range(len(variables)):
-                variable = variables[i]
-                cut_min, cut_max = cuts[i]
-                cut_mask = (self.results[variable] < cut_min) | (self.results[variable] > cut_max)
-                total_mask = (total_mask | cut_mask)
+            # Loop over all cut combinations
+            for variables, cuts in zip(variables_list, cuts_list):
 
-                if i>0:
-                    cut_key += '_'
-                cut_key += f'{variable}{cut_min}-{cut_max}'
+                # Loop through all cuts in a given combination and construct mask
+                total_mask = np.zeros(self.n_jets[data_type], dtype=bool) # For simplicity: cut_mask[i]=True means we will discard index i
+                cut_key = ''
+                for i in range(len(variables)):
+                    variable = variables[i]
+                    cut_min, cut_max = cuts[i]
+                    cut_mask = (self.results[data_type][variable] < cut_min) | (self.results[data_type][variable] > cut_max)
+                    total_mask = (total_mask | cut_mask)
 
-            # Now that we have the complete mask for this combination, apply it to all arrays
-            for obs_key,result in self.results.copy().items():
-                results_dict[obs_key][cut_key] = result[~total_mask]
+                    if i>0:
+                        cut_key += '_'
+                    cut_key += f'{variable}{cut_min}-{cut_max}'
+
+                # Now that we have the complete mask for this combination, apply it to all arrays
+                for obs_key,result in self.results[data_type].copy().items():
+                    results_dict[data_type][obs_key][cut_key] = result[~total_mask][:n_jets_max]
+                if 'mc' in data_type:
+                    results_dict[data_type]['total_scale_factor'][cut_key] = self.results[data_type]['total_scale_factor'].copy()[~total_mask][:n_jets_max]
                     
         return results_dict
 
@@ -273,14 +329,14 @@ class RunAnalysis(common_base.CommonBase):
                     pt_min = pt_bin_pair[0]
                     pt_max = pt_bin_pair[1]
                     pt_cut_key = f'jet_pt{pt_min}-{pt_max}'
-                    self.plot_1D_projection(result=result_dict[obs_key][pt_cut_key], observable=observable, 
-                                            subobservable_index=i, jet_pt_index=j,
+                    self.plot_1D_projection(result=result_dict, obs_key=obs_key, pt_cut_key=pt_cut_key, 
+                                            observable=observable, subobservable_index=i, jet_pt_index=j,
                                             pt_min=pt_min, pt_max=pt_max)
 
     #---------------------------------------------------------------
     # Plot a 1D histogram from numpy array of result
     #---------------------------------------------------------------
-    def plot_1D_projection(self, result=None, observable='', subobservable_index=0, jet_pt_index=0, pt_min=0, pt_max=0):  
+    def plot_1D_projection(self, result=None, obs_key='', pt_cut_key='', observable='', subobservable_index=0, jet_pt_index=0, pt_min=0, pt_max=0):  
 
         self.utils.set_plotting_options()
         ROOT.gROOT.ForceStyle()
@@ -305,39 +361,48 @@ class RunAnalysis(common_base.CommonBase):
         xtitle = self.observable_info[observable]['xtitle']
         ytitle = self.observable_info[observable]['ytitle']
 
-        # Create hist   
-        hname = f'h_{obs_key}_pt{pt_min}-{pt_max}'
-        #h = ROOT.TH1F(hname, hname, bins.size-1, bins)
-        h = ROOT.TH1F(hname, hname, bins.size-1, array.array('d', bins))
-        h.Sumw2()
+        # Construct dict of hists for data and MC
+        h_dict = {}
+        for data_type in self.results.keys():
 
-        # Loop through array and fill weighted hist
-        n_jets = result.shape[0]
-        weights = np.ones(n_jets)
-        for i in range(n_jets):
-            h.Fill(result[i], weights[i])
+            # Create hist   
+            hname = f'h_{data_type}_{obs_key}_pt{pt_min}-{pt_max}'
+            #h = ROOT.TH1F(hname, hname, bins.size-1, bins)
+            h = ROOT.TH1F(hname, hname, bins.size-1, array.array('d', bins))
+            h.Sumw2()
 
-        # TODO: Scale by pt-hat sum weights?
+            # Loop through array and fill weighted hist in order to apply pt-hat sum weights for MC
+            n_jets = result[data_type][obs_key][pt_cut_key].shape[0]
+            if 'mc' in data_type:
+                weights = result[data_type]['total_scale_factor'][pt_cut_key]
+            else:
+                weights = np.ones(n_jets)
 
-        # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
-        # First scale by bin width -- then normalize by integral
-        # (where integral weights by bin width)
-        h.Scale(1., 'width')
-        nbins = h.GetNbinsX()
-        if 'SD' in grooming_label:
-            # If SD, the untagged jets are in the first bin
-            min_bin = 0
-            n_jets_inclusive = h.Integral(min_bin, nbins, 'width')
-            n_jets_tagged = h.Integral(min_bin+1, nbins, 'width')
-            f_tagging = n_jets_tagged/n_jets_inclusive
-        else:
-            min_bin = 1
-            n_jets_inclusive = h.Integral(min_bin, nbins+1, 'width')
-            f_tagging = None
-        h.Scale(1./n_jets_inclusive)
+            for i in range(n_jets):
+                h.Fill(result[data_type][obs_key][pt_cut_key][i], weights[i])
+
+            # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
+            # First scale by bin width -- then normalize by integral
+            # (where integral weights by bin width)
+            h.Scale(1., 'width')
+            nbins = h.GetNbinsX()
+            if 'SD' in grooming_label:
+                # If SD, the untagged jets are in the first bin
+                min_bin = 0
+                n_jets_inclusive = h.Integral(min_bin, nbins, 'width')
+                n_jets_tagged = h.Integral(min_bin+1, nbins, 'width')
+                f_tagging = n_jets_tagged/n_jets_inclusive
+            else:
+                min_bin = 1
+                n_jets_inclusive = h.Integral(min_bin, nbins+1, 'width')
+                f_tagging = None
+            h.Scale(1./n_jets_inclusive)
+
+            h_dict[data_type] = h
 
         # Generate and save plot
-        self.plot_distribution_and_ratio(h, observable=observable, subobservable_index=subobservable_index,
+        self.plot_distribution_and_ratio(h_dict, obs_key=obs_key, observable=observable, 
+                                         subobservable_index=subobservable_index,
                                          jet_pt_index=jet_pt_index, pt_min=pt_min, pt_max=pt_max, 
                                          subobs_label=subobs_label, obs_setting=obs_setting, 
                                          grooming_label=grooming_label, f_tagging=f_tagging,
@@ -346,11 +411,13 @@ class RunAnalysis(common_base.CommonBase):
     #-------------------------------------------------------------------------------------------
     # Plot distributions in upper panel, and ratio in lower panel
     #-------------------------------------------------------------------------------------------
-    def plot_distribution_and_ratio(self, h, observable, subobservable_index=0, jet_pt_index=0, 
+    def plot_distribution_and_ratio(self, h_dict, obs_key='', observable='', subobservable_index=0, jet_pt_index=0, 
                                     pt_min=0, pt_max=0, subobs_label='',
                                     obs_setting='', grooming_label='', f_tagging=0,
                                     xtitle='', ytitle='', logy = False):
-        c = ROOT.TCanvas(f'c_{h.GetName()}', f'c_{h.GetName()}', 600, 650)
+
+        c_name = f'c_{obs_key}_pt{pt_min}-{pt_max}'
+        c = ROOT.TCanvas(c_name, c_name, 600, 650)
         c.Draw()
         c.cd()
 
@@ -367,18 +434,18 @@ class RunAnalysis(common_base.CommonBase):
             pad1.SetLogy()
         pad1.cd()
 
-        legend = ROOT.TLegend(0.25,0.75,0.4,0.88)
+        legend = ROOT.TLegend(0.25,0.6,0.4,0.88)
         self.utils.setup_legend(legend, 0.05, sep=-0.1)
 
         legend_ratio = ROOT.TLegend(0.25,0.25,0.45,0.4)
-        self.utils.setup_legend(legend_ratio, 0.07, sep=-0.1)
+        self.utils.setup_legend(legend_ratio, 0.06, sep=-0.1)
 
-        bins = np.array(h.GetXaxis().GetXbins())
+        bins = np.array(next(iter(h_dict.values())).GetXaxis().GetXbins())
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, bins[0], bins[-1])
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(1.7*h.GetMaximum())
+        myBlankHisto.SetMaximum(1.7*next(iter(h_dict.values())).GetMaximum())
         myBlankHisto.SetMinimum(1e-3)
         myBlankHisto.GetYaxis().SetTitleSize(0.08)
         myBlankHisto.GetYaxis().SetTitleOffset(1.1)
@@ -417,40 +484,79 @@ class RunAnalysis(common_base.CommonBase):
 
         # Draw distribution
         pad1.cd()
-        h.SetMarkerColorAlpha(self.colors[0], self.alpha)
-        h.SetMarkerSize(self.marker_size)
-        h.SetMarkerStyle(self.data_marker)
-        h.SetLineColorAlpha(self.colors[0], self.alpha)
-        h.SetLineStyle(self.line_style)
-        h.SetLineWidth(self.line_width)
-        h.Draw('PE same') # X0
-        legend.AddEntry(h, 'Uncorrected Data', 'PE')
 
         # Draw HEPData
         g = self.observable_info[observable]['hepdata_tgraph'][subobservable_index][jet_pt_index]
         if g:
-            g.SetMarkerColorAlpha(self.data_color, self.alpha)
+            g.SetMarkerColorAlpha(self.data_color, 1)
             g.SetMarkerSize(self.marker_size)
             g.SetMarkerStyle(self.data_marker)
-            g.SetLineColorAlpha(self.data_color, self.alpha)
+            g.SetLineColorAlpha(self.data_color, 1)
             g.SetLineWidth(self.line_width)
             g.Draw('PE Z same')
             legend.AddEntry(g, 'Published Data', 'PE')
+
+        # Draw our data, MC distributions
+        for i,data_type in enumerate(h_dict.keys()):
+            h = h_dict[data_type]
+            if 'mc' in data_type:
+                h.SetFillColorAlpha(self.colors[i], self.alpha)
+                h.SetFillStyle(self.fillstyles[0])
+                h.SetLineColorAlpha(self.colors[i], self.alpha)
+                h.SetLineStyle(self.line_style)
+                h.SetMarkerSize(0.)
+                h.SetMarkerStyle(0)
+                h.SetLineWidth(0)
+                h.Draw('E3 same') # X0
+                legend.AddEntry(h, self.data_type_label[data_type], 'f')
+            else:
+                h.SetMarkerColorAlpha(self.colors[i], self.alpha)
+                h.SetMarkerSize(self.marker_size)
+                h.SetMarkerStyle(self.data_marker)
+                h.SetLineColorAlpha(self.colors[i], self.alpha)
+                h.SetLineStyle(self.line_style)
+                h.SetLineWidth(self.line_width)
+                h.Draw('PE same') # X0
+                legend.AddEntry(h, self.data_type_label[data_type], 'PE')
 
         legend.Draw()
 
         # Draw ratio
         pad2.cd()
-        g_ratio = self.divide_histogram_by_tgraph(h, g)
-        if g_ratio:
-            g_ratio.SetMarkerColorAlpha(self.colors[0], self.alpha)
-            g_ratio.SetMarkerSize(self.marker_size)
-            g_ratio.SetMarkerStyle(self.data_marker)
-            g_ratio.SetLineColorAlpha(self.colors[0], self.alpha)
-            g_ratio.SetLineWidth(self.line_width)
-            g_ratio.Draw('PE Z same')
-            legend_ratio.AddEntry(g_ratio, 'Uncorrected / Published (uncertainties combined)', 'PE')
-            legend_ratio.Draw()
+
+        # Plot published data uncertainties at ratio=1
+        g_ratio = self.divide_tgraph_by_tgraph(g, g)
+        g_ratio.SetMarkerColorAlpha(self.data_color, 1)
+        g_ratio.SetMarkerSize(self.marker_size)
+        g_ratio.SetMarkerStyle(self.data_marker)
+        g_ratio.SetLineColorAlpha(self.data_color, 1)
+        g_ratio.SetLineWidth(self.line_width)
+        g_ratio.Draw('PE Z same')
+
+        # Plot ratios to published data
+        for i,data_type in enumerate(h_dict.keys()):
+            h = h_dict[data_type]
+            g_ratio = self.divide_histogram_by_tgraph(h, g, include_tgraph_uncertainties=False)
+            if g_ratio:
+                if 'mc' in data_type:
+                    g_ratio.SetFillColorAlpha(self.colors[i], self.alpha)
+                    g_ratio.SetFillStyle(self.fillstyles[0])
+                    g_ratio.SetLineColorAlpha(self.colors[i], self.alpha)
+                    g_ratio.SetMarkerSize(0.)
+                    g_ratio.SetMarkerStyle(0)
+                    g_ratio.SetLineWidth(0)
+                    g_ratio.Draw('E3 same')
+                    legend_ratio.AddEntry(g_ratio, f'{self.data_type_label[data_type]} / Published', 'f')
+                    legend_ratio.Draw()
+                else:
+                    g_ratio.SetMarkerColorAlpha(self.colors[i], self.alpha)
+                    g_ratio.SetMarkerSize(self.marker_size)
+                    g_ratio.SetMarkerStyle(self.data_marker)
+                    g_ratio.SetLineColorAlpha(self.colors[i], self.alpha)
+                    g_ratio.SetLineWidth(self.line_width)
+                    g_ratio.Draw('PE Z same')
+                    legend_ratio.AddEntry(g_ratio, f'{self.data_type_label[data_type]} / Published', 'PE')
+                    legend_ratio.Draw()
 
         line = ROOT.TLine(bins[0], 1, bins[-1], 1)
         line.SetLineColor(920+2)
@@ -492,76 +598,76 @@ class RunAnalysis(common_base.CommonBase):
             text = f'#it{{f}}_{{tagged}}^{{data}} ={f_tagging:.2f}'
             text_latex.DrawLatex(x, y-0.37-delta, text)
 
-        c.SaveAs(os.path.join(self.output_dir_1D_projections, f'{h.GetName()}{self.file_format}'))
+        c.SaveAs(os.path.join(self.output_dir_1D_projections, f'{obs_key}_pt{pt_min}-{pt_max}{self.file_format}'))
         c.Close()
 
     #---------------------------------------------------------------
     # Plot pairplot for all observables
+    # We will overlay data, mc_det_matched, mc_truth_matched
     #---------------------------------------------------------------
     def plot_pairplot(self, result_dict, pt_bin_pairs):
 
-        self.create_output_subdir(self.output_dir_plot_observables, '2D_projections')
+        self.create_output_subdir(self.output_dir_plot_observables, f'2D_projections')
+
+        # TODO: remove negative entries?
+        # TODO: should scale and center all observables?
 
         # For each pt bin, construct dataframe containing all observables (except pt)
 
+        # Plot only a subset of values for speed and image size
+        n_values = 100
+
         # Loop over pt bins
-        dataframes_dict = {}
+        dataframes_dict = self.recursive_defaultdict()
         for pt_bin_pair in pt_bin_pairs:
             pt_min = pt_bin_pair[0]
             pt_max = pt_bin_pair[1]
             pt_cut_key = f'jet_pt{pt_min}-{pt_max}'
-            dataframes_dict[pt_cut_key] = pd.DataFrame()
 
-            # Loop over observables
-            for observable in self.observables:
+            # Construct a separate dataframe for each data_type, then we will append them
+            for data_type in result_dict.keys():
+                dataframes_dict[pt_cut_key][data_type] = pd.DataFrame()
 
-                # Loop over subobservables
-                for i in range(self.observable_info[observable]['n_subobservables']):
-                    obs_key = self.observable_info[observable]['obs_keys'][i]
-                    if obs_key != 'jet_pt':
-                        dataframes_dict[pt_cut_key][obs_key] = result_dict[obs_key][pt_cut_key][:1000]
+                # Loop over data_type and observables
+                for observable in self.observables:
+
+                    # Loop over subobservables
+                    for i in range(self.observable_info[observable]['n_subobservables']):
+                        obs_key = self.observable_info[observable]['obs_keys'][i]
+                        obs_key_new = self.obs_key_formatted(observable, i)
+                        dataframes_dict[pt_cut_key][data_type][obs_key_new] = result_dict[data_type][obs_key][pt_cut_key][:n_values]
+
+                # Also store the data_type
+                n_jets = dataframes_dict[pt_cut_key][data_type].iloc[:,0].shape[0]
+                dataframes_dict[pt_cut_key][data_type]['data_type'] = np.repeat(data_type, n_jets)
+
+            # Append the data_types into a single dataframe
+            df_total = pd.concat([dataframes_dict[pt_cut_key][data_type] for data_type in result_dict.keys()], ignore_index=True)
 
             # Plot scatter matrix
             print(f'  Plotting {pt_cut_key}...')
-            g = sns.pairplot(dataframes_dict[pt_cut_key], corner=True, plot_kws={'alpha':0.1})
-            #g.legend.set_bbox_to_anchor((0.75, 0.75))
-            #plt.savefig(os.path.join(self.output_dir_2D_projections, f'pairplot_{pt_cut_key}.pdf'), dpi=50)
+            g = sns.pairplot(df_total, corner=True, hue='data_type', plot_kws={'alpha':0.1})
+            plt.tight_layout()
+            g.legend.set_bbox_to_anchor((0.75, 0.75))
+            #for lh in g._legend.legendHandles:   # Trying to set legend fontsize...
+            #    print(dir(lh)) 
             plt.savefig(os.path.join(self.output_dir_2D_projections, f'pairplot_{pt_cut_key}.pdf'))
             plt.close()
-        
+
             # Plot correlation matrix
-            corr_matrix = dataframes_dict[pt_cut_key].corr()
-            sns.heatmap(corr_matrix)
-            plt.savefig(os.path.join(self.output_dir_2D_projections, f'correlation_matrix_{pt_cut_key}.pdf'))
-            plt.close()
+            for data_type in result_dict.keys():
 
-        # TODO: For MC, we can overlay the det-level and truth-level pairplot
-        # Separate PYTHIA/JEWEL
-        #jewel_indices = y_train
-        #pythia_indices = 1 - y_train
-        #n_plot = int(self.n_train) # Plot a subset to save time/space
-        #X_Nsub_jewel = X_train[jewel_indices.astype(bool)][:n_plot]
-        #X_Nsub_pythia = X_train[pythia_indices.astype(bool)][:n_plot]
-
-        ## Construct dataframes for scatter matrix plotting
-        #df_jewel = pd.DataFrame(X_Nsub_jewel, columns=feature_labels)
-        #df_pythia = pd.DataFrame(X_Nsub_pythia, columns=feature_labels)
-        
-        ## Add label columns to each df to differentiate them for plotting
-        #df_jewel['generator'] = np.repeat(self.AA_label, X_Nsub_jewel.shape[0])
-        #df_pythia['generator'] = np.repeat(self.pp_label, X_Nsub_pythia.shape[0])
-        #df = df_jewel.append(df_pythia, ignore_index=True)
-
-        # Plot scatter matrix
-        #g = sns.pairplot(dataframes_dict[pt_cut_key], corner=True, hue='generator', plot_kws={'alpha':0.1})
-
-        # Plot correlation matrix
-        #dataframes_dict[pt_cut_key].drop(columns=['generator'])
+                dataframes_dict[pt_cut_key][data_type].drop(columns=['data_type'])
+                corr_matrix = dataframes_dict[pt_cut_key][data_type].corr(method='pearson', numeric_only=True)
+                sns.heatmap(corr_matrix)
+                plt.tight_layout()
+                plt.savefig(os.path.join(self.output_dir_2D_projections, f'correlation_matrix_{pt_cut_key}_{data_type}.pdf'))
+                plt.close()
 
     #---------------------------------------------------------------
     # Return formatted observable key
     #---------------------------------------------------------------
-    def obs_key_formatted(self, observable, i_subobservable):
+    def obs_key_formatted(self, observable, i_subobservable, tlatex=False):
 
         s = self.observable_info[observable]['xtitle']
 
@@ -575,7 +681,17 @@ class RunAnalysis(common_base.CommonBase):
         if grooming_setting:
             s += f' {self.utils.formatted_grooming_label(grooming_setting)}'
 
-        print(s)
+        # Convert from tlatex to latex
+        if not tlatex:
+            s = f'${s}$'
+            s = s.replace('#it','')
+            s = s.replace('} {','},\;{')
+            s = s.replace('#','\\')
+            s = s.replace('SD',',\;SD')
+            s = s.replace(', {\\beta} = 0', '')
+            s = s.replace('{\Delta R}','')
+            s = s.replace('Standard_WTA','\mathrm{Standard-WTA}')
+            s = s.replace('{\\lambda}_{{\\alpha}},\;{\\alpha} = ','\lambda_')
 
         return s
 
@@ -726,6 +842,46 @@ class RunAnalysis(common_base.CommonBase):
             g_new.SetPoint(bin-1, h_x, new_content)
             g_new.SetPointError(bin-1, 0, 0, new_error_low, new_error_up)
 
+        return g_new
+
+    #---------------------------------------------------------------
+    # Divide a tgraph by a tgraph, point-by-point: g1/g2
+    # NOTE: Ignore uncertainties on denominator
+    #---------------------------------------------------------------
+    def divide_tgraph_by_tgraph(self, g1, g2):
+
+        # Clone tgraph, in order to return a new one
+        g_new = g1.Clone(f'{g1.GetName()}_divided')
+
+        if g1.GetN() != g2.GetN():
+            sys.exit(f'ERROR: TGraph {g1.GetName()} has {g1.GetN()} points, but {g2.GetName()} has {g2.GetN()} points')
+
+        for i in range(0, g1.GetN()):
+
+            # Get TGraph (x,y) and errors
+            g1_x = ctypes.c_double(0)
+            g1_y = ctypes.c_double(0)
+            g1.GetPoint(i, g1_x, g1_y)
+            y1ErrLow = g1.GetErrorYlow(i)
+            y1ErrUp  = g1.GetErrorYhigh(i)
+            g1x = g1_x.value
+            g1y = g1_y.value
+
+            g2_x = ctypes.c_double(0)
+            g2_y = ctypes.c_double(0)
+            g2.GetPoint(i, g2_x, g2_y)
+            g2x = g2_x.value
+            g2y = g2_y.value
+
+            if not np.isclose(g1x, g2x):
+                sys.exit(f'ERROR: TGraph {g1.GetName()} point {i} at {g1x}, but {g2.GetName()} at {g2x}')
+
+            new_content = g1y / g2y
+            new_error_low = y1ErrLow/g1y * new_content
+            new_error_up = y1ErrUp/g1y * new_content
+
+            g_new.SetPoint(i, g1x, new_content)
+            g_new.SetPointError(i, 0, 0, new_error_low, new_error_up)
         return g_new
 
     #---------------------------------------------------------------
