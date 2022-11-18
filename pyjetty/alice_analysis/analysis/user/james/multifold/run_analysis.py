@@ -13,14 +13,22 @@ import yaml
 import numpy as np
 import pandas as pd
 import array
-import ROOT
 import ctypes
+
+try:
+    import ROOT
+except ImportError:
+    pass
 
 from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set_context('paper', rc={'font.size':18, 'axes.titlesize':18, 'axes.labelsize':18, 'text.usetex':True})
 
 import sklearn.preprocessing
+from sklearn.model_selection import train_test_split
+
+import tensorflow as tf
+from tensorflow import keras
 
 # Suppress some annoying warnings
 np.finfo(np.dtype("float32")) 
@@ -81,7 +89,7 @@ class RunAnalysis(common_base.CommonBase):
 
         self.n_jets = {}
         for data_type in results.keys():
-            self.n_jets[data_type] = next(iter(results[data_type].values())).shape[0]
+            self.n_jets[data_type] = results[data_type][self.observable_info[self.observables[0]]['obs_keys'][0]].shape[0]
         n_jets_total_data = self.n_jets['data'] 
         n_jets_total_mc = self.n_jets['mc_truth_matched']
         print(f'Analyzing the following observables: (n_jets={n_jets_total_data} in data, n_jets={n_jets_total_mc} in mc)')
@@ -99,7 +107,7 @@ class RunAnalysis(common_base.CommonBase):
                'mc_truth_matched': idx_mc}
 
         self.results = self.recursive_defaultdict()
-        for data_type in results:
+        for data_type in results.keys():
             for observable in self.observables:
                 for i in range(self.observable_info[observable]['n_subobservables']):
                     obs_key = self.observable_info[observable]['obs_keys'][i]
@@ -111,8 +119,8 @@ class RunAnalysis(common_base.CommonBase):
 
                     # Shuffle
                     self.results[data_type][obs_key] = results[data_type][obs_key][idx[data_type]]
-                    if 'mc' in data_type:
-                        self.results[data_type]['total_scale_factor'] = results[data_type]['total_scale_factor'][idx[data_type]]
+            if 'mc' in data_type:
+                self.results[data_type]['total_scale_factor'] = results[data_type]['total_scale_factor'][idx[data_type]]
         print('Done.')
 
         # Make some labels for plotting
@@ -705,13 +713,197 @@ class RunAnalysis(common_base.CommonBase):
 
     #---------------------------------------------------------------
     # Perform unfolding
+    #
+    # OmniFold code based in part on:
+    #  - https://github.com/ftoralesacosta/AI4EIC_Omnfold
     #---------------------------------------------------------------
     def perform_unfolding(self):
         print('Perform unfolding...')
+        print()
 
         # Create output dirs
-        for systematic in self.systematics_list:
-            self.create_output_subdir(self.output_dir, systematic)
+        #for systematic in self.systematics_list:
+        #    self.create_output_subdir(self.output_dir, systematic)
+
+        # Construct dataframe and ndarray of observables for each data_type
+        print('  Converting data to ndarray...')
+        df_dict = {}
+        ndarray_dict = {}
+        n_jets_dict = {}
+        cols_dict = {}
+        for data_type in self.results.keys():
+            df_dict[data_type] = pd.DataFrame()
+            for observable in self.observables:
+                for i in range(self.observable_info[observable]['n_subobservables']):
+                    obs_key = self.observable_info[observable]['obs_keys'][i]
+                    df_dict[data_type][obs_key] = self.results[data_type][obs_key]
+
+            # Convert to ndarray
+            ndarray_dict[data_type] = df_dict[data_type].to_numpy()
+            n_jets_dict[data_type] = ndarray_dict[data_type].shape[0]
+
+            # Store columns
+            cols_dict[data_type] = list(df_dict[data_type].columns)
+        print('  Done.')
+        print()
+
+        # TODO: Do we need to require the data and mc_det_matched have the same size?
+        balance_samples = True
+        if balance_samples:
+            n_jets = min(n_jets_dict['data'], n_jets_dict['mc_det_matched'])
+            print(f'n_jets: {n_jets}')
+            for data_type in self.results.keys():
+                ndarray_dict[data_type] = ndarray_dict[data_type][:n_jets,:]
+                n_jets_dict[data_type] = n_jets
+
+        # Perform MultiFold
+        print('  Performing MultiFold...')
+        n_observables = ndarray_dict['data'].shape[1]
+        multifold_result_dict = self.recursive_defaultdict()
+
+        # Initialize labels and weights
+        labels_dict = {}
+        labels_dict['nature_det'] = np.zeros(n_jets_dict['data'])
+        labels_dict['sim_det'] = np.ones(n_jets_dict['mc_det_matched'])
+        labels_dict['sim_truth'] = np.zeros(n_jets_dict['mc_truth_matched'])
+        labels_dict['nature_truth'] = np.ones(n_jets_dict['mc_truth_matched'])
+        weights_dict = self.recursive_defaultdict()
+
+        # Define ML model
+        inputs = keras.layers.Input((n_observables, ))
+        hidden_layer_1 = keras.layers.Dense(50, activation='relu')(inputs)
+        hidden_layer_2 = keras.layers.Dense(50, activation='relu')(hidden_layer_1)
+        hidden_layer_3 = keras.layers.Dense(50, activation='relu')(hidden_layer_2)
+        outputs = keras.layers.Dense(1, activation='sigmoid')(hidden_layer_3)
+        model = keras.models.Model(inputs=inputs, outputs=outputs)
+
+        # Iterate
+        self.n_iterations = 3
+        for iteration in range(1, self.n_iterations+1):
+            print(f'    Iteration {iteration}')
+
+            # Step 1: Train a classifier to discriminate 'nature_det' from 'sim_det',
+            #         where 'sim_det' is reweighted according to the previous iteration
+            multifold_result_dict[iteration]['nature_det'] = ndarray_dict['data']
+            if iteration == 1:
+                multifold_result_dict[iteration]['sim_det'] = ndarray_dict['mc_det_matched']
+                weights_push = np.ones(n_jets_dict['mc_det_matched'])
+            else:
+                multifold_result_dict[iteration]['sim_det'] = multifold_result_dict[iteration-1]['nature_det']
+                weights_push = multifold_result_dict[iteration-1]['nature_truth_weights']
+
+            training_data = np.concatenate((multifold_result_dict[iteration]['nature_det'], multifold_result_dict[iteration]['sim_det']))
+            labels = np.concatenate((labels_dict['nature_det'], labels_dict['sim_det']))
+
+            # TODO: Should I use the total_scale_factor for the initial weights? (and ones and data)
+            # Or should I always apply the total_scale_factor weights when computing the loss?
+            # I suppose we want the final sampler to be "physical" i.e. include the total_scale_factor weights implicitly
+            weights = np.concatenate((weights_push, np.ones(n_jets_dict['data'])))
+
+            #print(f'    training_data: {training_data.shape} -- {training_data}')
+            #print(f'    labels: {labels.shape} -- {labels}')
+            #print(f'    weights: {weights.shape} -- {weights}')
+
+            test_size = 0.2
+            X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(training_data, labels, weights, test_size=test_size)
+
+            # Stack the weights with the labels
+            y_train = np.stack((y_train, w_train), axis=1)
+            y_test = np.stack((y_test, w_test), axis=1)   
+
+            model.compile(loss=self.weighted_binary_crossentropy,
+                          optimizer='Adam',
+                          metrics=['accuracy'])
+
+            n_epochs = 2
+            batch_size = 10000
+            model.fit(X_train,
+                      y_train,
+                      epochs=n_epochs,
+                      batch_size=batch_size,
+                      validation_data=(X_test, y_test))
+
+            # Determine weights from likelihood ratio: w(mc_det_level) = P(data)/P(mc_det_level)
+            # Apply weights to generator: w'(mc_truth_level) = M(w(mc_det_level)) where M defines jet matching
+            f = model.predict(multifold_result_dict[iteration]['sim_det'], batch_size=batch_size)
+            eps = 1.e-6
+            weights_update = f / (1. - f + eps)
+            weights_dict[iteration]['step1'] = weights_push * np.squeeze(np.nan_to_num(weights_update))
+            weights_step_1 = weights_dict[iteration]['step1']
+            #print()
+            #print(f'weights step1: {weights_step_1.shape} -- {weights_step_1}')
+            #print()
+
+            # Step 2: Train a classifier to discriminate 'sim_truth' from 'nature_truth',
+            #         where 'nature_truth' is 'sim_truth' reweighted by weights_dict[iteration]['step1']
+            if iteration == 1:
+                multifold_result_dict[iteration]['sim_truth'] = ndarray_dict['mc_truth_matched']
+            else:
+                multifold_result_dict[iteration]['sim_truth'] = multifold_result_dict[iteration-1]['sim_truth']
+
+            training_data = np.concatenate((multifold_result_dict[iteration]['sim_truth'], multifold_result_dict[iteration]['sim_truth']))
+            labels = np.concatenate((labels_dict['sim_truth'], labels_dict['nature_truth']))
+
+            # TODO: Same question about pt-hat weights as above
+            weights = np.concatenate((np.ones(n_jets_dict['mc_truth_matched']), weights_dict[iteration]['step1']))
+
+            #print(f'    training_data: {training_data.shape} -- {training_data}')
+            #print(f'    labels: {labels.shape} -- {labels}')
+            #print(f'    weights: {weights.shape} -- {weights}')
+
+            X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(training_data, labels, weights, test_size=test_size)
+
+            # Stack the weights with the labels
+            y_train = np.stack((y_train, w_train), axis=1)
+            y_test = np.stack((y_test, w_test), axis=1)   
+
+            model.compile(loss=self.weighted_binary_crossentropy,
+                          optimizer='Adam',
+                          metrics=['accuracy'])
+
+            batch_size = 2000
+            model.fit(X_train,
+                      y_train,
+                      epochs=n_epochs,
+                      batch_size=batch_size,
+                      validation_data=(X_test, y_test))
+
+            f = model.predict(multifold_result_dict[iteration]['sim_truth'], batch_size=batch_size)
+            weights_update = f / (1. - f)
+            #print()
+            #print(f'weights_update: {weights_update.shape} -- {weights_update}')
+            #print()
+
+            # Apply weights to generator, now as a proper function of the generator phase space: 
+            #               w(mc_truth_level) = P(reweighted mc_truth_level) / P(mc_truth_level)
+            #         Assign the reweighted generator to the new current truth generator, to be used in subsequent iteration
+            #         In general, this step causes the new generator to drift away from the data from step 1
+            # When plotting a histogram, simply do h.Fill('sim_truth', weights)
+            multifold_result_dict[iteration]['nature_truth_weights'] = np.squeeze(np.nan_to_num(weights_update))
+
+        # Save results to file
+        output_dir = os.path.join(self.output_dir, 'unfolding_results')
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        self.utils.write_data(multifold_result_dict, output_dir, filename = f'unfolding_results.h5')
+
+    #---------------------------------------------------------------
+    # Binary crossentropy for classifying two samples with weights
+    # Weights are "hidden" by zipping in y_true (the labels)
+    #---------------------------------------------------------------
+    def weighted_binary_crossentropy(self, y_true, y_pred):
+
+        weights = tf.gather(y_true, [1], axis=1) # event weights
+        y_true = tf.gather(y_true, [0], axis=1) # actual y_true for loss
+        
+        # Clip the prediction value to prevent NaN's and Inf's
+        epsilon = keras.backend.epsilon()
+        y_pred = keras.backend.clip(y_pred, epsilon, 1. - epsilon)
+
+        t_loss = -weights * ((y_true) * keras.backend.log(y_pred) +
+                            (1 - y_true) * keras.backend.log(1 - y_pred))
+        
+        return keras.backend.mean(t_loss)
 
     #---------------------------------------------------------------
     # Plot final results
