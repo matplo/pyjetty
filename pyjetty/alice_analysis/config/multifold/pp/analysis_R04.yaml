@@ -265,8 +265,9 @@ ang:
 output_dir: '/rstorage/alice/AnalysisResults/james/1110260/output_analysis/'
 
 # Set which analysis steps to perform
-do_plot_observables: True
-do_unfolding: False
+do_plot_observables: False
+do_unfolding: True
+do_plot_unfolding_results: True
 do_systematics: False
 do_plot_final_result: False
 
@@ -284,7 +285,3 @@ trkeff_response: ''
 fastsim_response:
  - ''
  - ''
-
- # Figure info
-file_format: '.pdf'
-figure_approval_status: 'WIP'
