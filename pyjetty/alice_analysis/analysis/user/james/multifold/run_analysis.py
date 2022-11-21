@@ -99,8 +99,7 @@ class RunAnalysis(common_base.CommonBase):
 
         self.observable_info = self.recursive_defaultdict()
         for observable in self.observables:
-            print(observable)
-
+            
             obs_subconfig_list = analysis_observable_subconfigs[observable]
             obs_config_dict = dict((key,config[observable][key]) for key in obs_subconfig_list)
             self.observable_info[observable]['n_subobservables'] = len(obs_subconfig_list)
@@ -123,7 +122,12 @@ class RunAnalysis(common_base.CommonBase):
                                                                   
             # For jet_pt, store the binnings we will report
             if 'pt_bins_reported' in config[observable]['common_settings']:
-                self.observable_info[observable]['pt_bins_reported'] = config[observable]['common_settings']['pt_bins_reported']
+                pt_bins = config[observable]['common_settings']['pt_bins_reported']
+                pt_bin_pairs = [[pt_bins[i],pt_bins[i+1]] for i in range(len(pt_bins)-1)]
+                pt_bin_pairs_nested = [[pt_bin_pair] for pt_bin_pair in pt_bin_pairs]
+                self.observable_info[observable]['pt_bins_reported'] = pt_bins
+                self.observable_info[observable]['pt_bins_reported_pairs'] = pt_bin_pairs
+                self.observable_info[observable]['pt_bins_reported_pairs_nested'] = pt_bin_pairs_nested
 
         # Directory to write analysis output to
         self.output_dir = config['output_dir']
@@ -152,7 +156,8 @@ class RunAnalysis(common_base.CommonBase):
     #---------------------------------------------------------------
     def run_analysis(self):
 
-        self.load_data()
+        if self.do_plot_observables or self.do_unfolding:
+            self.load_data()
 
         if self.do_plot_observables:
             self.plot_observables()
@@ -170,14 +175,13 @@ class RunAnalysis(common_base.CommonBase):
             self.plot_results()
 
     #---------------------------------------------------------------
-    # Main processing function
+    # Load aggregated results for both data and MC
+    # The results will be stored in a dict of 1D numpy arrays:
+    #   - self.results[data_type][obs_key] = np.array([...])
+    #       where data_type is: 'data', 'mc_det_matched', 'mc_truth_matched'
+    #       and obs_key is self.observable_info[observable]['obs_key'][i] (plus 'pt_hat_scale_factors' for MC)
     #---------------------------------------------------------------
     def load_data(self):
-
-        # Load aggregated results for both data and MC
-        # The results will be stored with keys: 'data', 'mc_det_matched', 'mc_truth_matched'
-        # The arrays are stored with keys specified in self.observable_info: self.observable_info[observable]['obs_key'][i]
-        #   i.e. f'{observable}_{self.utils.obs_label(obs_setting, grooming_setting)}'
         print()
         print('Loading data...')
         results = {}
@@ -222,8 +226,9 @@ class RunAnalysis(common_base.CommonBase):
                     # Shuffle
                     self.results[data_type][obs_key] = results[data_type][obs_key][idx[data_type]]
             if 'mc' in data_type:
-                self.results[data_type]['total_scale_factor'] = results[data_type]['total_scale_factor'][idx[data_type]]
+                self.results[data_type]['pt_hat_scale_factors'] = results[data_type]['pt_hat_scale_factors'][idx[data_type]]
         print('Done.')
+        print()
 
     #---------------------------------------------------------------
     # Plot observables before unfolding
@@ -235,9 +240,7 @@ class RunAnalysis(common_base.CommonBase):
         # TODO: bin both mc_det_matched and mc_truth_matched by e.g. truth-level pt
         print('Binning results into pt bins to make some plots...')
         print()
-        pt_bins = self.observable_info['jet_pt']['pt_bins_reported']
-        pt_bin_pairs = [[pt_bins[i],pt_bins[i+1]] for i in range(len(pt_bins)-1)]
-        pt_bin_pairs_nested = [[pt_bin_pair] for pt_bin_pair in pt_bin_pairs]
+        pt_bin_pairs_nested = self.observable_info['jet_pt']['pt_bins_reported_pairs_nested']
         variables = [['jet_pt']] * len(pt_bin_pairs_nested)
         results_dict = self.utils.apply_cut(self.results, self.n_jets, variables, pt_bin_pairs_nested, n_jets_max=1000000)
 
@@ -250,7 +253,8 @@ class RunAnalysis(common_base.CommonBase):
         # Plot 1D projections of each observable
         print()
         print(f'Plotting 1D projections...')
-        self.plot_utils.plot_1D_projections(results_dict, pt_bin_pairs, self.observables, self.observable_info, self.jetR, output_dir)
+        pt_bin_pairs = self.observable_info['jet_pt']['pt_bins_reported_pairs']
+        self.plot_utils.plot_1D_projections_before_unfolding(results_dict, pt_bin_pairs, self.observables, self.observable_info, self.jetR, output_dir)
 
         # Plot pairplot between each pair of observables
         print()
@@ -293,6 +297,15 @@ class RunAnalysis(common_base.CommonBase):
 
             # Store columns
             cols_dict[data_type] = list(df_dict[data_type].columns)
+
+        # Check that the columns are ordered the same for all data_types
+        for i,data_type in enumerate(self.results.keys()):
+            if i == 0:
+                columns_reference = cols_dict[data_type]
+            else:
+                if cols_dict[data_type] != columns_reference:
+                    raise ValueError(f'Columns are not the same! {cols_dict}')
+
         print('  Done.')
         print()
 
@@ -308,15 +321,22 @@ class RunAnalysis(common_base.CommonBase):
         # Perform MultiFold
         print('  Performing MultiFold...')
         n_observables = ndarray_dict['data'].shape[1]
-        multifold_result_dict = self.recursive_defaultdict()
 
-        # Initialize labels and weights
+        # Initialize training data
+        # These are fixed independent of iteration -- the weights will vary with iteration
+        multifold_result_dict = self.recursive_defaultdict()
+        multifold_result_dict['nature_det'] = ndarray_dict['data']
+        multifold_result_dict['sim_det'] = ndarray_dict['mc_det_matched']
+        multifold_result_dict['sim_truth'] = ndarray_dict['mc_truth_matched']
+        multifold_result_dict['columns'] = cols_dict[list(self.results.keys())[0]]
+        multifold_result_dict['pt_hat_scale_factors'] = self.results['mc_truth_matched']['pt_hat_scale_factors'][:n_jets]
+
+        # Initialize labels
         labels_dict = {}
         labels_dict['nature_det'] = np.zeros(n_jets_dict['data'])
         labels_dict['sim_det'] = np.ones(n_jets_dict['mc_det_matched'])
         labels_dict['sim_truth'] = np.zeros(n_jets_dict['mc_truth_matched'])
         labels_dict['nature_truth'] = np.ones(n_jets_dict['mc_truth_matched'])
-        weights_dict = self.recursive_defaultdict()
 
         # Define ML model
         inputs = keras.layers.Input((n_observables, ))
@@ -332,22 +352,17 @@ class RunAnalysis(common_base.CommonBase):
             print(f'    Iteration {iteration}')
 
             # Step 1: Train a classifier to discriminate 'nature_det' from 'sim_det',
-            #         where 'sim_det' is reweighted according to the previous iteration
-            multifold_result_dict[iteration]['nature_det'] = ndarray_dict['data']
+            #         where 'sim_det' is reweighted by weights_det, which are updated in the previous iteration
             if iteration == 1:
-                multifold_result_dict[iteration]['sim_det'] = ndarray_dict['mc_det_matched']
-                weights_push = np.ones(n_jets_dict['mc_det_matched'])
-            else:
-                multifold_result_dict[iteration]['sim_det'] = multifold_result_dict[iteration-1]['nature_det']
-                weights_push = multifold_result_dict[iteration-1]['nature_truth_weights']
+                multifold_result_dict[f'weights_det_iteration{iteration}'] = np.ones(n_jets_dict['mc_det_matched'])
 
-            training_data = np.concatenate((multifold_result_dict[iteration]['nature_det'], multifold_result_dict[iteration]['sim_det']))
+            training_data = np.concatenate((multifold_result_dict['nature_det'], multifold_result_dict['sim_det']))
             labels = np.concatenate((labels_dict['nature_det'], labels_dict['sim_det']))
 
             # TODO: Should I use the total_scale_factor for the initial weights? (and ones and data)
             # Or should I always apply the total_scale_factor weights when computing the loss?
             # I suppose we want the final sampler to be "physical" i.e. include the total_scale_factor weights implicitly
-            weights = np.concatenate((weights_push, np.ones(n_jets_dict['data'])))
+            weights = np.concatenate((multifold_result_dict[f'weights_det_iteration{iteration}'], np.ones(n_jets_dict['data'])))
 
             #print(f'    training_data: {training_data.shape} -- {training_data}')
             #print(f'    labels: {labels.shape} -- {labels}')
@@ -374,27 +389,24 @@ class RunAnalysis(common_base.CommonBase):
 
             # Determine weights from likelihood ratio: w(mc_det_level) = P(data)/P(mc_det_level)
             # Apply weights to generator: w'(mc_truth_level) = M(w(mc_det_level)) where M defines jet matching
-            f = model.predict(multifold_result_dict[iteration]['sim_det'], batch_size=batch_size)
+            f = model.predict(multifold_result_dict['sim_det'], batch_size=batch_size)
             eps = 1.e-6
             weights_update = f / (1. - f + eps)
-            weights_dict[iteration]['step1'] = weights_push * np.squeeze(np.nan_to_num(weights_update))
-            weights_step_1 = weights_dict[iteration]['step1']
+            
+            # Update truth weights
+            multifold_result_dict[f'weights_truth_iteration{iteration}'] = multifold_result_dict[f'weights_det_iteration{iteration}'] * np.squeeze(np.nan_to_num(weights_update))
+            
             #print()
             #print(f'weights step1: {weights_step_1.shape} -- {weights_step_1}')
             #print()
 
             # Step 2: Train a classifier to discriminate 'sim_truth' from 'nature_truth',
-            #         where 'nature_truth' is 'sim_truth' reweighted by weights_dict[iteration]['step1']
-            if iteration == 1:
-                multifold_result_dict[iteration]['sim_truth'] = ndarray_dict['mc_truth_matched']
-            else:
-                multifold_result_dict[iteration]['sim_truth'] = multifold_result_dict[iteration-1]['sim_truth']
-
-            training_data = np.concatenate((multifold_result_dict[iteration]['sim_truth'], multifold_result_dict[iteration]['sim_truth']))
+            #         where 'nature_truth' is 'sim_truth' reweighted by weights_step_1
+            training_data = np.concatenate((multifold_result_dict['sim_truth'], multifold_result_dict['sim_truth']))
             labels = np.concatenate((labels_dict['sim_truth'], labels_dict['nature_truth']))
 
             # TODO: Same question about pt-hat weights as above
-            weights = np.concatenate((np.ones(n_jets_dict['mc_truth_matched']), weights_dict[iteration]['step1']))
+            weights = np.concatenate((np.ones(n_jets_dict['mc_truth_matched']), multifold_result_dict[f'weights_truth_iteration{iteration}']))
 
             #print(f'    training_data: {training_data.shape} -- {training_data}')
             #print(f'    labels: {labels.shape} -- {labels}')
@@ -417,7 +429,7 @@ class RunAnalysis(common_base.CommonBase):
                       batch_size=batch_size,
                       validation_data=(X_test, y_test))
 
-            f = model.predict(multifold_result_dict[iteration]['sim_truth'], batch_size=batch_size)
+            f = model.predict(multifold_result_dict['sim_truth'], batch_size=batch_size)
             weights_update = f / (1. - f + eps)
             #print()
             #print(f'weights_update: {weights_update.shape} -- {weights_update}')
@@ -427,8 +439,10 @@ class RunAnalysis(common_base.CommonBase):
             #               w(mc_truth_level) = P(reweighted mc_truth_level) / P(mc_truth_level)
             #         Assign the reweighted generator to the new current truth generator, to be used in subsequent iteration
             #         In general, this step causes the new generator to drift away from the data from step 1
-            # When plotting a histogram, simply do h.Fill('sim_truth', weights)
-            multifold_result_dict[iteration]['nature_truth_weights'] = np.squeeze(np.nan_to_num(weights_update))
+            # 
+            # Update det weights for next iteration
+            if iteration < self.n_iterations:
+                multifold_result_dict[f'weights_det_iteration{iteration+1}'] = np.squeeze(np.nan_to_num(weights_update))
 
         # Save results to file
         print()
@@ -460,6 +474,24 @@ class RunAnalysis(common_base.CommonBase):
     def plot_unfolding_results(self):
         print('Plotting unfolding results...')
         output_dir = self.utils.create_output_subdir(self.output_dir, 'unfolding_results')
+
+        unfolding_results = self.utils.read_data(os.path.join(output_dir, 'unfolding_results.h5'))
+        print()
+
+        # Convert the results to a dict of 1D numpy arrays, in order to perform cuts etc
+        results_dict, n_jets = self.utils.convert_results(unfolding_results)
+
+        # Apply pt cuts to a copy of results
+        print('Binning results into pt bins to make some plots...')
+        print()
+        pt_bin_pairs_nested = self.observable_info['jet_pt']['pt_bins_reported_pairs_nested']
+        variables = [['jet_pt']] * len(pt_bin_pairs_nested)
+        results_dict = self.utils.apply_cut(results_dict, n_jets, variables, pt_bin_pairs_nested)
+
+        # Plot 1D projections of each observable
+        print(f'Plotting 1D projections...')
+        pt_bin_pairs = self.observable_info['jet_pt']['pt_bins_reported_pairs']
+        self.plot_utils.plot_unfolding_results(results_dict, pt_bin_pairs, self.observables, self.observable_info, self.jetR, output_dir)
 
     #---------------------------------------------------------------
     # Plot final results

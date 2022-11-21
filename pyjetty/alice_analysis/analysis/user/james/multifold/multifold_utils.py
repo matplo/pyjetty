@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
   Analysis utilities for multifold analysis.
@@ -65,11 +65,16 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
     #   variables = [[variable1], [variable2, variable3], ...]
     #   cuts = [ [[variable1_min,variable1_max]], [[variable2_min,variable2_max], [variable3_min,variable3_max]], ...]
     #
-    # Each entry in the variables/cuts list corresponds to a set of cuts that will be simultanously appled
+    # Each entry in the variables/cuts list corresponds to a set of cuts that will be simultanously applied
+    #
+    # The input dict 'results' is expected to be in the format 
+    #   - results[data_type][obs_key] = np.array([...])
+    #       where data_type is e.g.: 'data', 'mc_det_matched', 'mc_truth_matched'
+    #       and obs_key is self.observable_info[observable]['obs_key'][i] (plus 'pt_hat_scale_factors' for MC)
     #
     # A dictionary will be returned, containing the different cut combinations specified, e.g.:
-    #   result_dict['data'][f'{variable1}{variable1_min}-{variable1_max}] = result1
-    #   result_dict['data'][f'{variable2}{variable2_min}-{variable2_max}_{variable3}{variable3_min}-{variable3_max}] = result2
+    #   result_dict['data'][obs_key][f'{variable1}{variable1_min}-{variable1_max}] = result1
+    #   result_dict['data'][obs_key][f'{variable2}{variable2_min}-{variable2_max}_{variable3}{variable3_min}-{variable3_max}] = result2
     # The dictionary will include both data and MC and det/truth levels.
     #
     # The reason for this is that we want to support both:
@@ -106,9 +111,71 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
                 for obs_key,result in results[data_type].copy().items():
                     results_dict[data_type][obs_key][cut_key] = result[~total_mask][:n_jets_max]
                 if 'mc' in data_type:
-                    results_dict[data_type]['total_scale_factor'][cut_key] = results[data_type]['total_scale_factor'].copy()[~total_mask][:n_jets_max]
+                    results_dict[data_type]['pt_hat_scale_factors'][cut_key] = results[data_type]['pt_hat_scale_factors'].copy()[~total_mask][:n_jets_max]
                     
         return results_dict
+
+    #---------------------------------------------------------------
+    # Convert unfolding_results to format of results dict.
+    #
+    # The purpose of this is so that we can use the same machinery to apply 
+    # cuts and make plots before and after unfolding.
+    #
+    # unfolding_results stores ndarrays of shape (n_jets, n_observables):
+    #   - unfolding_results['nature_det'] = ndarray 
+    #   - unfolding_results['sim_det'] = ndarray
+    #   - unfolding_results['sim_truth'] = ndarray
+    # as well as 1D arrays:
+    #   - unfolding_results['weights_det_iteration{i}'] = 1darray
+    #   - unfolding_results['weights_truth_iteration{i}'] = 1darray
+    #   - unfolding_results['pt_hat_scale_factors'] = 1darray 
+    # and the list of observables:
+    #   - unfolding_results['columns'] = list of obs_keys 
+    #
+    # The results will be stored in a dict of 1D numpy arrays:
+    #   - self.results[data_type][obs_key] = np.array([...])
+    #       where data_type is: 'data', 'mc_det_matched', 'mc_truth_matched'
+    #       and obs_key is self.observable_info[observable]['obs_key'][i] 
+    #       (plus 'pt_hat_scale_factors' and 'weights_det/truth_iteration{i}' for MC)
+    #
+    # We use this dictionary of 1D numpy arrays as opposed to e.g. a dataframe
+    # because we the different data types (data, sim_det, sim_truth) can have
+    # different size.
+    #---------------------------------------------------------------
+    def convert_results(self, unfolding_results):
+
+        results = self.recursive_defaultdict()
+        obs_keys = unfolding_results['columns']
+
+        for data_type in unfolding_results.keys():
+
+            if data_type == 'columns':
+                continue
+
+            # If 1D array, store it in sim det/truth as appropriate
+            # (store separately under sim det/truth so that cuts can easily be made independently)
+            if len(unfolding_results[data_type].shape) == 1:
+                if data_type == 'pt_hat_scale_factors':
+                    results['sim_det'][data_type] = unfolding_results[data_type]
+                    results['sim_truth'][data_type] = unfolding_results[data_type]
+                elif 'weights_det' in data_type:
+                        results['sim_det'][data_type] = unfolding_results[data_type]
+                elif 'weights_truth' in data_type:
+                    results['sim_truth'][data_type] = unfolding_results[data_type]
+            
+            # If ndarray, break into 1d arrays
+            elif len(unfolding_results[data_type].shape) == 2:
+                for i,obs_key in enumerate(obs_keys):
+                    results[data_type][obs_key] = unfolding_results[data_type][:,i]
+
+        n_jets = {}
+        for data_type,val in results.items():
+            if isinstance(val, np.ndarray):
+                n_jets[data_type] = val.shape[0]
+            else:
+                n_jets[data_type] = val[list(val.keys())[0]].shape[0]
+
+        return results, n_jets
 
     # ---------------------------------------------------------------
     # Get bin array (for each pt bin) from hepdata file
