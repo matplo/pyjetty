@@ -240,9 +240,12 @@ class RunAnalysis(common_base.CommonBase):
         # TODO: bin both mc_det_matched and mc_truth_matched by e.g. truth-level pt
         print('Binning results into pt bins to make some plots...')
         print()
+        pt_bin_pairs = self.observable_info['jet_pt']['pt_bins_reported_pairs']
         pt_bin_pairs_nested = self.observable_info['jet_pt']['pt_bins_reported_pairs_nested']
         variables = [['jet_pt']] * len(pt_bin_pairs_nested)
-        results_dict = self.utils.apply_cut(self.results, self.n_jets, variables, pt_bin_pairs_nested, n_jets_max=1000000)
+        mask_data_type_dict = {'sim_det': 'sim_truth'}
+        results_dict = self.utils.apply_cut(self.results, self.n_jets, variables, pt_bin_pairs_nested,
+                                            mask_data_type_dict=mask_data_type_dict, n_jets_max=1000000)
 
         # Print number of jets passing each cut
         for data_type in results_dict.keys():
@@ -253,7 +256,6 @@ class RunAnalysis(common_base.CommonBase):
         # Plot 1D projections of each observable
         print()
         print(f'Plotting 1D projections...')
-        pt_bin_pairs = self.observable_info['jet_pt']['pt_bins_reported_pairs']
         self.plot_utils.plot_1D_projections_before_unfolding(results_dict, pt_bin_pairs, self.observables, self.observable_info, self.jetR, output_dir)
 
         # Plot pairplot between each pair of observables

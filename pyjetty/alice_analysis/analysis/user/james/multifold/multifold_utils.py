@@ -67,6 +67,11 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
     #
     # Each entry in the variables/cuts list corresponds to a set of cuts that will be simultanously applied
     #
+    # The optional argument `mask_data_type_dict` is a dict that specifies which data_type to use to determine the mask
+    #   e.g. mask_data_type_dict={'sim_truth': 'sim_truth', 'sim_det': 'sim_truth'}  will determine the mask for 'sim_truth' 
+    #        for both 'sim_det' and 'sim_truth'.
+    #   Any keys not specified will use their own data type to determine the mask.
+    #
     # The input dict 'results' is expected to be in the format 
     #   - results[data_type][obs_key] = np.array([...])
     #       where data_type is e.g.: 'data', 'mc_det_matched', 'mc_truth_matched'
@@ -81,7 +86,7 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
     #   - Returning multiple different cuts on the same variable (e.g. pt=[20,40,60,80])
     #   - Cutting on multiple variables simultaneously
     #---------------------------------------------------------------
-    def apply_cut(self, results, n_jets, variables_list, cuts_list, n_jets_max=100000000):
+    def apply_cut(self, results, n_jets, variables_list, cuts_list, mask_data_type_dict=None, n_jets_max=100000000):
 
         if len(variables_list) != len(cuts_list):
             raise ValueError(f'variables_list has different length than cuts_list! {variables_list} vs. {cuts_list}')
@@ -90,6 +95,13 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
         
         # Loop through both data and MC
         for data_type in results.keys():
+
+            if mask_data_type_dict and data_type in mask_data_type_dict.keys():
+                if n_jets[mask_data_type] != n_jets[data_type]:
+                    raise ValueError(f'Data type mask does not correspond to the appropriate number of jets: {n_jets[mask_data_type]} vs. {n_jets[data_type]}')
+                mask_data_type = mask_data_type_dict[data_type]
+            else:
+                mask_data_type = data_type
 
             # Loop over all cut combinations
             for variables, cuts in zip(variables_list, cuts_list):
@@ -100,7 +112,7 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
                 for i in range(len(variables)):
                     variable = variables[i]
                     cut_min, cut_max = cuts[i]
-                    cut_mask = (results[data_type][variable] < cut_min) | (results[data_type][variable] > cut_max)
+                    cut_mask = (results[mask_data_type][variable] < cut_min) | (results[mask_data_type][variable] > cut_max)
                     total_mask = (total_mask | cut_mask)
 
                     if i>0:
