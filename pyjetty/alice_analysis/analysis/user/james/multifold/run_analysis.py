@@ -11,20 +11,15 @@ import os
 import argparse
 import yaml
 import numpy as np
-import pandas as pd
-import array
-import ctypes
 
 try:
     import ROOT
 except ImportError:
     pass
 
-from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set_context('paper', rc={'font.size':18, 'axes.titlesize':18, 'axes.labelsize':18, 'text.usetex':True})
 
-import sklearn.preprocessing
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
@@ -144,51 +139,56 @@ class RunAnalysis(common_base.CommonBase):
 
         # Load paths to processing output, to be unfolded
         self.main_data = config['main_data']
-        self.main_response = config['main_response']
-
+        self.response = {}
+        self.response['main'] = config['main_response']
         if 'trkeff' in self.systematics_list:
-            self.trkeff_response = config['trkeff_response']
+            self.response['trkeff'] = config['trkeff_response']
         if 'fastsim_generator0' in self.systematics_list:
-            self.fastsim_response_list = config['fastsim_response']
+            self.response['fastsim_list'] = config['fastsim_response']
 
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
     def run_analysis(self):
 
-        if self.do_plot_observables or self.do_unfolding:
-            self.load_data()
+        # Load response for each systematic, and plot/unfold
+        for systematic in self.systematics_list:
 
-        if self.do_plot_observables:
-            self.plot_observables()
+            if self.do_plot_observables or self.do_unfolding:
+                self.load_data(systematic)
+                
+            if self.do_plot_observables:
+                self.plot_observables(systematic)
 
-        if self.do_unfolding:
-            self.perform_unfolding()
+            if self.do_unfolding:
+                self.perform_unfolding(systematic)
 
-        if self.do_plot_unfolding_results:
-            self.plot_unfolding_results()
+            if self.do_plot_unfolding_results:
+                self.plot_unfolding_results(systematic)
 
+        # Compute systematic uncertainties
         if self.do_systematics:
             self.compute_systematics()
 
+        # Plot final results
         if self.do_plot_final_result:
             self.plot_results()
 
     #---------------------------------------------------------------
-    # Load aggregated results for both data and MC
+    # Load aggregated results for a given systematic for both data and MC
     # The results will be stored in a dict of 1D numpy arrays:
     #   - self.results[data_type][obs_key] = np.array([...])
     #       where data_type is: 'data', 'mc_det_matched', 'mc_truth_matched'
     #       and obs_key is self.observable_info[observable]['obs_key'][i] (plus 'pt_hat_scale_factors' for MC)
     #---------------------------------------------------------------
-    def load_data(self):
+    def load_data(self, systematic):
         print()
         print('Loading data...')
         results = {}
         results['data'] = self.utils.read_data(self.main_data)['data']
         print()
-        print('Loading MC...')
-        results_mc = self.utils.read_data(self.main_response)
+        print(f'Loading MC (systematic={systematic})...')
+        results_mc = self.utils.read_data(self.response[systematic])
         results['mc_det_matched'] = results_mc['det_matched']
         results['mc_truth_matched'] = results_mc['truth_matched']
         print()
@@ -233,8 +233,8 @@ class RunAnalysis(common_base.CommonBase):
     #---------------------------------------------------------------
     # Plot observables before unfolding
     #---------------------------------------------------------------
-    def plot_observables(self):
-        output_dir = self.utils.create_output_subdir(self.output_dir, 'plot_observables')
+    def plot_observables(self, systematic):
+        output_dir = self.utils.create_output_subdir(self.output_dir, f'{systematic}/plot_observables')
 
         # First, apply pt cuts to a copy of results
         # TODO: bin both mc_det_matched and mc_truth_matched by e.g. truth-level pt
@@ -266,52 +266,20 @@ class RunAnalysis(common_base.CommonBase):
         print()
 
     #---------------------------------------------------------------
-    # Perform unfolding
+    # Perform unfolding for a single systematic
     #
     # OmniFold code based in part on:
     #  - https://github.com/ftoralesacosta/AI4EIC_Omnfold
-    #---------------------------------------------------------------
-    def perform_unfolding(self):
-        output_dir = self.utils.create_output_subdir(self.output_dir, 'unfolding_results')
+    #---------------------------------------------------------------  
+    def perform_unfolding(self, systematic):
+        output_dir = self.utils.create_output_subdir(self.output_dir, f'{systematic}/unfolding_results')
         print('Perform unfolding...')
         print()
 
-        # Create output dirs
-        #for systematic in self.systematics_list:
-        #    self.create_output_subdir(self.output_dir, systematic)
+        # Construct ndarray of observables for each data_type
+        ndarray_dict, cols_dict, n_jets_dict = self.utils.convert_results_to_ndarray(self.results, self.observables, self.observable_info)
 
-        # Construct dataframe and ndarray of observables for each data_type
-        print('  Converting data to ndarray...')
-        df_dict = {}
-        ndarray_dict = {}
-        n_jets_dict = {}
-        cols_dict = {}
-        for data_type in self.results.keys():
-            df_dict[data_type] = pd.DataFrame()
-            for observable in self.observables:
-                for i in range(self.observable_info[observable]['n_subobservables']):
-                    obs_key = self.observable_info[observable]['obs_keys'][i]
-                    df_dict[data_type][obs_key] = self.results[data_type][obs_key]
-
-            # Convert to ndarray
-            ndarray_dict[data_type] = df_dict[data_type].to_numpy()
-            n_jets_dict[data_type] = ndarray_dict[data_type].shape[0]
-
-            # Store columns
-            cols_dict[data_type] = list(df_dict[data_type].columns)
-
-        # Check that the columns are ordered the same for all data_types
-        for i,data_type in enumerate(self.results.keys()):
-            if i == 0:
-                columns_reference = cols_dict[data_type]
-            else:
-                if cols_dict[data_type] != columns_reference:
-                    raise ValueError(f'Columns are not the same! {cols_dict}')
-
-        print('  Done.')
-        print()
-
-        # TODO: Do we need to require the data and mc_det_matched have the same size?
+        # Option to balance samples between data and MC
         balance_samples = True
         if balance_samples:
             n_jets = min(n_jets_dict['data'], n_jets_dict['mc_det_matched'])
@@ -473,15 +441,15 @@ class RunAnalysis(common_base.CommonBase):
     #---------------------------------------------------------------
     # Plot unfolding results
     #---------------------------------------------------------------
-    def plot_unfolding_results(self):
+    def plot_unfolding_results(self, systematic):
         print('Plotting unfolding results...')
-        output_dir = self.utils.create_output_subdir(self.output_dir, 'unfolding_results')
+        output_dir = self.utils.create_output_subdir(self.output_dir, f'{systematic}/unfolding_results')
 
         unfolding_results = self.utils.read_data(os.path.join(output_dir, 'unfolding_results.h5'))
         print()
 
         # Convert the results to a dict of 1D numpy arrays, in order to perform cuts etc
-        results_dict, n_jets = self.utils.convert_results(unfolding_results)
+        results_dict, n_jets = self.utils.convert_unfolding_results_to_dict(unfolding_results)
 
         # Apply pt cuts to a copy of results
         print('Binning results into pt bins to make some plots...')

@@ -15,6 +15,7 @@ import ctypes
 
 # Data analysis and plotting
 import numpy as np
+import pandas as pd
 import ROOT
 
 # Base class
@@ -128,6 +129,43 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
         return results_dict
 
     #---------------------------------------------------------------
+    # Construct dataframe and ndarray of observables for each data_type
+    #---------------------------------------------------------------
+    def convert_results_to_ndarray(self, results, observables, observable_info):
+        print('  Converting data to ndarray...')
+
+        df_dict = {}
+        ndarray_dict = {}
+        n_jets_dict = {}
+        cols_dict = {}
+        for data_type in results.keys():
+            df_dict[data_type] = pd.DataFrame()
+            for observable in observables:
+                for i in range(observable_info[observable]['n_subobservables']):
+                    obs_key = observable_info[observable]['obs_keys'][i]
+                    df_dict[data_type][obs_key] = results[data_type][obs_key]
+
+            # Convert to ndarray
+            ndarray_dict[data_type] = df_dict[data_type].to_numpy()
+            n_jets_dict[data_type] = ndarray_dict[data_type].shape[0]
+
+            # Store columns
+            cols_dict[data_type] = list(df_dict[data_type].columns)
+
+        # Check that the columns are ordered the same for all data_types
+        for i,data_type in enumerate(results.keys()):
+            if i == 0:
+                columns_reference = cols_dict[data_type]
+            else:
+                if cols_dict[data_type] != columns_reference:
+                    raise ValueError(f'Columns are not the same! {cols_dict}')
+
+        print('  Done.')
+        print()
+
+        return ndarray_dict, cols_dict, n_jets_dict
+
+    #---------------------------------------------------------------
     # Convert unfolding_results to format of results dict.
     #
     # The purpose of this is so that we can use the same machinery to apply 
@@ -154,7 +192,7 @@ class MultiFoldUtils(analysis_utils_obs.AnalysisUtils_Obs):
     # because we the different data types (data, sim_det, sim_truth) can have
     # different size.
     #---------------------------------------------------------------
-    def convert_results(self, unfolding_results):
+    def convert_unfolding_results_to_dict(self, unfolding_results):
 
         results = self.recursive_defaultdict()
         obs_keys = unfolding_results['columns']

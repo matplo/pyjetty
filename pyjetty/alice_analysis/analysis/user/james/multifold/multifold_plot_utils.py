@@ -185,6 +185,8 @@ class MultiFoldPlotUtils(common_base.CommonBase):
     #       - [pt_hat_scale_factors]
     #---------------------------------------------------------------
     def plot_unfolding_results(self, unfolding_results, pt_bin_pairs, observables, observable_info, jetR, output_dir):
+        output_dir_truth = self.utils.create_output_subdir(output_dir, 'Truth')
+        output_dir_det = self.utils.create_output_subdir(output_dir, 'Det')
 
         iterations = [key[-1] for key in unfolding_results['sim_truth'].keys() if 'weights_truth' in key]
 
@@ -226,7 +228,7 @@ class MultiFoldPlotUtils(common_base.CommonBase):
                     self.plot_1D_projection(unfolding_results, h_keys, h_legend_labels, h_plotmarkers, weights,
                                             observable_info=observable_info, obs_key=obs_key, cut_key=pt_cut_key, 
                                             observable=observable, subobservable_index=i, jet_pt_index=j,
-                                            pt_min=pt_min, pt_max=pt_max, jetR=jetR, output_dir=output_dir, prefix='Truth_')
+                                            pt_min=pt_min, pt_max=pt_max, jetR=jetR, output_dir=output_dir_truth, prefix='Truth_')
 
                     # ---------------------          
                     # Set which results to plot -- reweighted det-level 
@@ -250,7 +252,7 @@ class MultiFoldPlotUtils(common_base.CommonBase):
                     self.plot_1D_projection(unfolding_results, h_keys, h_legend_labels, h_plotmarkers, weights,
                                             observable_info=observable_info, obs_key=obs_key, cut_key=pt_cut_key, 
                                             observable=observable, subobservable_index=i, jet_pt_index=j,
-                                            pt_min=pt_min, pt_max=pt_max, jetR=jetR, output_dir=output_dir, prefix='Det_')
+                                            pt_min=pt_min, pt_max=pt_max, jetR=jetR, output_dir=output_dir_det, prefix='Det_')
 
     #---------------------------------------------------------------
     # Plot a 1D histogram for a given obs_key and pt_cut from a dict of numpy arrays
