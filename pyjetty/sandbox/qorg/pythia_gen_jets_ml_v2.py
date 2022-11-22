@@ -56,7 +56,7 @@ class JetFileOutput(object):
 		root_file_name = '_'.join(self.sname).replace('.cmnd', '_{}.root'.format(self.nfile))
 		root_file = ROOT.TFile(root_file_name, 'recreate')
 		root_ntuple_parts = ROOT.TNtuple('tree_Particle_gen', 'particles from PYTHIA8 - jets',
-								'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
+								'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:ParticleMass')
 		root_ntuple_ev = ROOT.TNtuple('tree_Event_gen', 'event info from PYTHIA8 - jets',
 								'run_number:ev_id:xsec:code:partonID')
 		run_number = self.args['py_seed'] + self.nfile
@@ -69,7 +69,7 @@ class JetFileOutput(object):
 			root_ntuple_ev.Fill(run_number, ev_number_stream, pythia.info.sigmaGen(), pythia.info.code(), j_flavor)
 			for p in j.constituents():
 				if pythiafjext.getPythia8Particle(p).isParton() is False:
-					root_ntuple_parts.Fill(run_number, ev_number_stream, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
+					root_ntuple_parts.Fill(run_number, ev_number_stream, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id(), p.m())
 		self.nfile += 1
 		root_file.Write()
 		root_file.Close()
@@ -77,8 +77,8 @@ class JetFileOutput(object):
 	def write_file_Zjets(self, jets, pythia):
 		root_file_name = '_'.join(self.sname).replace('.cmnd', '_{}.root'.format(self.nfile))
 		root_file = ROOT.TFile(root_file_name, 'recreate')
-		root_ntuple_parts = ROOT.TNtuple('tree_Particle_gen', 'particles from PYTHIA8 - jets', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
-		root_ntuple_parts_mDT = ROOT.TNtuple('tree_Particle_gen_mDT{}'.format(self.args['mDTzcut']), 'particles from PYTHIA8 - jets', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID')
+		root_ntuple_parts = ROOT.TNtuple('tree_Particle_gen', 'particles from PYTHIA8 - jets', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:ParticleMass')
+		root_ntuple_parts_mDT = ROOT.TNtuple('tree_Particle_gen_mDT{}'.format(self.args['mDTzcut']), 'particles from PYTHIA8 - jets', 'run_number:ev_id:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:ParticleMass')
 		root_ntuple_ev = ROOT.TNtuple('tree_Event_gen', 'event info from PYTHIA8 - jets', 'run_number:ev_id:xsec:code')
 		root_ntuple_zjet = ROOT.TNtuple('tree_Zjet_gen', 'Zjet kinematics','run_number:ev_id:ZjetPt:ZjetEta:ZjetPhi:ParticlePt:ParticleEta:ParticlePhi:ParticlePID:dR')
 		run_number = self.args['py_seed'] + self.nfile
@@ -92,7 +92,7 @@ class JetFileOutput(object):
 			root_ntuple_ev.Fill(run_number, ev_number_stream, pythia.info.sigmaGen(), pythia.info.code())
 			root_ntuple_zjet.Fill(run_number, ev_number_stream, Zjet.pt(), Zjet.eta(), Zjet.phi(), psjZ.pt(), psjZ.eta(), psjZ.phi(), pythiafjext.getPythia8Particle(psjZ).id(), ZjetDR)
 			for p in Zjet.constituents():
-				root_ntuple_parts.Fill(run_number, ev_number_stream, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
+				root_ntuple_parts.Fill(run_number, ev_number_stream, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id(), p.m())
 
 			# now mDT jets
 			ca_jets = fj.sorted_by_pt(self.jet_def_ca(Zjet.constituents()))
@@ -103,7 +103,7 @@ class JetFileOutput(object):
 				taggedJet = self.mDT.result(ca_jets[0])
 				if taggedJet.has_constituents():
 					for p in taggedJet.constituents():
-						root_ntuple_parts_mDT.Fill(run_number, ev_number_stream, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id())
+						root_ntuple_parts_mDT.Fill(run_number, ev_number_stream, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id(), p.m())
 		self.nfile += 1
 		root_file.Write()
 		root_file.Close()
