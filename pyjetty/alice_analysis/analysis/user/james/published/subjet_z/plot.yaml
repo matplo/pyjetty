@@ -1,0 +1,71 @@
+# Theory predictions for z_r, 0-10%
+
+# Data
+file_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/pp/493677-04-paper/leading_subjet_z/final_results/fFinalResults.root'
+file_AA: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper/leading_subjet_z/final_results/fFinalResults.root'
+
+file_AA_ratio: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio_half1/leading_subjet_z/final_results/fFinalResults_ratio.root'
+file_AA_ratio_sys: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio_half1/leading_subjet_z/ratio_systematics/fSystematics.root'
+file_AA_ratio_distribution1: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio_half1/leading_subjet_z/final_results/fFinalResults.root'
+file_AA_ratio_distribution2: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/PbPb/493675-04-paper-ratio_half2/leading_subjet_z/final_results/fFinalResults.root'
+
+# JETSCAPE
+jetscape_pp: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/901673/5020_PP_Colorless/AnalysisResultsFinal.root'
+jetscape_AA: '/Users/jamesmulligan/JETSCAPE/jetscape-docker/JETSCAPE-output/TG3/901673/5020_PbPb_0-10_0.30_2.0_1/AnalysisResultsFinal.root'
+
+# JEWEL
+jewel_pp: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/pp/893737/AnalysisResultsFinal.root'
+jewel_AA_recoils_off: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_off/893753/AnalysisResultsFinal.root'
+jewel_AA_recoils_on_charged: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_on_charged/901454/AnalysisResultsFinal.root'
+jewel_AA_recoils_on_cone: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_on_cone/904091/AnalysisResultsFinal.root'
+jewel_AA_recoils_on_unsubtracted: '/Users/jamesmulligan/Analysis_subjet_z/output_analysis/jewel/PbPb_recoils_on_unsubtracted/895833/AnalysisResultsFinal.root'
+gridsize: 0.1
+
+# In-medium jet functions
+# From Felix: Please find below results for the subjet R_AA including some uncertainties. As I mentioned before, there are
+#             several limitations and we had to make some approximations that we cannot really quantify at this point. So
+#             the uncertainties don’t really represent the actual uncertainty of the calculation. Nevertheless, it still
+#             represents a rough estimate assuming universality + factorization in QCD.
+#             We also had to leave out the last bin 0.98-1 since it is nonperturbative (latest) for z=1. We normalized our
+#             results over the remaining bins.
+#             But in the future we plan to do a global fit and we can then check universality of the jet functions and so on.
+# We now normalize everything (data, jetscape, medium jet functions) to the full range (e.g. 0.7 <zr < 1)
+# To do so, we normalize the medium jet function distributions (excluding the last bin) to be equal to the integral of the
+# data (excluding the last bin)
+# We also ignore the uncertainties for now, since they are very small -- we rather plot a thick line
+
+result1:
+  observable: 'leading_subjet_z'
+  jetR: 0.4
+  obs_label: 0.1
+  min_pt: 80
+  max_pt: 120
+  bins: [0.6, 0.7, 0.77, 0.83, 0.89, 0.95, 1.0]
+  medium_jet_functions:
+    zr: [0.65, 0.735, 0.8, 0.86, 0.92]
+    y_med: [0.1455584709507881, 0.13272989816238492, 0.14931064707348474, 0.210459800647732, 0.3619402789453955]
+    y_vac: [0.18138096111337335, 0.154211454017031, 0.16127989388252145, 0.20588293900273874, 0.29724430096231474]
+    ratio: [0.8025013764250916, 0.8607006464495582, 0.925785871252152, 1.0222304075663715, 1.2176525429541643]
+    uncertainty: [0.018772942469200263, 0.012432583518591953, 0.005973620925846246, 0.0028134697128204466, 0.019198510957898898]
+
+result2:
+  observable: 'leading_subjet_z'
+  jetR: 0.4
+  obs_label: 0.2
+  min_pt: 80
+  max_pt: 120
+  bins: [0.7, 0.8, 0.86, 0.9, 0.94, 0.98, 1.0]
+  medium_jet_functions:
+    zr: [0.75, 0.83, 0.88, 0.92, 0.96]
+    y_med: [0.12245446997436699, 0.11833608642134931, 0.1197749394695408, 0.19471980413302886, 0.44471401388800824]
+    y_vac: [0.14347122358081812, 0.13242651312460496, 0.1284936227978856, 0.19853112415040758, 0.397077484581548]
+    ratio: [0.8535124111866775, 0.893598144580025, 0.9321469568800401, 0.9808024054984383, 1.1199678429429485]
+    uncertainty: [0.014694528009061231, 0.009941774859060507, 0.00588644921871969, 0.0011806044097186254, 0.01111838686064225]
+
+result_ratio:
+  observable: 'leading_subjet_z'
+  jetR: 0.4
+  obs_label: '0.1-0.2'
+  min_pt: 100
+  max_pt: 150
+  bins: [0.7, 0.75, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.0]

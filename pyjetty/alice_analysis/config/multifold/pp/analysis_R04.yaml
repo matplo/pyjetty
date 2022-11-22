@@ -1,0 +1,287 @@
+# Configuration for unfolding analysis of observables 
+#
+# The observables are structured into observable blocks (e.g. theta_g, subjet_z, etc.)
+# each containing multiple individual subconfigurations (e.g. zcut, beta, subjetR, etc.),
+# where each subconfiguration corresponds to a single observable to be calculated.
+# One can also specify a list of jetR, which will be looped over.
+
+analysis_observables:
+  jet_pt: [config1]
+  theta_g: [config1]
+  zg: [config1]
+  leading_subjet_z: [config1, config2]
+  jet_axis: [config1]
+  ang: [config1, config3, config5, config7]
+
+jetR: [0.4]
+
+# Observable block
+jet_pt:
+
+  common_settings:
+    xtitle: '#it{p}_{T}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{p}_{T}}'
+    pt_bins_reported: [20, 40, 60, 80, 120]
+
+  config1:
+    None
+
+# Observable block
+# zcut=0.1 https://www.hepdata.net/record/ins2070421
+# zcut=0.2 https://www.hepdata.net/record/ins1893479
+theta_g:
+
+  common_settings:
+    xtitle: '#it{#theta}_{g}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#theta}_{g}}'
+
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut01/HEPData-ins2070421-v1-root.root'
+      tables: 
+        0.4: ['', '', 'Table 4', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config2:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut02/HEPData-ins1893479-v1-root.root'
+      tables: 
+        0.2: ['', '', 'Table 7', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+# Observable block
+# zcut=0.1 https://www.hepdata.net/record/ins2070421
+# zcut=0.2 https://www.hepdata.net/record/ins1893479
+zg:
+
+  common_settings:
+    xtitle: '#it{z}_{g}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{z}_{g}}'
+
+  config1:
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut01/HEPData-ins2070421-v1-root.root'
+      tables: 
+        0.4: ['', '', 'Table 1', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config2:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut02/HEPData-ins1893479-v1-root.root'
+      tables: 
+        0.2: ['', '', 'Table 1', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+# Observable block
+# https://www.hepdata.net/record/ins2070434
+leading_subjet_z:
+
+  common_settings:
+    xtitle: '#it{z_{r}}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{z_{r}}}'
+
+  config1:
+    subjet_R: 0.1
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/subjet_z/HEPData-ins2070434-v1-root.root'
+      tables: 
+        0.4: ['', '', '', 'Table 3']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+      
+  config2:
+    subjet_R: 0.2
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/subjet_z/HEPData-ins2070434-v1-root.root'
+      tables: 
+        0.4: ['', '', '', 'Table 4']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+# Observable block
+# https://www.hepdata.net/record/sandbox/1668138873
+jet_axis:
+
+  common_settings:
+    xtitle: '#it{#Delta R}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#Delta R}'
+      
+  config1:
+    axis: 'Standard_WTA'
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
+      tables: 
+        0.4: ['Table 55', 'Table 70', 'Table 83', '']
+        0.2: ['Table 1', 'Table 16', 'Table 29', '']      
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config2:
+    axis: 'Standard_SD'
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
+      tables: 
+        0.4: ['Table 64', 'Table 79', 'Table 92', '']
+        0.2: ['Table 10', 'Table 25', 'Table 38', '']   
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config3:
+    axis: 'WTA_SD'
+    SoftDrop:
+      zcut: 0.1
+      beta: 0
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
+      tables: 
+        0.4: ['Table 56', 'Table 71', 'Table 84', '']
+        0.2: ['Table 2', 'Table 17', 'Table 30', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+# Observable block
+# https://www.hepdata.net/record/ins1891385
+ang:
+
+  common_settings:
+    xtitle: '#it{#lambda}_{#it{#alpha}}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}}'
+
+  config1:
+    beta: 1
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables: 
+        0.4: ['Table 1', 'Table 9', 'Table 17', '']
+        0.2: ['Table 33', 'Table 41', 'Table 49', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config2:
+    beta: 1.5
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables:
+        0.4: ['Table 2', 'Table 10', 'Table 18', '']
+        0.2: ['Table 34', 'Table 42', 'Table 50', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config3:
+    beta: 2
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables: 
+        0.4: ['Table 3', 'Table 11', 'Table 19', '']
+        0.2: ['Table 35', 'Table 43', 'Table 51', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config4:
+    beta: 3
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables: 
+        0.4: ['Table 4', 'Table 12', 'Table 20', '']
+        0.2: ['Table 36', 'Table 44', 'Table 52', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config5:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 1
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables: 
+        0.4: ['Table 5', 'Table 13', 'Table 21', '']
+        0.2: ['Table 37', 'Table 45', 'Table 53', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config6:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 1.5
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables: 
+        0.4: ['Table 6', 'Table 14', 'Table 22', '']
+        0.2: ['Table 38', 'Table 46', 'Table 54', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config7:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 2
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables: 
+        0.4: ['Table 7', 'Table 15', 'Table 23', '']
+        0.2: ['Table 39', 'Table 47', 'Table 55', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+  config8:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    beta: 3
+    hepdata: 
+      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      tables: 
+        0.4: ['Table 8', 'Table 16', 'Table 24', '']
+        0.2: ['Table 40', 'Table 48', 'Table 56', '']
+      hname: 'Hist1D_y1'
+      gname: 'Graph1D_y1'
+
+###############################################################################
+# Analysis parameters
+
+# Directory to write analysis output to
+output_dir: '/rstorage/alice/AnalysisResults/james/1110260/output_analysis/'
+
+# Set which analysis steps to perform
+do_plot_observables: False
+do_unfolding: True
+do_plot_unfolding_results: True
+do_systematics: False
+do_plot_final_result: False
+
+# List of which systematics to perform
+systematics_list:
+  - main
+  - trkeff
+  - fastsim_generator0
+  - fastsim_generator1
+
+# Paths to processing output, to be used for unfolding
+main_data: '/rstorage/alice/AnalysisResults/james/1110260/processing_output_merged.h5'
+main_response: '/rstorage/alice/AnalysisResults/james/1110137/processing_output_merged.h5'
+trkeff_response: ''
+fastsim_response:
+ - ''
+ - ''

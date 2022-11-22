@@ -1,0 +1,87 @@
+dependent_variables:
+- header:
+    name: y
+    units: GeV
+  values:
+  - errors:
+    - label: err1
+      symerror: 0.0211
+    - label: err2
+      symerror: 13.497
+    value: 0.051529
+  - errors:
+    - label: err1
+      symerror: 0.15962
+    - label: err2
+      symerror: 3.5964
+    value: 1.6547
+  - errors:
+    - label: err1
+      symerror: 0.36941
+    - label: err2
+      symerror: 1.3764
+    value: 6.3205
+  - errors:
+    - label: err1
+      symerror: 0.26639
+    - label: err2
+      symerror: 2.1596
+    value: 3.6742
+  - errors:
+    - label: err1
+      symerror: 0.16383
+    - label: err2
+      symerror: 1.1349
+    value: 2.2145
+  - errors:
+    - label: err1
+      symerror: 0.15895
+    - label: err2
+      symerror: 0.95725
+    value: 1.5204
+  - errors:
+    - label: err1
+      symerror: 0.13023
+    - label: err2
+      symerror: 3.2959
+    value: 1.2489
+  - errors:
+    - label: err1
+      symerror: 0.10657
+    - label: err2
+      symerror: 3.4139
+    value: 0.86665
+  - errors:
+    - label: err1
+      symerror: 0.11757
+    - label: err2
+      symerror: 1.6964
+    value: 0.83824
+  - errors:
+    - label: err1
+      symerror: 0.097008
+    - label: err2
+      symerror: 3.9059
+    value: 0.78937
+  - errors:
+    - label: err1
+      symerror: 0.10694
+    - label: err2
+      symerror: 3.4994
+    value: 0.76962
+independent_variables:
+- header:
+    name: x
+    units: GeV
+  values:
+  - value: -0.05
+  - value: 0.025
+  - value: 0.075
+  - value: 0.125
+  - value: 0.175
+  - value: 0.225
+  - value: 0.275
+  - value: 0.325
+  - value: 0.375
+  - value: 0.425
+  - value: 0.475

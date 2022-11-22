@@ -44,7 +44,7 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
     elif observable == 'jet_axis':
       return '#Delta #it{R}_{axis}'
     elif observable == 'ang':
-      return '#it{#beta}'
+      return '#it{#alpha}'
 
     # Else observable not implemented
     return None

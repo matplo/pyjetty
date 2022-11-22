@@ -167,7 +167,8 @@ class PlotResults(common_base.CommonBase):
         self.y_ratio_min = -0.01
         self.y_ratio_max = 0.34
         pp_label = 'PYTHIA6'
-        self.ytitle = f'#frac{{1}}{{#it{{#sigma}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }}'
+        self.ytitle = f'#frac{{1}}{{#it{{#sigma}}}} #frac{{d#it{{#sigma}}}}{{ d{self.xtitle} }} (GeV^{{-1}}#it{{c}}^{{2}})'
+        self.xtitle = f'{self.xtitle} (GeV/#it{{c}}^{{2}})'
         self.plot_distribution(pp_label=pp_label)
         #self.plot_distribution_and_ratio(pp_label=pp_label, plot_ratio=False)
 
@@ -552,8 +553,8 @@ class PlotResults(common_base.CommonBase):
             
             self.observable_settings['prediction_distribution_list'].append(h_pp)
             self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp')
-            self.observable_settings['prediction_distribution_list'].append(h_pp_scaled)
-            self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp (scaled)')
+            #self.observable_settings['prediction_distribution_list'].append(h_pp_scaled)
+            #self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, pp (scaled)')
             self.observable_settings['prediction_distribution_list'].append(h_AA)
             self.observable_settings['prediction_distribution_labels'].append('JETSCAPE, Pb-Pb')
             self.observable_settings['prediction_distribution_list'].append(h_AA_scaled)
