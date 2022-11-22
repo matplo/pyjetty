@@ -268,6 +268,23 @@ class RunAnalysis(common_base.CommonBase):
     #---------------------------------------------------------------
     # Perform unfolding for a single systematic
     #
+    # The basic idea of OmniFold is that since an ML classifier approximates a likelihood 
+    # ratio between the two classes, we can use the classifier output thresholds to
+    # reweight one class into the other.
+    #
+    # Throughout, one can manipulate weighted distributions by simply propagating the 
+    # weights with the unweighted distributions, and applying them during appropriate 
+    # operations, namely when computing the loss or when filling histograms.
+    #
+    # We will follow notation of the OmniFold paper, where:
+    #    - omega_n: MC-det weights for iteration n
+    #    - nu_n: MC-truth weights for iteration n -- such that P_unfolded(n) = P(MC-truth, weights=nu_n)
+    # We interchangeably refer to 'omega' as 'weights_det', and 'nu' and 'weights_truth'.
+    #
+    # I personally find the 'push'/'pull' notation a bit confusing, so I neglect those labels and just assume
+    #   it is understood that there is an event-by-event association of MC-truth and MC-det which share
+    #   the same weight.
+    #
     # OmniFold code based in part on:
     #  - https://github.com/ftoralesacosta/AI4EIC_Omnfold
     #---------------------------------------------------------------  
@@ -303,8 +320,8 @@ class RunAnalysis(common_base.CommonBase):
 
         # Initialize labels
         labels_dict = {}
-        labels_dict['nature_det'] = np.zeros(n_jets_dict['data'])
-        labels_dict['sim_det'] = np.ones(n_jets_dict['mc_det_matched'])
+        labels_dict['nature_det'] = np.ones(n_jets_dict['data'])
+        labels_dict['sim_det'] = np.zeros(n_jets_dict['mc_det_matched'])
         labels_dict['sim_truth'] = np.zeros(n_jets_dict['mc_truth_matched'])
         labels_dict['nature_truth'] = np.ones(n_jets_dict['mc_truth_matched'])
 
@@ -318,22 +335,26 @@ class RunAnalysis(common_base.CommonBase):
 
         # Iterate
         self.n_iterations = 3
-        for iteration in range(1, self.n_iterations+1):
-            print(f'    Iteration {iteration}')
+        for n in range(1, self.n_iterations+1):
+            print(f'    Iteration {n}')
 
-            # Step 1: Train a classifier to discriminate 'nature_det' from 'sim_det',
-            #         where 'sim_det' is reweighted by weights_det, which are updated in the previous iteration
-            if iteration == 1:
-                multifold_result_dict[f'weights_det_iteration{iteration}'] = np.ones(n_jets_dict['mc_det_matched'])
+            #------------------
+            # Step 1: 
+            #   We wish to compute: omega_{n} = nu_{n-1} L[(1,nature_det),(nu_{n-1},sim_det)]
+            #      where L[(),()] is the likelihood ratio between the two (weighted) event ensembles,
+            #      which we approximate by an ML classifier.
+            #
+            #   To compute L, we therefore train a classifier to discriminate 'nature_det' from 'sim_det',
+            #      where 'sim_det' is reweighted by 'weights_truth', which are the truth weights from the previous iteration
+            #
+            #   We set the initial truth weights nu_0 to the pt-hat-scale-factors.
+            #   Ultimately, these will then be implicitly included in our final truth weights.
+            if n == 1:
+                multifold_result_dict[f'weights_truth_iteration{n-1}'] = multifold_result_dict['pt_hat_scale_factors']
 
             training_data = np.concatenate((multifold_result_dict['nature_det'], multifold_result_dict['sim_det']))
-            labels = np.concatenate((labels_dict['nature_det'], labels_dict['sim_det']))
-
-            # TODO: Should I use the total_scale_factor for the initial weights? (and ones and data)
-            # Or should I always apply the total_scale_factor weights when computing the loss?
-            # I suppose we want the final sampler to be "physical" i.e. include the total_scale_factor weights implicitly
-            weights = np.concatenate((multifold_result_dict[f'weights_det_iteration{iteration}'], np.ones(n_jets_dict['data'])))
-
+            labels = np.concatenate((labels_dict['nature_det'],labels_dict['sim_det']))
+            weights = np.concatenate((multifold_result_dict[f'weights_truth_iteration{n-1}'], np.ones(n_jets_dict['data'])))
             #print(f'    training_data: {training_data.shape} -- {training_data}')
             #print(f'    labels: {labels.shape} -- {labels}')
             #print(f'    weights: {weights.shape} -- {weights}')
@@ -341,7 +362,7 @@ class RunAnalysis(common_base.CommonBase):
             test_size = 0.2
             X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(training_data, labels, weights, test_size=test_size)
 
-            # Stack the weights with the labels
+            # Stack the weights with the labels, in order to apply the weights when computing the loss
             y_train = np.stack((y_train, w_train), axis=1)
             y_test = np.stack((y_test, w_test), axis=1)   
 
@@ -357,34 +378,35 @@ class RunAnalysis(common_base.CommonBase):
                       batch_size=batch_size,
                       validation_data=(X_test, y_test))
 
-            # Determine weights from likelihood ratio: w(mc_det_level) = P(data)/P(mc_det_level)
-            # Apply weights to generator: w'(mc_truth_level) = M(w(mc_det_level)) where M defines jet matching
+            # Compute omega_{n} ('weights_det') from the previous iteration's truth weights and the classifier:
+            #    omega_{n} = nu_{n-1} * L[(),()]
+            # To do this, get the likelihood ratio from the classifier for a sample of simulated events.
+            # The classifier returns a probability f of being true --  we want to convert this 
+            #   to a ratio P(true)/P(false) = P(true)/(1 - P(true))
             f = model.predict(multifold_result_dict['sim_det'], batch_size=batch_size)
             eps = 1.e-6
             weights_update = f / (1. - f + eps)
-            
-            # Update truth weights
-            multifold_result_dict[f'weights_truth_iteration{iteration}'] = multifold_result_dict[f'weights_det_iteration{iteration}'] * np.squeeze(np.nan_to_num(weights_update))
-            
-            #print()
-            #print(f'weights step1: {weights_step_1.shape} -- {weights_step_1}')
-            #print()
+            weights_update = np.squeeze(np.nan_to_num(weights_update))
+            multifold_result_dict[f'weights_det_iteration{n}'] = multifold_result_dict[f'weights_truth_iteration{n-1}'] * weights_update
 
-            # Step 2: Train a classifier to discriminate 'sim_truth' from 'nature_truth',
-            #         where 'nature_truth' is 'sim_truth' reweighted by weights_step_1
+            #------------------
+            # Step 2: 
+            #   We wish to compute: nu_{n} = nu_{n-1} L[(omega_n,sim_truth),(nu_{n-1},sim_truth)]
+            #      where L[(),()] is the likelihood ratio between the two (weighted) event ensembles,
+            #      which we approximate by an ML classifier.
+            #
+            #   To compute L, we therefore train a classifier to discriminate the two 'sim_truth' samples,
+            #       one weighted by 'weights_det' from Step 1, and the other by 'weights_truth' from the previous iteration.
             training_data = np.concatenate((multifold_result_dict['sim_truth'], multifold_result_dict['sim_truth']))
             labels = np.concatenate((labels_dict['sim_truth'], labels_dict['nature_truth']))
-
-            # TODO: Same question about pt-hat weights as above
-            weights = np.concatenate((np.ones(n_jets_dict['mc_truth_matched']), multifold_result_dict[f'weights_truth_iteration{iteration}']))
-
+            weights = np.concatenate((multifold_result_dict[f'weights_det_iteration{n}'], multifold_result_dict[f'weights_truth_iteration{n-1}']))
             #print(f'    training_data: {training_data.shape} -- {training_data}')
             #print(f'    labels: {labels.shape} -- {labels}')
             #print(f'    weights: {weights.shape} -- {weights}')
 
             X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(training_data, labels, weights, test_size=test_size)
 
-            # Stack the weights with the labels
+            # Stack the weights with the labels, in order to apply the weights when computing the loss
             y_train = np.stack((y_train, w_train), axis=1)
             y_test = np.stack((y_test, w_test), axis=1)   
 
@@ -399,20 +421,21 @@ class RunAnalysis(common_base.CommonBase):
                       batch_size=batch_size,
                       validation_data=(X_test, y_test))
 
+            # Compute nu_{n} ('weights_truth') from the previous iteration's truth weights and the classifier:
+            #    nu_{n} = nu_{n-1} * L[(),()]
+            # To do this, get the likelihood ratio from the classifier for a sample of simulated events.
+            # The classifier returns a probability f of being true --  we want to convert this 
+            #   to a ratio P(true)/P(false) = P(true)/(1 - P(true))
+            # In general, this step causes the new generator to drift away from the data from step 1
+            #
+            # Note: we could alternately have trained the classifier using nu_0 rather than nu_{n-1} for
+            #       the truth generator weights, in which case the coeffs below would be obtained simply
+            #       as the classifier output rather without multiplying by 'weights_truth_iteration{n-1}',
+            #       i.e. determining the coefficient in one go rather than iteratively updating the coeff.
             f = model.predict(multifold_result_dict['sim_truth'], batch_size=batch_size)
             weights_update = f / (1. - f + eps)
-            #print()
-            #print(f'weights_update: {weights_update.shape} -- {weights_update}')
-            #print()
-
-            # Apply weights to generator, now as a proper function of the generator phase space: 
-            #               w(mc_truth_level) = P(reweighted mc_truth_level) / P(mc_truth_level)
-            #         Assign the reweighted generator to the new current truth generator, to be used in subsequent iteration
-            #         In general, this step causes the new generator to drift away from the data from step 1
-            # 
-            # Update det weights for next iteration
-            if iteration < self.n_iterations:
-                multifold_result_dict[f'weights_det_iteration{iteration+1}'] = np.squeeze(np.nan_to_num(weights_update))
+            weights_update = np.squeeze(np.nan_to_num(weights_update))
+            multifold_result_dict[f'weights_truth_iteration{n}'] = multifold_result_dict[f'weights_truth_iteration{n-1}'] * weights_update
 
         # Save results to file
         print()
@@ -422,7 +445,7 @@ class RunAnalysis(common_base.CommonBase):
 
     #---------------------------------------------------------------
     # Binary crossentropy for classifying two samples with weights
-    # Weights are "hidden" by zipping in y_true (the labels)
+    # Weights are "hidden" by stacking both the labels and weights in y
     #---------------------------------------------------------------
     def weighted_binary_crossentropy(self, y_true, y_pred):
 

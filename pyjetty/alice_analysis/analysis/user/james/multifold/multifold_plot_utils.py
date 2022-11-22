@@ -236,6 +236,8 @@ class MultiFoldPlotUtils(common_base.CommonBase):
                     h_keys, h_legend_labels, h_plotmarkers, weights = [], [], [], []
                     # Plot reweighted det-level iterations: sim_det weighted by weights_det
                     for iteration in iterations:
+                        if iteration == '0':
+                            continue
                         data_type = 'sim_det'
                         label = f'MC det-level, iteration {iteration}'
                         h_keys.append([data_type,obs_key])
