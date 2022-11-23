@@ -29,6 +29,7 @@ from tensorflow import keras
 np.finfo(np.dtype("float32")) 
 np.finfo(np.dtype("float64"))
 
+sys.path.append('../../../../../..')
 from pyjetty.alice_analysis.analysis.base import common_base
 from pyjetty.alice_analysis.analysis.user.james.multifold import multifold_utils
 from pyjetty.alice_analysis.analysis.user.james.multifold import multifold_plot_utils

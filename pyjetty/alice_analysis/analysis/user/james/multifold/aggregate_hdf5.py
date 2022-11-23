@@ -9,6 +9,7 @@ import numpy as np
 import shutil
 from collections import defaultdict
 
+sys.path.append('../../../../../..')
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
 utils = analysis_utils_obs.AnalysisUtils_Obs()
 
@@ -171,7 +172,8 @@ def merge_stage0(filename_list, levels, observable_keys, jetR, is_mc, pt_hat_cro
         # First, create a dict that separates the filelist by pt-hat bin
         file_dict = defaultdict(list)
         for filename in filename_list:
-            pt_hat_bin = int(filename.split('/')[9])
+            #pt_hat_bin = int(filename.split('/')[9])
+            pt_hat_bin = int(filename.split('/')[-4])
             if pt_hat_bin not in range(1,21):
                 raise ValueError(f'Unexpected pt-ht bin {pt_hat_bin} -- check parsing of path')
             file_dict[pt_hat_bin].append(filename)
@@ -295,7 +297,8 @@ def check_if_mc(file):
     Function to check whether the production is data or MC
     '''
     if 'LHC18b8' in file:
-        pt_hat_cross_section_filename = '/rstorage/alice/data/LHC18b8/scaleFactors.yaml'
+        pt_hat_cross_section_filename = '/global/cfs/cdirs/alice/jdmull/multifold/scale_factors/LHC18b8/scaleFactors.yaml'
+        #pt_hat_cross_section_filename = '/rstorage/alice/data/LHC18b8/scaleFactors.yaml'
     elif 'LHC18b8' in file:
         pt_hat_cross_section_filename = '/rstorage/alice/data/LHC20g4/scaleFactors.yaml'
     else:

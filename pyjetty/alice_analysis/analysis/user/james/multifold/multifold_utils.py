@@ -16,7 +16,11 @@ import ctypes
 # Data analysis and plotting
 import numpy as np
 import pandas as pd
-import ROOT
+
+try:
+    import ROOT
+except ImportError:
+    pass
 
 # Base class
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
