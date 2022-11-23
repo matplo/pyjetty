@@ -126,7 +126,7 @@ class RunAnalysis(common_base.CommonBase):
                 self.observable_info[observable]['pt_bins_reported_pairs_nested'] = pt_bin_pairs_nested
 
         # Directory to write analysis output to
-        self.output_dir = config['output_dir']
+        self.output_dir = os.path.expandvars(config['output_dir'])
 
         # Set which analysis steps to perform
         self.do_plot_observables = config['do_plot_observables']
@@ -201,7 +201,7 @@ class RunAnalysis(common_base.CommonBase):
             self.n_jets[data_type] = results[data_type][self.observable_info[self.observables[0]]['obs_keys'][0]].shape[0]
         n_jets_total_data = self.n_jets['data'] 
         n_jets_total_mc = self.n_jets['mc_truth_matched']
-        print(f'Analyzing the following observables: (n_jets={n_jets_total_data} in data, n_jets={n_jets_total_mc} in mc)')
+        print(f'The following observables are available to analyze: (n_jets={n_jets_total_data} in data, n_jets={n_jets_total_mc} in mc)')
         [print(obs_key) for obs_key in results['data'].keys()]
         print()
 
@@ -220,6 +220,7 @@ class RunAnalysis(common_base.CommonBase):
             for observable in self.observables:
                 for i in range(self.observable_info[observable]['n_subobservables']):
                     obs_key = self.observable_info[observable]['obs_keys'][i]
+                    print(f'    {obs_key}')
 
                     # Check number of jets is as expected for each observable
                     if results[data_type][obs_key].shape[0] != self.n_jets[data_type] or idx[data_type].shape[0] != self.n_jets[data_type]:
@@ -231,6 +232,9 @@ class RunAnalysis(common_base.CommonBase):
             if 'mc' in data_type:
                 self.results[data_type]['pt_hat_scale_factors'] = results[data_type]['pt_hat_scale_factors'][idx[data_type]]
         print('Done.')
+        print()
+        print('We will analyze the following observables:')
+        [print(obs_key) for obs_key in self.results['data'].keys() if obs_key != 'pt_hat_scale_factors']
         print()
 
     #---------------------------------------------------------------
