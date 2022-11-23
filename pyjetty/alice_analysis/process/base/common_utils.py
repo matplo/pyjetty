@@ -21,8 +21,11 @@ import ROOT
 from silx.io.dictdump import dicttoh5, h5todict
 
 # Fastjet via python (from external library fjpydev)
-import fastjet as fj
-import fjext
+try:
+    import fastjet as fj
+    import fjext
+except ImportError:
+    pass
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base

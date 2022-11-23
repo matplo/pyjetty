@@ -19,7 +19,11 @@ import pandas
 import numpy as np
 from array import *
 import ROOT
-import fjtools
+
+try:
+    import fjtools
+except ImportError:
+    pass
 
 # Base class
 from pyjetty.alice_analysis.analysis.base import common_utils
