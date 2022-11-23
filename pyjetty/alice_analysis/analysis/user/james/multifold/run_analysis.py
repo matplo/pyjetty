@@ -138,14 +138,16 @@ class RunAnalysis(common_base.CommonBase):
         # List of systematic variations to perform
         self.systematics_list = config['systematics_list']
 
+        self.n_iterations = config['n_iterations']
+
         # Load paths to processing output, to be unfolded
-        self.main_data = config['main_data']
+        self.main_data = os.path.expandvars(config['main_data'])
         self.response = {}
-        self.response['main'] = config['main_response']
+        self.response['main'] = os.path.expandvars(config['main_response'])
         if 'trkeff' in self.systematics_list:
-            self.response['trkeff'] = config['trkeff_response']
+            self.response['trkeff'] = os.path.expandvars(config['trkeff_response'])
         if 'fastsim_generator0' in self.systematics_list:
-            self.response['fastsim_list'] = config['fastsim_response']
+            self.response['fastsim_list'] = [os.path.expandvars(x) for x in config['fastsim_response']]
 
     #---------------------------------------------------------------
     # Main processing function
@@ -335,7 +337,6 @@ class RunAnalysis(common_base.CommonBase):
         model = keras.models.Model(inputs=inputs, outputs=outputs)
 
         # Iterate
-        self.n_iterations = 3
         for n in range(1, self.n_iterations+1):
             print(f'    Iteration {n}')
 

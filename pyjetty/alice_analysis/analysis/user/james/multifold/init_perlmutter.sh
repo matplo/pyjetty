@@ -39,7 +39,7 @@ if [ ! -z ${INSTALL} ]; then
     scikit-learn==1.0.2 \
     seaborn==0.11.2 \
     silx==1.1.0 \
-    tensorflow==2.8.0 \
+    tensorflow==2.11.0 \
     torch==1.11 \
     torch-geometric==2.0.4 \
     torch-scatter==2.0.9 \
@@ -50,3 +50,5 @@ else
     source /global/homes/j/jdmull/miniconda3/bin/activate
     conda activate myenv
 fi
+
+export OUTPUT_DIR='/global/cfs/cdirs/alice/jdmull/multifold'

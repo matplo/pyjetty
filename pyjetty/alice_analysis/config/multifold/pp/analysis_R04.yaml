@@ -40,7 +40,7 @@ theta_g:
       zcut: 0.1
       beta: 0
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut01/HEPData-ins2070421-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut01/HEPData-ins2070421-v1-root.root'
       tables: 
         0.4: ['', '', 'Table 4', '']
       hname: 'Hist1D_y1'
@@ -51,7 +51,7 @@ theta_g:
       zcut: 0.2
       beta: 0
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut02/HEPData-ins1893479-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut02/HEPData-ins1893479-v1-root.root'
       tables: 
         0.2: ['', '', 'Table 7', '']
       hname: 'Hist1D_y1'
@@ -71,7 +71,7 @@ zg:
       zcut: 0.1
       beta: 0
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut01/HEPData-ins2070421-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut01/HEPData-ins2070421-v1-root.root'
       tables: 
         0.4: ['', '', 'Table 1', '']
       hname: 'Hist1D_y1'
@@ -82,7 +82,7 @@ zg:
       zcut: 0.2
       beta: 0
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut02/HEPData-ins1893479-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/theta_g_zcut02/HEPData-ins1893479-v1-root.root'
       tables: 
         0.2: ['', '', 'Table 1', '']
       hname: 'Hist1D_y1'
@@ -99,7 +99,7 @@ leading_subjet_z:
   config1:
     subjet_R: 0.1
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/subjet_z/HEPData-ins2070434-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/subjet_z/HEPData-ins2070434-v1-root.root'
       tables: 
         0.4: ['', '', '', 'Table 3']
       hname: 'Hist1D_y1'
@@ -108,7 +108,7 @@ leading_subjet_z:
   config2:
     subjet_R: 0.2
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/subjet_z/HEPData-ins2070434-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/subjet_z/HEPData-ins2070434-v1-root.root'
       tables: 
         0.4: ['', '', '', 'Table 4']
       hname: 'Hist1D_y1'
@@ -125,7 +125,7 @@ jet_axis:
   config1:
     axis: 'Standard_WTA'
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
       tables: 
         0.4: ['Table 55', 'Table 70', 'Table 83', '']
         0.2: ['Table 1', 'Table 16', 'Table 29', '']      
@@ -138,7 +138,7 @@ jet_axis:
       zcut: 0.1
       beta: 0
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
       tables: 
         0.4: ['Table 64', 'Table 79', 'Table 92', '']
         0.2: ['Table 10', 'Table 25', 'Table 38', '']   
@@ -151,7 +151,7 @@ jet_axis:
       zcut: 0.1
       beta: 0
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/jet_axis/HEPData-1668138873-v1-root.root'
       tables: 
         0.4: ['Table 56', 'Table 71', 'Table 84', '']
         0.2: ['Table 2', 'Table 17', 'Table 30', '']
@@ -169,7 +169,7 @@ ang:
   config1:
     beta: 1
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables: 
         0.4: ['Table 1', 'Table 9', 'Table 17', '']
         0.2: ['Table 33', 'Table 41', 'Table 49', '']
@@ -179,7 +179,7 @@ ang:
   config2:
     beta: 1.5
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables:
         0.4: ['Table 2', 'Table 10', 'Table 18', '']
         0.2: ['Table 34', 'Table 42', 'Table 50', '']
@@ -189,7 +189,7 @@ ang:
   config3:
     beta: 2
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables: 
         0.4: ['Table 3', 'Table 11', 'Table 19', '']
         0.2: ['Table 35', 'Table 43', 'Table 51', '']
@@ -199,7 +199,7 @@ ang:
   config4:
     beta: 3
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables: 
         0.4: ['Table 4', 'Table 12', 'Table 20', '']
         0.2: ['Table 36', 'Table 44', 'Table 52', '']
@@ -212,7 +212,7 @@ ang:
       beta: 0
     beta: 1
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables: 
         0.4: ['Table 5', 'Table 13', 'Table 21', '']
         0.2: ['Table 37', 'Table 45', 'Table 53', '']
@@ -225,7 +225,7 @@ ang:
       beta: 0
     beta: 1.5
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables: 
         0.4: ['Table 6', 'Table 14', 'Table 22', '']
         0.2: ['Table 38', 'Table 46', 'Table 54', '']
@@ -238,7 +238,7 @@ ang:
       beta: 0
     beta: 2
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables: 
         0.4: ['Table 7', 'Table 15', 'Table 23', '']
         0.2: ['Table 39', 'Table 47', 'Table 55', '']
@@ -251,7 +251,7 @@ ang:
       beta: 0
     beta: 3
     hepdata: 
-      file: '/home/james/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
+      file: '$HOME/pyjetty/pyjetty/alice_analysis/analysis/user/james/multifold/hepdata/angularity/HEPData-ins1891385-v1-root.root'
       tables: 
         0.4: ['Table 8', 'Table 16', 'Table 24', '']
         0.2: ['Table 40', 'Table 48', 'Table 56', '']
@@ -262,7 +262,8 @@ ang:
 # Analysis parameters
 
 # Directory to write analysis output to
-output_dir: '/rstorage/alice/AnalysisResults/james/1110260/output_analysis/'
+#output_dir: '/rstorage/alice/AnalysisResults/james/1110260/output_analysis/'
+output_dir: '$OUTPUT_DIR/1110260/output_analysis/'
 
 # Set which analysis steps to perform
 do_plot_observables: False
@@ -274,13 +275,15 @@ do_plot_final_result: False
 # List of which systematics to perform
 systematics_list:
   - main
-  - trkeff
-  - fastsim_generator0
-  - fastsim_generator1
+  #- trkeff
+  #- fastsim_generator0
+  #- fastsim_generator1
+
+n_iterations: 5
 
 # Paths to processing output, to be used for unfolding
-main_data: '/rstorage/alice/AnalysisResults/james/1110260/processing_output_merged.h5'
-main_response: '/rstorage/alice/AnalysisResults/james/1110137/processing_output_merged.h5'
+main_data: '$OUTPUT_DIR/1110260/processing_output_merged.h5'
+main_response: '$OUTPUT_DIR/1110137/processing_output_merged.h5'
 trkeff_response: ''
 fastsim_response:
  - ''
