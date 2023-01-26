@@ -77,7 +77,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
                        ROOT.kOrange-3]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
 
-    print(self)
+    #print(self)
 
   #---------------------------------------------------------------
   # Main processing function
@@ -232,6 +232,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       f = ROOT.TFile(response_file_name, 'RECREATE')
       f.Close()
 
+    use_histutils = True
+
     # Rebin response matrix, and create RooUnfoldResponse object
     # THn response matrix is: (pt-det, pt-true, obs-det, obs-true)
     for jetR in self.jetR_list:
@@ -248,6 +250,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         name_thn_rebinned_shape2 = getattr(self, 'name_thn_rebinned_shape{}_R{}_{}'.format(
           self.utils.remove_periods(self.shape_variation_parameter2), jetR, obs_label))
         name_data = getattr(self, 'name_data_R{}_{}'.format(jetR, obs_label))
+        name_data_rebinned = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
         name_roounfold = getattr(self, 'name_roounfold_R{}_{}'.format(jetR, obs_label))
         name_roounfold_shape1 = getattr(self, 'name_roounfold_shape{}_R{}_{}'.format(
           self.utils.remove_periods(self.shape_variation_parameter1), jetR, obs_label))
@@ -275,55 +278,6 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           move_underflow = False
         if self.prong_matching_response:
           move_underflow = False
-
-        # Rebin if requested, and write to file
-        use_histutils = True
-        try:
-          thn = self.fResponse.Get(name_thn)
-          thn.SetName(name_thn)
-        except AttributeError:
-          # Give a more helpful error message for debugging
-          raise AttributeError("%s not found in file %s" % (name_thn, self.input_file_response))
-        setattr(self, name_thn, thn)
-        if rebin_response:
-
-          # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
-          label = 'R{}_{}'.format(jetR, obs_label)
-          if use_histutils:
-            n_dim = 4
-            # If use_histutils, we use the Miss/Fake functionality of RooUnfold to
-            # perform kinematic efficiency corrections
-            self.histutils.rebin_thn(
-              response_file_name, thn, name_thn_rebinned, name_roounfold, n_dim,
-              n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
-              n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
-              label, self.prior_variation_parameter, self.prior_variation_option,
-              move_underflow, self.use_miss_fake)
-
-            # Also rebin response with shape scaling for shape closure tests
-            self.histutils.rebin_thn(
-              response_file_name, thn, name_thn_rebinned_shape1, name_roounfold_shape1,
-              n_dim, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
-              n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
-              label, self.shape_variation_parameter1, self.prior_variation_option,
-              move_underflow, self.use_miss_fake)
-
-            self.histutils.rebin_thn(
-              response_file_name, thn, name_thn_rebinned_shape2, name_roounfold_shape2,
-              n_dim, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
-              n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
-              label, self.shape_variation_parameter2, self.prior_variation_option,
-              move_underflow, self.use_miss_fake)
-
-          else:
-            # If not use_histutils, we apply a kinematic efficiency correction by hand
-            # after unfolding.
-            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold,
-                                      label, n_pt_bins_det, det_pt_bin_array, n_bins_det,
-                                      det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
-                                      n_bins_truth, truth_bin_array, self.observable,
-                                      self.prior_variation_parameter, move_underflow=move_underflow,
-                                      use_miss_fake=self.use_miss_fake)
 
         # Get data histogram
         hData = self.fData.Get(name_data)
@@ -356,6 +310,80 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         h.SetDirectory(0)
         name = getattr(self, 'name_data_rebinned_R{}_{}'.format(jetR, obs_label))
         setattr(self, name, h)
+
+        # Rebin if requested, and write to file
+        try:
+          thn = self.fResponse.Get(name_thn)
+          thn.SetName(name_thn)
+        except AttributeError:
+          # Give a more helpful error message for debugging
+          raise AttributeError("%s not found in file %s" % (name_thn, self.input_file_response))
+        setattr(self, name_thn, thn)
+
+        if rebin_response:
+          label = 'R{}_{}'.format(jetR, obs_label)
+          n_dim = 4
+
+          prior_variation_option = self.prior_variation_option
+          # Option 6 is to scale by data / MC-det
+          if int(self.prior_variation_option) == 6:
+            if self.prior_variation_parameter > 1e-8:  # Don't scale in control case
+              hData_PerBin = getattr(self, name_data_rebinned)
+
+              # Perform rebin of RM with no variation for taking ratio
+              thn_temp = self.histutils.rebin_thn(
+                response_file_name, thn, name_thn_rebinned, name_roounfold, n_dim,
+                n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
+                n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
+                label, 0., 1, move_underflow, self.use_miss_fake)
+              hMC_PerBin = thn_temp.Projection(2, 0)
+              hMC_PerBin.SetName("hMC_PerBin_{}".format(label))
+
+              prior_variation_option = hData_PerBin.Clone("hShapeVar_{}".format(label))
+              prior_variation_option.Divide(hMC_PerBin)
+
+              outputFile = ROOT.TFile("./test_output.root", "RECREATE");
+              prior_variation_option.Write();
+
+          # Create rebinned THn and RooUnfoldResponse with these binnings, and write to file
+          if use_histutils:
+            # If use_histutils, we use the Miss/Fake functionality of RooUnfold to
+            # perform kinematic efficiency corrections
+            rebinner = self.histutils.rebin_thn
+            if int(self.prior_variation_option) == 6 and self.prior_variation_parameter > 1e-8:
+              rebinner = self.histutils.rebin_thn_th2prior
+
+            rebinner(
+              response_file_name, thn, name_thn_rebinned, name_roounfold, n_dim,
+              n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
+              n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
+              label, self.prior_variation_parameter, prior_variation_option,
+              move_underflow, self.use_miss_fake)
+
+            # Also rebin response with shape scaling for shape closure tests
+            rebinner(
+              response_file_name, thn, name_thn_rebinned_shape1, name_roounfold_shape1,
+              n_dim, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
+              n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
+              label, self.shape_variation_parameter1, prior_variation_option,
+              move_underflow, self.use_miss_fake)
+
+            rebinner(
+              response_file_name, thn, name_thn_rebinned_shape2, name_roounfold_shape2,
+              n_dim, n_pt_bins_det, det_pt_bin_array, n_bins_det, det_bin_array,
+              n_pt_bins_truth, truth_pt_bin_array, n_bins_truth, truth_bin_array,
+              label, self.shape_variation_parameter2, prior_variation_option,
+              move_underflow, self.use_miss_fake)
+
+          else:
+            # If not use_histutils, we apply a kinematic efficiency correction by hand
+            # after unfolding.
+            self.utils.rebin_response(response_file_name, thn, name_thn_rebinned, name_roounfold,
+                                      label, n_pt_bins_det, det_pt_bin_array, n_bins_det,
+                                      det_bin_array, n_pt_bins_truth, truth_pt_bin_array,
+                                      n_bins_truth, truth_bin_array, self.observable,
+                                      self.prior_variation_parameter, move_underflow=move_underflow,
+                                      use_miss_fake=self.use_miss_fake)
 
         # Retrieve responses from file
         f = ROOT.TFile(response_file_name, 'READ')

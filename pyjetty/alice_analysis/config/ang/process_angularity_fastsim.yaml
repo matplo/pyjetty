@@ -1,14 +1,11 @@
 # Processing parameters
-jetR: [0.2, 0.4, 0.6]
-alphas: [1, 1.5, 2, 3]
+jetR: [0.2, 0.4]
 
-# Initial detector-level binnings. Distributions are rebinned via configs before unfolding
-n_pt_bins: 195
-pt_limits: [5, 200]
-n_lambda_bins: 160
-lambda_limits: [0, 0.8]
-n_rap_bins: 50            # just for fun, look at lambda distribution vs rapidity
-rap_limits: [-1, 1]
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang', 'mass']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 
 # Mass assumption for track/jet reconstruction
 track_mass: 0.13957         # Pion mass in GeV/c^2
@@ -17,15 +14,10 @@ track_random_mass: False    # Whether to randomly assign K and p mass to some tr
 # For extra verbose output in some functions
 debug_level: 0
 
-process_observables: ['ang']
-jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0
 fast_simulation: True
 dry_run: False
 
-# SoftDrop setting (current same for all SD plots)
-sd_zcut: 0.2    # multiplier
-sd_beta: 0      # exponent on (deltaR / R)
 
 ###############################################################################
 # Rebinning and unfolding parameters/configurations for angularity observables
@@ -75,3 +67,23 @@ ang:
       beta: 0
     alpha: 3
 
+
+###############################################################################
+mass:
+
+  common_settings:
+    xtitle: '#it{m}_{jet}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
+
+  ############################################################################
+  # Different alpha configurations
+  config_m:
+    name: "mass"
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_m_SD:
+    name: "groomed mass"
+    SoftDrop:
+      zcut: 0.2
+      beta: 0

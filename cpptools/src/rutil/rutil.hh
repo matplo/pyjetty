@@ -41,13 +41,15 @@ namespace RUtil
                               const double & prior_variation_parameter);
     double prior_scale_func_4(const double & obs_true, const double & content,
                               const double & prior_variation_parameter);
+    double prior_scale_func_5(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter);
     double prior_scale_func_def(const double & obs_true, const double & content,
                                 const double & prior_variation_parameter);
 
-	void delete_h(TH2* h);
-	void delete_h(THn* h);
+    void delete_h(TH2* h);
+    void delete_h(THn* h);
 
-	bool* sorted_match(const int* a, const int a_len, const int* b, const int b_len);
+    bool* sorted_match(const int* a, const int a_len, const int* b, const int b_len);
 
     //------------------------------------------------------
     // Rebinning utilities
@@ -87,6 +89,30 @@ namespace RUtil
                         const bool move_underflow=false,
                         const bool use_miss_fake=false,
                         const bool do_roounfoldresponse=true);
+
+        // Rebin N-dimensional THn to a new histogram with name name_thn_rebinned using provided axes
+        // WARNING: currently requires n_dim = 4
+        // Alternate definition to take TH2 as prior variation
+        THnF* rebin_thn_th2prior(
+            const std::string & response_file_name,
+            const THnF* thn,
+            const std::string & name_thn_rebinned,
+            const std::string & name_roounfold,
+            const int & n_dim,
+            const int & n_pt_bins_det,
+            const double* det_pt_bin_array,
+            const int & n_obs_bins_det,
+            const double* det_bin_array,
+            const int & n_pt_bins_truth,
+            const double* truth_pt_bin_array,
+            const int & n_obs_bins_truth,
+            const double* truth_bin_array,
+            const std::string & label="",
+            const double & prior_variation_parameter=0.,
+            const TH2* prior_variation=nullptr,
+            const bool move_underflow=false,
+            const bool use_miss_fake=false,
+            const bool do_roounfoldresponse=true);
 
         //---------------------------------------------------------------
         // Remove outliers from a TH1 via "simple" method:
@@ -159,6 +185,25 @@ namespace RUtil
                                const bool move_underflow=false,
                                const bool use_miss_fake=false);
 
+        // Fill empty thn_rebinned with data from thn
+        // Overloaded function to take TH2 as prior variation
+        void fill_rebinned_thn(const std::string & response_file_name, const THnF* thn,
+                               THnF* thn_rebinned, const unsigned int & n_dim,
+                               const bool do_roounfoldresponse=true,
+                               RooUnfoldResponse* roounfold_response=nullptr,
+                               const float min_det_pt=0.,
+                               const float min_truth_pt=0.,
+                               const float min_det=0.,
+                               const float min_truth=0.,
+                               const float max_det_pt=0.,
+                               const float max_truth_pt=0.,
+                               const float max_det=0.,
+                               const float max_truth=0.,
+                               const TH2* prior_variation=nullptr,
+                               const double & prior_variation_parameter=0.,
+                               const bool move_underflow=false,
+                               const bool use_miss_fake=false);
+
         // Set scaling of prior
         prior_scale_func prior_scale_factor_obs(const int & option);
 
@@ -166,9 +211,9 @@ namespace RUtil
         void simpleRemoveOutliersTHn_recurse(
             THn* hist, int limit, int dim, int* n_bins, int* x, int dim_to_update);
         // Recursive helper function for pThatRemoveOutliersTHn()
-        void pThatRemoveOutliersTHn_recurse(
-            THn* hist, int limit, int dim, int pTdim, int max_bin_number,
-            int* n_bins, int* x, int dim_to_update, bool verbose);
+        //void pThatRemoveOutliersTHn_recurse(
+        //   THn* hist, int limit, int dim, int pTdim, int max_bin_number,
+        //   int* n_bins, int* x, int dim_to_update, bool verbose);
 
         //------------------------------------------------------
         // Convolution of nonperturbative shape functions

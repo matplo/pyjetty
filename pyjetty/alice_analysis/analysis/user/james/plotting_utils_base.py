@@ -484,7 +484,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       else:  # alpha = 2, 3
         obs_true_list = [0, 0.05, 0.1, 0.2, 0.5]
     elif "{m}_{jet}" in xtitle:
-      obs_true_list = [0, 10, 20, 40]
+      obs_true_list = [1, 5, 8, 12, 20]
 
     max = 0
     residuals = []
@@ -761,9 +761,13 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
       rebin_val_mctruth = 2
       rebin_val_data = 2
     elif self.observable == "mass":
-      rebin_val_mcdet = 5
-      rebin_val_mctruth = 5
-      rebin_val_data = 5
+      rebin_val_mcdet = 2
+      rebin_val_mctruth = 2
+      rebin_val_data = 2
+      if jetR == 0.2:
+        hRM.GetAxis(2).SetRangeUser(0, 16)
+        hRM.GetAxis(3).SetRangeUser(0, 16)
+        hObs_JetPt.GetYaxis().SetRangeUser(0, 16)
 
     # Get RM, for a given pt cut
     if option == 'det':

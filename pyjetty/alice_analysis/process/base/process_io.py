@@ -3,7 +3,7 @@
 """
   Analysis IO class for jet analysis with track dataframe.
   Each instance of the class handles the IO of a *single* track tree.
-  
+
   Authors: James Mulligan
            Mateusz Ploskon
            Ezra Lesser
@@ -13,6 +13,8 @@ from __future__ import print_function
 
 import os   # for creating file on output
 import sys
+import pathlib  # for obtaining this file's directory
+import yaml  # to load tr. eff. uncertainty
 
 # Data analysis and plotting
 import ROOT
@@ -30,7 +32,7 @@ from pyjetty.alice_analysis.process.base import common_base
 
 ################################################################
 class ProcessIO(common_base.CommonBase):
-  
+
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
@@ -95,16 +97,70 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   def load_data(self, m=0.1396, reject_tracks_fraction=0., offset_indices=False,
                 group_by_evid=True, random_mass=False, min_pt=0.):
-    
+
     self.reject_tracks_fraction = reject_tracks_fraction
+    treff_bins, pT_edges = None, None  # Only used when pT-based cut is used
+    try:
+      float(self.reject_tracks_fraction)
+    except ValueError:
+      if self.reject_tracks_fraction != "LHC17pq" and self.reject_tracks_fraction != "LHC18qr":
+        raise ValueError("reject_tracks_fraction = %s not implemented" % \
+                         self.reject_tracks_fraction)
+
+      # For now if doing LHC17pq we are just doing a random 3% cut, so use simpler code
+      if self.reject_tracks_fraction == "LHC17pq":
+        #centrality = "0_100"
+        self.reject_tracks_fraction = 0.03
+
+      else:
+        # Assume Pb-Pb is 0-10% centrality (30-50% also available)
+        centrality = "0_10"
+
+        # Load correct pT array from config file
+        treff_config = None
+        treff_yaml = os.path.join(str(pathlib.Path(__file__).parent.resolve()),
+                                  "TrackEfficiencyConfiguration.yaml")
+        with open(treff_yaml, 'r') as stream:
+          treff_config = yaml.safe_load(stream)
+        treff_bins = treff_config[self.reject_tracks_fraction][centrality]
+        pT_edges = treff_config["ptBinning"]
+
+        # In the case of Pb-Pb, we want to apply an additional 2% track cut to account
+        # for the difference between the pp simulation and the actual Pb-Pb tr. eff.
+
+        # P(A or B) = P(A) +   P(B)    -    P(A and B)
+        #           = 0.02 + (1 - val) - 0.02 * (1 - val) = 1 - 0.98 * val
+        # so 1 - P(A or B) = 1 - (1 - 0.98 * val) = 0.98 * val
+        treff_bins = [ 0.98 * val for val in treff_bins ]
+
     self.reset_dataframes()
 
     print('Convert ROOT trees to pandas dataframes...')
     print('    track_tree_name = {}'.format(self.track_tree_name))
 
     self.track_df = self.load_dataframe()
-    
-    if self.reject_tracks_fraction > 1e-3:
+
+    if treff_bins != None:
+      # Apply pT-based track cut
+      print("    Removing tracks from %s using pT-based approach" % self.track_tree_name)
+
+      # Get indices to delete
+      #print("    * Generating random numbers array...")
+      np.random.seed()
+      random_array = np.random.rand(len(self.track_df.index))
+      print("    * Calculating correct bin edges and getting probabilities...")
+      probs = self.track_df["ParticlePt"].apply(
+        lambda x: treff_bins[np.searchsorted(pT_edges, x) - 1])
+      print("    * Calculating indices to cut...")
+      indices_to_cut = self.track_df.index[np.greater(random_array, probs).astype(bool)]
+
+      # Delete all tagged indices
+      print("    Removing %i of %i tracks from %s" % \
+            (len(indices_to_cut), len(self.track_df.index), self.track_tree_name))
+      self.track_df.drop(np.array(indices_to_cut), inplace=True)
+
+    elif self.reject_tracks_fraction > 1e-3:
+      # Apply simple track cut
       n_remove = int(reject_tracks_fraction * len(self.track_df.index))
       print('    Removing {} of {} tracks from {}'.format(
         n_remove, len(self.track_df.index), self.track_tree_name))
@@ -113,12 +169,12 @@ class ProcessIO(common_base.CommonBase):
       self.track_df.drop(indices_remove, inplace=True)
 
     if random_mass:
-      print('    \033[93mRandomly assigning proton and kaon mass to some tracks.\033[0m') 
+      print('    \033[93mRandomly assigning proton and kaon mass to some tracks.\033[0m')
 
     df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid, random_mass, min_pt=min_pt)
 
     return df_fjparticles
-  
+
   #---------------------------------------------------------------
   # Convert ROOT TTree to pandas dataframe
   # Return merged track+event dataframe from a given input file

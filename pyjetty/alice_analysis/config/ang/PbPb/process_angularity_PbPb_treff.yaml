@@ -29,7 +29,7 @@ fast_simulation: False
 emb_file_list: '/rstorage/alice/data/LHC18qr/570/files.txt'
 mc_fraction_threshold: 0.5
 # Uncommend for MC // comment for data
-reject_tracks_fraction: 0.06
+reject_tracks_fraction: 'LHC18qr'
 
 
 ###############################################################################

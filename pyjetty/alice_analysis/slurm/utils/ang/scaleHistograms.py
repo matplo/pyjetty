@@ -31,8 +31,8 @@ def scaleHistograms(configFile, remove_unscaled):
 
   # Option to remove outliers from specified histograms
   # Remove outliers that are above some amount of the max of the pT-hat bin
-  pThatRemoveOutliers = True
-  #pThatMaxMultiplier = 4
+  pThatRemoveOutliers = False
+  pThatMaxMultiplier = 3
   pThatBins = [5, 7, 9, 12, 16, 21, 28, 36, 45, 57, 70, 85,
                99, 115, 132, 150, 169, 190, 212, 235, None]  ## PYTHIA
   #pThatBins = [7, 9, 12, 16, 21, 28, 36, 45, 57, 70, 85, 99,
@@ -95,9 +95,9 @@ def scaleHistograms(configFile, remove_unscaled):
         pThatHighEdge = pThatBins[i]
         if pThatHighEdge != None:
           #if pThatHighEdge < 20:
-          pThatHighEdge *= 3 #pThatMaxMultiplier
-          if pThatHighEdge < 40:
-            pThatHighEdge = 40
+          pThatHighEdge *= pThatMaxMultiplier
+          #if pThatHighEdge < 40:
+          #  pThatHighEdge = 40
           #else:
           #  pThatHighEdge *= 2
           #  if pThatHighEdge < 60:

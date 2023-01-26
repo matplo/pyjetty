@@ -1,0 +1,90 @@
+# Processing parameters
+jetR: [0.2, 0.4]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['ang', 'mass']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+
+# Require a minimum leading track pT (in GeV/c)
+# Comparison to Pb-Pb: 5 GeV
+# Comparison to D0 analysis (scaled by m_T):
+#     2 GeV --> 2.734 GeV
+#     3 GeV --> 3.532 GeV
+#     5 GeV --> 5.336 GeV
+#     7 GeV --> 7.244 GeV
+min_leading_track_pT: 7.244
+
+# Uncomment for data // comment for MC
+reject_tracks_fraction: 0
+
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for angularity observables
+ang:
+
+  common_settings:
+    xtitle: '#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{#lambda}_{#it{#alpha}}^{#it{#kappa}=1}}'
+
+  ############################################################################
+  # Different alpha configurations
+  config_1:
+    alpha: 1
+
+  config_1.5:
+    alpha: 1.5
+
+  config_2:
+    alpha: 2
+
+  config_3:
+    alpha: 3
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_1_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 1
+
+  config_1.5_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 1.5
+
+  config_2_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 2
+
+  config_3_SD:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    alpha: 3
+
+
+###############################################################################
+mass:
+
+  common_settings:
+    xtitle: '#it{m}_{jet}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
+
+  ############################################################################
+  # Different alpha configurations
+  config_m:
+    name: "mass"
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_m_SD:
+    name: "groomed mass"
+    SoftDrop:
+      zcut: 0.2
+      beta: 0

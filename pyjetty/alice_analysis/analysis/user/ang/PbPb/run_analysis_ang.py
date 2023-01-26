@@ -234,7 +234,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth,
     maxbin, plot_pp_data=False, plot_MC=False, plot_PbPb=True, draw_ratio=False):
 
-    self.set_logy = True if grooming_setting else False
+    self.set_logy = True if (grooming_setting and self.observable == "ang") else False
     make_ratio_plot = True if (plot_MC or plot_pp_data and draw_ratio) else False
     match_data_normalization = True
     plot_pythia_and_herwig = (not plot_PbPb)
@@ -269,9 +269,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
       # maxbin+1 in grooming case to account for extra tagging bin
     if grooming_setting and maxbin:
-      h = self.truncate_hist(getattr(self, name), None, maxbin+1, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin+1, (name+'_trunc').replace("__","_"))
     else:
-      h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin, (name+'_trunc').replace("__", "_"))
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -528,9 +528,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       alpha = obs_label.split("_")[0]
       if alpha == "1.5":
         maxval *= 1.2
-    maxval = 5e1 * maxval if self.set_logy else maxval
     ymin = 1e-3  # Prevent ROOT from drawing 0 on plots
     if self.set_logy:
+      maxval *= 5e1
       ymin = 5e-1 * h.GetMinimum()
     myBlankHisto.SetMinimum(ymin)
     myBlankHisto.SetMaximum(maxval)
@@ -745,7 +745,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myBlankHisto2.GetYaxis().SetTitleSize(0.055)
       if plot_pp_data and plot_PbPb:
         myBlankHisto2.SetMinimum(0.3)
-        myBlankHisto2.SetMaximum(2.6)
+        if self.observable == "ang":
+          myBlankHisto2.SetMaximum(2.6)
+        else:
+          myBlankHisto2.SetMaximum(1.99)
       elif plot_MC:
         if min_pt_truth == 100:
           myBlankHisto2.SetMinimum(0.35)
@@ -959,6 +962,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         self.utils.remove_periods(jetR), obs_label, int(min_pt_truth),
         int(max_pt_truth), self.file_format)
 
+    name.replace("__", "_")
     output_dir = getattr(self, 'output_dir_final_results')
     output_dir_single = output_dir + '/single_results'
     if not os.path.exists(output_dir_single):
@@ -996,8 +1000,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     f = ROOT.TFile(self.results_pp, 'READ')
 
     # Retrieve previous result and ensure that it has the proper bin range
-    h_prev_data_name = 'hmain_%s_R%s_%s_%s-%s_trunc' % \
-      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_prev_data_name = ('hmain_%s_R%s_%s_%s-%s_trunc' % \
+      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
     h_prev_data = f.Get(h_prev_data_name)
     if not h_prev_data:
       raise AttributeError("%s not found in file %s" % (h_prev_data_name, self.results_pp))
@@ -1091,8 +1095,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         th2.Sumw2()
 
       # Set range and binning to be the same as data
-      name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name_data = ('hmain_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__","_")
       h_data = getattr(self, name_data)
       pt_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
                                  i in range(1, h_data.GetNbinsX()+2)])
@@ -1104,8 +1108,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h = th2.ProjectionY()
 
       # Finally, rename and truncate the histogram to the correct size
-      name = 'hPythia_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name = ('hPythia_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
       h_rebin = h.Rebin(len(obs_bin_array)-1, name+"_Rebin", obs_bin_array)
       if move_underflow:
         h_rebin.SetBinContent(1, h.GetBinContent(0))
@@ -1119,15 +1123,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       filepath = os.path.join(output_dir, 'response.root')
       f = ROOT.TFile(filepath, 'READ')
 
-      thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(
-        self.observable, jetR, obs_label).replace("__", "_")
+      thn_name = ('hResponse_JetPt_{}_R{}_{}_rebinned'.format(
+        self.observable, jetR, obs_label)).replace("__", "_")
       thn = f.Get(thn_name)
       if not thn:
         raise AttributeError("%s not found in %s" % (thn_name, filepath))
       thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
-      name = 'hPythia_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name = ('hPythia_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
       h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
       h.SetDirectory(0)
 
@@ -1153,8 +1157,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         th2.Sumw2()
 
       # Set range and binning to be the same as data
-      name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name_data = ('hmain_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
       h_data = getattr(self, name_data)
       pt_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
                                  i in range(1, h_data.GetNbinsX()+2)])
@@ -1166,8 +1170,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h = th2.ProjectionY()
 
       # Finally, rename and truncate the histogram to the correct size
-      name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name = ('hHerwig_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
       h_rebin = h.Rebin(len(obs_bin_array)-1, name+"_Rebin", obs_bin_array)
       if move_underflow:
         h_rebin.SetBinContent(1, h.GetBinContent(0))
@@ -1189,8 +1193,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         raise AttributeError("%s not found in %s" % (thn_name, filepath))
       thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
-      name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name = ('hHerwig_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
       h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
       h.SetDirectory(0)
 
@@ -1379,7 +1383,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     # Get the observable binning from the measured data
     name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
-      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth).replace("__", "_")
     h_data = self.truncate_hist(getattr(self, name_data), None, maxbin, name_data+"_trunc")
     obs_bin_array = [h_data.GetXaxis().GetBinLowEdge(i) for i in range(1, h_data.GetNbinsX()+2)]
     if "SD" in obs_label:
@@ -1387,7 +1391,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     obs_bin_array = array('d', obs_bin_array)
 
     # Create and fill TH1 with values from file
-    name = "hZhang_%s_R%s_%s_%i-%i" % (type, jetR, obs_label, min_pt_truth, max_pt_truth)
+    name = ("hZhang_%s_R%s_%s_%i-%i" % (type, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
     h = ROOT.TH1F(name, name, len(obs_bin_array)-1, obs_bin_array)
     for i in range(1, h.GetNbinsX()+1):
       width = abs(h.GetBinLowEdge(i + 1) - h.GetBinLowEdge(i))
@@ -1434,7 +1438,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     # Get the observable binning from the measured data
     name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
-      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth).replace("__","_")
     h_data = self.truncate_hist(getattr(self, name_data), None, maxbin, name_data+"_trunc")
     obs_bin_array = [h_data.GetXaxis().GetBinLowEdge(i) for i in range(1, h_data.GetNbinsX()+2)]
     obs_bin_array = array('d', obs_bin_array)
@@ -1518,8 +1522,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     f = ROOT.TFile(self.results_pp, 'READ')
 
     # Retrieve pp data and ensure that it has the proper bin range
-    h_pp_data_name = 'hmain_%s_R%s_%s_%s-%s_trunc' % \
-      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+    h_pp_data_name = ('hmain_%s_R%s_%s_%s-%s_trunc' % \
+      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace('__', '_')
     h_pp_data = f.Get(h_pp_data_name)
     if not h_pp_data:
       raise AttributeError("%s not found in file %s" % (h_pp_data_name, self.results_pp))
@@ -1533,9 +1537,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     h_pp_data.SetDirectory(0)
 
     # Retrieve pp systematics and ensure that it has the proper bin range
-    h_pp_sys_name = 'hResult_%s_systotal_R%s_%s_n3_%s-%s' % \
-      (self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    h_pp_sys = f.Get(h_pp_sys_name)
+    for n_iter in range(2, 20):
+      h_pp_sys_name = 'hResult_%s_systotal_R%s_%s_n%i_%s-%s' % \
+        (self.observable, jetR, obs_label, n_iter, min_pt_truth, max_pt_truth)
+      h_pp_sys = f.Get(h_pp_sys_name)
+      if h_pp_sys:
+        break
     if not h_pp_sys:
       raise AttributeError("%s not found in file %s" % (h_pp_sys_name, self.results_pp))
 
@@ -1595,7 +1602,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     plot_ratio_same_scale = True
 
     # In the 2-ratio case, whether to plot just 1 value of alpha
-    single_alpha = False
+    single_alpha = (self.observable == "mass") or False
     if single_alpha and plot_ratio and plot_pp_data and plot_MC:
       overlay_list = [i for i in overlay_list if i == "config_R0.2_1"]
     if not overlay_list:
@@ -1627,6 +1634,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     setlogy = False
     for name in overlay_list:
       if "SD" not in name:
+        break
+      if self.observable != "ang":
         break
       elif name == overlay_list[-1]:
         setlogy = True
@@ -1714,9 +1723,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           jetR, obs_label, min_pt_truth, max_pt_truth))
 
       if grooming_setting and maxbin:
-        h = self.truncate_hist(getattr(self, name), None, maxbin+1, name+'_trunc')
+        h = self.truncate_hist(getattr(self, name), None, maxbin+1, (name+'_trunc').replace("__", "_"))
       else:
-        h = self.truncate_hist(getattr(self, name), None, maxbin, name+'_trunc')
+        h = self.truncate_hist(getattr(self, name), None, maxbin, (name+'_trunc').replace("__", "_"))
       h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
         self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
 
@@ -1755,14 +1764,21 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if min_pt_truth == 20:
             myBlankHisto.SetMaximum(1.1*ymax)
           elif min_pt_truth == 40:
-            if self.use_prev_result:
+            if self.observable == "mass" and grooming_setting:
+              myBlankHisto.SetMaximum(1.9*ymax)
+            elif self.use_prev_result:
               myBlankHisto.SetMaximum(1.8*ymax)
             elif plot_pp_data and plot_MC and single_alpha:
               myBlankHisto.SetMaximum(2*ymax)
             else:
-              myBlankHisto.SetMaximum(1.2*ymax)
+              myBlankHisto.SetMaximum(1.7*ymax)
           elif min_pt_truth == 60:
-            myBlankHisto.SetMaximum(1.15*ymax)
+            if self.observable == "mass":
+              myBlankHisto.SetMaximum(1.9*ymax)
+            else:
+              myBlankHisto.SetMaximum(1.15*ymax)
+          elif self.observable == "mass":
+              myBlankHisto.SetMaximum(1.9*ymax)
           else:
             myBlankHisto.SetMaximum(1.3*ymax)
         elif jetR == 0.4:
@@ -1777,7 +1793,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         else:
           myBlankHisto.SetMaximum(1.5*ymax)
         if setlogy:
-          myBlankHisto.SetMaximum(5*ymax)
+          if self.observable == "mass":
+            myBlankHisto.SetMaximum(1e2*ymax)
+          else:
+            myBlankHisto.SetMaximum(5*ymax)
           myBlankHisto.SetMinimum(ymin/2)
         elif plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
@@ -2116,7 +2135,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
       if subobs_label:
-        text += '%s = %s' % (subobs_label, obs_setting)
+        text += subobs_label
+        if obs_setting:
+          text += ' = ' + str(obs_setting)
       text_list.append(text)
       h_list.append(h)
 

@@ -1,0 +1,109 @@
+# Processing parameters
+jetR: [0.2]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['mass']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+
+# Max eta value (for plots)
+eta_max: 0.9
+
+sd_zcut: 0.2
+sd_beta: 0
+
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for jet mass observables
+mass:
+
+  common_settings:
+    xtitle: '#it{m}_{jet}'
+    ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
+    pt_bins_reported: [80, 100]
+    plot_overlay_list:
+      - ['config_m']
+      - ['config_m_SD']
+    max_reg_param: 10
+    reg_param_variation: 1
+
+  ############################################################################
+  # Different alpha configurations
+  config_m:
+    name: "mass"
+    R: 0.2
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120]
+    obs_bins_truth: [0, 2, 4, 6, 8, 12, 16]
+    obs_max_reported: [12]
+    obs_bins_det: [0, 2, 4, 6, 8, 12, 16]
+    obs_bins_det_sys_binning: [0, 1.8, 3.6, 4.4, 5.2, 7, 9, 11, 13, 16, 20]
+    reg_param:
+      0.2: 2
+
+  ############################################################################
+  # Different alpha configurations with SoftDrop
+  config_m_SD:
+    name: "groomed mass"
+    R: 0.2
+    pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
+    pt_bins_det: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150, 200]
+    pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120]
+    obs_bins_truth: [0, 1.8, 3.6, 5.8, 8, 12, 16]
+    obs_max_reported: [12]
+    obs_bins_det: [0, 1.8, 3.6, 5.8, 8, 12, 16]
+    obs_bins_det_sys_binning: [0, 1.6, 3.2, 5.6, 7.6, 9, 12, 16, 20]
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    reg_param:
+      0.2: 2
+
+
+###############################################################################
+# Analysis & plotting parameters
+file_format: ".pdf"
+output_dir: "/rstorage/alice/AnalysisResults/ang/pp/AngR02_ptbin4"
+roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
+
+analysis_observable: 'mass'
+do_unfolding: False
+force_rebin: False
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: False
+figure_approval_status: 'Work In Progress'
+
+# Whether or not to use the previous measurement in ratio
+use_prev_result: False
+
+# List of which systematics to perform
+# Options: [main, trkeff, prior1, prior2, truncation, binning, \
+#           random_mass, fastsim_generator0, fastsim_generator1]
+systematics_list:
+  - main
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
+  - binning
+  - random_mass
+  - fastsim_generator0
+  - fastsim_generator1
+
+# Paths to processing output, to be used for unfolding
+main_data: '/rstorage/alice/AnalysisResults/ang/1110550/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/1110651/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/1110652/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
+randmass_data: '/rstorage/alice/AnalysisResults/ang/1110653/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/1110654/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
+# fastsim order: PYTHIA, Herwig
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/1110655/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                   '/rstorage/alice/AnalysisResults/ang/1110656/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root']
+
+# Prior variation parameters
+prior_variation_option: 2
+prior1_variation_parameter: 0.1
+prior2_variation_parameter: -0.1

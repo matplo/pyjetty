@@ -578,7 +578,7 @@ class RunAnalysis(common_base.CommonBase):
 
     h = f.Get(name)
     if not h:
-      raise ValueError("Histogram with name %s not found in file" % name)
+      raise ValueError("Histogram with name %s not found in file %s" % (name, f.GetName()))
     h.SetDirectory(0)
     setattr(self, '{}{}'.format(name, suffix), h)
 
@@ -1293,8 +1293,8 @@ class RunAnalysis(common_base.CommonBase):
     hepdata_reader_systematics = hepdata_lib.RootFileReader(systematics_root_filename)
  
     # Define variables
-    h_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt, max_pt)
-    if self.observable == 'ang':
+    h_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt, max_pt).replace('__', '_')
+    if self.observable == 'ang' or  self.observable == 'mass':
         h_name += '_trunc'
     h = hepdata_reader.read_hist_1d(h_name)
  
@@ -1387,9 +1387,20 @@ class RunAnalysis(common_base.CommonBase):
 
   #----------------------------------------------------------------------
   def set_hepdata_table_descriptors(self, table, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
-    
-    if self.observable == 'ang':
-    
+
+    if self.observable == 'mass':
+        print("\nWARNING! Implement set_hepdata_table_descriptors() in substructure/run_analysis.py !!")
+
+        if grooming_setting and 'sd' in grooming_setting.keys():
+            x_label = r'$m_{\textrm{jet},g}$'
+            y_label = r'$\frac{1}{\sigma_{inc}} \frac{d\sigma}{d m_{\textrm{jet},g}}$'
+
+        else:
+            x_label = r'$m_\textrm{jet}$'
+            y_label = r'$\frac{1}{\sigma} \frac{d\sigma}{d m_\textrm{jet}}$'
+
+    elif self.observable == 'ang':
+
         if grooming_setting and 'sd' in grooming_setting.keys():
         
             if np.isclose(jetR, 0.4):

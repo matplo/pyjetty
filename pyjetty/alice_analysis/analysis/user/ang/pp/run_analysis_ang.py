@@ -183,7 +183,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     print('is_pp: {}'.format(self.is_pp))
 
     # Whether or not to use the previous preliminary result in final plots
-    self.use_prev_prelim = config['use_prev_prelim']
+    self.use_prev_prelim = config['use_prev_prelim'] if 'use_prev_prelim' in config else False
 
     self.histutils = ROOT.RUtil.HistUtils()
 
@@ -241,6 +241,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     else:
       self.do_theory = False
+      self.do_theory_F_np = False
 
     if self.do_theory:
       self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
@@ -1272,7 +1273,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     
     for i_config, overlay_list in enumerate(self.plot_overlay_list):
     
-      if len(overlay_list) > 1:
+      if len(overlay_list) >= 1:
       
         self.plot_final_result_overlay(i_config, jetR, overlay_list)
 
@@ -1382,9 +1383,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
       # maxbin+1 in grooming case to account for extra tagging bin
     if grooming_setting and maxbin:
-      h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin+1, (name+'_trunc').replace('__', '_'))
     else:
-      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin, (name+'_trunc').replace('__', '_'))
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -1662,7 +1663,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       hPythia = None; fraction_tagged_pythia = None;
       if grooming_setting:
         hPythia, fraction_tagged_pythia = self.MC_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1, 'Pythia')
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin+1 if maxbin else None, 'Pythia')
       else:
         hPythia, fraction_tagged_pythia = self.MC_prediction(
           jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin, 'Pythia')
@@ -1769,7 +1770,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     self.utils.setup_legend(myLegend, 0.035)
     if show_everything_else:
       myLegend.AddEntry(h, 'ALICE pp', 'pe')
-      myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+      myLegend.AddEntry(h_sys, 'Syst. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     if plot_herwig:
@@ -1849,9 +1850,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label,
                                               min_pt_truth, max_pt_truth)
     if grooming_setting and maxbin:
-      h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin+1, (name+'_trunc').replace('__', '_'))
     else:
-      h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+      h = self.truncate_hist(getattr(self, name), None, maxbin, (name+'_trunc').replace('__', '_'))
     
     n_obs_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
@@ -2565,7 +2566,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(
         jetR, obs_label, min_pt_truth, max_pt_truth))
       #fraction_tagged = getattr(self, '{}_fraction_tagged'.format(name))
-    h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+    h = self.truncate_hist(getattr(self, name), None, maxbin, (name+'_trunc').replace('__', '_'))
     h.SetMarkerSize(1.5)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
@@ -2661,7 +2662,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     myLegend = ROOT.TLegend(0.25, 0.7, 0.45, 0.85)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'This measurement', 'pe')
-    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+    myLegend.AddEntry(h_sys, 'Syst. uncertainty', 'f')
     myLegend.AddEntry(hCompStat, 'ALI-PREL-339374', 'pe')
     myLegend.Draw()
 
@@ -2688,7 +2689,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   def MC_prediction(self, jetR, obs_setting, obs_label, min_pt_truth,
                     max_pt_truth, maxbin, MC='Pythia', overlay=False):
-  
+
     if MC.lower() == 'pythia':
       hMC = self.get_pythia_from_response(jetR, obs_label, min_pt_truth,
                                           max_pt_truth, maxbin, overlay)
@@ -2704,53 +2705,68 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     fraction_tagged_MC =  n_jets_tagged/n_jets_inclusive
     hMC.Scale(1./n_jets_inclusive, 'width')
-      
+
     return [hMC, fraction_tagged_MC]
 
   #----------------------------------------------------------------------
   def get_pythia_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth,
                                maxbin, overlay=False):
 
-    output_dir = getattr(self, 'output_dir_main')
+    # Use direct (unmatched) files instead of projecting fastsim RM
+    do_direct_files = True #(len(self.theory_predictions) >= (int(recoils) + 1))
 
-    prev_prelim = False
-    if self.use_prev_prelim and overlay and (jetR == 0.2 or jetR == 0.4) \
-       and min_pt_truth == 40 and obs_label == '1':
-      prev_prelim = True
-      # Need to rebin response for the binning used by previous preliminary result
-      filepath = os.path.join(output_dir, 'response_prev_prelim.root')
+    h = None
+    if do_direct_files:  # Read from TH2
 
-      if not os.path.exists(filepath):
-        # Create rebinned THn with these binnings, and write to file
-        print("Rebinning response matrix for previous preliminary masurement...")
-        name_thn = self.utils.name_thn(self.observable, jetR, obs_label)
-        name_thn_rebinned = self.utils.name_thn_rebinned(self.observable, jetR, obs_label)
-        name_roounfold = 'roounfold_response_R{}_{}'.format(jetR, obs_label)
-        thn = ROOT.TFile(self.main_response, 'READ').Get(name_thn)
-        thn.SetName(name_thn)
-        label = 'R{}_{}'.format(jetR, obs_label)
-        pt_bins_truth = array('d', [5, 20, 40, 60, 80, 100, 150, 200])
-        pt_bins_det = array('d', [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150])
-        obs_bins = getattr(self, "xedges_prev_prelim_%s" % jetR)
-        self.utils.rebin_response(
-          filepath, thn, name_thn_rebinned, name_roounfold, label, len(pt_bins_det)-1,
-          pt_bins_det, len(obs_bins)-1, obs_bins, len(pt_bins_truth)-1, pt_bins_truth,
-          len(obs_bins)-1, obs_bins, self.observable, do_roounfoldresponse=False)
-    else:
+      f = ROOT.TFile(self.main_response, 'READ')
+      name = "h_%s_JetPt_Truth_R%s_%sScaled" % (self.observable, str(jetR), obs_label) \
+        if obs_label else "h_%s_JetPt_Truth_R%sScaled" % (self.observable, str(jetR))
+      th2 = f.Get(name)
+      if not th2:
+        raise AttributeError("%s not found in %s" % (name, self.main_response))
+      if not th2.GetSumw2():
+        th2.Sumw2()
+
+      # Set range and binning to be the same as data
+      name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      h_data = getattr(self, name_data)
+      pt_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
+                                 i in range(1, h_data.GetNbinsX()+2)])
+      obs_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
+                                  i in range(1, h_data.GetNbinsX()+2)])
+      move_underflow = (obs_bin_array[0] < 0)
+
+      th2.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+      h = th2.ProjectionY()
+
+      # Finally, rename and truncate the histogram to the correct size
+      name = 'hPythia_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      h_rebin = h.Rebin(len(obs_bin_array)-1, name+"_Rebin", obs_bin_array)
+      if move_underflow:
+        h_rebin.SetBinContent(1, h.GetBinContent(0))
+        h_rebin.SetBinError(1, h.GetBinError(0))
+      h = self.truncate_hist(h_rebin, None, maxbin, name)
+      h.SetDirectory(0)
+
+    else:  # Get projection of RM
+      output_dir = getattr(self, 'output_dir_main')
+
       filepath = os.path.join(output_dir, 'response.root')
-    f = ROOT.TFile(filepath, 'READ')
+      f = ROOT.TFile(filepath, 'READ')
 
-    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
-    thn = f.Get(thn_name)
-    thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+      thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(
+        self.observable, jetR, obs_label).replace("__", "_")
+      thn = f.Get(thn_name)
+      if not thn:
+        raise AttributeError("%s not found in %s" % (thn_name, filepath))
+      thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
 
-    name = 'hPythia_{}_R{}_{}_{}-{}'.format(
-      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    if prev_prelim:
-      h = thn.Projection(3)
-    else:
-      h = self.truncate_hist(thn.Projection(3), maxbin, name)
-    h.SetDirectory(0)
+      name = 'hPythia_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
+      h.SetDirectory(0)
 
     return h
 
@@ -2758,17 +2774,63 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def get_herwig_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth,
                                maxbin, overlay=False):
 
-    filepath = os.path.join(self.output_dir_fastsim_generator1, 'response.root')
-    f = ROOT.TFile(filepath, 'READ')
+    # Use direct (unmatched) files instead of projecting fastsim RM
+    do_direct_files = True #(len(self.theory_predictions) >= (int(recoils) + 1))
 
-    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
-    thn = f.Get(thn_name)
-    thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+    h = None
 
-    name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
-      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
-    h = self.truncate_hist(thn.Projection(3), maxbin, name)
-    h.SetDirectory(0)
+    if do_direct_files:  # Read from TH2
+
+      f = ROOT.TFile(self.fastsim_response_list[1], 'READ')
+      name = "h_%s_JetPt_Truth_R%s_%sScaled" % (self.observable, str(jetR), obs_label) \
+        if obs_label else "h_%s_JetPt_Truth_R%sScaled" % (self.observable, str(jetR))
+      th2 = f.Get(name)
+      if not th2:
+        raise AttributeError("%s not found in %s" % (name, self.main_response))
+      if not th2.GetSumw2():
+        th2.Sumw2()
+
+      # Set range and binning to be the same as data
+      name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      h_data = getattr(self, name_data)
+      pt_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
+                                 i in range(1, h_data.GetNbinsX()+2)])
+      obs_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
+                                  i in range(1, h_data.GetNbinsX()+2)])
+      move_underflow = (obs_bin_array[0] < 0)
+
+      th2.GetXaxis().SetRangeUser(min_pt_truth, max_pt_truth)
+      h = th2.ProjectionY()
+
+      # Finally, rename and truncate the histogram to the correct size
+      name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      h_rebin = h.Rebin(len(obs_bin_array)-1, name+"_Rebin", obs_bin_array)
+      if move_underflow:
+        h_rebin.SetBinContent(1, h.GetBinContent(0))
+        h_rebin.SetBinError(1, h.GetBinError(0))
+      h = self.truncate_hist(h_rebin, None, maxbin, name)
+      h.SetDirectory(0)
+
+    else:  # Get projection of RM
+      try:
+        filepath = os.path.join(self.output_dir_fastsim_generator1, 'response.root')
+      except AttributeError:  # No fastsim generator
+        return None
+      f = ROOT.TFile(filepath, 'READ')
+
+      thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(
+        self.observable, jetR, obs_label).replace("__", "_")
+      thn = f.Get(thn_name)
+      if not thn:
+        raise AttributeError("%s not found in %s" % (thn_name, filepath))
+      thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+
+      name = 'hHerwig_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
+      h = self.truncate_hist(thn.Projection(3), None, maxbin, name)
+      h.SetDirectory(0)
 
     return h
 
@@ -2825,6 +2887,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     setlogy = False
     for name in overlay_list:
       if "SD" not in name:
+        break
+      elif "config_m" in name:
+        # Do not put groomed mass on log plot
         break
       elif name == overlay_list[-1]:
         setlogy = True
@@ -2886,9 +2951,9 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           h.SetBinError(i, 0.)
       else:
         if grooming_setting and maxbin:
-          h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+          h = self.truncate_hist(getattr(self, name), None, maxbin+1, (name+'_trunc').replace('__', '_'))
         else:
-          h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
+          h = self.truncate_hist(getattr(self, name), None, maxbin, (name+'_trunc').replace('__', '_'))
         h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(
           self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
 
@@ -2922,17 +2987,22 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(xtitle)
-        myBlankHisto.GetYaxis().SetTitleOffset(1.3)
+        ytitleoffset = 1.3 if self.observable == "ang" else 1.5
+        myBlankHisto.GetYaxis().SetTitleOffset(ytitleoffset)
         myBlankHisto.SetYTitle(ytitle)
         if jetR == 0.2:
-          if min_pt_truth == 20:
-            myBlankHisto.SetMaximum(1.1*ymax)
-          elif min_pt_truth == 40:
-            myBlankHisto.SetMaximum(1.2*ymax)
-          elif min_pt_truth == 60:
-            myBlankHisto.SetMaximum(1.15*ymax)
-          else:
-            myBlankHisto.SetMaximum(1.3*ymax)
+          if self.observable == "ang":
+            if min_pt_truth == 20:
+              myBlankHisto.SetMaximum(1.1*ymax)
+            elif min_pt_truth == 40:
+              myBlankHisto.SetMaximum(1.2*ymax)
+            elif min_pt_truth == 60:
+              myBlankHisto.SetMaximum(1.15*ymax)
+            else:
+              myBlankHisto.SetMaximum(1.3*ymax)
+          else:  # mass
+            myBlankHisto.SetMaximum(1.6*ymax)
+
         elif jetR == 0.4:
           if min_pt_truth == 20:
             myBlankHisto.SetMaximum(1.5*ymax)
@@ -2942,20 +3012,27 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             myBlankHisto.SetMaximum(1.15*ymax)
           else:
             myBlankHisto.SetMaximum(1.5*ymax)
+
         else:
           myBlankHisto.SetMaximum(1.5*ymax)
+
         if setlogy:
-          myBlankHisto.SetMaximum(5*ymax)
+          if self.observable == "mass":
+            myBlankHisto.SetMaximum(1e2*ymax)
+          else:
+            myBlankHisto.SetMaximum(5*ymax)
+
         myBlankHisto.SetMinimum(0.)
+
         if plot_ratio:
           myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
           if setlogy:  # the minimum value matters
             myBlankHisto.SetMinimum(2*ymin/3)
           myBlankHisto.GetYaxis().SetTitleSize(0.065)
-          myBlankHisto.GetYaxis().SetTitleOffset(1.1)
+          myBlankHisto.GetYaxis().SetTitleOffset(ytitleoffset - 0.2)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
         myBlankHisto.Draw('E')
-        
+
         # Plot ratio
         if plot_ratio:
           
@@ -3096,8 +3173,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
-      if subobs_label:
-        text += '%s = %s' % (subobs_label, obs_setting)
+      if self.observable == "ang":
+        if subobs_label:
+          text += subobs_label
+          if obs_setting:
+            text += ' = ' + obs_setting
+      else:  # mass
+        text += "ALICE data"
       text_list.append(text)
       h_list.append(h)
         
@@ -3107,7 +3189,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         myLegend.AddEntry(h, text, 'pe')
       else:
         myLegend2.AddEntry(h, text, 'pe')
-    myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
+    myLegend.AddEntry(h_sys, 'Syst. uncertainty', 'f')
     if plot_MC:
       if MC.lower() == "pythia":
         myLegend.AddEntry(hMC, 'PYTHIA8 Monash2013', 'l')
@@ -3181,12 +3263,18 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       grooming_setting = self.grooming_settings[i]
       obs_label = self.utils.obs_label(obs_setting, grooming_setting)
       maxbin = maxbins[i]
-      
+
       h = getattr(self, name.format(obs_label))
-      if 'SD' in obs_label:
-        content = [ h.GetBinContent(j) for j in range(2, maxbin+2) ]
+      if maxbin == None:
+        maxbin_i = h.GetNbinsX() + 1
       else:
-        content = [ h.GetBinContent(j) for j in range(1, maxbin+1) ]
+        maxbin_i = maxbin + 1
+        if 'SD' in obs_label:
+          maxbin_i += 1
+      if 'SD' in obs_label:
+        content = [ h.GetBinContent(j) for j in range(2, maxbin_i) ]
+      else:
+        content = [ h.GetBinContent(j) for j in range(1, maxbin_i) ]
 
       min_val = min(content)
       if min_val < total_min:

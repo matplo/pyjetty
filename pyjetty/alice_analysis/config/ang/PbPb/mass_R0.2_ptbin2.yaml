@@ -1,6 +1,5 @@
 # Processing parameters
 jetR: [0.2]
-alphas: [1, 1.5, 2, 3]
 
 # For extra verbose output in some functions
 debug_level: 0
@@ -33,8 +32,8 @@ mass:
     plot_overlay_list:
       - ['config_m']
       - ['config_m_SD']
-    max_reg_param: 20
-    reg_param_variation: 2
+    max_reg_param: 15
+    reg_param_variation: 1
 
   ############################################################################
   # Different alpha configurations
@@ -44,12 +43,13 @@ mass:
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [40, 45, 50, 60, 70, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [45, 50, 60, 70, 80, 100, 120]
-    obs_bins_truth: [0, 1, 2, 3, 4, 5, 6, 7, 10]
+    obs_bins_truth: [0, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 4.4, 5, 5.6, 6.2, 7, 10]
     obs_max_reported: [7]
-    obs_bins_det: [0, 1, 2, 3, 4, 5, 6, 7, 10]
-    obs_bins_det_sys_binning: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12]
-    #reg_param:
-    #  0.2: 15
+    obs_bins_det: [0, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 4.4, 5, 5.6, 6.2, 7, 10]
+    obs_bins_det_sys_binning: [0, 0.5, 1, 1.4, 1.8, 2.2, 2.6, 3, 3.4, 3.8, 4.2, 4.6, 5.2,
+                               5.8, 6.8, 8, 9, 12]
+    reg_param:
+      0.2: 2
 
   ############################################################################
   # Different alpha configurations with SoftDrop
@@ -59,26 +59,27 @@ mass:
     pt_bins_truth:  [5, 20, 40, 60, 80, 100, 150, 200]
     pt_bins_det: [40, 45, 50, 60, 70, 80, 100, 120, 150, 200]
     pt_bins_det_sys_truncation: [45, 50, 60, 70, 80, 100, 120]
-    obs_bins_truth: [0, 1, 2, 3, 4, 5, 6, 7, 9]
+    obs_bins_truth: [0, 0.3, 0.6, 0.9, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 4.6, 5.2, 6, 7, 9]
     obs_max_reported: [7]
-    obs_bins_det: [0, 1, 2, 3, 4, 5, 6, 7, 9]
-    obs_bins_det_sys_binning: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15]
+    obs_bins_det: [0, 0.3, 0.6, 0.9, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 4.6, 5.2, 6, 7, 9]
+    obs_bins_det_sys_binning: [0, 0.4, 0.7, 1, 1.4, 1.8, 2.2, 2.6, 3, 3.4, 3.8, 4.4, 5, 6, 7, 10]
     SoftDrop:
       zcut: 0.2
       beta: 0
-    #reg_param:
-    #  0.2: 15
+    reg_param:
+      0.2: 2
 
 
 ###############################################################################
 # Analysis & plotting parameters
 file_format: ".pdf"
 output_dir: "/rstorage/alice/AnalysisResults/ang/PbPb/AngR02_ptbin2"
+results_pp: "/rstorage/alice/AnalysisResults/ang/pp/AngR02_ptbin2/mass/final_results/fFinalResults.root"
 roounfold_path: "$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so"
 
 analysis_observable: 'mass'
-do_unfolding: True
-force_rebin: True
+do_unfolding: False
+force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
@@ -93,8 +94,8 @@ use_prev_result: False
 systematics_list:
   - main
   - trkeff
-#  - prior1
-#  - prior2
+  - prior1
+  - prior2
   - truncation
   - binning
   - random_mass
@@ -108,13 +109,13 @@ systematics_list:
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/ang/1020932/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/1021096/AnalysisResultsFinal_no1-4.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/1021096/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
 trkeff_response: '/rstorage/alice/AnalysisResults/ang/1021095/AnalysisResultsFinal_no1-4.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/1028380/AnalysisResultsFinal.root'
 randmass_response: '/rstorage/alice/AnalysisResults/ang/1028397/AnalysisResultsFinal_no1-4.root'
 # fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
 fastsim_response: ['/rstorage/alice/AnalysisResults/ang/1028398/AnalysisResultsFinal_no1-5.root',
-                   '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/ang/1028400/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
                    '/rstorage/alice/AnalysisResults/ang/1028399/AnalysisResultsFinal_no1-4.root',
                    '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/1021094/AnalysisResultsFinal.root'
@@ -131,6 +132,7 @@ R_max_variation1: 0.05
 R_max_variation2: 0.5
 
 # Prior variation parameters
-prior_variation_option: 1
-prior1_variation_parameter: 0.5
-prior2_variation_parameter: -0.5
+prior_variation_option: 2
+prior1_variation_parameter: 0.1
+prior2_variation_parameter: -0.1
+

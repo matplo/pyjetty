@@ -45,6 +45,8 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       return '#Delta #it{R}_{axis}'
     elif observable == 'ang':
       return '#it{#alpha}'
+    elif observable == 'mass':
+      return '#it{m}_{jet}'
 
     # Else observable not implemented
     return None
@@ -146,8 +148,8 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
           name = 'hResponse_JetPt_{}_R{}_{}_Rmax{}Scaled'.format(observable, jetR, obs_label, R_max)
       else:
         name = 'hResponse_JetPt_{}_R{}_{}Scaled'.format(observable, jetR, obs_label)
-        
-      return name.replace("__", '_')
+
+      return name.replace("__", '_').replace('_Scaled', 'Scaled')
 
   #---------------------------------------------------------------
   # Get name of response THn, rebinned
@@ -165,13 +167,17 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       if R_max:
         if thermal_model:
           return 'h_{}_JetPt_R{}_{}_Rmax{}Scaled'.format(
-            observable, jetR, obs_label, R_max).replace("__", '_')
+            observable, jetR, obs_label, R_max).replace("__", '_').replace('_Scaled', 'Scaled')
         else:
           return 'h_{}_JetPt_R{}_{}_Rmax{}'.format(
             observable, jetR, obs_label, R_max).replace("__", '_')
       else:
-        return 'h_{}_JetPt_R{}_{}'.format(
-          observable, jetR, obs_label).replace("__", '_')
+        if obs_label:
+          return 'h_{}_JetPt_R{}_{}'.format(
+            observable, jetR, obs_label).replace("__", '_')
+        else:
+          return 'h_{}_JetPt_R{}'.format(
+            observable, jetR).replace("__", '_')
 
   #---------------------------------------------------------------
   # Get name of 2D data histogram, rebinned

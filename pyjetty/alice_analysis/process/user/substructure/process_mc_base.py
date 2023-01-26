@@ -76,7 +76,7 @@ class ProcessMCBase(process_base.ProcessBase):
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
 
-    self.fast_simulation = config['fast_simulation']
+    self.fast_simulation = config['fast_simulation'] if 'fast_simulation' in config else False
     if 'jetscape' in config:
         self.jetscape = config['jetscape']
     else:
@@ -89,7 +89,7 @@ class ProcessMCBase(process_base.ProcessBase):
       self.matching_systematic = config['matching_systematic']
     else:
       self.matching_systematic = False
-    self.dry_run = config['dry_run']
+    self.dry_run = config['dry_run'] if 'dry_run' in config else False
     self.skip_deltapt_RC_histograms = True
     self.fill_RM_histograms = True
 

@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /home/ezra/pyjetty/pyjetty/alice_analysis
-python process/user/ang/ang_mc.py -c config/ang/randmass_angularity.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+python process/user/ang/process_mc_ang.py -c config/ang/process_angularity_randmass.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/ang/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/ang/${JOB_ID}
