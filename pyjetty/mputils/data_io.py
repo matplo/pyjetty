@@ -1,5 +1,5 @@
 from matplotlib.style import library
-from pyjetty.mputils import MPBase
+from pyjetty.mputils.mputils import MPBase
 import random
 try:
 	import uproot3 as uproot
@@ -11,6 +11,7 @@ except:
 	except:
 		pass
 import pandas as pd
+import fastjet as fj
 import fjext
 from tqdm import tqdm
 
@@ -43,7 +44,11 @@ class DataEvent(object):
 
 class DataFileIO(MPBase):
 	def __init__(self, **kwargs):
-		self.configure_from_args(file_input=None, tree_name='tree_Particle', event_tree_name='tree_event_char', selected_event_columns=[], is_data=True)
+		self.configure_from_args(file_input=None, 
+                           	tree_name='tree_Particle', 
+                            event_tree_name='tree_event_char', 
+                            selected_event_columns=[], 
+                            is_data=True)
 		self.event_number = 0
 		super(DataFileIO, self).__init__(**kwargs)
 		self.reset_dfs()
@@ -111,7 +116,10 @@ class DataFileIO(MPBase):
 			self.event_df = self.event_df_orig
 		# Load track tree into dataframe
 		if self.is_data:
-			self.track_tree_name = 'PWGHF_TreeCreator/{}'.format(tree_name)
+			if 'PWGHF_TreeCreator' not in tree_name:
+				self.track_tree_name = 'PWGHF_TreeCreator/{}'.format(tree_name)
+			else:
+				self.track_tree_name = tree_name
 		else:
 			self.track_tree_name = tree_name
 		self.track_tree = uproot.open(file_input)[self.track_tree_name]
@@ -195,7 +203,12 @@ class DataIO(MPBase):
 			self.current_event_in_file = 0
 			self.file_io = None
 			return self.load_event(offset=offset)
-		self.event = self.file_io.df_events[self.current_event_in_file]
+		try:
+			self.event = self.file_io.df_events[self.current_event_in_file]
+		except:
+			self.event = None
+			print(len(self.file_io.df_events), self.current_event_in_file)
+			return None
 		# print ('reset indexes')
 		# _tmp = [p.set_user_index(0) for ip,p in enumerate(event.particles)]
 		# print('loaded event:', self.current_event_in_file)
@@ -228,6 +241,7 @@ class DataIO(MPBase):
 			if self.file_io.is_valid is False:
 				continue
 			for e in self.file_io.df_events:
+				print('yield e', e)
 				yield e		
 
 	def open_afile(self, afile):
@@ -272,5 +286,5 @@ class DataBackgroundIO(DataIO):
 		self.current_event_in_file = 0
 		afile = random.choice(self.list_of_files)
 		print('[i] opening data file', afile)
-		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name)
+		self.file_io = DataFileIO(file_input=afile, tree_name=self.tree_name, event_tree_name=self.event_tree_name)
 		print('    number of events', self.current_file_number_of_events(), 'in tree', self.tree_name)

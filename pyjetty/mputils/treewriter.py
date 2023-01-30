@@ -1,7 +1,7 @@
 import ROOT
 import fastjet as fj
 import fjcontrib
-from pyjetty.mputils import MPBase, pwarning
+from pyjetty.mputils.mputils import MPBase, pwarning
 
 
 def get_LundDeclusteringType():

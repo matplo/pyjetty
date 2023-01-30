@@ -2,7 +2,7 @@ import ROOT
 import fastjet as fj
 import numpy as np
 import array
-from pyjetty.mputils import MPBase, UniqueString, logbins
+from pyjetty.mputils.mputils import MPBase, UniqueString, logbins
 
 class BoltzmannEvent(MPBase):
 	def __init__(self, **kwargs):

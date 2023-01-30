@@ -21,8 +21,7 @@ import copy
 import random
 import ROOT
 
-from pyjetty.mputils import logbins
-from pyjetty.mputils import MPBase
+from pyjetty.mputils.mputils import logbins, MPBase
 
 import ROOT
 ROOT.gROOT.SetBatch(True)

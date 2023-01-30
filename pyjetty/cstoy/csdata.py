@@ -17,11 +17,11 @@ import uproot
 import pandas as pd
 import time
 
-from pyjetty.mputils import logbins
-from pyjetty.mputils import MPBase
-from pyjetty.mputils import BoltzmannEvent
-from pyjetty.mputils import CEventSubtractor
-from pyjetty.mputils import RTreeWriter
+from pyjetty.mputils.mputils import logbins
+from pyjetty.mputils.mputils import MPBase
+from pyjetty.mputils.boltzmann import BoltzmannEvent
+from pyjetty.mputils.csubtractor import CEventSubtractor
+from pyjetty.mputils.treewriter import RTreeWriter
 
 from alice_efficiency import AliceChargedParticleEfficiency
 from pyjetty.mputils.data_io import DataIO

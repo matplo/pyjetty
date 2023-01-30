@@ -2,7 +2,7 @@
 
 from symbol import file_input
 from yaml import parse
-from pyjetty.mputils import DataIO
+from pyjetty.mputils.data_io import DataIO
 import argparse
 import os
 import ROOT

@@ -3,7 +3,7 @@
 
 import fastjet as fj
 import fjcontrib
-from pyjetty.mputils import MPBase
+from pyjetty.mputils.mputils import MPBase
 
 class CEventSubtractor(MPBase):
 	def __init__(self, **kwargs):

@@ -1,4 +1,4 @@
-from pyjetty.mputils import MPBase
+from pyjetty.mputils.mputils import MPBase
 import fastjet as fj
 import fjcontrib
 import fjext

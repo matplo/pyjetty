@@ -68,7 +68,7 @@ class JetFileOutput(object):
 			j_flavor_psj = _j[2]
 			jetDR = j_flavor_psj.delta_R(j)
 			root_ntuple_ev.Fill(run_number, ev_number_stream, pythia.info.sigmaGen(), pythia.info.code(), j_flavor)
-			root_ntuple_jet.Fill(run_number, ev_number_stream, j.pt(), j.eta(), j.phi(), j.m(), j_flavor_psj.pt(), j_flavor_psj.eta(), j_flavor_psj.phi(), pythiafjext.getPythia8Particle(j_flavor_psj).id(), j_flavor_psj.m(),jetDR)
+			root_ntuple_jet.Fill(run_number, ev_number_stream, j.pt(), j.eta(), j.phi(), j.m(), j_flavor_psj.pt(), j_flavor_psj.eta(), j_flavor_psj.phi(), pythiafjext.getPythia8Particle(j_flavor_psj).id(), j_flavor_psj.m(), jetDR)
 			for p in j.constituents():
 				if pythiafjext.getPythia8Particle(p).isParton() is False:
 					root_ntuple_parts.Fill(run_number, ev_number_stream, p.pt(), p.eta(), p.phi(), pythiafjext.getPythia8Particle(p).id(), p.m())
@@ -123,7 +123,7 @@ def main():
 	parser.add_argument('--Zjet', help='force Zjet generation - will read pythia_gen_qorg_Zjet_master.cmnd from current directory', default=False, action='store_true')
 	parser.add_argument('--mDT', help='mDT clean up with z_cut=0.04 (default) on the Zjets', default=False, action='store_true')
 	parser.add_argument('--mDTzcut', help='mDT clean up with z_cut=0.04 (default) on the Zjets', default=0.04, type=float)
-	parser.add_argument('--ZjetR', help='specify the radius of the anti-kT jet for Z-match - default is R=1.0', default=1.0, type=float)
+	# parser.add_argument('--ZjetR', help='specify the radius of the anti-kT jet for Z-match - default is R=1.0', default=1.0, type=float)
 
 	pyconf.add_standard_pythia_args(parser)
 	args = parser.parse_args()
@@ -137,11 +137,12 @@ def main():
 	if args.nev < 10:
 		args.nev = 10
 
-	jet_def_akt = fj.JetDefinition ( fj.antikt_algorithm, args.ZjetR)
+	# jet_def_akt = fj.JetDefinition ( fj.antikt_algorithm, args.ZjetR)
+	jet_def_akt = fj.JetDefinition ( fj.antikt_algorithm, args.jet_R)
 	if args.Zjet is False:
 		del args.mDT
 		del args.mDTzcut
-		del args.ZjetR
+		# del args.ZjetR
 	else:
 		if args.py_cmnd is None:
 			print('[e] you have to specify the command file for Zjet generation with --py-cmnd <file> - sorry, no shortcut ;-(')
@@ -177,8 +178,8 @@ def main():
 			if len(parts_pythia_p) < 1:
 					continue
 			parts = fT.merged_particle_vector(parts_pythia_h)
-			jet_def = fj.JetDefinition(fj.antikt_algorithm, args.jet_R)
-			jets = fj.sorted_by_pt(jet_def(parts))
+			# jet_def = fj.JetDefinition(fj.antikt_algorithm, args.jet_R)
+			jets = fj.sorted_by_pt(jet_def_akt(parts))
 
 			jets_selected = jet_selector(fj.sorted_by_pt(jets))
 			if len(jets_selected) < 1:
