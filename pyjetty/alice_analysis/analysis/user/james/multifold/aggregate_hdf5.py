@@ -9,6 +9,7 @@ import numpy as np
 import shutil
 from collections import defaultdict
 
+sys.path.append('../../../../../..')
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
 utils = analysis_utils_obs.AnalysisUtils_Obs()
 
@@ -85,7 +86,7 @@ def aggregate(config_file, filename_list, is_mc, pt_hat_cross_section_dict, outp
     with h5py.File(os.path.join(output_dir, output_filename), 'w') as hf:
         
         if is_mc:
-            observable_keys += ['total_scale_factor']
+            observable_keys += ['pt_hat_scale_factors']
         
         for level in levels:
             for observable in observable_keys:
@@ -127,7 +128,7 @@ def aggregate(config_file, filename_list, is_mc, pt_hat_cross_section_dict, outp
                 print(f'  n_jets: {result_total.shape[0]}')
                 print(f'  mean pt: {np.mean(result_total)}')
                 if is_mc:
-                    scale_factor = hf[level]['total_scale_factor'][:]
+                    scale_factor = hf[level]['pt_hat_scale_factors'][:]
                     print(f'  pt-hat scale factors: {scale_factor}')
                 print()
                 index=0
@@ -171,7 +172,8 @@ def merge_stage0(filename_list, levels, observable_keys, jetR, is_mc, pt_hat_cro
         # First, create a dict that separates the filelist by pt-hat bin
         file_dict = defaultdict(list)
         for filename in filename_list:
-            pt_hat_bin = int(filename.split('/')[9])
+            #pt_hat_bin = int(filename.split('/')[9])
+            pt_hat_bin = int(filename.split('/')[-4])
             if pt_hat_bin not in range(1,21):
                 raise ValueError(f'Unexpected pt-ht bin {pt_hat_bin} -- check parsing of path')
             file_dict[pt_hat_bin].append(filename)
@@ -213,17 +215,17 @@ def merge_stage0(filename_list, levels, observable_keys, jetR, is_mc, pt_hat_cro
                             else:
                                 output_dict[level][observable] = hf[f'{jetR}/{level}/{observable}'][:]
 
-            # Now that we have computed n_events_pt_hat_bin, write total_scale_factor = (pt-hat cross-section)/(event_scale_factor)
-            observable = 'total_scale_factor'
-            total_scale_factor = pt_hat_cross_section_dict[pt_hat_bin] / (n_events_pt_hat_bin / n_events_avg)
+            # Now that we have computed n_events_pt_hat_bin, write pt_hat_scale_factor = (pt-hat cross-section)/(event_scale_factor)
+            observable = 'pt_hat_scale_factors'
+            pt_hat_scale_factors = pt_hat_cross_section_dict[pt_hat_bin] / (n_events_pt_hat_bin / n_events_avg)
             for filename in file_dict[pt_hat_bin][:int(n_files_max/n_pt_hat_bins)]:
                 with h5py.File(filename, 'r') as hf:
                     for level in levels:
                         n_jets = next(iter(hf[jetR][level].values())).shape[0]
                         if observable in output_dict[level].keys():
-                            output_dict[level][observable] = np.concatenate((output_dict[level][observable], np.repeat(total_scale_factor, n_jets)))
+                            output_dict[level][observable] = np.concatenate((output_dict[level][observable], np.repeat(pt_hat_scale_factors, n_jets)))
                         else:
-                            output_dict[level][observable] = np.repeat(total_scale_factor, n_jets)
+                            output_dict[level][observable] = np.repeat(pt_hat_scale_factors, n_jets)
             
             utils.write_data(output_dict, outputdir_stage0, filename = f'MergedResults{pt_hat_bin}.h5')
 
@@ -295,7 +297,8 @@ def check_if_mc(file):
     Function to check whether the production is data or MC
     '''
     if 'LHC18b8' in file:
-        pt_hat_cross_section_filename = '/rstorage/alice/data/LHC18b8/scaleFactors.yaml'
+        pt_hat_cross_section_filename = '/global/cfs/cdirs/alice/jdmull/multifold/scale_factors/LHC18b8/scaleFactors.yaml'
+        #pt_hat_cross_section_filename = '/rstorage/alice/data/LHC18b8/scaleFactors.yaml'
     elif 'LHC18b8' in file:
         pt_hat_cross_section_filename = '/rstorage/alice/data/LHC20g4/scaleFactors.yaml'
     else:
