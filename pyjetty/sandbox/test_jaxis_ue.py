@@ -20,6 +20,7 @@ import os
 import sys
 from pyjetty.mputils.generic_object import GenericObject
 from pyjetty.mputils.csubtractor import CEventSubtractor
+from pyjetty.mputils.jpickle import JetPickleIO
 
 # from pyjetty.mputils.data_io import DataBackgroundIO
 try:
@@ -214,8 +215,12 @@ class Analysis(GenericObject):
 				self.configure_from_dict(self.args.__dict__)
 
 		self.max_eta_hadron=0.9
-	
-		self.data 	= DataReader(file_list=self.datalist)
+
+		self.embedding = self.datalist
+ 
+		if self.embedding:
+			self.data 	= DataReader(file_list=self.datalist)
+
 		self.cs 	= CEventSubtractor(alpha=self.alpha, 
                               			max_distance=self.dRmax, 
                                  		max_eta=self.max_eta_hadron, 
@@ -241,6 +246,12 @@ class Analysis(GenericObject):
 		self.tn = ROOT.TNtuple('jadiffs', 'jadiffs', 'pt:dR_CAR0:dR_CARinf:dR_CA_R0_inf:dR_CA_R0_inf_WTA:dR_CA_R0_inf_SD:dR_ues_CA_R0_inf:dR_ues_CA_R0_inf_WTA:dR_ues_CA_R0_inf_SD')
 		self.tn_check = ROOT.TNtuple('tn_check', 'tn_check', 'pt:delta_pt:dR_CAR0_WTA:dR_CAR0_SD:dR_CAR0_WTA_SD:dR_CARinf_WTA:dR_CARinf_SD:dR_CARinf_WTA_SD')
 
+		if self.dump:
+			self.pickle_std = JetPickleIO(fname='{}_std.pkl'.format(self.output.replace('.root', '')))
+			self.pickle_caR0SD = JetPickleIO(fname='{}_caR0SD.pkl'.format(self.output.replace('.root', '')))
+			self.pickle_caRinfSD = JetPickleIO(fname='{}_caRinfSD.pkl'.format(self.output.replace('.root', '')))
+
+
 	def run(self, pythia):
 		self.parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, False)
 		self.parts_pythia_h_selected = self.parts_selector_h(self.parts_pythia_h)
@@ -249,12 +260,14 @@ class Analysis(GenericObject):
 		if len(self.jets_h) < 1:
 			return False
 
-		e = self.data.next_event()
+		if self.embedding:
+			e = self.data.next_event()
 		# print('number of particles in the UE', len(e['particles']))
 		# _py_ue = [p for p in e['particles']]
 		# _ = [_py_ue.append(p) for p in self.parts_pythia_h_selected]
 		_py_ue = fj.vectorPJ()
-		_ = [ _py_ue.push_back(p) for p in e['particles']]
+		if self.embedding:
+			_ = [ _py_ue.push_back(p) for p in e['particles']]
 		_ = [ _py_ue.push_back(p) for p in self.parts_pythia_h_selected]
 		self.jets_h_w_ue = fj.sorted_by_pt(self.jet_def(_py_ue))
 
@@ -323,6 +336,12 @@ class Analysis(GenericObject):
 									j.delta_R(j_CARinf_WTA), j.delta_R(j_CARinf_SD), j_CARinf_WTA.delta_R(j_CARinf_SD)
                 )
 
+				if self.dump:
+					if j.delta_R(j_CAR0_SD) > 0.05:
+						self.pickle_std.add_jet(j)
+						self.pickle_caR0SD.add_jet(j_CAR0_SD)
+						self.pickle_caRinfSD.add_jet(j_CARinf_SD)
+
 				# print_jet(j)
 				# print_jet(j_ue)
 				# print_jet(j_ue_subtr)
@@ -338,17 +357,22 @@ class Analysis(GenericObject):
 		self.fout.Write()
 		self.fout.Close()
 		print ('[i] written ', self.fout.GetName(), file=sys.stderr)
+		self.pickle_std.write_to_file()
+		self.pickle_caR0SD.write_to_file()
+		self.pickle_caRinfSD.write_to_file()
+
 
  
 def main():
 	parser = argparse.ArgumentParser(description='pythia8 fastjet on the fly', prog=os.path.basename(__file__))
 	parser.add_argument('--output', default=Analysis._default_file_output, type=str)
-	parser.add_argument('datalist', help='run through a file list', default='', type=str)
+	parser.add_argument('--datalist', help='run through a file list', default='', type=str)
 	parser.add_argument('--alpha', default=0, type=float)
 	parser.add_argument('--dRmax', default=0.25, type=float)
 	parser.add_argument('--sd-zcut', default=0.1, type=float)
 	parser.add_argument('--jet-R0', default=0.2, type=float)
 	parser.add_argument('--overwrite', help="overwrite output", default=False, action='store_true')
+	parser.add_argument('--dump', help="dump some jets to pickle", default=False, action='store_true')
 	parser.add_argument('--jet-pt-min', help='remove jets below the cut', default=20., type=float)
 	parser.add_argument('--jet-pt-max', help='remove jets above the cut', default=40., type=float)
 	parser.add_argument('--nev', help='number of events to run', default=100, type=int)
