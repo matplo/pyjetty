@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from symbol import file_input
-from yaml import parse
+# from yaml import parse
 from pyjetty.mputils.data_io import DataIO
 import argparse
 import os
@@ -16,6 +16,7 @@ def main():
 	parser.add_argument('-o', '--output', help='output filename - optional', type=str, required=False)
 	parser.add_argument('--ptree', help='particle tree to analyze', type=str, default='tree_Particle_gen')
 	parser.add_argument('--etree', help='event tree to analyze', type=str, default='tree_Event_gen')
+	parser.add_argument('--jet-R', help='jet R', type=float, default=1.0)
 	args = parser.parse_args()
 	print(args)
 
@@ -27,7 +28,7 @@ def main():
 	tnjets = ROOT.TNtuple('tnjets', 'tnjets', 'pt:eta:y:phi:m:mult:tag:lead_part_pid:tau21')
 
 	fj.ClusterSequence.print_banner()
-	jet_def = fj.JetDefinition ( fj.antikt_algorithm, 0.8 )
+	jet_def = fj.JetDefinition ( fj.antikt_algorithm, args.jet_R)
 
 	beta = 1.0
 	nSub1_beta1 = fjcontrib.Nsubjettiness(1,   fjcontrib.OnePass_WTA_KT_Axes(), fjcontrib.UnnormalizedMeasure(beta))

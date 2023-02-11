@@ -338,6 +338,7 @@ class Analysis(GenericObject):
 
 				if self.dump:
 					if j.delta_R(j_CAR0_SD) > 0.05:
+						print('adding a jet to pickle')
 						self.pickle_std.add_jet(j)
 						self.pickle_caR0SD.add_jet(j_CAR0_SD)
 						self.pickle_caRinfSD.add_jet(j_CARinf_SD)

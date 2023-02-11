@@ -1,4 +1,3 @@
-from matplotlib.style import library
 from pyjetty.mputils.mputils import MPBase
 import random
 try:
@@ -241,7 +240,7 @@ class DataIO(MPBase):
 			if self.file_io.is_valid is False:
 				continue
 			for e in self.file_io.df_events:
-				print('yield e', e)
+				# print('yield e', e)
 				yield e		
 
 	def open_afile(self, afile):
