@@ -65,7 +65,10 @@ from pyjetty.mputils.generic_object import GenericObject
 class UniqueRunNumber(GenericObject):
 	def __init__(self, **kwargs):
 		super(UniqueRunNumber, self).__init__(**kwargs)
-		self.current_thread_id = threading.currentThread().native_id
+		try:
+			self.current_thread_id = threading.currentThread().native_id
+		except:
+			self.current_thread_id = threading.currentThread().ident
 		self.fname = os.path.join(os.getcwd(), '.unique_run_numbers')
 
 	def unique(self):
@@ -276,7 +279,7 @@ def analyze_file(fname, args):
 
 	fout = JetFileOutput(args=args)
 
-	run_number = 1 # this number should change	
+	run_number = 1 # this number should change
 	urn = UniqueRunNumber()
 	run_number = urn.unique()
 
@@ -417,7 +420,7 @@ def analyze_file(fname, args):
 	pbar_ev.close()
 
 
-def count_threads_alive(threads):	
+def count_threads_alive(threads):
 	_count = len([thr for thr in threads if thr.is_alive()])
 	return _count
 
@@ -436,7 +439,7 @@ def launch_with_threads(args, nthreads=multiprocessing.cpu_count() * 2):
 		_t.start()
 		while count_threads_alive(threads) >= nthreads:
 			_ = [thr.join(0.1) for thr in threads if thr.is_alive()]
-    
+
 
 def main():
 	parser = argparse.ArgumentParser(description='pythia8 in python', prog=os.path.basename(__file__))
