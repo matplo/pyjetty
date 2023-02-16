@@ -72,12 +72,16 @@ class UniqueRunNumber(GenericObject):
 		self.fname = os.path.join(os.getcwd(), '.unique_run_numbers')
 
 	def unique(self):
+		run_number = None
 		not_unique = self.load_run_numbers()
-		run_number = self.current_thread_id
+		if self.slurm:
+			run_number = os.getenv('SLURM_JOB_ID')
+		if run_number is None:
+			run_number = self.current_thread_id			
 		while run_number in not_unique:
 			run_number += 1
 		self.write_run_number(run_number)
-		return run_number
+		return int(run_number)
 
 	def load_run_numbers(self):
 		# load numbers from a file - one file per pid
@@ -126,7 +130,7 @@ class JetFileOutput(GenericObject):
 				self.mDT = fjcontrib.ModifiedMassDropTagger(self.args_d['mDTzcut'])
 		except:
 			pass
-		self.urn = UniqueRunNumber()
+		self.urn = UniqueRunNumber(args=self.args)
 
 
 	def write_file_partons(self, jets, pythia):
@@ -165,6 +169,7 @@ class JetFileOutput(GenericObject):
 		self.nfile += 1
 		root_file.Write()
 		root_file.Close()
+		# print('[i] writing', root_file.GetName(), 'jets:', len(jets))
 
 	def write_file_Zjets(self, jets, pythia):
 		root_file_name = '_'.join(self.sname).replace('.cmnd', '_{}.root'.format(self.nfile))
@@ -299,8 +304,6 @@ def analyze_file(fname, args):
 	while not input_hepmc.failed():
 		ev = input_hepmc.read_event(event_hepmc)
 		if input_hepmc.failed() or n_total_jets_accepted > args.nev:
-			if args.Zjet is False:
-				fout.write_file_partons(jets_accepted, pythia=None)
 			break
 
 		pbar_ev.update()
@@ -407,7 +410,7 @@ def analyze_file(fname, args):
 			continue
 
 		break
-
+ 
 	if len(jets_accepted) > 0:
 		if args.Zjet is False:
 			fout.write_file_partons(jets_accepted, pythia=None)
@@ -459,6 +462,7 @@ def main():
 	parser.add_argument('-g', '--debug', help='print some extras', default=False, action='store_true')
 	parser.add_argument('-o', '--output', help='overwrite default naming of the output', default='', type=str)
 	parser.add_argument('-t', '--threads', help='mutlithread', default=1, type=int)
+	parser.add_argument('--slurm', help='get run number from slurm batch job id', action='store_true', default=False)
 
 	args = parser.parse_args()
 

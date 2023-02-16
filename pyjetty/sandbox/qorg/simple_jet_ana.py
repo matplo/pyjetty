@@ -25,7 +25,8 @@ def main():
 		outfname = args.output
 	rfout = ROOT.TFile(outfname, 'recreate')
 	rfout.cd()
-	tnjets = ROOT.TNtuple('tnjets', 'tnjets', 'pt:eta:y:phi:m:mult:tag:lead_part_pid:tau21')
+	tnjets = ROOT.TNtuple('tnjets', 'tnjets', 'pt:eta:y:phi:m:mult:tag:lead_part_pid:tau21:n')
+	tnstray = ROOT.TNtuple('tnstray', 'tnstray', 'pt:eta:y:dphi:deta:dy:dR:z')
 
 	fj.ClusterSequence.print_banner()
 	jet_def = fj.JetDefinition ( fj.antikt_algorithm, args.jet_R)
@@ -39,7 +40,7 @@ def main():
 	for e in dfio.next_event(): 
 		number_of_events += 1
 		jets = fj.sorted_by_pt(jet_def(e.particles))
-		for j in jets:
+		for i, j in enumerate(jets):
 			mult = len(j.constituents())
 			try:
 				tag = e.partonID
@@ -51,7 +52,15 @@ def main():
 			tau_ratio = -1
 			if tau1 != 0:
 				tau_ratio = tau2/tau1
-			tnjets.Fill(j.perp(), j.eta(), j.rap(), j.phi(), j.m(), mult, tag, lead_pid, tau_ratio)
+			tnjets.Fill(j.perp(), j.eta(), j.rap(), j.phi(), j.m(), mult, tag, lead_pid, tau_ratio, i)
+			if i > 0:
+				for c in j.constituents():
+					dphi = jets[0].delta_phi_to(c)
+					deta = jets[0].eta() - c.eta()
+					dy = jets[0].rap() - c.rap()
+					dR = jets[0].delta_R(c)
+					tnstray.Fill(c.pt(), c.eta(), c.rap(), dphi, deta, dy, dR, c.pt() / jets[0].pt())
+
 	print('[i] total number of events analyzed', number_of_events)
 
 	rfout.Write()
