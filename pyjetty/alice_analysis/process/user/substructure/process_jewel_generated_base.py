@@ -330,7 +330,8 @@ class CurvesFromJewelTracks():
         #     fastjet particles, for convenience
         thermal_particles = []
         thermal_particles_selected = []
-        if self.event_bck_df and len(self.event_bck_df):
+        try:
+          if len(self.event_bck_df):
             thermal_particles = self.get_fjparticles(self.event_bck_df)
             # Drop specified fraction of thermal particles
             # Loop manually since the wrapped functions are a bit funky
@@ -339,6 +340,9 @@ class CurvesFromJewelTracks():
                     thermal_particles_selected.append(p)
             #print(f'n_thermals before: {len(thermal_particles)}')
             #print(f'n_thermals after: {len(thermal_particles_selected)}')
+        except TypeError:
+          # This means that self.event_bck_df = None
+          pass
 
         if len(fj_particles) > 1:
             if np.abs(fj_particles[0].eta() - fj_particles[1].eta()) < 1e-10:
@@ -377,8 +381,9 @@ class CurvesFromJewelTracks():
                 for part in thermal_particles_selected:
                     part.set_user_index(-1)
                     particles.push_back(part)
-                recombiner = fjext.NegativeEnergyRecombiner(-1)
-                jet_def.set_recombiner(recombiner)
+
+            recombiner = fjext.NegativeEnergyRecombiner(-1)
+            jet_def.set_recombiner(recombiner)
 
             # Do jet finding
             cs = fj.ClusterSequence(particles, jet_def)
@@ -472,11 +477,11 @@ class CurvesFromJewelTracks():
             jet_def = fj.JetDefinition(self.reclustering_algorithm, jetR)
             if grooming_setting:
               # For negative_recombiner case, we set the negative recombiner
-              if self.thermal_subtraction_method and \
-                "negative_recombiner" in self.thermal_subtraction_method:
+              #if self.thermal_subtraction_method and \
+              #  "negative_recombiner" in self.thermal_subtraction_method:
 
-                recombiner = fjext.NegativeEnergyRecombiner(-1)
-                jet_def.set_recombiner(recombiner)
+              recombiner = fjext.NegativeEnergyRecombiner(-1)
+              jet_def.set_recombiner(recombiner)
 
               gshop = fjcontrib.GroomerShop(jet, jet_def)
               jet_groomed_lund = self.utils.groom(gshop, grooming_setting, jetR)

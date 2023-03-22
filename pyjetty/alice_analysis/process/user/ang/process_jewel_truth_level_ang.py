@@ -6,7 +6,7 @@
   This specific code is to run over jewel generator data to produce histograms (at truth level) that will then be compared to
   the data. That is, this base is to run over MC, but only at truth level, without response matrices.
 
-  Author: Reynier Cruz Torres (reynier@lbl.gov)
+  Author: Ezra Lesser (elesser@berkeley.edu)
   Based on code by: James Mulligan (james.mulligan@berkeley.edu)
 """
 
@@ -39,7 +39,7 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
   # Constructor
   #---------------------------------------------------------------
   def __init__(self, input_file='', config_file='', output_dir='', **kwargs):
-  
+
     # Initialize base class
     super(Process_CurvesFromJewelTracks_ang, self).__init__(input_file, config_file, output_dir, **kwargs)
 
@@ -99,10 +99,15 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
       self, observable, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
       obs_label, jet_pt_ungroomed, suffix=None, label=''):
 
-    if not self.thermal_subtraction_method or \
-        'negative_recombiner' in self.thermal_subtraction_method:
+    check_user_index = False
+
+    if not self.thermal_subtraction_method:
       name = 'h_%s_JetPt_R%s_%s%s' % (observable, jetR, obs_label, label) if \
         len(obs_label) else 'h_%s_JetPt_R%s%s' % (observable, jetR, label)
+    elif 'negative_recombiner' in self.thermal_subtraction_method:
+      name = 'h_%s_JetPt_R%s_%s%s' % (observable, jetR, obs_label, label) if \
+        len(obs_label) else 'h_%s_JetPt_R%s%s' % (observable, jetR, label)
+      check_user_index = True
     elif 'gridsub' in self.thermal_subtraction_method:
       name = 'h_%s_JetPt_R%s_%s_gridsub_%s%s' % (observable, jetR, obs_label, suffix, label) \
         if len(obs_label) else 'h_%s_JetPt_R%s_gridsub_%s%s' % (observable, jetR, suffix, label)
@@ -130,10 +135,10 @@ class Process_CurvesFromJewelTracks_ang(process_jewel_generated_base.CurvesFromJ
 
       if grooming_setting:
         groomed_jet = jet_groomed_lund.pair()
-        obs = fjext.lambda_beta_kappa(jet, groomed_jet, obs_setting, kappa, jetR)
+        obs = fjext.lambda_beta_kappa(jet, groomed_jet, obs_setting, kappa, jetR, check_user_index)
 
       else:
-        obs = fjext.lambda_beta_kappa(jet, obs_setting, kappa, jetR)
+        obs = fjext.lambda_beta_kappa(jet, obs_setting, kappa, jetR, check_user_index)
 
     #######################################################################
     elif observable == "mass":

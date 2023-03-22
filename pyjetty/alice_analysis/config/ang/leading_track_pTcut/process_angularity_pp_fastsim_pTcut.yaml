@@ -14,7 +14,7 @@ jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distan
 #     3 GeV --> 3.532 GeV
 #     5 GeV --> 5.336 GeV
 #     7 GeV --> 7.244 GeV
-min_leading_track_pT: 7.244
+min_leading_track_pT: 5.336
 
 fast_simulation: True
 reject_tracks_fraction: 0

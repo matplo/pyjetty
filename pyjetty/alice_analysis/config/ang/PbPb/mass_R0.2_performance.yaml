@@ -26,7 +26,7 @@ eta_max: 0.9
 mass:
 
   common_settings:
-    xtitle: '#it{m}_{jet}'
+    xtitle: '#it{m}_{jet} (GeV/#it{c}^{2})'
     ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
     pt_bins_reported: [40, 60, 80, 100, 150]
     plot_overlay_list:
@@ -121,17 +121,16 @@ fastsim_response: ['/rstorage/alice/AnalysisResults/ang/1028398/AnalysisResultsF
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/1021094/AnalysisResultsFinal.root'
 
 # Histograms for theory predictions
-theory_predictions: ['/rstorage/alice/AnalysisResults/ang/998707/AnalysisResultsFinal.root',
-                     '/rstorage/alice/AnalysisResults/ang/1007194/AnalysisResultsFinal_no1-4.root',
-                     '/rstorage/alice/AnalysisResults/ang/1003267/AnalysisResultsFinal.root',
-                     '/rstorage/alice/AnalysisResults/ang/PbPb/jetscape_results.root']
-theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)",
-                           "JEWEL pp", "JETSCAPE (MATTER+LBT)"]
+theory_predictions: ['/rstorage/alice/AnalysisResults/ang/1216098/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                     '/rstorage/alice/AnalysisResults/ang/1216355/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                     '/rstorage/alice/AnalysisResults/ang/1216018/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root']
+theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)", "JEWEL pp"]
+
 # R_max variations
 R_max_variation1: 0.05
 R_max_variation2: 0.5
 
 # Prior variation parameters
 prior_variation_option: 2
-prior1_variation_parameter: 0.2
-prior2_variation_parameter: -0.2
+prior1_variation_parameter: 0.1
+prior2_variation_parameter: -0.1

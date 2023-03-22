@@ -1149,9 +1149,12 @@ class RunAnalysis(common_base.CommonBase):
         raise ValueError(f"Min bin number {minbin} cannot be less than 1")
 
     elif minbin == None:
+      if maxbin == length:
+        h.SetNameTitle(new_name, new_name)
+        return h
       bin_range = range(1, maxbin+2)
-      if maxbin >= length:
-        raise ValueError(f"Max bin number {maxbin} larger or equal to histogram size {length}")
+      if maxbin > length:
+        raise ValueError(f"Max bin number {maxbin} larger than histogram size {length}")
       if maxbin < 1:
         raise ValueError(f"Max bin number {maxbin} cannot be less than 1")
 

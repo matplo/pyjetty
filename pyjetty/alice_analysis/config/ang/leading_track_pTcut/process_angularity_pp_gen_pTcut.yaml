@@ -6,18 +6,14 @@ debug_level: 0
 
 process_observables: ['ang', 'mass']
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
-
-# Require a minimum leading track pT (in GeV/c)
-# Comparison to Pb-Pb: 5 GeV
-# Comparison to D0 analysis (scaled by m_T):
-#     2 GeV --> 2.734 GeV
-#     3 GeV --> 3.532 GeV
-#     5 GeV --> 5.336 GeV
-#     7 GeV --> 7.244 GeV
-min_leading_track_pT: 5.336
-
 # Uncomment for data // comment for MC
 reject_tracks_fraction: 0
+
+# Uncomment for MC // comment for data
+#reject_tracks_fraction: 0.02
+
+# Require a minimum leading track pT (in GeV/c)
+min_leading_track_pT: 5.336
 
 
 ###############################################################################
@@ -73,7 +69,7 @@ ang:
 mass:
 
   common_settings:
-    xtitle: '#it{m}_{jet}'
+    xtitle: '#it{m}_{jet} (GeV/#it{c}^{2})'
     ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
 
   ############################################################################

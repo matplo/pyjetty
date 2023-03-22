@@ -547,10 +547,12 @@ class ProcessMCBase(process_base.ProcessBase):
     for jet_det in jets_det_selected:
 
       # Check additional acceptance criteria
-      # skip event if not satisfied -- since first jet in event is highest pt
       if not self.utils.is_det_jet_accepted(jet_det, self.min_leading_track_pT):
         if self.debug_level > 1:
-          print('jet rejected due to acceptance')
+          text = 'det jet rejected due to acceptance'
+          if self.min_leading_track_pT:
+            text += ' or leading track pT cut'
+          print(text)
         continue
 
       self.fill_det_before_matching(jet_det, jetR, R_max)
@@ -558,21 +560,44 @@ class ProcessMCBase(process_base.ProcessBase):
     # Fill truth-level jet histograms (before matching)
     for jet_truth in jets_truth_selected:
 
+      # Check additional acceptance criteria
+      if not self.utils.is_truth_jet_accepted(jet_truth, self.min_leading_track_pT):
+        if self.debug_level > 1:
+          print('truth jet rejected due to leading track pT cut')
+        continue
+
       if self.is_pp or self.fill_Rmax_indep_hists:
         self.fill_truth_before_matching(jet_truth, jetR)
 
     # Loop through jets and set jet matching candidates for each jet in user_info
     if self.is_pp:
       for jet_det in jets_det_selected:
+        if not self.utils.is_det_jet_accepted(jet_det, self.min_leading_track_pT):
+          continue
+
         for jet_truth in jets_truth_selected_matched:
+          if not self.utils.is_truth_jet_accepted(jet_truth, self.min_leading_track_pT):
+            continue
+
           self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR))
-    else:
+
+    else:  # Pb-Pb
       for jet_det_pp in jets_det_pp_selected:
+        if not self.utils.is_det_jet_accepted(jet_det_pp, self.min_leading_track_pT):
+          continue
+
         # First fill the combined-to-pp matches, then the pp-to-pp matches
         for jet_det_combined in jets_det_selected:
+          if not self.utils.is_det_jet_accepted(jet_det_combined, self.min_leading_track_pT):
+            continue
+
           self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR,
             'hDeltaR_combined_ppdet_R{{}}_Rmax{}'.format(R_max), fill_jet1_matches_only=True)
+
         for jet_truth in jets_truth_selected_matched:
+          if not self.utils.is_truth_jet_accepted(jet_truth, self.min_leading_track_pT):
+            continue
+
           self.set_matching_candidates(
             jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{{}}_Rmax{}'.format(R_max))
 

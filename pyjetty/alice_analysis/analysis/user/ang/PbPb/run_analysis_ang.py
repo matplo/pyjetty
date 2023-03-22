@@ -521,13 +521,16 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h_pp_sys.SetFillColorAlpha(color, 0.8)
       h_pp_sys.SetFillStyle(3004)
 
-    maxval = max(2.3*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
-    if plot_jetscape:
-      maxval = max(maxval, 1.7*hJetscape.GetMaximum())
-    if min_pt_truth == 100:
-      alpha = obs_label.split("_")[0]
-      if alpha == "1.5":
-        maxval *= 1.2
+    if self.observable != "mass" and not grooming_setting:
+      maxval = max(2.3*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
+      if plot_jetscape:
+        maxval = max(maxval, 1.7*hJetscape.GetMaximum())
+      if min_pt_truth == 100:
+        alpha = obs_label.split("_")[0]
+        if alpha == "1.5":
+          maxval *= 1.2
+    else:
+      maxval = 2.3*h.GetBinContent(int(0.4*h.GetNbinsX()))
     ymin = 1e-3  # Prevent ROOT from drawing 0 on plots
     if self.set_logy:
       maxval *= 5e1
@@ -1298,7 +1301,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def get_jetscape_from_response(self, jetR, obs_label, min_pt_truth, max_pt_truth,
                                  maxbin, overlay=False, MC="jetscape"):
 
-    # Determine type fro MC string arg
+    # Determine type from MC string arg
     type = "AA"  # Default to AA prediction
     if "pp" in MC.lower():
       type = "pp"
@@ -1307,8 +1310,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     i_pred = -1
     for i in range(0, len(self.theory_predictions_names)):
-      if "jetscape" in self.theory_predictions_names[i].lower() and \
-        type in self.theory_predictions_names[i].lower():
+      if "jetscape" in self.theory_predictions_names[i].lower():  #and type in self.theory_predictions_names[i].lower():
           i_pred = i
           break
 
@@ -1317,12 +1319,16 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     filepath = self.theory_predictions[i_pred]
     f = ROOT.TFile(filepath, 'READ')
 
-    if self.observable != "ang":
-      return None
-    alpha = obs_label.split('_')[0]
+    #if self.observable != "ang":
+    #  return None
     gr = "" if "SD" in obs_label else "un"
-    name = "h_chjet_angularity_%sgroomed_alice_R%s_pt%i-%i_alpha%s_5020_0-10_%s" % \
-      (gr, jetR, min_pt_truth, max_pt_truth, alpha, type)
+    if self.observable == "ang":
+      alpha = obs_label.split('_')[0]
+      name = "h_chjet_angularity_%sgroomed_alice_R%s_pt%i-%i_alpha%s_5020_0-10_%s" % \
+        (gr, jetR, min_pt_truth, max_pt_truth, alpha, type)
+    elif self.observable == "mass":
+      name = "h_chjet_mass_%sgroomed_alice_R%s_pt%i-%i_5020_0-10_%s" % \
+        (gr, jetR, min_pt_truth, max_pt_truth, type)
 
     h = f.Get(name)
     if not h:
@@ -1433,49 +1439,68 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
   def get_hybrid(self, jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin):
 
     # For now only have R=0.2 predictions
-    if str(jetR) != "0.2" or self.observable != "ang":
+    if str(jetR) != "0.2" or self.observable not in ["ang", "mass"]:
       return None, None, None, None
 
     # Get the observable binning from the measured data
     name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
-      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth).replace("__","_")
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth) #.replace("__","_")
     h_data = self.truncate_hist(getattr(self, name_data), None, maxbin, name_data+"_trunc")
     obs_bin_array = [h_data.GetXaxis().GetBinLowEdge(i) for i in range(1, h_data.GetNbinsX()+2)]
     obs_bin_array = array('d', obs_bin_array)
     del h_data
 
-    filepath = "/rstorage/alice/AnalysisResults/ang/PbPb/hybrid_ang/"
+    filepath = "/rstorage/alice/AnalysisResults/ang/PbPb/hybrid_%s/" % self.observable
 
     pT_bin = [40, 60, 80, 100].index(min_pt_truth)
-    alpha = ["1", "1.5", "2", "3"].index(obs_label.split('_')[0])
+    if self.observable == "ang":
+      alpha = ["1", "1.5", "2", "3"].index(obs_label.split('_')[0])
     h_pp_NoElastic = None; h_pp_WithElastic = None; h_PbPb_NoElastic = None; h_PbPb_WithElastic = None
     for elastic in ["No", "With"]:  # Elastic Moliere scattering
-      filename = "010_Angus_%sElastic_WantWake_1_JetR_2_Angus_JetBin_%i_Alpha_%i_Groomed_%i.dat" % \
-        (elastic, pT_bin, alpha, int("SD" in obs_label))
+      filename = ""
+      if self.observable == "ang":
+        filename = "010_Angus_%sElastic_WantWake_1_JetR_2_Angus_JetBin_%i_Alpha_%i_Groomed_%i.dat" % \
+          (elastic, pT_bin, alpha, int("SD" in obs_label))
+      elif self.observable == "mass":
+        WantWake = True
+        el = elastic if elastic == "No" else ""
+        filename = "results_chmass/HYBRID_Hadrons_%sElastic_5020_010_Wake_%i_ChJetMass_JetR0p2_Gro_%i_JetBin_%i.dat" % \
+          (el, int(WantWake), int("SD" in obs_label), pT_bin+1)
 
       # Create and fill TH1 with values from file
-      name = "hHybrid_%sElastic_pp_R%s_%s_%i-%i" % \
-        (elastic, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name = "hHybrid_%s_%sElastic_pp_R%s_%s_%i-%i" % \
+        (self.observable, elastic, jetR, obs_label, min_pt_truth, max_pt_truth)
       h_pp = ROOT.TH1F(name, name, len(obs_bin_array)-1, obs_bin_array)
-      name = "hHybrid_%sElastic_PbPb_R%s_%s_%i-%i" % \
-        (elastic, jetR, obs_label, min_pt_truth, max_pt_truth)
+      name = "hHybrid_%s_%sElastic_PbPb_R%s_%s_%i-%i" % \
+        (self.observable, elastic, jetR, obs_label, min_pt_truth, max_pt_truth)
       h_PbPb = ROOT.TH1F(name, name, len(obs_bin_array)-1, obs_bin_array)
 
       # Read lines from file and fill histograms
       lines = None
       with open(os.path.join(filepath, filename), 'r') as f:
-        lines = [line.split(' ') for line in f.readlines()]
+        delin = ' ' if self.observable == "ang" else '\t'
+        lines = [line.split(delin) for line in f.readlines()]
 
-      ang_bin_center   = [float(line[0]) for line in lines]
-      upper_band_PbPb  = [float(line[1]) for line in lines]
-      lower_band_PbPb  = [float(line[2]) for line in lines]
-      vacuum           = [float(line[3]) for line in lines]
-      error_vacuum     = [float(line[4]) for line in lines]
-      upper_band_ratio = [float(line[5]) for line in lines]
-      lower_band_ratio = [float(line[6]) for line in lines]
+      if self.observable == "ang":
+        obs_bin_center   = [float(line[0]) for line in lines]
+        upper_band_PbPb  = [float(line[1]) for line in lines]
+        lower_band_PbPb  = [float(line[2]) for line in lines]
+        vacuum           = [float(line[3]) for line in lines]
+        error_vacuum     = [float(line[4]) for line in lines]
+        upper_band_ratio = [float(line[5]) for line in lines]
+        lower_band_ratio = [float(line[6]) for line in lines]
+
+      elif self.observable == "mass":
+        obs_bin_center   = [float(line[0]) for line in lines]
+        vacuum           = [float(line[1]) for line in lines]
+        error_vacuum     = [float(line[2]) for line in lines]
+        upper_band_PbPb  = [float(line[3]) for line in lines]
+        lower_band_PbPb  = [float(line[4]) for line in lines]
+        upper_band_ratio = [float(line[5]) for line in lines]
+        lower_band_ratio = [float(line[6]) for line in lines]
 
       if "SD" in obs_label:
-        ang_bin_center   = [-0.05] + ang_bin_center
+        obs_bin_center   = [-0.05] + obs_bin_center
         upper_band_PbPb  = [0] + upper_band_PbPb
         lower_band_PbPb  = [0] + lower_band_PbPb
         vacuum           = [0] + vacuum
@@ -1483,15 +1508,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         upper_band_ratio = [0] + upper_band_ratio
         lower_band_ratio = [0] + lower_band_ratio
 
-      # Check that ang_bin_center is the same as obs_bin_array
-      expected_ang_bin_center = [(obs_bin_array[i+1] - obs_bin_array[i]) / 2 + obs_bin_array[i] for \
+      # Check that obs_bin_center is the same as obs_bin_array
+      expected_obs_bin_center = [(obs_bin_array[i+1] - obs_bin_array[i]) / 2 + obs_bin_array[i] for \
                                  i in range(0, len(obs_bin_array)-1)]
       try:
-        diff = [abs(expected_ang_bin_center[i] - ang_bin_center[i]) < 1e-8 for i in range(len(expected_ang_bin_center))]
+        diff = [abs(expected_obs_bin_center[i] - obs_bin_center[i]) < 1e-8 for i in range(len(expected_obs_bin_center))]
       except:
-        raise IndexError("Expected:", expected_ang_bin_center, "\nFound:", ang_bin_center)
+        raise IndexError("Expected:", expected_obs_bin_center, "\nFound:", obs_bin_center)
       if False in diff:
-        raise ValueError("Expected:", expected_ang_bin_center, "\nFound:", ang_bin_center)
+        raise ValueError("Expected:", expected_obs_bin_center, "\nFound:", obs_bin_center)
 
       error_PbPb = [(upper_band_PbPb[i] - lower_band_PbPb[i]) / 2 for i in range(0, h_pp.GetNbinsX())]
       center_PbPb = [lower_band_PbPb[i] + error_PbPb[i] for i in range(0, h_pp.GetNbinsX())]

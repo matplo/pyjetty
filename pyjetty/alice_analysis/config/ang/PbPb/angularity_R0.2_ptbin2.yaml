@@ -212,9 +212,9 @@ fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFi
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
 
 # Histograms for theory predictions
-theory_predictions: ['/rstorage/alice/AnalysisResults/ang/998707/AnalysisResultsFinal.root',
-                     '/rstorage/alice/AnalysisResults/ang/1007194/AnalysisResultsFinal_no1-4.root',
-                     '/rstorage/alice/AnalysisResults/ang/1003267/AnalysisResultsFinal.root',
+theory_predictions: ['/rstorage/alice/AnalysisResults/ang/1216098/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                     '/rstorage/alice/AnalysisResults/ang/1216355/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                     '/rstorage/alice/AnalysisResults/ang/1216018/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
                      '/rstorage/alice/AnalysisResults/ang/PbPb/jetscape_results.root']
 theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)",
                            "JEWEL pp", "JETSCAPE (MATTER+LBT)"]

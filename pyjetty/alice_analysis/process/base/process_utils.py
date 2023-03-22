@@ -3,7 +3,9 @@
 """
   Analysis utilities for jet analysis with track dataframe.
   
-  Author: James Mulligan (james.mulligan@berkeley.edu)
+  Authors:
+  James Mulligan (james.mulligan@berkeley.edu)
+  Ezra Lesser (elesser@berkeley.edu)
 """
 
 from __future__ import print_function
@@ -54,9 +56,18 @@ class ProcessUtils(common_utils.CommonUtils):
   #---------------------------------------------------------------
   # Check if truth-jet passes acceptance criteria
   #---------------------------------------------------------------
-  def is_truth_jet_accepted(self, jet_truth):
-    
-    return self.is_det_jet_accepted(self, jet_truth)
+  def is_truth_jet_accepted(self, jet_truth, min_leading_track_pT=None):
+
+    # If there is no leading track pT cut, accept all truth jets
+    if not min_leading_track_pT:
+      return True
+
+    # Otherwise same def as is_det_jet_accepted, but without 100 GeV track check
+    for track in jet_truth.constituents():
+      if track.pt() >= min_leading_track_pT:
+        return True
+    return False
+
 
   #---------------------------------------------------------------
   # Compute delta-R (eta-phi) between a PseudoJet and a given eta,phi value

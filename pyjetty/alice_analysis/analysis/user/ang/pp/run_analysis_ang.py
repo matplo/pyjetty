@@ -3177,7 +3177,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if subobs_label:
           text += subobs_label
           if obs_setting:
-            text += ' = ' + obs_setting
+            text += ' = ' + str(obs_setting)
       else:  # mass
         text += "ALICE data"
       text_list.append(text)

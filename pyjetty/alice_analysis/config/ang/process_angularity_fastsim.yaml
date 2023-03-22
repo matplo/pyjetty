@@ -72,7 +72,7 @@ ang:
 mass:
 
   common_settings:
-    xtitle: '#it{m}_{jet}'
+    xtitle: '#it{m}_{jet} (GeV/#it{c}^{2})'
     ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{m}_{jet}}'
 
   ############################################################################
