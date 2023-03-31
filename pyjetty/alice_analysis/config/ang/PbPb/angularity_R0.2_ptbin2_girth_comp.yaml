@@ -31,8 +31,8 @@ ang:
     pt_bins_reported: [40, 60]
     plot_overlay_list:
       - ['config_R0.2_1']
-    max_reg_param: 10
-    reg_param_variation: 1
+    max_reg_param: 20
+    reg_param_variation: 2
 
   ############################################################################
   # Different R & alpha configurations
@@ -46,8 +46,8 @@ ang:
     obs_max_reported: [0.6]
     obs_bins_det: [0, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.42, 0.55, 0.75]
     obs_bins_det_sys_binning: [0, 0.07, 0.11, 0.15, 0.19, 0.24, 0.29, 0.33, 0.37, 0.42, 0.54, 0.75]
-    #reg_param:
-    #  0.2: 2
+    reg_param:
+      0.2: 15
 
 
 ###############################################################################
@@ -90,16 +90,16 @@ systematics_list:
 # Paths to processing output, to be used for unfolding
 #main_data: '/rstorage/alice/AnalysisResults/ang/872257/AnalysisResultsFinal.root'
 main_data: '/rstorage/alice/AnalysisResults/ang/1020932/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/ang/877553/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/ang/879564/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/ang/877553/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/ang/1150066/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
 randmass_data: '/rstorage/alice/AnalysisResults/ang/890497/AnalysisResultsFinal.root'
-randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/AnalysisResultsFinal.root'
+randmass_response: '/rstorage/alice/AnalysisResults/ang/879602/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
 # fastsim order: PYTHIA, Herwig, JEWEL (recoils off), JEWEL (recoils on)
-fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/987484/AnalysisResultsFinal.root',
-                   '/rstorage/alice/AnalysisResults/ang/934787/AnalysisResultsFinal.root']
-#                   '/rstorage/alice/AnalysisResults/ang/997583/AnalysisResultsFinal.root']
-thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/AnalysisResultsFinal.root'
+fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/Scaled_no_cuts/AnalysisResultsFinal_no1-5.root',
+                   '/rstorage/alice/AnalysisResults/ang/987484/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                   '/rstorage/alice/AnalysisResults/ang/934787/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                   '/rstorage/alice/AnalysisResults/ang/997583/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root']
+thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
 
 # R_max variations
 R_max_variation1: 0.05

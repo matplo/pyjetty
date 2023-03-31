@@ -82,6 +82,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     self.histutils = ROOT.RUtil.HistUtils()
 
+    self.colors = [ROOT.kRed+1, ROOT.kGreen+2, ROOT.kBlue, ROOT.kOrange+2,
+        ROOT.kViolet+2, ROOT.kCyan+1, ROOT.kPink+10, ROOT.kGray+1,
+        ROOT.kYellow+4, ROOT.kAzure+8, ROOT.kRed]
+    #self.colors = self.ColorArray
 
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -216,6 +220,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       max_pt_truth = self.pt_bins_reported[i+1]
       maxbin = self.obs_max_bins(obs_label)[i]
 
+      # Do special plotting for comparison to Run 1 case
+      if self.use_prev_result:
+        self.plot_observable(
+          jetR, obs_label, obs_setting, grooming_setting, min_pt_truth,
+          max_pt_truth, maxbin, plot_MC=False, draw_ratio=True)
+        return
+
       self.plot_observable(
         jetR, obs_label, obs_setting, grooming_setting, min_pt_truth,
         max_pt_truth, maxbin, plot_MC=True, draw_ratio=True)
@@ -246,7 +257,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
 
     c.cd()
     pad_y_split = 0.5
-    pad_left_margin = 0.16 if self.set_logy else 0.15
+    if self.observable == "mass" and min_pt_truth == 80:
+      pad_left_margin = 0.16
+    else:
+      pad_left_margin = 0.16 if self.set_logy else 0.15
     myPad = ROOT.TPad('myPad', 'The pad', 0, pad_y_split if make_ratio_plot else 0, 1, 1)
     myPad.SetLeftMargin(pad_left_margin)
     myPad.SetTopMargin(0.03)
@@ -300,7 +314,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myBlankHisto.GetXaxis().SetTitleOffset(1.02)
       myBlankHisto.GetXaxis().SetTitleSize(0.055)
     myBlankHisto.SetYTitle(self.ytitle.replace("alpha}", "alpha}="+alpha))
-    myBlankHisto.GetYaxis().SetTitleOffset(1.3 if self.set_logy else 1.1)
+    if self.observable == "mass" and min_pt_truth == 80:
+      myBlankHisto.GetYaxis().SetTitleOffset(1.35)
+    else:
+      myBlankHisto.GetYaxis().SetTitleOffset(1.3 if self.set_logy else 1.15)
     myBlankHisto.GetYaxis().SetTitleSize(0.055)
 
     plot_pythia = False; plot_herwig = False;
@@ -348,60 +365,132 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj)
 
       if hPythia:
-        hPythia.SetFillStyle(0)
-        hPythia.SetMarkerSize(1.5)
-        hPythia.SetMarkerStyle(21)
-        hPythia.SetMarkerColor(600-6)
-        hPythia.SetLineColor(600-6)
-        hPythia.SetLineWidth(1)
+        color_pythia = self.colors[0]
+        # Create clone with 0 error for solid line
+        hPythia_draw = hPythia.Clone(hPythia.GetName()+"_drawclone")
+        for i in range(hPythia_draw.GetNbinsX()+1):
+          hPythia_draw.SetBinError(i, 0)
+        #hPythia_draw.SetMarkerSize(1.5)
+        #hPythia_draw.SetMarkerStyle(21)
+        #hPythia_draw.SetMarkerColor(600-6)
+        #hPythia_draw.SetFillColorAlpha(color_pythia, 0.5)
+        #hPythia_draw.SetFillStyle(1001)
+        hPythia_draw.SetLineStyle(1)
+        hPythia_draw.SetLineColor(color_pythia)
+        hPythia_draw.SetLineWidth(4)
         plot_pythia = True
         n_pp_models += 1
       #else:
       #  print('No PYTHIA prediction for %s %s' % (self.observable, obs_label))
 
       if hHerwig:
-        hHerwig.SetFillStyle(0)
-        hHerwig.SetMarkerSize(1.5)
-        hHerwig.SetMarkerStyle(33)
-        hHerwig.SetMarkerColor(2)
-        hHerwig.SetLineColor(2)
-        hHerwig.SetLineWidth(1)
+        color_herwig = self.colors[1]
+        # Create clone with 0 error for solid line
+        hHerwig_draw = hHerwig.Clone(hHerwig.GetName()+"_drawclone")
+        for i in range(hHerwig_draw.GetNbinsX()+1):
+          hHerwig_draw.SetBinError(i, 0)
+        #hHerwig_draw.SetMarkerSize(1.5)
+        #hHerwig_draw.SetMarkerStyle(33)
+        #hHerwig_draw.SetMarkerColor(2)
+        #hHerwig_draw.SetFillColorAlpha(color_herwig, 0.5)
+        #hHerwig_draw.SetFillStyle(1001)
+        hHerwig_draw.SetLineStyle(7)
+        hHerwig_draw.SetLineColor(color_herwig)
+        hHerwig_draw.SetLineWidth(4)
         plot_herwig = True
         n_pp_models += 1
       #else:
       #  print('No Herwig prediction for %s %s' % (self.observable, obs_label))
 
       if hJewel_pp:
-        hJewel_pp.SetFillStyle(0)
-        hJewel_pp.SetMarkerSize(1.5)
-        hJewel_pp.SetMarkerStyle(28)
-        hJewel_pp.SetMarkerColor(8)
-        hJewel_pp.SetLineColor(8)
-        hJewel_pp.SetLineWidth(1)
+        # Create clone with 0 error for solid line
+        hJewel_pp_draw = hJewel_pp.Clone(hJewel_pp.GetName()+"_drawclone")
+        for i in range(hJewel_pp_draw.GetNbinsX()+1):
+          hJewel_pp_draw.SetBinError(i, 0)
+        color_jewel_pp = self.colors[2]
+        #hJewel_pp_draw.SetMarkerSize(1.5)
+        #hJewel_pp_draw.SetMarkerStyle(28)
+        #hJewel_pp_draw.SetMarkerColor(8)
+        #hJewel_pp_draw.SetFillColorAlpha(color_jewel_pp, 0.5)
+        #hJewel_pp_draw.SetFillStyle(1001)
+        hJewel_pp_draw.SetLineStyle(8)
+        hJewel_pp_draw.SetLineColor(color_jewel_pp)
+        hJewel_pp_draw.SetLineWidth(4)
         plot_jewel_pp = True
         n_pp_models += 1
       #else:
       #  print('No JEWEL pp prediction for %s %s' % (self.observable, obs_label))
 
+      if hJetscape_pp:
+        # Check that binning is the same as data
+        b_d = [h.GetBinLowEdge(i) for i in range(1, h.GetNbinsX()+2)]
+        b_j = [hJetscape_pp.GetBinLowEdge(i) for i in range(1, hJetscape_pp.GetNbinsX()+2)]
+        if b_j != b_d:
+          print("JETSCAPE pp BINS ARE DIFFERENT for %s!\n" % obs_label,
+                "*** data: ", b_d, "*** jtsp: ", b_j, sep="")
+        else:
+          color_jetscape = self.colors[3]
+          #hJetscape_pp.SetMarkerSize(1.5)
+          #hJetscape_pp.SetMarkerStyle(42)
+          #hJetscape_pp.SetMarkerColor(44)
+          hJetscape_pp.SetFillColorAlpha(color_jetscape, 0.7)
+          hJetscape_pp.SetFillStyle(1001)
+          hJetscape_pp.SetLineStyle(1)
+          hJetscape_pp.SetLineColor(color_jetscape)
+          hJetscape_pp.SetLineWidth(0)
+          n_pp_models += 1
+          plot_jetscape_pp = True
+      #else:
+      #  print('No JETSCAPE prediction for %s %s' % (self.observable, obs_label))
+
+      if hZhang_pp:
+        # Set 0 error for solid line
+        for i in range(hZhang_pp.GetNbinsX()+1):
+          hZhang_pp.SetBinError(i, 0)
+        color_zhang = self.colors[6]
+        #hZhang_pp.SetMarkerSize(1.5)
+        #hZhang_pp.SetMarkerStyle(27)
+        #hZhang_pp.SetMarkerColor(95)
+        #hZhang_pp.SetFillColorAlpha(color_zhang, 0.7)
+        #hZhang_pp.SetFillStyle(1001)
+        hZhang_pp.SetLineStyle(3)
+        hZhang_pp.SetLineColor(color_zhang)
+        hZhang_pp.SetLineWidth(4)
+        n_pp_models += 1
+        plot_zhang_pp = True
+
       if hJewel_no_recoils:
-        hJewel_no_recoils.SetFillStyle(0)
-        hJewel_no_recoils.SetMarkerSize(1.5)
-        hJewel_no_recoils.SetMarkerStyle(34)
-        hJewel_no_recoils.SetMarkerColor(42)
-        hJewel_no_recoils.SetLineColor(42)
-        hJewel_no_recoils.SetLineWidth(1)
+        color_jewel_no_recoils = self.colors[0]
+        # Create clone with 0 error for solid line
+        hJewel_no_recoils_draw = hJewel_no_recoils.Clone(hJewel_no_recoils.GetName()+"_drawclone")
+        for i in range(hJewel_no_recoils_draw.GetNbinsX()+1):
+          hJewel_no_recoils_draw.SetBinError(i, 0)        #hJewel_no_recoils.SetMarkerSize(1.5)
+        #hJewel_no_recoils.SetMarkerStyle(34)
+        #hJewel_no_recoils.SetMarkerColor(42)
+        #hJewel_no_recoils.SetFillColorAlpha(color_jewel_no_recoils, 0.5)
+        #hJewel_no_recoils.SetFillStyle(1001)
+        hJewel_no_recoils_draw.SetLineStyle(1)
+        hJewel_no_recoils_draw.SetLineColor(color_jewel_no_recoils)
+        hJewel_no_recoils_draw.SetLineWidth(4)
         plot_jewel_no_recoils = True
         n_AA_models += 1
       #else:
       #  print('No JEWEL (recoils off) prediction for %s %s' % (self.observable, obs_label))
 
       if hJewel_recoils:
-        hJewel_recoils.SetFillStyle(0)
-        hJewel_recoils.SetMarkerSize(1.5)
-        hJewel_recoils.SetMarkerStyle(47)
-        hJewel_recoils.SetMarkerColor(4)
-        hJewel_recoils.SetLineColor(4)
-        hJewel_recoils.SetLineWidth(1)
+        color_jewel_recoils = self.colors[1]
+        # Create clone with 0 error for solid line
+        hJewel_recoils_draw = hJewel_recoils.Clone(hJewel_recoils.GetName()+"_drawclone")
+        for i in range(hJewel_recoils_draw.GetNbinsX()+1):
+          hJewel_recoils_draw.SetBinError(i, 0)        #hJewel_no_recoils.SetMarkerSize(1.5)
+        #hJewel_recoils.SetMarkerSize(1.5)
+        #hJewel_recoils.SetMarkerStyle(47)
+        #hJewel_recoils.SetMarkerColor(4)
+        #hJewel_recoils.SetFillColorAlpha(color_jewel_recoils, 0.5)
+        #hJewel_recoils.SetFillStyle(1001)
+        hJewel_recoils_draw.SetLineStyle(7)
+        hJewel_recoils_draw.SetLineColor(color_jewel_recoils)
+        hJewel_recoils_draw.SetLineWidth(4)
         plot_jewel_recoils = True
         n_AA_models += 1
       #else:
@@ -415,90 +504,82 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           print("JETSCAPE AA BINS ARE DIFFERENT for %s!\n" % obs_label,
                 "*** data: ", b_d, "*** jtsp: ", b_j, sep="")
         else:
-          hJetscape.SetFillStyle(0)
-          hJetscape.SetMarkerSize(1.5)
-          hJetscape.SetMarkerStyle(43)
-          hJetscape.SetMarkerColor(6)
-          hJetscape.SetLineColor(6)
-          hJetscape.SetLineWidth(1)
+          color_jetscape = self.colors[3]
+          #hJetscape.SetMarkerSize(1.5)
+          #hJetscape.SetMarkerStyle(43)
+          #hJetscape.SetMarkerColor(6)
+          hJetscape.SetFillColorAlpha(color_jetscape, 0.7)
+          hJetscape.SetFillStyle(1001)
+          hJetscape.SetLineStyle(1)
+          hJetscape.SetLineColor(color_jetscape)
+          hJetscape.SetLineWidth(0)
           plot_jetscape = True
           n_AA_models += 1
       #else:
       #  print('No JETSCAPE prediction for %s %s' % (self.observable, obs_label))
 
-      if hJetscape_pp:
-        # Check that binning is the same as data
-        b_d = [h.GetBinLowEdge(i) for i in range(1, h.GetNbinsX()+2)]
-        b_j = [hJetscape_pp.GetBinLowEdge(i) for i in range(1, hJetscape_pp.GetNbinsX()+2)]
-        if b_j != b_d:
-          print("JETSCAPE pp BINS ARE DIFFERENT for %s!\n" % obs_label,
-                "*** data: ", b_d, "*** jtsp: ", b_j, sep="")
-        else:
-          hJetscape_pp.SetFillStyle(0)
-          hJetscape_pp.SetMarkerSize(1.5)
-          hJetscape_pp.SetMarkerStyle(42)
-          hJetscape_pp.SetMarkerColor(44)
-          hJetscape_pp.SetLineColor(44)
-          hJetscape_pp.SetLineWidth(1)
-          n_pp_models += 1
-          plot_jetscape_pp = True
-      #else:
-      #  print('No JETSCAPE prediction for %s %s' % (self.observable, obs_label))
-
-      if hZhang_pp:
-        hZhang_pp.SetFillStyle(0)
-        hZhang_pp.SetMarkerSize(1.5)
-        hZhang_pp.SetMarkerStyle(27)
-        hZhang_pp.SetMarkerColor(95)
-        hZhang_pp.SetLineColor(95)
-        hZhang_pp.SetLineWidth(1)
-        n_pp_models += 1
-        plot_zhang_pp = True
-
       if hZhang:
-        hZhang.SetFillStyle(0)
-        hZhang.SetMarkerSize(1.5)
-        hZhang.SetMarkerStyle(33)
-        hZhang.SetMarkerColor(2)
-        hZhang.SetLineColor(2)
-        hZhang.SetLineWidth(1)
+        # Set 0 error for solid line
+        for i in range(hZhang.GetNbinsX()+1):
+          hZhang.SetBinError(i, 0)
+        color_zhang = self.colors[6]
+        #hZhang.SetMarkerSize(1.5)
+        #hZhang.SetMarkerStyle(33)
+        #hZhang.SetMarkerColor(2)
+        #hZhang.SetFillColorAlpha(color_zhang, 0.7)
+        #hZhang.SetFillStyle(1001)
+        hZhang.SetLineStyle(3)
+        hZhang.SetLineColor(color_zhang)
+        hZhang.SetLineWidth(4)
         n_AA_models += 1
         plot_zhang = True
 
       if hHybridNoElastic:
         plot_hybrid = True
+        color_hybrid_no_elastic = self.colors[4]
+        color_hybrid_elastic = self.colors[5]
 
-        hHybridNoElastic.SetFillStyle(0)
-        hHybridNoElastic.SetMarkerSize(1.5)
-        hHybridNoElastic.SetMarkerStyle(35)
-        hHybridNoElastic.SetMarkerColor(7)
-        hHybridNoElastic.SetLineColor(7)
-        hHybridNoElastic.SetLineWidth(1)
+        #hHybridNoElastic.SetMarkerSize(1.5)
+        #hHybridNoElastic.SetMarkerStyle(35)
+        #hHybridNoElastic.SetMarkerColor(7)
+        hHybridNoElastic.SetFillColorAlpha(color_hybrid_no_elastic, 0.5)
+        hHybridNoElastic.SetFillStyle(1001)
+        hHybridNoElastic.SetLineStyle(1)
+        hHybridNoElastic.SetLineColor(color_hybrid_no_elastic)
+        hHybridNoElastic.SetLineWidth(0)
 
-        hHybridWithElastic.SetFillStyle(0)
-        hHybridWithElastic.SetMarkerSize(1.5)
-        hHybridWithElastic.SetMarkerStyle(36)
-        hHybridWithElastic.SetMarkerColor(8)
-        hHybridWithElastic.SetLineColor(8)
-        hHybridWithElastic.SetLineWidth(1)
+        #hHybridWithElastic.SetMarkerSize(1.5)
+        #hHybridWithElastic.SetMarkerStyle(36)
+        #hHybridWithElastic.SetMarkerColor(8)
+        hHybridWithElastic.SetFillColorAlpha(color_hybrid_elastic, 0.5)
+        hHybridWithElastic.SetFillStyle(1001)
+        hHybridWithElastic.SetLineStyle(1)
+        hHybridWithElastic.SetLineColor(color_hybrid_elastic)
+        hHybridWithElastic.SetLineWidth(0)
 
         n_AA_models += 2
 
         if hHybridNoElastic_pp and plot_pp_data:
           plot_hybrid_pp = True
-          hHybridNoElastic_pp.SetFillStyle(0)
-          hHybridNoElastic_pp.SetMarkerSize(1.5)
-          hHybridNoElastic_pp.SetMarkerStyle(35)
-          hHybridNoElastic_pp.SetMarkerColor(7)
-          hHybridNoElastic_pp.SetLineColor(7)
-          hHybridNoElastic_pp.SetLineWidth(1)
+          color_hybrid_pp = color_hybrid_no_elastic
 
-          hHybridWithElastic_pp.SetFillStyle(0)
-          hHybridWithElastic_pp.SetMarkerSize(1.5)
-          hHybridWithElastic_pp.SetMarkerStyle(36)
-          hHybridWithElastic_pp.SetMarkerColor(8)
-          hHybridWithElastic_pp.SetLineColor(8)
-          hHybridWithElastic_pp.SetLineWidth(1)
+          #hHybridNoElastic_pp.SetMarkerSize(1.5)
+          #hHybridNoElastic_pp.SetMarkerStyle(35)
+          #hHybridNoElastic_pp.SetMarkerColor(7)
+          hHybridNoElastic_pp.SetFillColorAlpha(color_hybrid_pp, 0.5)
+          hHybridNoElastic_pp.SetFillStyle(1001)
+          hHybridNoElastic_pp.SetLineStyle(8)
+          hHybridNoElastic_pp.SetLineColor(color_hybrid_pp)
+          hHybridNoElastic_pp.SetLineWidth(0)
+
+          #hHybridWithElastic_pp.SetMarkerSize(1.5)
+          #hHybridWithElastic_pp.SetMarkerStyle(36)
+          #hHybridWithElastic_pp.SetMarkerColor(8)
+          hHybridWithElastic_pp.SetFillColorAlpha(color_hybrid_pp, 0.5)
+          hHybridWithElastic_pp.SetFillStyle(1001)
+          hHybridWithElastic_pp.SetLineStyle(8)
+          hHybridWithElastic_pp.SetLineColor(color_hybrid_pp)
+          hHybridWithElastic_pp.SetLineWidth(0)
 
           n_pp_models += 2
 
@@ -530,7 +611,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if alpha == "1.5":
           maxval *= 1.2
     else:
-      maxval = 2.3*h.GetBinContent(int(0.4*h.GetNbinsX()))
+      maxval = 2.3*max(h.GetBinContent(int(0.4*h.GetNbinsX())), h.GetBinContent(2), h.GetBinContent(3))
     ymin = 1e-3  # Prevent ROOT from drawing 0 on plots
     if self.set_logy:
       maxval *= 5e1
@@ -543,8 +624,10 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       m = 2 if grooming_setting else 1
       integral = h.Integral(m, h.GetNbinsX(), "width")
       if plot_jewel_no_recoils:
+        hJewel_no_recoils_draw.Scale(integral / hJewel_no_recoils.Integral(m, h.GetNbinsX(), "width"))
         hJewel_no_recoils.Scale(integral / hJewel_no_recoils.Integral(m, h.GetNbinsX(), "width"))
       if plot_jewel_recoils:
+        hJewel_recoils_draw.Scale(integral / hJewel_recoils.Integral(m, h.GetNbinsX(), "width"))
         hJewel_recoils.Scale(integral / hJewel_recoils.Integral(m, h.GetNbinsX(), "width"))
       if plot_jetscape:
         hJetscape.Scale(integral / hJetscape.Integral(m, h.GetNbinsX(), "width"))
@@ -557,10 +640,13 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       if plot_pp_data:
         integral = h_pp_data.Integral(m, h_pp_data.GetNbinsX(), "width")
         if plot_pythia:
+          hPythia_draw.Scale(integral / hPythia.Integral(m, h.GetNbinsX(), "width"))
           hPythia.Scale(integral / hPythia.Integral(m, h.GetNbinsX(), "width"))
         if plot_herwig:
+          hHerwig_draw.Scale(integral / hHerwig.Integral(m, h.GetNbinsX(), "width"))
           hHerwig.Scale(integral / hHerwig.Integral(m, h.GetNbinsX(), "width"))
         if plot_jewel_pp:
+          hJewel_pp_draw.Scale(integral / hJewel_pp.Integral(m, h.GetNbinsX(), "width"))
           hJewel_pp.Scale(integral / hJewel_pp.Integral(m, h.GetNbinsX(), "width"))
         if plot_jetscape_pp:
           hJetscape_pp.Scale(integral / hJetscape_pp.Integral(m, h.GetNbinsX(), "width"))
@@ -573,30 +659,30 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if not ignore_MC_top_panel:
       if not plot_PbPb:
         if plot_pythia:
-          hPythia.Draw('E2 same')
+          hPythia_draw.Draw('L 3 same')
         if plot_herwig:
-          hHerwig.Draw('E2 same')
+          hHerwig_draw.Draw('L 3 same')
         if plot_jewel_pp:
-          hJewel_pp.Draw('E2 same')
+          hJewel_pp_draw.Draw('L 3 same')
         if plot_zhang_pp:
-          hZhang_pp.Draw('E2 same')
+          hZhang_pp.Draw('L 3 same')
         if plot_hybrid_pp:
-          hHybridNoElastic_pp.Draw('E2 same')
+          hHybridNoElastic_pp.Draw('E3 same')
           #hHybridWithElastic_pp.Draw('E2 same')
         if plot_jetscape_pp:
-          hJetscape_pp.Draw('E2 same')
+          hJetscape_pp.Draw('E3 same')
       else:
         if plot_jewel_no_recoils:
-          hJewel_no_recoils.Draw('E2 same')
+          hJewel_no_recoils_draw.Draw('L 3 same')
         if plot_jewel_recoils:
-          hJewel_recoils.Draw('E2 same')
+          hJewel_recoils_draw.Draw('L 3 same')
         if plot_zhang:
-          hZhang.Draw('E2 same')
+          hZhang.Draw('L 3 same')
         if plot_hybrid:
-          hHybridNoElastic.Draw('E2 same')
-          hHybridWithElastic.Draw('E2 same')
+          hHybridNoElastic.Draw('E3 same')
+          hHybridWithElastic.Draw('E3 same')
         if plot_jetscape:
-          hJetscape.Draw('E2 same')
+          hJetscape.Draw('E3 same')
 
     if plot_pp_data:
       h_pp_sys.Draw("E2 same")
@@ -611,7 +697,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     #text_xval = 0.53 if plot_PbPb else 0.56
     text_xval = 0.61
     text_yval = 0.9;  delta_y = 0.065
-    if plot_pp_data and not plot_PbPb:
+    if self.observable == "ang" and plot_pp_data and not plot_PbPb:
       text = 'ALICE'
     else:
       text = 'ALICE {}'.format(self.figure_approval_status)
@@ -693,30 +779,30 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myLegend.AddEntry(h_pp_sys, 'pp syst. uncert.', 'f')
     if not ignore_MC_top_panel:
       if plot_pythia:
-        myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pf')
+        myLegend.AddEntry(hPythia_draw, 'PYTHIA8 Monash2013', 'l')
       if plot_herwig:
-        myLegend.AddEntry(hHerwig, 'Herwig7 default tune', 'pf')
+        myLegend.AddEntry(hHerwig_draw, 'Herwig7 default tune', 'l')
       if plot_jewel_pp:
-        myLegend.AddEntry(hJewel_pp, 'JEWEL pp', 'pf')
+        myLegend.AddEntry(hJewel_pp_draw, 'JEWEL pp', 'l')
       if plot_zhang_pp:
-        myLegend.AddEntry(hZhang_pp, 'POWHEG+PYTHIA6', 'pf')
+        myLegend.AddEntry(hZhang_pp, 'POWHEG+PYTHIA6', 'l')
       if plot_hybrid_pp:
-        myLegend.AddEntry(hHybridNoElastic_pp, 'Hybrid model vacuum', 'pf')
+        myLegend.AddEntry(hHybridNoElastic_pp, 'Hybrid model vacuum', 'f')
         #myLegend.AddEntry(hHybridWithElastic_pp, 'Hybrid model (with elastic) baseline')
       if plot_jetscape_pp:
-        myLegend.AddEntry(hJetscape_pp, 'JETSCAPE pp', 'pf')
+        myLegend.AddEntry(hJetscape_pp, 'JETSCAPE pp', 'f')
       if plot_PbPb:
         if plot_jewel_no_recoils:
-          myLegend.AddEntry(hJewel_no_recoils, 'JEWEL (recoils off)', 'pf')
+          myLegend.AddEntry(hJewel_no_recoils_draw, 'JEWEL (recoils off)', 'l')
         if plot_jewel_recoils:
-          myLegend.AddEntry(hJewel_recoils, 'JEWEL (recoils on)', 'pf')
-        if plot_jetscape:
-          myLegend.AddEntry(hJetscape, 'JETSCAPE (MATTER+LBT)', 'pf')
+          myLegend.AddEntry(hJewel_recoils_draw, 'JEWEL (recoils on)', 'l')
         if plot_zhang:
-          myLegend.AddEntry(hZhang, 'Higher-Twist parton #it{E}-loss', 'pf')
+          myLegend.AddEntry(hZhang, 'Higher-Twist parton #it{E}-loss', 'l')
+        if plot_jetscape:
+          myLegend.AddEntry(hJetscape, 'JETSCAPE (MATTER+LBT)', 'f')
         if plot_hybrid:
-          myLegend.AddEntry(hHybridNoElastic, 'Hybrid model (no elastic)', 'pf')
-          myLegend.AddEntry(hHybridWithElastic, 'Hybrid model (with elastic)', 'pf')
+          myLegend.AddEntry(hHybridNoElastic, 'Hybrid model (no elastic)', 'f')
+          myLegend.AddEntry(hHybridWithElastic, 'Hybrid model (with elastic)', 'f')
     myLegend.Draw()
 
     ##########################################################################
@@ -744,7 +830,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         myBlankHisto2.SetYTitle("#frac{Pb-Pb}{pp}")
       elif plot_MC:
         myBlankHisto2.SetYTitle("#frac{Theory}{Data}")
-      myBlankHisto2.GetYaxis().SetTitleOffset(1.3 if self.set_logy else 1.1)
+      myBlankHisto2.GetYaxis().SetTitleOffset(1.3 if self.set_logy else 1.15)
       myBlankHisto2.GetYaxis().SetTitleSize(0.055)
       if plot_pp_data and plot_PbPb:
         myBlankHisto2.SetMinimum(0.3)
@@ -781,36 +867,72 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if plot_pythia:
           hPythiaRatio = hPythia.Clone(hPythia.GetName()+"_ratio")
           hPythiaRatio.Divide(h_pp_data_no_error)
-          hPythiaRatio.Draw('E2 same')
+          hPythiaRatio.SetMarkerSize(0)
+          hPythiaRatio.SetFillColorAlpha(color_pythia, 1)
+          hPythiaRatio.SetFillStyle(1001)
+          hPythiaRatio.SetLineStyle(1)
+          hPythiaRatio.SetLineColor(color_pythia)
+          hPythiaRatio.SetLineWidth(4)
+          hPythiaRatio.Draw('E3 same')
 
         if plot_herwig:
           hHerwigRatio = hHerwig.Clone(hHerwig.GetName()+"_ratio")
           hHerwigRatio.Divide(h_pp_data_no_error)
-          hHerwigRatio.Draw('E2 same')
+          hHerwigRatio.SetMarkerSize(0)
+          hHerwigRatio.SetFillColorAlpha(color_herwig, 0.5)
+          hHerwigRatio.SetFillStyle(1001)
+          hHerwigRatio.SetLineStyle(1)
+          hHerwigRatio.SetLineColor(color_herwig)
+          hHerwigRatio.SetLineWidth(4)
+          hHerwigRatio.Draw('E3 same')
 
         if plot_jewel_pp:
           hJewelRatio = hJewel_pp.Clone(hJewel_pp.GetName()+"_ratio")
           hJewelRatio.Divide(h_pp_data_no_error)
-          hJewelRatio.Draw('E2 same')
-
-        if plot_jetscape_pp:
-          hJetscapeRatio = hJetscape_pp.Clone(hJetscape_pp.GetName()+"_ratio")
-          hJetscapeRatio.Divide(h_pp_data_no_error)
-          hJetscapeRatio.Draw('E2 same')
-
-        if plot_zhang_pp:
-          hZhangRatio = hZhang_pp.Clone(hZhang_pp.GetName()+"_ratio")
-          hZhangRatio.Divide(h_pp_data_no_error)
-          hZhangRatio.Draw('E2 same')
+          hJewelRatio.SetMarkerSize(0)
+          hJewelRatio.SetFillColorAlpha(color_jewel_pp, 0.5)
+          hJewelRatio.SetFillStyle(1001)
+          hJewelRatio.SetLineStyle(1)
+          hJewelRatio.SetLineColor(color_jewel_pp)
+          hJewelRatio.SetLineWidth(4)
+          hJewelRatio.Draw('E3 same')
 
         if plot_hybrid_pp:
           hHybridNoElasticRatio = hHybridNoElastic_pp.Clone(hHybridNoElastic_pp.GetName()+"_ratio")
           hHybridNoElasticRatio.Divide(h_pp_data_no_error)
-          hHybridNoElasticRatio.Draw('E2 same')
+          hHybridNoElasticRatio.SetMarkerSize(0)
+          hHybridNoElasticRatio.SetFillColorAlpha(color_hybrid_pp, 0.5)
+          hHybridNoElasticRatio.SetFillStyle(1001)
+          hHybridNoElasticRatio.SetLineStyle(1)
+          hHybridNoElasticRatio.SetLineColor(color_hybrid_pp)
+          hHybridNoElasticRatio.SetLineWidth(4)
+          hHybridNoElasticRatio.Draw('E3 same')
 
           #hHybridWithElasticRatio = hHybridWithElastic_pp.Clone(hHybridWithElastic_pp.GetName()+"_ratio")
           #hHybridWithElasticRatio.Divide(h_pp_data)
           #hHybridWithElasticRatio.Draw('E2 same')
+
+        if plot_jetscape_pp:
+          hJetscapeRatio = hJetscape_pp.Clone(hJetscape_pp.GetName()+"_ratio")
+          hJetscapeRatio.Divide(h_pp_data_no_error)
+          hJetscapeRatio.SetMarkerSize(0)
+          hJetscapeRatio.SetFillColorAlpha(color_jetscape, 0.7)
+          hJetscapeRatio.SetFillStyle(1001)
+          hJetscapeRatio.SetLineStyle(1)
+          hJetscapeRatio.SetLineColor(color_jetscape)
+          hJetscapeRatio.SetLineWidth(4)
+          hJetscapeRatio.Draw('E3 same')
+
+        if plot_zhang_pp:
+          hZhangRatio = hZhang_pp.Clone(hZhang_pp.GetName()+"_ratio")
+          hZhangRatio.Divide(h_pp_data_no_error)
+          hZhangRatio.SetMarkerSize(0)
+          #hZhangRatio.SetFillColorAlpha(color_zhang, 0.7)
+          #hZhangRatio.SetFillStyle(1001)
+          hZhangRatio.SetLineStyle(3)
+          hZhangRatio.SetLineColor(color_zhang)
+          hZhangRatio.SetLineWidth(4)
+          hZhangRatio.Draw('L 3 same')
 
         # Draw data stat + systematic uncertainties around ratio = 1
         hSysRatio = h_pp_sys.Clone(h_pp_sys.GetName()+"_ratio")
@@ -843,31 +965,67 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if plot_jewel_no_recoils:
           hJewelNoRecoilsRatio = hJewel_no_recoils.Clone(hJewel_no_recoils.GetName()+"_ppratio")
           hJewelNoRecoilsRatio.Divide(hJewel_pp)
-          hJewelNoRecoilsRatio.Draw('E2 same')
+          hJewelNoRecoilsRatio.SetMarkerSize(0)
+          hJewelNoRecoilsRatio.SetFillColorAlpha(color_jewel_no_recoils, 1)
+          hJewelNoRecoilsRatio.SetFillStyle(1001)
+          hJewelNoRecoilsRatio.SetLineStyle(1)
+          hJewelNoRecoilsRatio.SetLineColor(color_jewel_no_recoils)
+          hJewelNoRecoilsRatio.SetLineWidth(0)
+          hJewelNoRecoilsRatio.Draw('E3 same')
 
         if plot_jewel_recoils:
           hJewelRecoilsRatio = hJewel_recoils.Clone(hJewel_recoils.GetName()+"_ppratio")
           hJewelRecoilsRatio.Divide(hJewel_pp)
-          hJewelRecoilsRatio.Draw('E2 same')
+          hJewelRecoilsRatio.SetMarkerSize(0)
+          hJewelRecoilsRatio.SetFillColorAlpha(color_jewel_recoils, 0.6)
+          hJewelRecoilsRatio.SetFillStyle(1001)
+          hJewelRecoilsRatio.SetLineStyle(1)
+          hJewelRecoilsRatio.SetLineColor(color_jewel_recoils)
+          hJewelRecoilsRatio.SetLineWidth(0)
+          hJewelRecoilsRatio.Draw('E3 same')
 
         if plot_jetscape:
           hJetscapeRatio = hJetscape.Clone(hJetscape.GetName()+"_ppratio")
           hJetscapeRatio.Divide(hJetscape_pp)
-          hJetscapeRatio.Draw('E2 same')
+          hJetscapeRatio.SetMarkerSize(0)
+          hJetscapeRatio.SetFillColorAlpha(color_jetscape, 0.5)
+          hJetscapeRatio.SetFillStyle(1001)
+          hJetscapeRatio.SetLineStyle(1)
+          hJetscapeRatio.SetLineColor(color_jetscape)
+          hJetscapeRatio.SetLineWidth(0)
+          hJetscapeRatio.Draw('E3 same')
 
         if plot_zhang:
           hZhangRatio = hZhang.Clone(hZhang.GetName()+"_ppratio")
           hZhangRatio.Divide(hZhang_pp)
-          hZhangRatio.Draw('E2 same')
+          hZhangRatio.SetMarkerSize(0)
+          #hZhangRatio.SetFillColorAlpha(color_zhang, 0.7)
+          #hZhangRatio.SetFillStyle(1001)
+          hZhangRatio.SetLineStyle(3)
+          hZhangRatio.SetLineColor(color_zhang)
+          hZhangRatio.SetLineWidth(4)
+          hZhangRatio.Draw('L 3 same')
 
         if plot_hybrid:
           hHybridNoElasticRatio = hHybridNoElastic.Clone(hHybridNoElastic.GetName()+"_ppratio")
           hHybridNoElasticRatio.Divide(hHybridNoElastic_pp)
-          hHybridNoElasticRatio.Draw('E2 same')
+          hHybridNoElasticRatio.SetMarkerSize(0)
+          hHybridNoElasticRatio.SetFillColorAlpha(color_hybrid_no_elastic, 0.3)
+          hHybridNoElasticRatio.SetFillStyle(1001)
+          hHybridNoElasticRatio.SetLineStyle(1)
+          hHybridNoElasticRatio.SetLineColor(color_hybrid_no_elastic)
+          hHybridNoElasticRatio.SetLineWidth(0)
+          hHybridNoElasticRatio.Draw('E3 same')
 
           hHybridWithElasticRatio = hHybridWithElastic.Clone(hHybridWithElastic.GetName()+"_ppratio")
           hHybridWithElasticRatio.Divide(hHybridWithElastic_pp)
-          hHybridWithElasticRatio.Draw('E2 same')
+          hHybridWithElasticRatio.SetMarkerSize(0)
+          hHybridWithElasticRatio.SetFillColorAlpha(color_hybrid_elastic, 0.4)
+          hHybridWithElasticRatio.SetFillStyle(1001)
+          hHybridWithElasticRatio.SetLineStyle(1)
+          hHybridWithElasticRatio.SetLineColor(color_hybrid_elastic)
+          hHybridWithElasticRatio.SetLineWidth(0)
+          hHybridWithElasticRatio.Draw('E3 same')
 
       # Calculate MC ratio plots
       elif plot_MC:
@@ -878,31 +1036,67 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if plot_jewel_no_recoils:
           hJewelNoRecoilsRatio = hJewel_no_recoils.Clone(hJewel_no_recoils.GetName()+"_ratio")
           hJewelNoRecoilsRatio.Divide(h_AA_no_error)
-          hJewelNoRecoilsRatio.Draw('E2 same')
+          hJewelNoRecoilsRatio.SetMarkerSize(0)
+          hJewelNoRecoilsRatio.SetFillColorAlpha(color_jewel_no_recoils, 1)
+          hJewelNoRecoilsRatio.SetFillStyle(1001)
+          hJewelNoRecoilsRatio.SetLineStyle(1)
+          hJewelNoRecoilsRatio.SetLineColor(color_jewel_no_recoils)
+          hJewelNoRecoilsRatio.SetLineWidth(4)
+          hJewelNoRecoilsRatio.Draw('E3 same')
 
         if plot_jewel_recoils:
           hJewelRecoilsRatio = hJewel_recoils.Clone(hJewel_recoils.GetName()+"_ratio")
           hJewelRecoilsRatio.Divide(h_AA_no_error)
-          hJewelRecoilsRatio.Draw('E2 same')
+          hJewelRecoilsRatio.SetMarkerSize(0)
+          hJewelRecoilsRatio.SetFillColorAlpha(color_jewel_recoils, 0.5)
+          hJewelRecoilsRatio.SetFillStyle(1001)
+          hJewelRecoilsRatio.SetLineStyle(1)
+          hJewelRecoilsRatio.SetLineColor(color_jewel_recoils)
+          hJewelRecoilsRatio.SetLineWidth(4)
+          hJewelRecoilsRatio.Draw('E3 same')
 
         if plot_jetscape:
           hJetscapeRatio = hJetscape.Clone(hJetscape.GetName()+"_ratio")
           hJetscapeRatio.Divide(h_AA_no_error)
-          hJetscapeRatio.Draw('E2 same')
+          hJetscapeRatio.SetMarkerSize(0)
+          hJetscapeRatio.SetFillColorAlpha(color_jetscape, 0.7)
+          hJetscapeRatio.SetFillStyle(1001)
+          hJetscapeRatio.SetLineStyle(1)
+          hJetscapeRatio.SetLineColor(color_jetscape)
+          hJetscapeRatio.SetLineWidth(4)
+          hJetscapeRatio.Draw('E3 same')
 
         if plot_zhang:
           hZhangRatio = hZhang.Clone(hZhang.GetName()+"_ratio")
           hZhangRatio.Divide(h_AA_no_error)
-          hZhangRatio.Draw('E2 same')
+          hZhangRatio.SetMarkerSize(0)
+          #hZhangRatio.SetFillColorAlpha(color_zhang, 0.7)
+          #hZhangRatio.SetFillStyle(1001)
+          hZhangRatio.SetLineStyle(3)
+          hZhangRatio.SetLineColor(color_zhang)
+          hZhangRatio.SetLineWidth(4)
+          hZhangRatio.Draw('L 3 same')
 
         if plot_hybrid:
           hHybridNoElasticRatio = hHybridNoElastic.Clone(hHybridNoElastic.GetName()+"_ratio")
           hHybridNoElasticRatio.Divide(h_AA_no_error)
-          hHybridNoElasticRatio.Draw('E2 same')
+          hHybridNoElasticRatio.SetMarkerSize(0)
+          hHybridNoElasticRatio.SetFillColorAlpha(color_hybrid_no_elastic, 0.5)
+          hHybridNoElasticRatio.SetFillStyle(1001)
+          hHybridNoElasticRatio.SetLineStyle(1)
+          hHybridNoElasticRatio.SetLineColor(color_hybrid_no_elastic)
+          hHybridNoElasticRatio.SetLineWidth(4)
+          hHybridNoElasticRatio.Draw('E3 same')
 
           hHybridWithElasticRatio = hHybridWithElastic.Clone(hHybridWithElastic.GetName()+"_ratio")
           hHybridWithElasticRatio.Divide(h_AA_no_error)
-          hHybridWithElasticRatio.Draw('E2 same')
+          hHybridWithElasticRatio.SetMarkerSize(0)
+          hHybridWithElasticRatio.SetFillColorAlpha(color_hybrid_elastic, 0.5)
+          hHybridWithElasticRatio.SetFillStyle(1001)
+          hHybridWithElasticRatio.SetLineStyle(1)
+          hHybridWithElasticRatio.SetLineColor(color_hybrid_elastic)
+          hHybridWithElasticRatio.SetLineWidth(4)
+          hHybridWithElasticRatio.Draw('E3 same')
 
         # Draw data stat + systematic uncertainties around ratio = 1
         hSysRatio = h_sys.Clone(h_sys.GetName()+"_ratio")
@@ -927,21 +1121,21 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         maxx = 0.98
         minx = 0.53
         if plot_pp_data and plot_PbPb and plot_MC and \
-          min_pt_truth == 80 and "SD" not in obs_label:
+          self.observable == "ang" and min_pt_truth == 80 and "SD" not in obs_label:
           maxx -= 0.22; minx -= 0.22
         myLegend2 = ROOT.TLegend(minx, miny, maxx, maxy)
         self.utils.setup_legend(myLegend2, 0.035)
         if plot_jewel_no_recoils:
-          myLegend2.AddEntry(hJewelNoRecoilsRatio, 'JEWEL (recoils off)', 'pf')
+          myLegend2.AddEntry(hJewelNoRecoilsRatio, 'JEWEL (recoils off)', 'f')
         if plot_jewel_recoils:
-          myLegend2.AddEntry(hJewelRecoilsRatio, 'JEWEL (recoils on)', 'pf')
+          myLegend2.AddEntry(hJewelRecoilsRatio, 'JEWEL (recoils on)', 'f')
         if plot_jetscape:
-          myLegend2.AddEntry(hJetscapeRatio, 'JETSCAPE (MATTER+LBT)', 'pf')
+          myLegend2.AddEntry(hJetscapeRatio, 'JETSCAPE (MATTER+LBT)', 'f')
         if plot_zhang:
-          myLegend2.AddEntry(hZhangRatio, 'Higher-Twist parton #it{E}-loss', 'pf')
+          myLegend2.AddEntry(hZhangRatio, 'Higher-Twist parton #it{E}-loss', 'l')
         if plot_hybrid:
-          myLegend2.AddEntry(hHybridNoElasticRatio, 'Hybrid model (no elastic)', 'pf')
-          myLegend2.AddEntry(hHybridWithElasticRatio, 'Hybrid model (with elastic)', 'pf')
+          myLegend2.AddEntry(hHybridNoElasticRatio, 'Hybrid model (no elastic)', 'f')
+          myLegend2.AddEntry(hHybridWithElasticRatio, 'Hybrid model (with elastic)', 'f')
         myLegend2.Draw()
 
     ##########################################################################
