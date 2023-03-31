@@ -1,0 +1,41 @@
+# Processing parameters
+jetR: [0.2, 0.4]
+
+# For extra verbose output in some functions
+debug_level: 0
+
+process_observables: ['lund']
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+# Uncomment for data // comment for MC
+reject_tracks_fraction: 0
+
+# Uncomment for MC // comment for data
+#reject_tracks_fraction: 0.02
+
+
+###############################################################################
+# Rebinning and unfolding parameters/configurations for angularity observables
+lund:
+
+  common_settings:
+    xtitle: '#it{z}_{g}'
+    ytitle: '#it{#theta}_{g}'
+    ztitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{z}_{g} d#it{#theta}_{g}}'
+
+  config1:
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+
+  config2:
+    DynamicalGrooming:
+      a: 'late_kt_0.5'
+
+  config3:
+    DynamicalGrooming:
+      a: 'late_kt_1.0'
+
+  config4:
+    DynamicalGrooming:
+      a: 'late_kt_2.0'
+
