@@ -142,6 +142,8 @@ class ProcessUtils(common_utils.CommonUtils):
         return gshop.max_z()
       elif a == 'max_kt':
         return gshop.max_kt()
+      elif len(a) > 6 and a[0:7] == 'late_kt':
+        return gshop.late_kt(float(a[8:]))
       elif a == 'max_kappa':
         return gshop.max_kappa()
       elif a == 'max_tf':
