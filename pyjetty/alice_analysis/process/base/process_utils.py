@@ -122,20 +122,20 @@ class ProcessUtils(common_utils.CommonUtils):
   # the GroomerShop  remains in scope.
   #---------------------------------------------------------------
   def groom(self, gshop, grooming_setting, jetR):
-  
+
     if 'sd' in grooming_setting:
-    
+
       zcut = grooming_setting['sd'][0]
       beta = grooming_setting['sd'][1]
       return gshop.soft_drop(beta, zcut, jetR)
 
     elif 'dg' in grooming_setting:
-    
+
       if len(gshop.jet().constituents()) < 2:
         return None
-        
+
       a = grooming_setting['dg'][0]
-      
+
       if a == 'max_pt_softer':
         return gshop.max_pt_softer()
       elif a == 'max_z':
@@ -152,9 +152,8 @@ class ProcessUtils(common_utils.CommonUtils):
         return gshop.min_tf()
       else:
         return gshop.dynamical(a)
-    
+
     else:
       sys.exit('grooming_setting {} not recognized.'.format(grooming_setting))
-    
 
 
