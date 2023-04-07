@@ -13,9 +13,11 @@ Next:numberShowProcess = 0
 
 ! PartonLevel:ISR = off
 PartonLevel:ISR = on
-PartonLevel:MPI = off
+! PartonLevel:MPI = off
+PartonLevel:MPI = on
 
-Random:seed = 123456
-Random:setSeed = on
+! Random:seed = 123456
+! Random:setSeed = on
 
-PhaseSpace:pTHatMin = 500.
+! PhaseSpace:pTHatMin = 500.
+! PhaseSpace:pTHatMax = 550.
