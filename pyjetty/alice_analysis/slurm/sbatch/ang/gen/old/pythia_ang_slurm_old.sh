@@ -4,21 +4,22 @@
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --partition=std
 #SBATCH --time=24:00:00
-#SBATCH --array=1-1120
+#SBATCH --array=1-200
 #SBATCH --output=/rstorage/alice/AnalysisResults/ang/slurm-%A_%a.out
 
 # Center of mass energy in GeV
 ECM=5020
 
 # Number of events per pT-hat bin (for statistics)
-NEV_DESIRED=21000000
+#NEV_DESIRED=21000000
+NEV_DESIRED=1000000
 
 # Lower edges of the pT-hat bins
 PTHAT_BINS=(5 7 9 12 16 21 28 36 45 57 70 85 99 115 132 150 169 190 212 235)
 echo "Number of pT-hat bins: ${#PTHAT_BINS[@]}"
 
 # Currently we have 8 nodes * 20 cores active
-NCORES=1120
+NCORES=200
 NEV_PER_JOB=$(( $NEV_DESIRED * ${#PTHAT_BINS[@]} / $NCORES ))
 echo "Number of events per job: $NEV_PER_JOB"
 NCORES_PER_BIN=$(( $NCORES / ${#PTHAT_BINS[@]} ))
@@ -48,15 +49,23 @@ module load pyjetty/1.0
 echo "python is" $(which python)
 cd /home/ezra/analysis_env/
 SCRIPT="/home/ezra/pyjetty/pyjetty/alice_analysis/process/user/ang/pythia_parton_hadron.py"
-CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/gen_angularity.yaml"
+CONFIG="/home/ezra/pyjetty/pyjetty/alice_analysis/config/ang/process_angularity.yaml"
 
 if $USE_PTHAT_MAX; then
-	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2,PhaseSpace:pTHatMax=$PTHAT_MAX "
+	#echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree --pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2,PhaseSpace:pTHatMax=$PTHAT_MAX "
+	#pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED \
+	#	--py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree \
+	#	--pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2,PhaseSpace:pTHatMax=$PTHAT_MAX
+	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree --no-match-level ch --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX,ParticleDecays:limitTau0=on "
 	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED \
 		--py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree \
-		--pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2,PhaseSpace:pTHatMax=$PTHAT_MAX 
+		--no-match-level ch --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX,ParticleDecays:limitTau0=on
 else
+	#pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR \
+	#	--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB \
+	#	--no-tree --pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2
+	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree --no-match-level ch --pythiaopts HardQCD:all=on,ParticleDecays:limitTau0=on "
 	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR \
 		--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB \
-		--no-tree --pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2
+		--no-tree --no-match-level ch --pythiaopts HardQCD:all=on,ParticleDecays:limitTau0=on
 fi

@@ -1278,7 +1278,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                maxbin, overlay=False):
 
     # Use direct (unmatched) files instead of projecting fastsim RM
-    do_direct_files = False #(len(self.theory_predictions) >= (int(recoils) + 1))
+    do_direct_files = True #(len(self.theory_predictions) >= (int(recoils) + 1))
 
     h = None
     if do_direct_files:  # Read from TH2
@@ -1339,7 +1339,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                maxbin, overlay=False):
 
     # Use direct (unmatched) files instead of projecting fastsim RM
-    do_direct_files = False #(len(self.theory_predictions) >= (int(recoils) + 1))
+    do_direct_files = True #(len(self.theory_predictions) >= (int(recoils) + 1))
 
     h = None
 
