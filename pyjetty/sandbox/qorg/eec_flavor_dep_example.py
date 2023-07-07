@@ -73,7 +73,7 @@ class EECHistogramOutput(object):
 			self.h_eec[fid]
 		except:
 			self.fout.cd()
-			self.h_eec[fid] = ROOT.TH1F(f'h_eec_{fid}', 'h_eec_fidx;R_{L};dN/dR_{L}'.replace('fidx', str(fid)), 40, logbins(0.001, 1., 40))
+			self.h_eec[fid] = ROOT.TH1F(f'h_eec_{fid}', 'h_eec_fidx;R_{L};dN/dR_{L}'.replace('fidx', str(fid)), 20, logbins(0.001, 1., 20))
 			self.h_pt[fid] = ROOT.TH1F(f'h_pt_{fid}', 'h_pt_fidx;p_{T}^{jet};dN/dp_{T}'.replace('fidx', str(fid)), 1000, 0, 1000)
 		return self.h_eec[fid], self.h_pt[fid]
 
