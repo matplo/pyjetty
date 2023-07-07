@@ -1,0 +1,28 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_gluons.root 		:h_eec_21 :p  : title=gluons
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_eec_1 :p  : title=d
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_eec_2 :p  : title=u
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_eec_3 :p  : title=s
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_eec_4 :p  : title=c
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_eec_5 :p  : title=b
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_gluons.root 		:h_pt_21 :p  : title=gluons
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_pt_1 :p  : title=d
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_pt_2 :p  : title=u
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_pt_3 :p  : title=s
+
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_pt_4 :p  : title=c
+/Users/ploskon/devel/pyjetty/pyjetty/sandbox/qorg/eec_uds.root 		:h_pt_5 :p  : title=b
+
