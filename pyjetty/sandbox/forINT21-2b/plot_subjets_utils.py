@@ -197,7 +197,7 @@ class SubjetPlot(object):
 			if gr_col > 0.9:
 				gr_col = 0.9
 			_col = [gr_col, gr_col, gr_col, 0.3]
-			print(i, _col)
+			# print(i, _col)
 			self.colors.append(_col)
 
 	def plot(self, scale_pt=0, sj_r=0.1):
