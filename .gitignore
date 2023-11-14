@@ -19,3 +19,5 @@ Pipfile.lock
 .vscode/settings.json
 *.save
 *.tar.gz
+cpptools/src/TGlauberMC/
+cpptools/src/TennGen/
