@@ -83,7 +83,7 @@ force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Preliminary'
+figure_approval_status: ''
 
 # Whether or not to use the previous measurement in ratio
 use_prev_result: False
@@ -124,7 +124,7 @@ thermal_closure: '/rstorage/alice/AnalysisResults/ang/1021094/AnalysisResultsFin
 theory_predictions: ['/rstorage/alice/AnalysisResults/ang/1216098/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
                      '/rstorage/alice/AnalysisResults/ang/1216355/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
                      '/rstorage/alice/AnalysisResults/ang/1216018/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
-                     '/rstorage/jetscape/AnalysisResults/1223149/v3/AnalysisResultsFinal.root']
+                     '/rstorage/alice/AnalysisResults/ang/PbPb/Jetscape_ALICE_JetMass/JETSCAPE_results.root']
 theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)", "JEWEL pp", "JETSCAPE (MATTER+LBT)"]
 # R_max variations
 R_max_variation1: 0.05

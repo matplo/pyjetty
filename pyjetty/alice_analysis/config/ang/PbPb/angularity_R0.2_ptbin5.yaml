@@ -169,7 +169,7 @@ force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Preliminary'
+figure_approval_status: ''
 
 # Whether or not to use the previous measurement in ratio
 use_prev_result: False
@@ -208,9 +208,9 @@ fastsim_response: ['/rstorage/alice/AnalysisResults/ang/934788/Scaled_no_cuts/An
 thermal_closure: '/rstorage/alice/AnalysisResults/ang/950196/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root'
 
 # Histograms for theory predictions
-theory_predictions: ['/rstorage/alice/AnalysisResults/ang/998707/AnalysisResultsFinal.root',
-                     '/rstorage/alice/AnalysisResults/ang/1007194/AnalysisResultsFinal_no1-8.root',
-                     '/rstorage/alice/AnalysisResults/ang/1003267/AnalysisResultsFinal_no1-8.root',
+theory_predictions: ['/rstorage/alice/AnalysisResults/ang/1216098/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                     '/rstorage/alice/AnalysisResults/ang/1216355/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
+                     '/rstorage/alice/AnalysisResults/ang/1216018/Scaled_no_cuts/AnalysisResultsFinal_no1-4.root',
                      '/rstorage/alice/AnalysisResults/ang/PbPb/jetscape_results.root']
 theory_predictions_names: ["JEWEL (recoils off)", "JEWEL (recoils on)",
                            "JEWEL pp", "JETSCAPE (MATTER+LBT)"]

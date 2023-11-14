@@ -116,12 +116,14 @@ class PythiaPartonHadron(parton_hadron_base.PartonHadronBase):
                 continue
 
             # Creates std::vector<fastjet::PseudoJet> of final-state hadrons
-            parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
+            #parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
+            parts_pythia_ch = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, True)
 
             # h_is_charged is a std::vector<bool>
-            h_is_charged = pythiafjext.is_charged(pythia, [pythiafjext.kFinal], 0, True)
+            #h_is_charged = pythiafjext.is_charged(pythia, [pythiafjext.kFinal], 0, True)
+            h_is_charged = [True for part in parts_pythia_ch]
 
-            self.fill_branches(parts_pythia_p, parts_pythia_h, h_is_charged, iev, self.user_seed, MPIon)
+            self.fill_branches(parts_pythia_p, parts_pythia_ch, h_is_charged, iev, self.user_seed, MPIon)
 
             # Some "accepted" events don't survive hadronization step -- keep track here
             iev += 1

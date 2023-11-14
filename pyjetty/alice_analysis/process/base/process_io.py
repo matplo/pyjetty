@@ -62,8 +62,8 @@ class ProcessIO(common_base.CommonBase):
     
     # Set the combination of fields that give a unique event id
     self.unique_identifier =  ['run_number', 'ev_id']
-    if self.use_ev_id_ext:
-      self.unique_identifier += ['ev_id_ext']
+    #if self.use_ev_id_ext:
+    #  self.unique_identifier += ['ev_id_ext']
       
     # Set relevant columns of event tree
     self.event_columns = self.unique_identifier + ['z_vtx_reco', 'is_ev_rej']
@@ -171,7 +171,8 @@ class ProcessIO(common_base.CommonBase):
     if random_mass:
       print('    \033[93mRandomly assigning proton and kaon mass to some tracks.\033[0m')
 
-    df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid, random_mass, min_pt=min_pt)
+    df_fjparticles = self.group_fjparticles(
+        m, offset_indices, group_by_evid, random_mass, min_pt=min_pt)
 
     return df_fjparticles
 
@@ -183,6 +184,11 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   def load_dataframe(self):
 
+    self.skip_event_tree = True
+    self.tree_dir = ""
+    self.track_tree_name = "tree_Particle_gen_h_MPIon"
+    self.track_columns = self.unique_identifier + ['ParticlePx', 'ParticlePy', 'ParticlePz', 'ParticleE']
+
     # Load event tree into dataframe
     if not self.skip_event_tree:
       event_tree = None
@@ -192,7 +198,7 @@ class ProcessIO(common_base.CommonBase):
         if not event_tree:
           raise ValueError("Tree %s not found in file %s" % (event_tree_name, self.input_file))
         self.event_df_orig = uproot.concatenate(event_tree, self.event_columns, library="pd")
-    
+
       # Check if there are duplicated event ids
       #print(self.event_df_orig)
       #d = self.event_df_orig.duplicated(self.unique_identifier, keep=False)
@@ -201,7 +207,7 @@ class ProcessIO(common_base.CommonBase):
       if n_duplicates > 0:
         raise ValueError(
           "There appear to be %i duplicate events in the event dataframe" % n_duplicates)
-      
+
       # Apply event selection
       self.event_df_orig.reset_index(drop=True)
       if self.is_pp:
@@ -221,7 +227,7 @@ class ProcessIO(common_base.CommonBase):
       if not track_tree:
         raise ValueError("Tree %s not found in file %s" % (track_tree_name, self.input_file))
       track_df_orig = uproot.concatenate(track_tree, self.track_columns, library="pd")
-    
+
     # Apply hole selection, in case of jetscape
     if self.is_jetscape:
         if self.holes:
@@ -259,7 +265,8 @@ class ProcessIO(common_base.CommonBase):
     #print(self.track_df[d])
     n_duplicates = sum(self.track_df.duplicated(self.track_columns))
     if n_duplicates > 0:
-      sys.exit('ERROR: There appear to be {} duplicate particles in the merged dataframe'.format(n_duplicates))
+      raise ValueError(
+        'There appear to be %i duplicate particles in the merged dataframe' % n_duplicates)
 
     return self.track_df
 
@@ -424,20 +431,20 @@ class ProcessIO(common_base.CommonBase):
       #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
       track_df_grouped = None
       track_df_grouped = self.track_df.groupby(self.unique_identifier)
-    
+
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
       df_fjparticles = None
       df_fjparticles = track_df_grouped.apply(
-        self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
-    
+        self.get_fjparticles, m, offset_indices, random_mass, min_pt)
+
     else:
       print("Transform the track dataframe into a dataframe of fastjet particles per track...")
 
       # Transform into a DataFrame of fastjet particles
-      df = self.track_df
-      df_fjparticles = pandas.DataFrame( 
-        {"run_number": df["run_number"], "ev_id": df["ev_id"],
-         "fj_particle": self.get_fjparticles(self.track_df, m, offset_indices, random_mass, min_pt=min_pt)} )
+      df_fjparticles = pandas.DataFrame(
+        {"run_number": self.track_df["run_number"], "ev_id": self.track_df["ev_id"],
+         "fj_particle": self.get_fjparticles(
+           self.track_df, m, offset_indices, random_mass, min_pt)} )
 
     return df_fjparticles
 
@@ -445,16 +452,23 @@ class ProcessIO(common_base.CommonBase):
   # Return fastjet:PseudoJets from a given track dataframe
   #---------------------------------------------------------------
   def get_fjparticles(self, df_tracks, m, offset_indices=False, random_mass=False, min_pt=0.):
-    
+
     # If offset_indices is true, then offset the user_index by a large negative value
     user_index_offset = 0
     if offset_indices:
         user_index_offset = int(-1e6)
-        
-    # Apply a pt cut
-    df_tracks_accepted = df_tracks[df_tracks.ParticlePt > min_pt]
 
-    m_array = np.full((df_tracks_accepted['ParticlePt'].values.size), m)
+    # Apply a pT cut and make mass array
+    df_tracks_accepted, m_array = None, None
+    if 'ParticlePt' in df_tracks.columns:
+      df_tracks_accepted = df_tracks[df_tracks.ParticlePt > min_pt]
+      m_array = np.full((df_tracks_accepted['ParticlePt'].values.size), m)
+    elif 'ParticlePx' in df_tracks.columns:
+      df_tracks_accepted = df_tracks[(df_tracks.ParticlePx**2 + df_tracks.ParticlePy**2)**0.5 > min_pt]
+      #m_array = (df_tracks_accepted["ParticleE"]**2 - df_tracks_accepted["ParticlePx"]**2 - df_tracks_accepted["ParticlePy"]**2 - df_tracks_accepted["ParticlePz"]**2)**0.5
+      m_array = np.full((df_tracks_accepted['ParticlePx'].values.size), m)
+    else:
+      raise ValueError("Neither ParticlePt nor ParticlePx detected in tracks dataframe")
 
     # Randomly assign K and p mass for systematic check
     if random_mass:
@@ -472,8 +486,16 @@ class ProcessIO(common_base.CommonBase):
       m_array = np.where(rand_val > p_prob, p_mass, m_array)
 
     # Use swig'd function to create a vector of fastjet::PseudoJets from numpy arrays of pt,eta,phi
-    fj_particles = fjext.vectorize_pt_eta_phi_m(
-      df_tracks_accepted['ParticlePt'].values, df_tracks_accepted['ParticleEta'].values,
-      df_tracks_accepted['ParticlePhi'].values, m_array, user_index_offset)
+    if 'ParticlePt' in df_tracks_accepted.columns:
+      fj_particles = fjext.vectorize_pt_eta_phi_m(
+        df_tracks_accepted['ParticlePt'].values, df_tracks_accepted['ParticleEta'].values,
+        df_tracks_accepted['ParticlePhi'].values, m_array, user_index_offset)
+    elif 'ParticlePx' in df_tracks_accepted.columns:
+      #fj_particles = fjext.vectorize_px_py_pz_e(
+      #  df_tracks_accepted['ParticlePx'].values, df_tracks_accepted['ParticlePy'].values,
+      #  df_tracks_accepted['ParticlePz'].values, df_tracks_accepted['ParticleE'].values, user_index_offset)
+      fj_particles = fjext.vectorize_px_py_pz_m(
+        df_tracks_accepted['ParticlePx'].values, df_tracks_accepted['ParticlePy'].values,
+        df_tracks_accepted['ParticlePz'].values, m_array, user_index_offset)
     return fj_particles
 

@@ -173,7 +173,7 @@ force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: False
-figure_approval_status: 'Preliminary'
+figure_approval_status: ''
 
 # Whether or not to use the previous measurement in ratio
 use_prev_result: False

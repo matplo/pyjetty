@@ -224,7 +224,7 @@ class PythiaQuarkGluon(process_base.ProcessBase):
 
             self.parents = []
             self.event = pythia.event
-            #print(self.event)
+            print(self.event)
             fs_parton_5 = fj.PseudoJet(pythia.event[5].px(), pythia.event[5].py(), pythia.event[5].pz(), pythia.event[5].e())
             fs_parton_6 = fj.PseudoJet(pythia.event[6].px(), pythia.event[6].py(), pythia.event[6].pz(), pythia.event[6].e())
             self.parents = [fs_parton_5, fs_parton_6] # parent partons in dijet

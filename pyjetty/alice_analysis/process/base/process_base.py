@@ -108,10 +108,7 @@ class ProcessBase(common_base.CommonBase):
         self.recluster_alg = 'CA'
         self.reclustering_algorithm = fj.cambridge_algorithm
 
-    if 'm' in config:
-        self.m = config['m']
-    else:
-        self.m = 0.1396
+    self.m = config['m'] if 'm' in config else 0.1396
 
   #---------------------------------------------------------------
   # Create thn and set as class attribute from name, dim
@@ -164,7 +161,7 @@ class ProcessBase(common_base.CommonBase):
   # Compare two jets and store matching candidates in user_info
   #---------------------------------------------------------------
   def set_matching_candidates(self, jet1, jet2, jetR, hname, fill_jet1_matches_only=False):
-  
+
     # Fill histogram of matching distance of all candidates
     deltaR = jet1.delta_R(jet2)
     if hname:
@@ -187,12 +184,12 @@ class ProcessBase(common_base.CommonBase):
       jet_user_info = jet.python_info()
     else:
       jet_user_info = jet_info.JetInfo()
-      
+
     jet_user_info.matching_candidates.append(jet_match)
     if deltaR < jet_user_info.closest_jet_deltaR:
       jet_user_info.closest_jet = jet_match
       jet_user_info.closest_jet_deltaR = deltaR
-          
+
     jet.set_python_info(jet_user_info)
 
   #---------------------------------------------------------------

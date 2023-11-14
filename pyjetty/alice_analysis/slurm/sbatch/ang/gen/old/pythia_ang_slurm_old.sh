@@ -59,7 +59,7 @@ if $USE_PTHAT_MAX; then
 	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree --no-match-level ch --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX,ParticleDecays:limitTau0=on "
 	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED \
 		--py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree \
-		--no-match-level ch --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX,ParticleDecays:limitTau0=on
+		--no-match-level ch --pythiaopts HardQCD:all=on,PhaseSpace:pTHatMax=$PTHAT_MAX,111:mayDecay=on,310:mayDecay=off,3122:mayDecay=off,3112:mayDecay=off,3222:mayDecay=off,3312:mayDecay=off,3322:mayDecay=off,3334:mayDecay=off
 else
 	#pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR \
 	#	--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB \
@@ -67,5 +67,5 @@ else
 	echo "pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR --user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB --no-tree --no-match-level ch --pythiaopts HardQCD:all=on,ParticleDecays:limitTau0=on "
 	pipenv run python $SCRIPT -c $CONFIG --output-dir $OUTDIR \
 		--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB \
-		--no-tree --no-match-level ch --pythiaopts HardQCD:all=on,ParticleDecays:limitTau0=on
+		--no-tree --no-match-level ch --pythiaopts HardQCD:all=on,111:mayDecay=on,310:mayDecay=off,3122:mayDecay=off,3112:mayDecay=off,3222:mayDecay=off,3312:mayDecay=off,3322:mayDecay=off,3334:mayDecay=off
 fi

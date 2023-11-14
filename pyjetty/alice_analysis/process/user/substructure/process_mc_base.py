@@ -34,6 +34,9 @@ from array import *
 import ROOT
 import yaml
 import random
+import argparse
+import os
+import sys
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -46,6 +49,12 @@ from pyjetty.alice_analysis.process.base import process_io_emb
 from pyjetty.alice_analysis.process.base import process_base
 from pyjetty.alice_analysis.process.base import thermal_generator
 from pyjetty.mputils import CEventSubtractor
+
+# For generating pythia tests
+from heppy.pythiautils import configuration as pyconf
+import pythia8
+import pythiafjext
+import pythiaext
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -152,6 +161,34 @@ class ProcessMCBase(process_base.ProcessBase):
     #     'hDeltaObs_%s_emb_R%s_%s%s' % (observable, jetR, obs_label, suffix)
     self.fill_delta_obs = False
 
+    # If set to true, generates PYTHIA8 events to simulate the TTree data
+    self.pythia_test = True
+    if self.pythia_test:
+        self.user_seed = 152322855
+        self.pTHatMin = 235
+        self.pTHatMax = -1
+        parser = argparse.ArgumentParser()
+        pyconf.add_standard_pythia_args(parser)
+        parser.add_argument('--user-seed', help='PYTHIA starting seed', default=1111, type=int)
+        parser.add_argument('-o', '--output-dir', action='store', type=str, default='./',
+                            help='Output directory for generated ROOT file(s)')
+        parser.add_argument('-f', '--input_file', action='store', type=str, default='AnalysisResults.root',
+                            help='Input ROOT file containing TTrees')
+        parser.add_argument('-c', '--config_file', action='store', type=str, default='config/angularity.yaml',
+                            help="Path of config file for observable configurations")
+        args = parser.parse_args()
+        print(args)
+        mycfg = ['Beams:eCM=5020', 'Random:setSeed=on', 'Random:seed={}'.format(self.user_seed),
+                 'HardQCD:all=on', 'PhaseSpace:pTHatMin={}'.format(self.pTHatMin),
+                 'PhaseSpace:pTHatMax={}'.format(self.pTHatMax), "PhaseSpace:bias2Selection=off",
+                 "111:mayDecay=on", "310:mayDecay=off", "3122:mayDecay=off",
+                 "3112:mayDecay=off", "3222:mayDecay=off", "3312:mayDecay=off",
+                 "3322:mayDecay=off", "3334:mayDecay=off"]
+        #mycfg.append('HadronLevel:all=off')
+        self.pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
+        #self.pythia.stat()
+        #print()
+
   #---------------------------------------------------------------
   # Main processing function
   #---------------------------------------------------------------
@@ -209,6 +246,24 @@ class ProcessMCBase(process_base.ProcessBase):
         self.nEvents_truth_holes = len(df_fjparticles_truth_holes.index)
         self.nTracks_truth_holes = len(io_truth_holes.track_df.index)
         print('--- {} seconds ---'.format(time.time() - self.start_time))
+
+    if self.pythia_test:
+        nev = len(df_fjparticles_truth)
+        print("Generate %i simulated PYTHIA8 events..." % nev)
+        events = [ pythiafjext.vectorize_select(
+                     self.pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, False, 0.1396)
+                       for i in range(nev) if self.pythia.next() ]
+        run_number = [self.user_seed] * nev
+        ev_id = list(range(nev))
+        tuples = list(zip(run_number, ev_id))
+        index = pandas.MultiIndex.from_tuples(tuples, names=["run_number", "ev_id"])
+        df_fjparticles_pythia = pandas.DataFrame({"fj_particle": events}, index=index)
+
+        # For now, just set both det and truth to thsi pythia gen
+        print("before:\n", df_fjparticles_truth)
+        df_fjparticles_truth = df_fjparticles_pythia
+        df_fjparticles_det = df_fjparticles_pythia
+        print("after:\n", df_fjparticles_truth)
 
     # ------------------------------------------------------------------------
 
@@ -344,7 +399,8 @@ class ProcessMCBase(process_base.ProcessBase):
 
     # Fill track histograms
     if not self.dry_run:
-      [self.fill_track_histograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
+      for fj_particles_det in self.df_fjparticles['fj_particles_det']:
+        self.fill_track_histograms(fj_particles_det)
 
     fj.ClusterSequence.print_banner()
     print()
@@ -364,9 +420,9 @@ class ProcessMCBase(process_base.ProcessBase):
           in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'],
                  self.df_fjparticles['fj_particles_det_holes'], self.df_fjparticles['fj_particles_truth_holes'])]
     else:
-        result = [self.analyze_event(fj_particles_det, fj_particles_truth) \
-          for fj_particles_det, fj_particles_truth in zip(
-          self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+        for fj_particles_det, fj_particles_truth in zip(
+          self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth']):
+            self.analyze_event(fj_particles_det, fj_particles_truth)
 
     if self.debug_level > 0:
       for attr in dir(self):
@@ -384,11 +440,13 @@ class ProcessMCBase(process_base.ProcessBase):
     # Check that the entries exist appropriately
     # (need to check how this can happen -- but it is only a tiny fraction of events)
     if type(fj_particles_det) != fj.vectorPJ:
+      print("ERROR: fj_particles_det of type %s; expected %s" % (type(fj_particles_det), fj.vectorPJ))
       return
 
     for track in fj_particles_det:
       self.hTrackEtaPhi.Fill(track.eta(), track.phi())
       self.hTrackPt.Fill(track.pt())
+
 
   #---------------------------------------------------------------
   # Analyze jets of a given event.

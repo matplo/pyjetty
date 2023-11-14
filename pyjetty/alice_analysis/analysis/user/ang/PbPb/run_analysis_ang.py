@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#obs_! /usr/bin/env python
 
 """ theory_comp.py
 Loads theory comparisons, preforms un/folding, makes plots
@@ -343,23 +343,23 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
             jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Pythia')
           hHerwig, fraction_tagged_herwig = self.MC_prediction(
             jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Herwig')
-        hJewel_pp, fraction_tagged_jewel_pp = self.MC_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL pp')
+        #hJewel_pp, fraction_tagged_jewel_pp = self.MC_prediction(
+        #  jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL pp')
         hJetscape_pp, fraction_tagged_jetscape_pp = self.MC_prediction(
           jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JETSCAPE pp')
-        if not grooming_setting:  # Disable groomed predictions for now
-          hZhang_pp, fraction_tagged_zhang_pp = self.MC_prediction(
-            jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Zhang pp')
+        hZhang_pp, fraction_tagged_zhang_pp = self.MC_prediction(
+          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Zhang pp')
 
-      hJewel_no_recoils, fraction_tagged_jewel_no_recoils = self.MC_prediction(
-        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=False)
-      hJewel_recoils, fraction_tagged_jewel_recoils = self.MC_prediction(
-        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=True)
+      hJewel_no_recoils, fraction_tagged_jewel_no_recoils, \
+        hJewel_recoils, fraction_tagged_jewel_recoils = None, None, None, None
+      #hJewel_no_recoils, fraction_tagged_jewel_no_recoils = self.MC_prediction(
+      #  jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=False)
+      #hJewel_recoils, fraction_tagged_jewel_recoils = self.MC_prediction(
+      #  jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JEWEL', recoils=True)
       hJetscape, fraction_tagged_jetscape = self.MC_prediction(
         jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'JETSCAPE')
-      if not grooming_setting:  # Disable groomed predictions for now
-        hZhang, fraction_tagged_zhang = self.MC_prediction(
-          jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Zhang')
+      hZhang, fraction_tagged_zhang = self.MC_prediction(
+        jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj, 'Zhang')
 
       hHybridNoElastic_pp, hHybridWithElastic_pp, hHybridNoElastic, hHybridWithElastic = self.get_hybrid(
         jetR, obs_setting, obs_label, min_pt_truth, max_pt_truth, maxbin_adj)
@@ -427,7 +427,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         b_j = [hJetscape_pp.GetBinLowEdge(i) for i in range(1, hJetscape_pp.GetNbinsX()+2)]
         if b_j != b_d:
           print("JETSCAPE pp BINS ARE DIFFERENT for %s!\n" % obs_label,
-                "*** data: ", b_d, "*** jtsp: ", b_j, sep="")
+                "*** data: ", b_d, "\n*** jtsp: ", b_j, sep="")
         else:
           color_jetscape = self.colors[3]
           #hJetscape_pp.SetMarkerSize(1.5)
@@ -603,7 +603,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       h_pp_sys.SetFillStyle(3004)
 
     if self.observable != "mass" and not grooming_setting:
-      maxval = max(2.3*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
+      maxval = max(1.9*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
       if plot_jetscape:
         maxval = max(maxval, 1.7*hJetscape.GetMaximum())
       if min_pt_truth == 100:
@@ -611,8 +611,12 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         if alpha == "1.5":
           maxval *= 1.2
     else:
-      maxval = 2.3*max(h.GetBinContent(int(0.4*h.GetNbinsX())), h.GetBinContent(2), h.GetBinContent(3))
+      maxval = 2.1*max(h.GetBinContent(int(0.4*h.GetNbinsX())), h.GetBinContent(2), h.GetBinContent(3))
     ymin = 1e-3  # Prevent ROOT from drawing 0 on plots
+    if self.observable == "mass":
+      ymin = -0.015
+    elif min_pt_truth == 40 and obs_label == "3":
+      ymin = -0.6
     if self.set_logy:
       maxval *= 5e1
       ymin = 5e-1 * h.GetMinimum()
@@ -833,11 +837,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       myBlankHisto2.GetYaxis().SetTitleOffset(1.3 if self.set_logy else 1.15)
       myBlankHisto2.GetYaxis().SetTitleSize(0.055)
       if plot_pp_data and plot_PbPb:
-        myBlankHisto2.SetMinimum(0.3)
+        myBlankHisto2.SetMinimum(0.45)
         if self.observable == "ang":
-          myBlankHisto2.SetMaximum(2.6)
+          myBlankHisto2.SetMaximum(1.85)
         else:
-          myBlankHisto2.SetMaximum(1.99)
+          myBlankHisto2.SetMaximum(1.85)
       elif plot_MC:
         if min_pt_truth == 100:
           myBlankHisto2.SetMinimum(0.35)
@@ -1264,7 +1268,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if not hMC:
       return [None, None]
 
-    n_jets_inclusive = hMC.Integral(0, hMC.GetNbinsX()+1, "" if scale_width else "width")
+    n_jets_inclusive = hMC.Integral(0, hMC.GetNbinsX(), "" if scale_width else "width")
     n_jets_tagged = hMC.Integral(hMC.FindBin(
       self.truth_bin_array(obs_label)[0]), hMC.GetNbinsX(), "" if scale_width else "width")
 
@@ -1278,13 +1282,14 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                maxbin, overlay=False):
 
     # Use direct (unmatched) files instead of projecting fastsim RM
-    do_direct_files = True #(len(self.theory_predictions) >= (int(recoils) + 1))
+    do_direct_files = (self.observable == "mass") #(len(self.theory_predictions) >= (int(recoils) + 1))
 
     h = None
-    if do_direct_files:  # Read from TH2
+    if do_direct_files:  # Read from unmatched TH2
 
       f = ROOT.TFile(self.main_response, 'READ')
-      name = "h_%s_JetPt_Truth_R%s_%sScaled" % (self.observable, str(jetR), obs_label)
+      name = "h_%s_JetPt_Truth_R%s_%sScaled" % (self.observable, str(jetR), obs_label) \
+        if obs_label else "h_%s_JetPt_Truth_R%sScaled" % (self.observable, str(jetR))
       th2 = f.Get(name)
       if not th2:
         raise AttributeError("%s not found in %s" % (name, self.main_response))
@@ -1292,8 +1297,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         th2.Sumw2()
 
       # Set range and binning to be the same as data
-      name_data = ('hmain_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__","_")
+      name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       h_data = getattr(self, name_data)
       pt_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
                                  i in range(1, h_data.GetNbinsX()+2)])
@@ -1307,7 +1312,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       # Finally, rename and truncate the histogram to the correct size
       name = ('hPythia_{}_R{}_{}_{}-{}'.format(
         self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
+      #print("before:", [h.GetXaxis().GetBinLowEdge(i) for i in range(2, h.GetNbinsX()+2)])
+      #print("changing to:", obs_bin_array)
       h_rebin = h.Rebin(len(obs_bin_array)-1, name+"_Rebin", obs_bin_array)
+      #print("after:", [h_rebin.GetXaxis().GetBinLowEdge(i) for i in range(2, h_rebin.GetNbinsX()+2)])
+      #print("\n\n\n\n")
       if move_underflow:
         h_rebin.SetBinContent(1, h.GetBinContent(0))
         h_rebin.SetBinError(1, h.GetBinError(0))
@@ -1339,14 +1348,15 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
                                maxbin, overlay=False):
 
     # Use direct (unmatched) files instead of projecting fastsim RM
-    do_direct_files = True #(len(self.theory_predictions) >= (int(recoils) + 1))
+    do_direct_files = (self.observable == "mass") #(len(self.theory_predictions) >= (int(recoils) + 1))
 
     h = None
 
     if do_direct_files:  # Read from TH2
 
       f = ROOT.TFile(self.fastsim_response_list[1], 'READ')
-      name = "h_%s_JetPt_Truth_R%s_%sScaled" % (self.observable, str(jetR), obs_label)
+      name = "h_%s_JetPt_Truth_R%s_%sScaled" % (self.observable, str(jetR), obs_label) \
+        if obs_label else "h_%s_JetPt_Truth_R%sScaled" % (self.observable, str(jetR))
       th2 = f.Get(name)
       if not th2:
         raise AttributeError("%s not found in %s" % (name, self.main_response))
@@ -1354,8 +1364,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
         th2.Sumw2()
 
       # Set range and binning to be the same as data
-      name_data = ('hmain_{}_R{}_{}_{}-{}'.format(
-        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)).replace("__", "_")
+      name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
+        self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       h_data = getattr(self, name_data)
       pt_bin_array = array('d', [h_data.GetXaxis().GetBinLowEdge(i) for \
                                  i in range(1, h_data.GetNbinsX()+2)])
@@ -1502,6 +1512,11 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     elif "ratio" in MC.lower():
       type = "ratio"
 
+    if self.observable == "mass":
+      # Yasuki's fixed predictions do not include the ratio; we have to make it
+      if type == "ratio":
+        return None
+
     i_pred = -1
     for i in range(0, len(self.theory_predictions_names)):
       if "jetscape" in self.theory_predictions_names[i].lower():  #and type in self.theory_predictions_names[i].lower():
@@ -1538,7 +1553,8 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       integral = h.Integral(1, h.GetNbinsX())
       #h_new.SetBinContent(1, 0)
       #h_new.SetBinError(1, 0)
-      for i in range(0, h.GetNbinsX()+2):
+      max_to_use = h.GetNbinsX()+2 if self.observable == "ang" else h.GetNbinsX()+1
+      for i in range(0, max_to_use):
         width = 1 if i == 0 else abs(h.GetBinLowEdge(i + 1) - h.GetBinLowEdge(i))
         h_new.SetBinContent(i + 1, width * h.GetBinContent(i))
         h_new.SetBinError(i + 1, width * h.GetBinError(i))
@@ -1560,30 +1576,52 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       self, jetR, obs_label, min_pt_truth, max_pt_truth, maxbin, overlay, MC):
 
     # At the moment only have R=0.2 predictions
-    if str(jetR) != "0.2" or self.observable != "ang":
+    if str(jetR) != "0.2":
       return None
 
     # Determine and open the correct file
     base_dir = "/rstorage/alice/AnalysisResults/ang/PbPb/zhang_predictions"
     gr = "groomed" if "sd" in obs_label.lower() else "ungroomed"
     type = "pp" if "pp" in MC.lower() else "PbPb"
-    filename = type + '-' + gr + "-jets.dat"
 
-    # Fixed predictions for groomed jets
-    #if gr[0] == 'g':
-    #  filename = "new-" + filename
+    # Get observable-specific details
+    filename = ""
+    pt_range = ""
+    column = 0
 
-    alpha = obs_label.split('_')[0]
+    if self.observable == "ang":
+
+        filename = type + '-' + gr + "-jets.dat"
+        # Fixed predictions for groomed jets
+        if gr[0] == 'g':
+            filename = "final-" + filename
+
+        alpha = obs_label.split('_')[0]
+        pt_range = "(%i-%i)GeV" % (min_pt_truth, max_pt_truth)
+        column = ["1", "1.5", "2", "3"].index(alpha)
+
+    elif self.observable == "mass":
+
+        # Alternate filename for mass calcluations
+        filename = gr + "_jet_mass.dat"
+
+        pt_range = "//%i-%i//" % (min_pt_truth, max_pt_truth)
+        column = ["pp", "PbPb", "PbPb/pp"].index(type)
+
+    else:
+        raise ValueError(
+            "Did not parse %s correctly: no predictions implemented" % self.observable)
+
     contents = []
     with open(os.path.join(base_dir, filename), 'r') as f:
-      contents = f.readlines()
+        contents = f.readlines()
 
     # Find the correct set of data -- we have 4 pT bins in each file
-    values = self.trim_contents(contents, min_pt_truth, max_pt_truth, alpha)
+    values = self.trim_contents(contents, min_pt_truth, max_pt_truth, pt_range, column)
 
     # Get the observable binning from the measured data
     name_data = 'hmain_{}_R{}_{}_{}-{}'.format(
-      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth).replace("__", "_")
+      self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     h_data = self.truncate_hist(getattr(self, name_data), None, maxbin, name_data+"_trunc")
     obs_bin_array = [h_data.GetXaxis().GetBinLowEdge(i) for i in range(1, h_data.GetNbinsX()+2)]
     if "SD" in obs_label:
@@ -1603,10 +1641,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     return h
 
   #----------------------------------------------------------------------
-  def trim_contents(self, contents, min_pt_truth, max_pt_truth, alpha):
-
-    range = "(%i-%i)GeV" % (min_pt_truth, max_pt_truth)
-    column = ["1", "1.5", "2", "3"].index(alpha)
+  def trim_contents(self, contents, min_pt_truth, max_pt_truth, range, column):
 
     recording = False
     data = []
@@ -1617,15 +1652,19 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           recording = True
         continue
 
-      # Stop condition
-      if line[0] == '-' and len(data):
-        break
+      l_split = line.split()
+      if not len(l_split) or l_split[0][0] in ['p', 'a', 'n']:
+        continue
 
-      ending = column * 10 + 7
-      if len(line) >= ending:
-        s = line[column*10:ending]
-        if s[0].isnumeric():
-          data.append(float(s))
+      # Stop condition
+      if line[0] in ['-', '/']:
+        if len(data):
+            break
+        continue
+
+      val = [float(i) if i[0].isnumeric() else None for i in l_split][column]
+      if val != None:
+          data.append(val)
 
     return data
 
@@ -1658,7 +1697,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
       elif self.observable == "mass":
         WantWake = True
         el = elastic if elastic == "No" else ""
-        filename = "results_chmass/HYBRID_Hadrons_%sElastic_5020_010_Wake_%i_ChJetMass_JetR0p2_Gro_%i_JetBin_%i.dat" % \
+        filename = "results/HYBRID_Hadrons_%sElastic_5020_010_Wake_%i_ChJetMass_JetR0p2_Gro_%i_JetBin_%i.dat" % \
           (el, int(WantWake), int("SD" in obs_label), pT_bin+1)
 
       # Create and fill TH1 with values from file
