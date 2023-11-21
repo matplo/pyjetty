@@ -74,8 +74,7 @@ def main():
 				psj.set_user_index(i)
 				fjparts.push_back(psj)
 
-		jets = fj.sorted_by_pt(jet_def(fjparts))		
-		jets = jet_selector(jet_def(fjparts))
+		jets = fj.sorted_by_pt(jet_selector(jet_def(fjparts)))
 
 		njets += len(jets)
 		for j in jets:
