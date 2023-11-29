@@ -43,7 +43,7 @@ export -f os_darwin
 function n_cores()
 {
 	local _ncores="1"
-	[ $(os_darwin) ] && local _ncores=$(system_profiler SPHardwareDataType | grep "Number of Cores" | cut -f 2 -d ":" | sed 's| ||')
+	[ $(os_darwin) ] && local _ncores=$(system_profiler SPHardwareDataType | grep "Number of Cores" | cut -f 2 -d ":" | sed 's| ||' | cut -f 1 -d " ")
 	[ $(os_linux) ] && local _ncores=$(lscpu | grep "CPU(s):" | head -n 1 | cut -f 2 -d ":" | sed 's| ||g')
 	#[ ${_ncores} -gt "1" ] && retval=$(_ncores-1)
 	echo ${_ncores}
