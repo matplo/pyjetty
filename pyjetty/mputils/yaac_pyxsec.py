@@ -15,23 +15,21 @@ import os
 ## 1) with --list to build the list of files to download
 ## 2) without --list to actually copy - note existing files on local disk are NOT overwritten; warning will be printed
 
-## # Configuration to download LHC18a4a2 sim
-## # (to be used by download_data.py)
-## 
-## period: 'LHC18a4a2_fast' # pass3
+## # Configuration to download pyxsec files for a particular production
+## period: 'LHC19d3_2_extra'
 ## parent_dir: 'sim'
-## year: '2018'
-## train_name: 'HF_TreeCreator'
-## train_PWG: 'AOD235/PWGHF'
-## train_number: '635_20210528-0103_child_1'
-## runlist: [282016, 282021, 282025, 282031, 282050, 282051, 282078, 282098, 282099, 282118, 282120, 282122, 282123, 282125, 282126, 282127, 282146, 282147, 282189, 282206, 282224, 282227, 282229, 282230, 282247, 282302, 282303, 282304, 282305, 282306, 282307, 282309, 282312, 282313, 282314, 282340, 282341, 282342, 282343]
-## 
-## output_dir: '/mnt/rstorage/alice/sim/LHC18/LHC18a4a2/635/child_1'
-## 
+## year: '2019'
+## train_name: ''
+## train_PWG: ''
+## train_number: ''
+## runlist: [294925]
+##
+## output_dir: '/rstorage/alice/sim/pyxsec'
+##
 ## # these are taken as some default values by yaac.py
 ## nthreads: 20
-## file_pattern: 'AnalysisResults.root'
-## pt_hat_bins: ['/']
+## file_pattern: 'pyxsec.root'
+## pt_hat_bins: [20]
 ## or could be
 ## pt_hat_bins: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
@@ -90,7 +88,7 @@ def do_copy(config):
 		return
 	if len(file_list) < 1:
 		print('[e] no files to copy - read from {}'.format(config['file_list']))
-		return		
+		return
 	print('[i] will use {} threads'.format(config['nthreads']))
 	warnings = []
 	skipped = []
@@ -199,7 +197,7 @@ def main():
 	#parser.add_argument('input', default=None, help="list of files in a directory to be copied; alternatively could be /alice/data/2018/LHC18 with --list", type=str)
 	parser.add_argument('--list', default=False, action="store_true")
 	parser.add_argument('--nthreads', default=0, type=int, help='number of threads')
-	parser.add_argument('-c', '--configFile', default='', 
+	parser.add_argument('-c', '--configFile', default='',
 									help='yaml config file',
 									type=str, required=True)
 	args = parser.parse_args()
@@ -244,4 +242,3 @@ def main():
 
 if __name__ == '__main__':
 	main()
-
