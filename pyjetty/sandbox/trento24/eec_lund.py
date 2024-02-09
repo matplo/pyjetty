@@ -24,6 +24,8 @@ import math
 import array
 import pandas as pd
 
+from pathlib import Path
+
 def jet_to_dict(j):
 	d = {}
 	d['pt'] = j.perp()
@@ -50,22 +52,23 @@ from itertools import combinations
 # from itertools import combinations_with_replacement
 from itertools import product
 
-def eec_pairs_from_parts(parts, w, ptcut=1.):
+def eec_pairs_from_parts(parts, w, pt_cut=1.):
 	d = {}
-	_parts = [ p for p in parts if p.perp() > 1.]
-	_combs = combinations(_parts)
-	d['weights'] = [(x[0].perp() * x[1].perp())/(w*w) for x in _comb]
+	_parts = [ p for p in parts if p.perp() > pt_cut]
+	_combs = list(combinations(_parts, 2))
+	d['weights'] = [(x[0].perp() * x[1].perp())/(w*w) for x in _combs]
 	d['RL'] = [x[0].delta_R(x[1]) for x in _combs]
+	d['type'] = [-1 for x in _combs]
 	return d
 
 def eec_from_lsplit_to_dict(l, w, pt_cut):
 	d = {}
-	_parts1 = [ p for p in l.harder().constituents() if p.perp() > 1.]
+	_parts1 = [p for p in l.harder().constituents() if p.perp() > pt_cut]
 	_ = [ p.set_user_index(0) for p in _parts1]
 	#for p in _parts1:
 	#	print(p.user_index())
 
-	_parts2 = [ p for p in l.softer().constituents() if p.perp() > 1.]
+	_parts2 = [p for p in l.softer().constituents() if p.perp() > pt_cut]
 	_ = [ p.set_user_index(1) for p in _parts2]
 	#for p in _parts2:
 	#	print(p.user_index())
@@ -92,6 +95,12 @@ def eec_from_lsplit_to_dict(l, w, pt_cut):
 	d['type'] = d['type'] + [x[0].user_index() + x[1].user_index() for x in _combs]
 
 	# print (d['weights'], d['RL'], d['type'])
+	if len(d['RL']) > 0:
+		print(max(d['RL']))
+	else:
+		d['weights'] = [0]
+		d['RL'] = [0]
+		d['type'] = [-1]
 
 	return d
 
@@ -138,10 +147,10 @@ def main():
 	parser.add_argument('--ignore-mycfg', help="ignore some settings hardcoded here", default=False, action='store_true')
 	parser.add_argument('-v', '--verbose', help="be verbose", default=False, action='store_true')
 	parser.add_argument('--ncorrel', help='max n correlator', type=int, default=2)
-	parser.add_argument('-o','--output', help='root output filename', default='eec_pythia.root', type=str)
+	parser.add_argument('-o','--output', help='output filename', default='eec_pythia.parquet', type=str)
 	parser.add_argument('--jet-ptmin', help='minimum jet pt', default=20, type=float)
 	parser.add_argument('--jet-ptmax', help='maximum jet pt', default=1e5, type=float)
-	parser.add_argument('--jet-etamax', help='maximum jet eta', default=3.0, type=float)
+	parser.add_argument('--jet-etamax', help='maximum jet eta', default=2.0, type=float)
 	parser.add_argument('--use-lundpt', help="use lund radiator pt for scaling", default=False, action='store_true')
 	parser.add_argument('--stable-beauty', help="set some hadrons stable", default=False, action='store_true')
 	parser.add_argument('--ptcut', help="pt cut for particles for EEC", default=1.0, type=float)
@@ -219,6 +228,7 @@ def main():
 			jdict['sigmaErr'] = pythia.info.sigmaErr()
 			jdict['Q2Fac'] = pythia.info.Q2Fac()
 			jdict['Q2Ren'] = pythia.info.Q2Ren()
+			jdict['eecs'] = eec_pairs_from_parts(j.constituents(), j.perp(), pt_cut)
 			lunds = lund_gen.result(j)
 			nsplits = len(lunds)
 			ldicts = []
@@ -234,15 +244,24 @@ def main():
 
 	df = pd.DataFrame.from_dict(jdicts)
 	# print(df)
-	df.to_parquet('eec_lund.parquet', compression='snappy')
+	file_ext = Path(args.output).suffix
+	foutput = args.output.replace(file_ext, '.parquet')
 
-	with open('eec_lund.pkl', 'wb') as file:
-		pickle.dump(df, file)
+	# save parquet by default
+	df.to_parquet(foutput, compression='snappy')
 
-	df.to_csv('eec_lund.csv', index=False)  # Set index=False to exclude the DataFrame index from the CSV file
+	if file_ext == '.pkl':
+		foutput = args.output.replace(file_ext, '.pkl')
+		with open(foutput, 'wb') as file:
+			pickle.dump(df, file)
+
+	if file_ext == '.csv':
+		foutput = args.output.replace(file_ext, '.csv')
+		df.to_csv(foutput, index=False)  # Set index=False to exclude the DataFrame index from the CSV file
 
 	pythia.stat()
-	pythia.settings.writeFile('eec_lund.cmnd')
+	foutput = args.output.replace(file_ext, '.cmnd')
+	pythia.settings.writeFile(foutput)
 
 if __name__ == '__main__':
 	main()
