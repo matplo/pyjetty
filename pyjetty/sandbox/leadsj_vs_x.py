@@ -39,7 +39,7 @@ def main():
 	# for background
 	parser.add_argument('--cent-bin', help="centraility bin 0 is the  0-5 percent most central bin", type=int, default=0)
 	parser.add_argument('--seed', help="pr gen seed", type=int, default=1111)
-	parser.add_argument('--harmonics', help="set harmonics flag (0 : v1 - v5) , (1 : v2 - v5) , (2: v3 - v5) , (3: v1 - v4) , (4: v1 - v3) , (5: uniform dN/dphi no harmonics) , (6 : v1 - v2 , v4 - v5) , (7 : v1 - v3 , v5) , (8 : v1 , v3 - v5) , (9 : v1 only) , (10 : v2 only) , (11 : v3 only) , (12 : v4 only) , (13 : v5 only)", 
+	parser.add_argument('--harmonics', help="set harmonics flag (0 : v1 - v5) , (1 : v2 - v5) , (2: v3 - v5) , (3: v1 - v4) , (4: v1 - v3) , (5: uniform dN/dphi no harmonics) , (6 : v1 - v2 , v4 - v5) , (7 : v1 - v3 , v5) , (8 : v1 , v3 - v5) , (9 : v1 only) , (10 : v2 only) , (11 : v3 only) , (12 : v4 only) , (13 : v5 only)",
 						type=int, default=5)
 	parser.add_argument('--eta', help="set eta range must be uniform (e.g. abs(eta) < 0.9, which is ALICE TPC fiducial acceptance)",
 						type=float, default=0.9)
@@ -64,8 +64,8 @@ def main():
 	all_jets = []
 
 	# mycfg = ['PhaseSpace:pThatMin = 80']
-	# mycfg = ['PhaseSpace:pThatMin = 40']	
-	mycfg = ['']	
+	# mycfg = ['PhaseSpace:pThatMin = 40']
+	mycfg = ['']
 	if args.ignore_mycfg:
 		mycfg = []
 	pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
@@ -153,25 +153,25 @@ def main():
 			rc_sjets01 = fj.sorted_by_pt(jet_def_rc01(j.constituents()))
 			rc_sjets02 = fj.sorted_by_pt(jet_def_rc02(j.constituents()))
 			rc_sjets03 = fj.sorted_by_pt(jet_def_rc03(j.constituents()))
-			tw.fill_branches(	j 			= j, 
-								lund 		= [ls for ls in lund_gen.result(j)], 
-								dyg1 		= dy_groomer.result(j, 1), 
+			tw.fill_branches(	j 			= j,
+								lund 		= [ls for ls in lund_gen.result(j)],
+								dyg1 		= dy_groomer.result(j, 1),
 
-								sd01 		= j_sd01, 
-								sd01_z 		= sd01_info.z, 
-								sd01_mu 	= sd01_info.mu, 
-								sd01_Delta 	= sd01_info.dR, 
+								sd01 		= j_sd01,
+								sd01_z 		= sd01_info.z,
+								sd01_mu 	= sd01_info.mu,
+								sd01_Delta 	= sd01_info.dR,
 
-								sd02 		= j_sd02, 
-								sd02_z 		= sd02_info.z, 
-								sd02_mu 	= sd02_info.mu, 
-								sd02_Delta 	= sd02_info.dR, 
+								sd02 		= j_sd02,
+								sd02_z 		= sd02_info.z,
+								sd02_mu 	= sd02_info.mu,
+								sd02_Delta 	= sd02_info.dR,
 
 								# breaking compatibility
-								# sd 			= j_sd, 
-								# sd_z 		= sd_info.z, 
-								# sd_mu 		= sd_info.mu, 
-								# sd_Delta 	= sd_info.dR, 
+								# sd 			= j_sd,
+								# sd_z 		= sd_info.z,
+								# sd_mu 		= sd_info.mu,
+								# sd_Delta 	= sd_info.dR,
 
 								lsjet005 	= rc_sjets005[0],
 								nsjet005    	= len(rc_sjets005),
