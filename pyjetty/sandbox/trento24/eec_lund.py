@@ -96,7 +96,8 @@ def eec_from_lsplit_to_dict(l, w, pt_cut):
 
 	# print (d['weights'], d['RL'], d['type'])
 	if len(d['RL']) > 0:
-		print(max(d['RL']))
+		# print(max(d['RL']))
+		pass
 	else:
 		d['weights'] = [0]
 		d['RL'] = [0]
