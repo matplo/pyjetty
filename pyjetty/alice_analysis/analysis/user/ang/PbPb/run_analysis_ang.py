@@ -1,4 +1,4 @@
-#obs_! /usr/bin/env python
+#! /usr/bin/env python
 
 """ theory_comp.py
 Loads theory comparisons, preforms un/folding, makes plots
@@ -605,13 +605,17 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
     if self.observable != "mass" and not grooming_setting:
       maxval = max(1.9*h.GetBinContent(int(0.4*h.GetNbinsX())), 1.7*h.GetMaximum())
       if plot_jetscape:
-        maxval = max(maxval, 1.7*hJetscape.GetMaximum())
-      if min_pt_truth == 100:
-        alpha = obs_label.split("_")[0]
-        if alpha == "1.5":
-          maxval *= 1.2
+        maxval = max(maxval, 1.9*hJetscape.GetMaximum())
+      # Extra adjustment for some bins
+      alpha = obs_label.split("_")[0]
+      if min_pt_truth == 100 and alpha != "1":
+        maxval *= 1.2
+      elif min_pt_truth == 80 and alpha == "3":
+        maxval *= 1.2
     else:
       maxval = 2.1*max(h.GetBinContent(int(0.4*h.GetNbinsX())), h.GetBinContent(2), h.GetBinContent(3))
+      if grooming_setting:
+        maxval *= 1.1
     ymin = 1e-3  # Prevent ROOT from drawing 0 on plots
     if self.observable == "mass":
       ymin = -0.015
@@ -853,7 +857,7 @@ class RunAnalysisAng(run_analysis.RunAnalysis):
           if min_pt_truth == 100:
             myBlankHisto2.SetMaximum(1.65)
           else:
-            myBlankHisto2.SetMaximum(1.55)
+            myBlankHisto2.SetMaximum(1.85)
       myBlankHisto2.Draw("E")
 
       # Draw dashed line at ratio = 1
