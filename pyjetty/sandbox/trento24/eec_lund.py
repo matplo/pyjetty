@@ -74,22 +74,24 @@ def eec_from_lsplit_to_dict(l, w, pt_cut):
 	d['RL'] = []
 	d['type'] = []
 	# combinations only from the hard prong
-	_combs = combinations(_parts1, 2)
+	_combs = list(combinations(_parts1, 2))
 	d['weights'] = d['weights'] + [(x[0].perp() * x[1].perp())/(w*w) for x in _combs]
 	d['RL'] = d['RL'] + [x[0].delta_R(x[1]) for x in _combs]
 	d['type'] = d['type'] + [x[0].user_index() + x[1].user_index() for x in _combs]
 
 	# combinations only from the soft prong
-	_combs = combinations(_parts2, 2)
+	_combs = list(combinations(_parts2, 2))
 	d['weights'] = d['weights'] + [(x[0].perp() * x[1].perp())/(w*w) for x in _combs]
 	d['RL'] = d['RL'] + [x[0].delta_R(x[1]) for x in _combs]
 	d['type'] = d['type'] + [x[0].user_index() + x[1].user_index() for x in _combs]
 
 	# cross combinations
-	_combs = product(_parts1, _parts2)
+	_combs = list(product(_parts1, _parts2))
 	d['weights'] = d['weights'] + [(x[0].perp() * x[1].perp())/(w*w) for x in _combs]
 	d['RL'] = d['RL'] + [x[0].delta_R(x[1]) for x in _combs]
 	d['type'] = d['type'] + [x[0].user_index() + x[1].user_index() for x in _combs]
+
+	# print (d['weights'], d['RL'], d['type'])
 
 	return d
 
