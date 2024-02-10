@@ -42,6 +42,9 @@ def lund_split_to_dict(l, nsplit):
 	d['m'] = l.m()
 	d['psi'] = l.psi()
 	d['delta'] = l.Delta()
+	d['pt'] = l.pair().perp()
+	d['pt_softer'] = l.softer().perp()
+	d['pt_harder'] = l.harder().perp()
 	return d
 
 # aa = 0
@@ -157,7 +160,7 @@ def main():
 	parser.add_argument('--ptcut', help="pt cut for particles for EEC", default=1.0, type=float)
 	parser.add_argument('--stable-charm', help="set some hadrons stable", default=False, action='store_true')
 	args = parser.parse_args()
- 
+
 	file_ext = Path(args.output).suffix
 	fcmnd_file = args.output.replace(file_ext, '.cmnd')
 	if os.path.exists(fcmnd_file):
