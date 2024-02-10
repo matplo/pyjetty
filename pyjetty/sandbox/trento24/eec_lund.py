@@ -19,7 +19,7 @@ import pythiaext
 
 from heppy.pythiautils import configuration as pyconf
 
-import ROOT
+# import ROOT
 import math
 import array
 import pandas as pd
@@ -157,6 +157,12 @@ def main():
 	parser.add_argument('--ptcut', help="pt cut for particles for EEC", default=1.0, type=float)
 	parser.add_argument('--stable-charm', help="set some hadrons stable", default=False, action='store_true')
 	args = parser.parse_args()
+ 
+	file_ext = Path(args.output).suffix
+	fcmnd_file = args.output.replace(file_ext, '.cmnd')
+	if os.path.exists(fcmnd_file):
+		print(f'[w] output file {fcmnd_file} exists, will not overwrite')
+		return
 
 	pt_cut = args.ptcut
 	if pt_cut <= 0:
@@ -245,7 +251,6 @@ def main():
 
 	df = pd.DataFrame.from_dict(jdicts)
 	# print(df)
-	file_ext = Path(args.output).suffix
 	foutput = args.output.replace(file_ext, '.parquet')
 
 	# save parquet by default
