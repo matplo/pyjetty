@@ -1,0 +1,136 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC (per inclusive jet)
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1x/lg0x :p  +p25 +k1: title=inclusive
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1x/lg0a :p  +p24 +k4: title=gluons
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1x/lg0b :p  +p29 +k32: title=uds
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1/lg0x :p  +p25 +k1: title=inclusive
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1/lg0a :p  +p24 +k4: title=gluons
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1/lg0b :p  +p29 +k32: title=uds
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1a/lg0x :p  +p25 +k1: title=inclusive
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1a/lg0a :p  +p24 +k4: title=gluons
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1a/lg0b :p  +p29 +k32: title=uds
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1a/lg0c :p  +p20 +k42: title=stable charm
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1b/lg0x :p  +p25 +k1: title=inclusive
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1b/lg0a :p  +p24 +k4: title=gluons
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1b/lg0b :p  +p29 +k32: title=uds
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1b/lg0c :p  +p20 +k42: title=stable charm
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1b/lg0d :p  +p21 +k40: title=stable beauty
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0c :p  +p20 +k42: title=stable charm
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0e :p  +p33 +k45: title=decaying charm
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0d :p  +p21 +k40: title=stable beauty
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0f :p  +p34 +k36: title=decaying beauty
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1a :p  +p24 +k4: title=gluons max-kT
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1b :p  +p29 +k32: title=uds max-kT
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1c :p  +p20 +k42: title=charm max-kT
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1d :p  +p21 +k40: title=beauty max-kT
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2b :p  +p24 +k4: title=gluons SD z=0.1
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2c :p  +p29 +k32: title=uds SD z=0.1
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2a :p  +p20 +k42: title=charm SD z=0.1
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2d :p  +p21 +k40: title=beauty SD z=0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+##title Lund
+#legend pos=ur
+#x R_{L}
+#logx 1
+#grid xy
+##xrange 0.01 0.4
+#y EEC
+#maxy 5.5
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3a :p  +p24 +k4: title=gluons any split z>0.1
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3b :p  +p29 +k32: title=uds any split z>0.1
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3c :p  +p20 +k42: title=charm any split z>0.1
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3d :p  +p21 +k40: title=beauty any split z>0.1
+

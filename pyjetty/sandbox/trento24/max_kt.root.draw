@@ -1,0 +1,65 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT_types/lg0_lund :p  : title=gluons
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT_types/lg1_lund :p  : title=gluons max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_SD_types/lg0_lund :p  : title=gluons
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_SD_types/lg1_lund :p  : title=gluons SD
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg0_lund :p  : title=gluons
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg1_lund :p  : title=gluons max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg2_lund :p  : title=gluons SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg3_lund :p  : title=gluons any split z>0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg0_lund :p  : title=uds
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg1_lund :p  : title=uds max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg2_lund :p  : title=uds SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg3_lund :p  : title=uds any split z>0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg0_lund :p  : title=charm
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg1_lund :p  : title=charm max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg2_lund :p  : title=charm SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg3_lund :p  : title=charm any split z>0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg0_lund :p  : title=beauty
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg1_lund :p  : title=beauty max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg2_lund :p  : title=beauty SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg3_lund :p  : title=beauty any split z>0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT_types/lg0 :p  : title=gluons
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT_types/lg1 :p  : title=gluons max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT_types/lg1AA :p  : title=AA
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT_types/lg1AB :p  : title=AB
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT_types/lg1BB :p  : title=BB
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_SD_types/lg0 :p  : title=gluons
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_SD_types/lg1 :p  : title=gluons SD
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_SD_types/lg1AA :p  : title=AA
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_SD_types/lg1AB :p  : title=AB
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_SD_types/lg1BB :p  : title=BB
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg0 :p  : title=gluons
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg1 :p  : title=gluons max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg2 :p  : title=gluons SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:glue_maxkT/lg3 :p  : title=gluons any split z>0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg0 :p  : title=uds
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg1 :p  : title=uds max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg2 :p  : title=uds SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:uds_maxkT/lg3 :p  : title=uds any split z>0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg0 :p  : title=charm
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg1 :p  : title=charm max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg2 :p  : title=charm SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:charm_maxkT/lg3 :p  : title=charm any split z>0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg0 :p  : title=beauty
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg1 :p  : title=beauty max-kT
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg2 :p  : title=beauty SD z=0.1
+/Users/ploskon/tmp/trento24/max_kt.root 		:beauty_maxkT/lg3 :p  : title=beauty any split z>0.1
+

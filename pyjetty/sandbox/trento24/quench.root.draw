@@ -1,0 +1,25 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/quench.root 		:quench_1/lg0x :p  : title=inclusive vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_1/lg0a :p  : title=gluons vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_1/lg0b :p  : title=uds vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_1/lg0xq :p  : title=inclusive med
+/Users/ploskon/tmp/trento24/quench.root 		:quench_1/lg0aq :p  : title=gluons med = 0.6 x vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_1/lg0bq :p  : title=uds med = 2. x vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_2/lg0x :p  : title=inclusive vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_2/lg0a :p  : title=gluons vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_2/lg0b :p  : title=uds vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_2/lg0xq :p  : title=inclusive med
+/Users/ploskon/tmp/trento24/quench.root 		:quench_2/lg0aq :p  : title=gluons med = 1.1 x vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_2/lg0bq :p  : title=uds med = 1.2 x vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_3/lg0x :p  : title=inclusive vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_3/lg0a :p  : title=gluons vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_3/lg0b :p  : title=uds vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_3/lg0xq :p  : title=inclusive med
+/Users/ploskon/tmp/trento24/quench.root 		:quench_3/lg0aq :p  : title=gluons med = 0.9 x vac
+/Users/ploskon/tmp/trento24/quench.root 		:quench_3/lg0bq :p  : title=uds med = 0.9 x vac
+

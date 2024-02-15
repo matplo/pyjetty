@@ -1,0 +1,77 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g0/lg_lund :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g0/lg0_lund :p  : title=split 0
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1/lg1_lund :p  : title=split 1
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g2/lg2_lund :p  : title=split 2
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g3/lg3_lund :p  : title=split 3
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g4/lg4_lund :p  : title=split 4
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g5/lg5_lund :p  : title=split 5
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g6/lg6_lund :p  : title=split 6
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g7/lg7_lund :p  : title=split 7
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g8/lg8_lund :p  : title=split 8
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g0/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g0/lg0 :p  : title=split 0
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g0/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g0/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g0/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1/lg1 :p  : title=split 1
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g2/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g2/lg2 :p  : title=split 2
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g2/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g2/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g2/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g3/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g3/lg3 :p  : title=split 3
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g3/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g3/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g3/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g4/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g4/lg4 :p  : title=split 4
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g4/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g4/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g4/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g5/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g5/lg5 :p  : title=split 5
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g5/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g5/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g5/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g6/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g6/lg6 :p  : title=split 6
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g6/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g6/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g6/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g7/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g7/lg7 :p  : title=split 7
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g7/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g7/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g7/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g8/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g8/lg8 :p  : title=split 8
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g8/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g8/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g8/lg0BB :p  : title=BB
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg1 :p  : title=split 1
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg2 :p  : title=split 2
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg3 :p  : title=split 3
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg4 :p  : title=split 4
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg5 :p  : title=split 5
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg6 :p  : title=split 6
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg7 :p  : title=split 7
+/Users/ploskon/tmp/trento24/gluon_splits.root 		:glue_g1to8/lg8 :p  : title=split 8
+

@@ -1,0 +1,12 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/various.root 		:glue_no_sel/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/various.root 		:glue_no_sel/lg0 :p  : title=split 0
+/Users/ploskon/tmp/trento24/various.root 		:glue_no_sel/lg0AA :p  : title=AA
+/Users/ploskon/tmp/trento24/various.root 		:glue_no_sel/lg0AB :p  : title=AB
+/Users/ploskon/tmp/trento24/various.root 		:glue_no_sel/lg0BB :p  : title=BB
+

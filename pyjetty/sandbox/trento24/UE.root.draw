@@ -1,0 +1,66 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend 0.596,0.683,0.995,0.883, tx_size= 0.035
+#logx 1
+#grid xy
+#x R_{L}
+#y EEC
+#maxy 3
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/UE.root 		:glue_UE_comp1/lg1 :p  : title=gluons w/o UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_UE_comp1/lg0 :p  : title=gluons w/UE
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend 0.596,0.683,0.995,0.883, tx_size= 0.035
+#logx 1
+#grid xy
+#x R_{L}
+#y EEC
+#maxy 3
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/UE.root 		:glue_noUE/lg :p  : title=gluons w/o UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_noUE/lg0 :p  : title=split 0  w/o UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_noUE/lg0AA :p  : title=AA w/o UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_noUE/lg0AB :p  : title=AB w/o UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_noUE/lg0BB :p  : title=BB w/o UE
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend 0.596,0.683,0.995,0.883, tx_size= 0.035
+#logx 1
+#grid xy
+#x R_{L}
+#y EEC
+#maxy 3
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/UE.root 		:glue_no_sel/lg :p  : title=gluons w/UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_no_sel/lg0 :p  : title=split 0
+/Users/ploskon/tmp/trento24/UE.root 		:glue_no_sel/lg0AA :p  : title=AA  w/UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_no_sel/lg0AB :p  : title=AB  w/UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_no_sel/lg0BB :p  : title=BB  w/UE
+
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend 0.596,0.683,0.995,0.883, tx_size= 0.035
+#logx 1
+#grid xy
+#x R_{L}
+#y EEC
+#maxy 3
+#scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/UE.root 		:glue_UE_comp/lg0 :p  : title=gluons w/UE
+/Users/ploskon/tmp/trento24/UE.root 		:glue_UE_comp/lg0x :p  : title=gluons w/UE max-kT
+/Users/ploskon/tmp/trento24/UE.root 		:glue_UE_comp/lg1 :p  : title=gluons w/o UE
+

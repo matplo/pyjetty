@@ -1,0 +1,49 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg :p  : title=gluons
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg1 :p  : title=split 1
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg2 :p  : title=split 2
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg3 :p  : title=split 3
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg4 :p  : title=split 4
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg5 :p  : title=split 5
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg6 :p  : title=split 6
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg7 :p  : title=split 7
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g1to8_scaling/lg8 :p  : title=split 8
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0x/lg1 :p  : title=gluons
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0x5/lg5 :p  : title=500
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0x10/lg10 :p  : title=1000
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xx/lg1 :p  : title=100
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xx/lg5 :p  : title=500
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xx/lg10 :p  : title=1000
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxxx/lg1 :p  : title=100
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxxx/lg5 :p  : title=500
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxxx/lg10 :p  : title=1000
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxx/lg1_lund :p  : title=100
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxx/lg5_lund :p  : title=500
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxx/lg10_lund :p  : title=1000
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title: smart group
+#legend pos=ur
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxx/lg1 :p  : title=100
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxx/lg5 :p  : title=500
+/Users/ploskon/tmp/trento24/scaling.root 		:glue_g0xxx/lg10 :p  : title=1000
+

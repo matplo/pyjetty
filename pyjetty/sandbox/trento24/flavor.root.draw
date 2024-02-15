@@ -1,0 +1,210 @@
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title inclusive
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1/lg0x_lund :colz  : title=inclusive
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title gluons
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1/lg0a_lund :colz  : title=gluons
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title uds quarks
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1/lg0b_lund :colz  : title=uds
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title gluons (?)
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1x/lg0a_lund :colz  : title=gluons
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title uds(?)
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_1x/lg0b_lund :colz  : title=uds
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title stable charm
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0c_lund :colz  : title=stable charm
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title stable beauty
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0d_lund :colz  : title=stable beauty
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title charm
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0e_lund :colz  : title=charm
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title beauty
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_2/lg0f_lund :colz  : title=beauty
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title gluons max-k_{T}
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1a_lund :colz  : title=gluons max-kT
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title uds max-k{T}
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1b_lund :colz  : title=uds max-kT
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title charm max-k_{T}
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1c_lund :colz  : title=charm max-kT
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title beauty max-k_{T}
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_maxkT/lg1d_lund :colz  : title=beauty max-kT
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title charm SD z=0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2a_lund :colz  : title=charm SD z=0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title gluons SD z=0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2b_lund :colz  : title=gluons SD z=0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title usd SD z=0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2c_lund :colz  : title=uds SD z=0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title beauty SD z=0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_SD/lg2d_lund :colz  : title=beauty SD z=0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title gluons any split z>0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3a_lund :colz  : title=gluons any split z>0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title uds any split z>0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3b_lund :colz  : title=uds any split z>0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title charm any split z>0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3c_lund :colz  : title=charm any split z>0.1
+#-----------------------
+#figure
+#geom 500x500
+#date
+#title beauty any split z>0.1
+#legend pos=ur
+#x \log(1/\Delta)
+#y k_{T} (GeV/c)
+##scalebwidth 1 NoyAxisModif
+/Users/ploskon/tmp/trento24/flavor.root 		:flavor_zcut/lg3d_lund :colz  : title=beauty any split z>0.1
